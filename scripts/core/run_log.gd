@@ -38,6 +38,7 @@ func append(sim: Sim, character_id: StringName, seconds: float) -> void:
 	if best_dps < 0.0:
 		best_dps = 0.0
 	var data := {
+		"version": String(ProjectSettings.get_setting("application/config/version", "")),
 		"seed": sim.run_seed,
 		"character": String(character_id),
 		"wave": sim.wave,

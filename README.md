@@ -45,7 +45,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.4 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.5 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -60,6 +60,14 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - Linux：`~/.local/share/godot/app_userdata/Reverb/runs.jsonl`
 
 把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页有 `Open log folder` 直接打开记录目录；显示本局种子，想复现别人的局，在选角页的 `Seed` 里填同一个数字即可。
+
+收到一个或多个 `runs.jsonl` 后：
+
+```bash
+python3 tools/runs_report.py runs.jsonl --out report.md
+```
+
+会按角色、死亡波数、武器胜率、最近几局生成 Markdown 报告；日志里的 `version` 会标出构建版本。
 
 ## 从源码运行
 
@@ -90,13 +98,14 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1679 项）
+make test     # 无头测试（当前 1680 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
 make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
 make export   # 导出 macOS/Windows/Linux（需要 Godot export templates）
 python3 tools/gen_audio.py  # 重新生成程序合成音效
+python3 tools/runs_report.py <runs.jsonl>  # 汇总试玩日志
 ```
 
 代码结构：
