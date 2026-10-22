@@ -31,11 +31,30 @@ static func pending(ci: CanvasItem, sim: Sim) -> void:
 		ci.draw_circle(ps.pos, 2.5, col)
 
 
-static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary) -> void:
+static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary) -> void:
+	var lifespan := maxi(1, sim.echo_lifespan())
 	for a in sim.echoes:
 		var pts: PackedVector2Array = paths.get(a, PackedVector2Array())
-		if pts.size() >= 2:
-			ci.draw_polyline(pts, Color(a.take.tint(), 0.22), 2.5)
+		if pts.size() < 2:
+			continue
+		var tint := a.take.tint()
+		var remaining := clampi(lifespan - a.take.age, 0, lifespan)
+		var base_alpha := 0.07 + 0.15 * float(remaining) / float(lifespan)
+		var progress := float(reveal.get(a, 1.0))
+		if progress <= 0.0:
+			ci.draw_polyline(pts, Color(tint, base_alpha * 0.6), 2.0)
+			continue
+		if progress < 1.0:
+			# Faint full route, then a bright head running along it.
+			ci.draw_polyline(pts, Color(tint, base_alpha * 0.5), 2.0)
+			var keep := clampi(int(ceil(progress * float(pts.size() - 1))) + 1, 1, pts.size())
+			var shown := pts.slice(0, keep)
+			if shown.size() >= 2:
+				ci.draw_polyline(shown, Color(tint, 0.6), 3.0)
+			var head := shown[shown.size() - 1]
+			ci.draw_circle(head, 3.5, Color(tint, 0.95))
+		else:
+			ci.draw_polyline(pts, Color(tint, base_alpha), 2.5)
 
 
 # Faint dashed circle: makes pickup range upgrades (and the magnet) legible without text.

@@ -3,9 +3,11 @@ extends Node2D
 
 const MAX_SPARKS := 400
 const PATH_STRIDE := 3
+const REVEAL_TIME := 0.8
 
 var sim: Sim
 var _paths: Dictionary = {}
+var _reveal: Dictionary = {}
 var _sparks: Array[Spark] = []
 var _shake: float = 0.0
 
@@ -13,6 +15,7 @@ var _shake: float = 0.0
 func bind(s: Sim) -> void:
 	sim = s
 	_paths.clear()
+	_reveal.clear()
 	_sparks.clear()
 	_shake = 0.0
 	sim.enemy_killed.connect(_on_kill)
@@ -33,6 +36,9 @@ func _process(delta: float) -> void:
 			_sparks[keep] = s
 			keep += 1
 	_sparks.resize(keep)
+	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
+	for actor in _reveal.keys():
+		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
 	queue_redraw()
 
 
@@ -41,7 +47,7 @@ func _draw() -> void:
 		return
 	ArenaPainter.arena(self)
 	ArenaPainter.pending(self, sim)
-	ArenaPainter.echo_paths(self, sim, _paths)
+	ArenaPainter.echo_paths(self, sim, _paths, _reveal)
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim)
@@ -69,6 +75,8 @@ func _on_echo(actor: EchoActor) -> void:
 	for i in range(0, actor.take.samples.size(), PATH_STRIDE):
 		pts.append(actor.take.samples[i])
 	_paths[actor] = pts
+	# Newest first; older echoes start their reveal a beat later so the routes do not overlap in time.
+	_reveal[actor] = -0.12 * float(maxi(0, sim.bank.takes.size() - 1 - actor.index))
 	var ring := _spark(actor.pos, actor.take.tint(), 0.0, 0.6)
 	if ring != null:
 		ring.ring = true
