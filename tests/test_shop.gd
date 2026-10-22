@@ -41,8 +41,8 @@ func test_buying_an_item_applies_it(c: Check) -> void:
 	var hp := s.player.hp
 	c.ok(s.shop.buy(s, o), "purchase succeeds")
 	c.eq(s.player.materials, 86, "materials deducted")
-	c.near(s.player.max_hp(), max_hp + 8.0, 0.001, "max hp raised")
-	c.near(s.player.hp, hp + 8.0, 0.001, "current hp raised with it")
+	c.near(s.player.max_hp(), max_hp + 10.0, 0.001, "max hp raised")
+	c.near(s.player.hp, hp + 10.0, 0.001, "current hp raised with it")
 	c.eq(s.player.item_count(&"iron_heart"), 1, "item recorded")
 	c.ok(not s.shop.buy(s, o), "a sold offer cannot be bought twice")
 	c.eq(s.player.materials, 86, "no double charge")

@@ -119,14 +119,14 @@ static func _build_weapons() -> void:
 static func _build_items() -> void:
 	var warm := Color(1.0, 0.9, 0.5)
 	var echo := Color(1.0, 0.45, 0.9)
-	_item(&"iron_heart", {"mods": {Stats.MAX_HP: 8.0}, "price": 14, "color": warm})
-	_item(&"sneakers", {"mods": {Stats.MOVE_SPEED: 24.0}, "price": 12, "max_stack": 6, "color": warm})
+	_item(&"iron_heart", {"mods": {Stats.MAX_HP: 10.0}, "price": 14, "color": warm})
+	_item(&"sneakers", {"mods": {Stats.MOVE_SPEED: 28.0}, "price": 12, "max_stack": 6, "color": warm})
 	_item(&"sharp_edge", {"mods": {Stats.DAMAGE_PCT: 0.10}, "price": 16, "color": warm})
 	_item(&"quick_trigger", {"mods": {Stats.ATTACK_SPEED_PCT: 0.12}, "price": 16, "color": warm})
 	_item(&"long_barrel", {"mods": {Stats.RANGE_PCT: 0.12}, "price": 12, "max_stack": 5, "color": warm})
 	_item(&"lucky_coin", {"mods": {Stats.CRIT_CHANCE: 0.06}, "price": 14, "max_stack": 8, "color": warm})
 	_item(&"magnet", {"mods": {Stats.PICKUP_RANGE: 50.0}, "price": 10, "max_stack": 4, "color": warm})
-	_item(&"regen_patch", {"mods": {Stats.HP_REGEN: 0.5}, "price": 18, "max_stack": 6, "color": warm})
+	_item(&"regen_patch", {"mods": {Stats.HP_REGEN: 0.65}, "price": 18, "max_stack": 6, "color": warm})
 	_item(&"spare_deck", {
 		"mods": {Stats.ECHO_SLOTS: 1.0}, "price": 40, "max_stack": 2, "color": echo, "echo_item": true,
 	})
@@ -168,7 +168,7 @@ static func _build_characters() -> void:
 		"color": Color(0.5, 0.95, 1.0),
 		"overrides": {Stats.ECHO_SLOTS: 0.0},
 		"mods": {
-			Stats.DAMAGE_PCT: 0.65,
+			Stats.DAMAGE_PCT: 0.6,
 			Stats.MAX_HP: 25.0,
 			Stats.MOVE_SPEED: 20.0,
 			Stats.ATTACK_SPEED_PCT: 0.25,
@@ -178,7 +178,7 @@ static func _build_characters() -> void:
 	})
 	_character(&"mirror", {
 		"color": Color(1.0, 0.8, 0.4),
-		"overrides": {Stats.ECHO_SLOTS: 2.0, Stats.ECHO_POWER: 0.3},
+		"overrides": {Stats.ECHO_SLOTS: 2.0, Stats.ECHO_POWER: 0.4},
 		"mods": {Stats.MAX_HP: 5.0},
 		"live_echo": true,
 		"unlock_wins": 1,
