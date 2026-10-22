@@ -404,6 +404,20 @@ func test_shop_merges_two_takes(c: Check) -> void:
 	ui.free()
 
 
+func test_daily_starts_with_today_seed_and_records_best(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.start_daily()
+	c.eq(main.character_id, &"looper", "daily uses the looper")
+	c.eq(main.sim.run_seed, main.today_seed(), "daily seed comes from the date")
+	c.ok(main._daily_run, "daily run is tagged")
+	main.sim.phase = Sim.Phase.WON
+	main.sim.wave = 20
+	main._record_run()
+	c.eq(main.meta.daily_best, 20, "daily best is recorded")
+	main.free()
+
+
 func test_main_settings_open_and_close(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

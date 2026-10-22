@@ -33,8 +33,32 @@ func test_defaults_and_unlock_at_wave_ten(c: Check) -> void:
 	_cleanup()
 
 
-func test_wins_and_corrupt_file(c: Check) -> void:
+func test_daily_best_persists_and_resets(c: Check) -> void:
 	_cleanup()
+	var meta := Meta.new(PATH)
+	var s := Sim.new(1)
+	s.start_run()
+	s.phase = Sim.Phase.LOST
+	s.wave = 8
+	meta.record_daily(s, 20261023)
+	c.eq(meta.daily_seed, 20261023, "daily seed recorded")
+	c.eq(meta.daily_best, 8, "daily best recorded")
+	s.wave = 20
+	s.phase = Sim.Phase.WON
+	meta.record_daily(s, 20261023)
+	c.eq(meta.daily_best, 20, "daily best improves")
+	c.eq(meta.daily_wins, 1, "daily win counted")
+	var loaded := Meta.new(PATH)
+	c.eq(loaded.daily_best, 20, "daily best persists")
+	s.wave = 3
+	s.phase = Sim.Phase.LOST
+	meta.record_daily(s, 20261024)
+	c.eq(meta.daily_seed, 20261024, "a new day resets the seed")
+	c.eq(meta.daily_best, 3, "a new day resets the best")
+	_cleanup()
+
+
+func test_wins_and_corrupt_file(c: Check) -> void:
 	var file := FileAccess.open(PATH, FileAccess.WRITE)
 	file.store_string("not json")
 	file = null

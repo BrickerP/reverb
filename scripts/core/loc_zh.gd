@@ -80,6 +80,8 @@ const TABLE := {
 	"select.seed_hint": "可选",
 	"select.settings": "设置",
 	"select.history": "记录",
+	"select.daily": "每日挑战",
+	"select.daily_best": "每日 · 最佳 %d 波",
 	"history.title": "对局记录",
 	"history.empty": "还没有对局记录。",
 	"history.seed": "种子",

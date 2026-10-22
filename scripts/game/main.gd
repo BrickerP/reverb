@@ -25,6 +25,7 @@ var _recorded := false
 var _unlock_text := ""
 var _run_started_msec := 0
 var _settings_restore_pause := false
+var _daily_run := false
 
 
 func _ready() -> void:
@@ -61,6 +62,7 @@ func _ready() -> void:
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
+	character_select.daily_requested.connect(start_daily)
 	settings_ui.volume_changed.connect(_on_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
@@ -76,6 +78,7 @@ func _ready() -> void:
 func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	if char_id != &"":
 		character_id = char_id
+	_daily_run = false
 	sim = Sim.new(seed_value if seed_value >= 0 else randi())
 	var def := Content.character(character_id)
 	if def != null:
@@ -110,6 +113,16 @@ func choose_character(id: StringName, seed_value: int = -1) -> void:
 
 func _retry_seed(seed_value: int) -> void:
 	new_run(seed_value, character_id)
+
+
+func today_seed() -> int:
+	var date := Time.get_date_dict_from_system()
+	return int(date["year"]) * 10000 + int(date["month"]) * 100 + int(date["day"])
+
+
+func start_daily() -> void:
+	new_run(today_seed(), &"looper")
+	_daily_run = true
 
 
 func _open_log_folder() -> void:
@@ -190,7 +203,8 @@ func show_select() -> void:
 	shop_ui.visible = false
 	end_ui.visible = false
 	_view.visible = false
-	character_select.refresh(meta)
+	character_select.refresh(meta, today_seed(),
+			meta.daily_best if meta.daily_seed == today_seed() else 0)
 	character_select.visible = true
 
 
@@ -288,6 +302,8 @@ func _record_run() -> void:
 		return
 	_recorded = true
 	var newly := meta.record_run(sim)
+	if _daily_run and sim.run_seed == today_seed():
+		meta.record_daily(sim, sim.run_seed)
 	if run_log != null:
 		var seconds := float(Time.get_ticks_msec() - _run_started_msec) / 1000.0
 		run_log.append(sim, character_id, seconds)

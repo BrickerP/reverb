@@ -4,10 +4,12 @@ extends Control
 signal character_chosen(id: StringName)
 signal settings_requested
 signal history_requested
+signal daily_requested
 
 var _cards_box: HBoxContainer
 var _summary: Label
 var _cards: Array[Button] = []
+var _daily_button: Button
 var seed_edit: LineEdit
 
 
@@ -66,10 +68,16 @@ func _ready() -> void:
 	history_button.custom_minimum_size = Vector2(160.0, 36.0)
 	history_button.pressed.connect(func() -> void: history_requested.emit())
 	buttons.add_child(history_button)
+	var daily_button := Button.new()
+	daily_button.text = Loc.t("select.daily")
+	daily_button.custom_minimum_size = Vector2(160.0, 36.0)
+	daily_button.pressed.connect(func() -> void: daily_requested.emit())
+	buttons.add_child(daily_button)
+	_daily_button = daily_button
 	box.add_child(buttons)
 
 
-func refresh(meta: Meta) -> void:
+func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 	UiTheme.clear(_cards_box)
 	_cards.clear()
 	for def: CharacterDef in Content.characters().values():
@@ -78,6 +86,7 @@ func refresh(meta: Meta) -> void:
 		_cards.append(card)
 	_summary.text = "%s  ·  v%s" % [Loc.t("select.best", [meta.best_wave, meta.wins]),
 			str(ProjectSettings.get_setting("application/config/version", ""))]
+	_daily_button.text = Loc.t("select.daily_best", [daily_best]) if daily_best > 0 else Loc.t("select.daily")
 	for card in _cards:
 		if not card.disabled:
 			card.grab_focus()

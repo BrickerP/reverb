@@ -80,6 +80,8 @@ const TABLE := {
 	"select.seed_hint": "optional",
 	"select.settings": "Settings",
 	"select.history": "History",
+	"select.daily": "Daily",
+	"select.daily_best": "Daily · best %d",
 	"history.title": "Run history",
 	"history.empty": "No runs recorded yet.",
 	"history.seed": "Seed",
