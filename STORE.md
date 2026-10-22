@@ -97,7 +97,7 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 
 ## 发布前必须解决
 
-1. **英文更名**：Steam 已有至少两款 `Reverb`（2514890、5085070），必须换名。候选 `Last Take`、`Take Stack` 未发现同名 Steam 游戏；`Overdub` 与 `Paratopic: Overdub` 冲突。仍要做正式商标检索。
+1. **英文更名**：Steam 已有至少两款 `Reverb`（2514890、5085070），必须换名。候选检索：`Take Stack` 未发现同名 Steam 游戏，推荐工作名；`Ghost Take` 未发现同名游戏但偏恐怖；`Take Twenty` 未发现同名游戏但绑定 20 波；`Last Take` 已有独立游戏概念；`Overdub` 与 `Paratopic: Overdub` 冲突；`Dead Take` 已被 Steam 3352690 占用。正式商标检索前不能定名。
 2. **辨识度**：GRIMLOOP（4709620）已做“每 30 秒过去幽灵重放走位和攻击”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
 3. **真人数据**：难度、防御流、8–14 波墙都还没有真人验证。
 4. **音频**：目前是程序合成占位，需要至少一轮混音与音乐设计。
