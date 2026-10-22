@@ -2,7 +2,7 @@
 
 Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和武器配置录成一张「回响」，下一波让过去的自己以角色对应的威力替你打——但槽位有限，你必须决定留下哪个过去的自己。
 
-当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、3 个角色、叠录、本地解锁记录和占位音效；没有更多角色或元进度树。
+当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、3 个角色、叠录、本地解锁记录和占位音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
 
 ![wave](docs/wave.png)
 ![shop](docs/shop.png)
@@ -41,9 +41,17 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 | 换角色（仅结算界面） | C |
 | 商店 | 鼠标点击卡片与按钮 |
 
-## 运行
+## 下载玩
 
-目前**没有一键安装包**，需要本机装 Godot 4.7.x（开发与测试用的是 4.7.2）。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.0 的 macOS / Windows / Linux 构建，不用装 Godot。
+
+- **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
+- **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
+- **Linux**：`Reverb-linux.zip` → 解压 → `chmod +x Reverb.x86_64` → 运行。
+
+## 从源码运行
+
+需要本机装 Godot 4.7.x（开发与测试用的是 4.7.2）。
 
 ```bash
 git clone https://github.com/BrickerP/reverb.git
@@ -75,6 +83,7 @@ make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
 make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
+make export   # 导出 macOS/Windows/Linux（需要 Godot export templates）
 python3 tools/gen_audio.py  # 重新生成程序合成音效
 ```
 

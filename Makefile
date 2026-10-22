@@ -1,6 +1,6 @@
 GODOT ?= godot
 
-.PHONY: import test smoke perf frames ui-shots run run-zh
+.PHONY: import test smoke perf frames ui-shots run run-zh export
 
 import:
 	$(GODOT) --headless --path . --import
@@ -25,3 +25,11 @@ run:
 
 run-zh:
 	REVERB_LANG=zh $(GODOT) --path .
+
+export: import
+	mkdir -p export/macos export/windows export/linux
+	$(GODOT) --headless --path . --export-release "macOS" export/macos/Reverb.zip
+	$(GODOT) --headless --path . --export-release "Windows" export/windows/Reverb.exe
+	cd export/windows && zip -9 -q Reverb-windows.zip Reverb.exe Reverb.pck
+	$(GODOT) --headless --path . --export-release "Linux" export/linux/Reverb.x86_64
+	cd export/linux && zip -9 -q Reverb-linux.zip Reverb.x86_64 Reverb.pck
