@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-> 工作名：Reverb / 回响。英文名未定：Steam 已有一款 Reverb（Echo Games Lab，未发售）。以下为占位文案，发布前需要更名。
+> 工作名：Reverb / 回响。英文名必须更换：Steam 已有至少两款 `Reverb`（2514890 多人潜行 FPS、5085070 四轨音游），另有 HP Reverb 硬件与 Reverb Communications。以下为占位文案，发布前需要更名并做正式商标检索。
 
 ## 短描述
 
@@ -97,8 +97,8 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 
 ## 发布前必须解决
 
-1. **英文更名**：Steam 已有 Reverb；需查重与商标检索。
-2. **辨识度**：GRIMLOOP 已做“过去分身重放”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
+1. **英文更名**：Steam 已有至少两款 `Reverb`（2514890、5085070），必须换名。候选 `Last Take`、`Take Stack` 未发现同名 Steam 游戏；`Overdub` 与 `Paratopic: Overdub` 冲突。仍要做正式商标检索。
+2. **辨识度**：GRIMLOOP（4709620）已做“每 30 秒过去幽灵重放走位和攻击”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
 3. **真人数据**：难度、防御流、8–14 波墙都还没有真人验证。
 4. **音频**：目前是程序合成占位，需要至少一轮混音与音乐设计。
 5. **Steam Deck**：窗口、手柄、字体需要实机验证。
