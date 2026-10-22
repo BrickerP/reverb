@@ -16,6 +16,9 @@ jobs:
           - os: macos-latest
             godot_url: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_macos.universal.zip
             godot_bin: /tmp/godot/Godot.app/Contents/MacOS/Godot
+          - os: windows-latest
+            godot_url: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip
+            godot_bin: /tmp/godot/Godot_v4.7.2-stable_win64.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
