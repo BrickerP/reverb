@@ -41,6 +41,7 @@ func _ready() -> void:
 	shop_ui.start_requested.connect(_on_start_requested)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
+	end_ui.seed_retry_requested.connect(_retry_seed)
 	character_select.character_chosen.connect(choose_character)
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
@@ -74,11 +75,18 @@ func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	_phase = sim.phase
 
 
-func choose_character(id: StringName) -> void:
+func choose_character(id: StringName, seed_value: int = -1) -> void:
 	if meta != null and not meta.is_unlocked(id):
 		return
 	character_id = id
-	new_run(-1, id)
+	var chosen := seed_value
+	if chosen < 0 and character_select != null:
+		chosen = character_select.chosen_seed()
+	new_run(chosen, id)
+
+
+func _retry_seed(seed_value: int) -> void:
+	new_run(seed_value, character_id)
 
 
 func show_select() -> void:
@@ -122,6 +130,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_pause()
 	elif event.is_action_pressed(&"restart") and end_ui.visible:
 		new_run()
+	elif event.is_action_pressed(&"retry") and end_ui.visible and sim != null:
+		_retry_seed(sim.run_seed)
 	elif event.is_action_pressed(&"character") and end_ui.visible:
 		show_select()
 	elif event.is_action_pressed(&"mute"):

@@ -6,6 +6,7 @@ signal character_chosen(id: StringName)
 var _cards_box: HBoxContainer
 var _summary: Label
 var _cards: Array[Button] = []
+var seed_edit: LineEdit
 
 
 func _ready() -> void:
@@ -36,6 +37,17 @@ func _ready() -> void:
 	_cards_box.add_theme_constant_override("separation", 20)
 	_cards_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(_cards_box)
+	var seed_row := HBoxContainer.new()
+	seed_row.add_theme_constant_override("separation", 8)
+	seed_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	seed_row.add_child(UiTheme.label(Loc.t("select.seed"), 14, UiTheme.DIM))
+	seed_edit = LineEdit.new()
+	seed_edit.placeholder_text = Loc.t("select.seed_hint")
+	seed_edit.custom_minimum_size = Vector2(160.0, 32.0)
+	seed_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	seed_edit.max_length = 12
+	seed_row.add_child(seed_edit)
+	box.add_child(seed_row)
 	_summary = UiTheme.label("", 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_summary)
 	box.add_child(UiTheme.label(Loc.t("select.hint"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
@@ -53,6 +65,11 @@ func refresh(meta: Meta) -> void:
 		if not card.disabled:
 			card.grab_focus()
 			break
+
+
+func chosen_seed() -> int:
+	var text := seed_edit.text.strip_edges()
+	return int(text) if text.is_valid_int() else -1
 
 
 func _make_card(def: CharacterDef, meta: Meta) -> Button:

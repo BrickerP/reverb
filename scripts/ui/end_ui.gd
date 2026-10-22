@@ -3,9 +3,11 @@ extends Control
 
 signal restart_requested
 signal character_requested
+signal seed_retry_requested(seed_value: int)
 
 var restart_button: Button
 var character_button: Button
+var retry_button: Button
 var best_take: EchoTake
 
 var _title: Label
@@ -16,6 +18,7 @@ var _best_row: HBoxContainer
 var _best_preview: PathPreview
 var _best_label: Label
 var _no_echo: Label
+var _seed_value: int = 0
 
 
 func _ready() -> void:
@@ -45,8 +48,16 @@ func _ready() -> void:
 	_stats = UiTheme.label("", 20, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_title)
 	box.add_child(_stats)
-	_seed = UiTheme.label("", 12, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
-	box.add_child(_seed)
+	var seed_row := HBoxContainer.new()
+	seed_row.add_theme_constant_override("separation", 10)
+	seed_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_seed = UiTheme.label("", 12, UiTheme.DIM)
+	seed_row.add_child(_seed)
+	retry_button = Button.new()
+	retry_button.custom_minimum_size = Vector2(150.0, 28.0)
+	retry_button.pressed.connect(_on_retry_seed)
+	seed_row.add_child(retry_button)
+	box.add_child(seed_row)
 	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_unlock)
 	_best_row = HBoxContainer.new()
@@ -83,6 +94,7 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_title.text = Loc.t("end.win", [WaveDirector.FINAL_WAVE]) if won else Loc.t("end.lose", [sim.wave])
 	_title.add_theme_color_override("font_color", UiTheme.COIN if won else UiTheme.WARN)
 	_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
+	_seed_value = sim.run_seed
 	_seed.text = Loc.t("end.seed", [sim.run_seed])
 	_unlock.text = unlocked_text
 	_unlock.visible = unlocked_text != ""
@@ -97,8 +109,13 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 		_best_preview.setup(best_take, true)
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
+	retry_button.text = Loc.t("end.retry_seed")
 	visible = true
 	restart_button.grab_focus()
+
+
+func _on_retry_seed() -> void:
+	seed_retry_requested.emit(_seed_value)
 
 
 func _on_restart() -> void:

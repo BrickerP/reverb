@@ -139,6 +139,10 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.character_requested.connect(func() -> void: changes[0] += 1)
 	ui.character_button.pressed.emit()
 	c.eq(changes[0], 1, "character change requested")
+	var retried := [-1]
+	ui.seed_retry_requested.connect(func(seed_value: int) -> void: retried[0] = seed_value)
+	ui.retry_button.pressed.emit()
+	c.eq(retried[0], s.run_seed, "seed retry carries the run seed")
 	s.phase = Sim.Phase.WON
 	ui.show_result(s)
 	c.ok(ui.visible, "also shown on a win")
@@ -401,9 +405,11 @@ func test_main_boots_into_character_select(c: Check) -> void:
 	_root().add_child(main)
 	c.ok(main.character_select.visible, "boot shows character select")
 	c.eq(main.sim, null, "no run starts before a choice")
+	main.character_select.seed_edit.text = "12345"
 	main.choose_character(&"looper")
 	c.ok(not main.character_select.visible, "choice hides the select")
 	c.ok(main.sim != null, "the run starts")
+	c.eq(main.sim.run_seed, 12345, "the seed field is honored")
 	c.eq(main.sim.echo_capacity(), 3, "the chosen character is applied")
 	main.end_ui.character_requested.emit()
 	c.ok(main.character_select.visible, "the end screen can return to select")

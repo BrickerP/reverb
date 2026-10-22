@@ -80,4 +80,10 @@ static func build() -> Theme:
 	th.set_color("font_disabled_color", "Button", Color(0.42, 0.45, 0.58))
 	th.set_color("font_color", "Label", INK)
 	th.set_stylebox("panel", "PanelContainer", box(Color(0.035, 0.04, 0.09, 0.94), Color(0.2, 0.3, 0.6, 0.8), 2, 8))
+	th.set_stylebox("normal", "LineEdit", box(Color(0.04, 0.05, 0.1), Color(0.25, 0.4, 0.7)))
+	th.set_stylebox("focus", "LineEdit", box(Color(0.04, 0.05, 0.1), ACCENT, 2))
+	th.set_color("font_color", "LineEdit", INK)
+	th.set_color("font_placeholder_color", "LineEdit", DIM)
+	th.set_color("caret_color", "LineEdit", ACCENT)
+	th.set_color("selection_color", "LineEdit", Color(ACCENT, 0.3))
 	return th

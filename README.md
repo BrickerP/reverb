@@ -38,12 +38,13 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 | 暂停 | P / Esc / Start |
 | 静音 | M |
 | 重开（仅结算界面） | R |
+| 重试本局种子（仅结算界面） | S |
 | 换角色（仅结算界面） | C |
 | 商店 | 鼠标点击卡片与按钮 |
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.1 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.2 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -57,7 +58,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - Windows：`%APPDATA%\Godot\app_userdata\Reverb\runs.jsonl`
 - Linux：`~/.local/share/godot/app_userdata/Reverb/runs.jsonl`
 
-把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页也会显示本局种子，方便复现。
+把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页显示本局种子；想复现别人的局，在选角页的 `Seed` 里填同一个数字即可。
 
 ## 从源码运行
 
@@ -88,7 +89,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1649 项）
+make test     # 无头测试（当前 1666 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
