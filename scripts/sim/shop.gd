@@ -117,6 +117,8 @@ func _random_offer(sim: Sim) -> Offer:
 		return o
 	var idefs := Content.items().values()
 	var it: ItemDef = idefs[sim.rng.randi_range(0, idefs.size() - 1)]
+	if it.echo_item and sim.echo_capacity() <= 0:
+		return null
 	if _maxed(sim, it):
 		return null
 	o.item = it

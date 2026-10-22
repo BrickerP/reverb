@@ -19,6 +19,7 @@ var _peak_projectiles := 0
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SAVE", "user://frame_probe_save.json")
 	if DisplayServer.get_name() == "headless":
 		printerr("frame_probe needs a real window: drop --headless")
 		quit(1)
@@ -35,7 +36,11 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
-	if _main == null or _main.sim == null:
+	if _main == null or _main.character_select == null:
+		return false
+	if _main.sim == null:
+		if _main.character_select.visible:
+			_main.choose_character(&"looper")
 		return false
 	var sim: Sim = _main.sim
 	var now := Time.get_ticks_usec()

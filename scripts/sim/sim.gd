@@ -314,9 +314,10 @@ func _end_wave() -> void:
 	pending.clear()
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * WAVE_END_HEAL)
 	bank.age_after_wave(echo_lifespan())
-	var take := recorder.finish(wave, player.weapons, player.stats)
-	bank.add(take)
-	echo_recorded.emit(take)
+	if echo_capacity() > 0:
+		var take := recorder.finish(wave, player.weapons, player.stats)
+		bank.add(take)
+		echo_recorded.emit(take)
 	wave_ended.emit(wave)
 	if wave >= WaveDirector.FINAL_WAVE:
 		phase = Phase.WON

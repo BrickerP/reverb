@@ -2,12 +2,15 @@ class_name EndUi
 extends Control
 
 signal restart_requested
+signal character_requested
 
 var restart_button: Button
+var character_button: Button
 var best_take: EchoTake
 
 var _title: Label
 var _stats: Label
+var _unlock: Label
 var _best_row: HBoxContainer
 var _best_preview: PathPreview
 var _best_label: Label
@@ -41,6 +44,8 @@ func _ready() -> void:
 	_stats = UiTheme.label("", 20, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_title)
 	box.add_child(_stats)
+	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_unlock)
 	_best_row = HBoxContainer.new()
 	_best_row.add_theme_constant_override("separation", 16)
 	_best_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -57,17 +62,26 @@ func _ready() -> void:
 	_no_echo = UiTheme.label(Loc.t("end.no_echo"), 16, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_no_echo)
 	restart_button = Button.new()
-	restart_button.custom_minimum_size = Vector2(280.0, 56.0)
-	restart_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	restart_button.custom_minimum_size = Vector2(220.0, 56.0)
 	restart_button.pressed.connect(_on_restart)
-	box.add_child(restart_button)
+	character_button = Button.new()
+	character_button.custom_minimum_size = Vector2(220.0, 56.0)
+	character_button.pressed.connect(_on_character)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 16)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_child(restart_button)
+	buttons.add_child(character_button)
+	box.add_child(buttons)
 
 
-func show_result(sim: Sim) -> void:
+func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	var won := sim.phase == Sim.Phase.WON
 	_title.text = Loc.t("end.win", [WaveDirector.FINAL_WAVE]) if won else Loc.t("end.lose", [sim.wave])
 	_title.add_theme_color_override("font_color", UiTheme.COIN if won else UiTheme.WARN)
 	_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
+	_unlock.text = unlocked_text
+	_unlock.visible = unlocked_text != ""
 	best_take = null
 	for take: EchoTake in sim.bank.takes:
 		if best_take == null or take.power() > best_take.power():
@@ -78,9 +92,14 @@ func show_result(sim: Sim) -> void:
 		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(best_take.power() * sim.echo_power()))])
 		_best_preview.setup(best_take, true)
 	restart_button.text = Loc.t("end.restart")
+	character_button.text = Loc.t("end.change")
 	visible = true
 	restart_button.grab_focus()
 
 
 func _on_restart() -> void:
 	restart_requested.emit()
+
+
+func _on_character() -> void:
+	character_requested.emit()

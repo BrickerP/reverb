@@ -126,6 +126,8 @@ func _draw_health() -> void:
 
 
 func _draw_echo_chips() -> void:
+	if sim.echo_capacity() <= 0:
+		return
 	_text(Loc.t("hud.echo"), Vector2(40.0, 62.0), 14, UiTheme.DIM)
 	var lifespan := sim.echo_lifespan()
 	var now := Time.get_ticks_msec() / 1000.0

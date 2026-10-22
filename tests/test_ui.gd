@@ -127,10 +127,18 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	c.ok(ui.visible, "shown")
 	c.eq(ui.size, _root().get_visible_rect().size, "end screen covers the whole screen")
 	c.ok(ui.best_take != null, "the strongest recorded take is shown")
+	ui.show_result(s, "Unlocked: Soloist")
+	c.ok(ui._unlock.visible, "an unlock message is shown")
+	ui.show_result(s)
+	c.ok(not ui._unlock.visible, "and hidden without one")
 	var restarts := [0]
 	ui.restart_requested.connect(func() -> void: restarts[0] += 1)
 	ui.restart_button.pressed.emit()
 	c.eq(restarts[0], 1, "restart requested")
+	var changes := [0]
+	ui.character_requested.connect(func() -> void: changes[0] += 1)
+	ui.character_button.pressed.emit()
+	c.eq(changes[0], 1, "character change requested")
 	s.phase = Sim.Phase.WON
 	ui.show_result(s)
 	c.ok(ui.visible, "also shown on a win")
@@ -365,6 +373,24 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 	for i in 70:
 		main._physics_process(DT)
 	c.ok(main.end_ui.visible, "the end screen arrives after the beat")
+	main.free()
+
+
+func test_main_boots_into_character_select(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	c.ok(main.character_select.visible, "boot shows character select")
+	c.eq(main.sim, null, "no run starts before a choice")
+	main.choose_character(&"looper")
+	c.ok(not main.character_select.visible, "choice hides the select")
+	c.ok(main.sim != null, "the run starts")
+	c.eq(main.sim.echo_capacity(), 3, "the chosen character is applied")
+	main.end_ui.character_requested.emit()
+	c.ok(main.character_select.visible, "the end screen can return to select")
+	c.eq(main.sim, null, "the old run is put away")
+	main.meta.unlocked[&"solo"] = true
+	main.choose_character(&"solo")
+	c.eq(main.sim.echo_capacity(), 0, "solo runs without echoes")
 	main.free()
 
 

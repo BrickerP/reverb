@@ -4,9 +4,14 @@ extends RefCounted
 const DT := 1.0 / 60.0
 
 
-static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDirector.FINAL_WAVE) -> Dictionary:
+static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDirector.FINAL_WAVE,
+		character_id: StringName = &"") -> Dictionary:
 	var sim := Sim.new(seed_value)
 	var bot := Bot.new()
+	if character_id != &"":
+		var def := Content.character(character_id)
+		if def != null:
+			def.apply(sim)
 	if no_echo:
 		sim.player.stats.values[Stats.ECHO_SLOTS] = -100.0
 	sim.start_run()

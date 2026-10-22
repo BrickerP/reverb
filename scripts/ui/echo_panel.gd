@@ -38,6 +38,11 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 	var over := sim.bank.overflow(capacity)
 	var heading := Loc.t("shop.echoes", [sim.bank.takes.size(), capacity])
 	_box.add_child(UiTheme.label(heading, 22, UiTheme.WARN if over > 0 else UiTheme.ECHO))
+	if capacity <= 0:
+		var none := UiTheme.label(Loc.t("shop.echo_none_slots"), 16, UiTheme.DIM)
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_box.add_child(none)
+		return
 	if sim.bank.takes.is_empty():
 		var hint := UiTheme.label(Loc.t("shop.echo_none"), 16, UiTheme.DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

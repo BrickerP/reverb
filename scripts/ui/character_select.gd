@@ -1,0 +1,103 @@
+class_name CharacterSelectUi
+extends Control
+
+signal character_chosen(id: StringName)
+
+var _cards_box: HBoxContainer
+var _summary: Label
+var _cards: Array[Button] = []
+
+
+func _ready() -> void:
+	visible = false
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var dim := ColorRect.new()
+	dim.color = Color(0.01, 0.01, 0.04, 0.97)
+	add_child(dim)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(880.0, 0.0)
+	panel.add_theme_stylebox_override("panel", UiTheme.box(
+			Color(0.03, 0.04, 0.09, 0.98), Color(0.3, 0.5, 0.9, 0.6), 2, 10))
+	center.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 32)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	margin.add_child(box)
+	box.add_child(UiTheme.label(Loc.t("select.title"), 40, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(UiTheme.label(Loc.t("select.subtitle"), 16, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	_cards_box = HBoxContainer.new()
+	_cards_box.add_theme_constant_override("separation", 20)
+	_cards_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(_cards_box)
+	_summary = UiTheme.label("", 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_summary)
+	box.add_child(UiTheme.label(Loc.t("select.hint"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+
+
+func refresh(meta: Meta) -> void:
+	UiTheme.clear(_cards_box)
+	_cards.clear()
+	for def: CharacterDef in Content.characters().values():
+		var card := _make_card(def, meta)
+		_cards_box.add_child(card)
+		_cards.append(card)
+	_summary.text = Loc.t("select.best", [meta.best_wave, meta.wins])
+	for card in _cards:
+		if not card.disabled:
+			card.grab_focus()
+			break
+
+
+func _make_card(def: CharacterDef, meta: Meta) -> Button:
+	var locked := not meta.is_unlocked(def.id)
+	var card := Button.new()
+	card.custom_minimum_size = Vector2(380.0, 280.0)
+	card.disabled = locked
+	card.modulate.a = 0.5 if locked else 1.0
+	var normal := UiTheme.box(Color(0.05, 0.06, 0.12), def.color, 2, 8)
+	var hover := UiTheme.box(Color(0.08, 0.1, 0.2), def.color.lightened(0.2), 3, 8)
+	card.add_theme_stylebox_override("normal", normal)
+	card.add_theme_stylebox_override("hover", hover)
+	card.pressed.connect(_on_card.bind(def.id))
+	var margin := MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 22)
+	card.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 10)
+	margin.add_child(box)
+	box.add_child(UiTheme.label(Loc.character_name(def.id), 30, def.color))
+	var desc := UiTheme.label(Loc.character_desc(def.id), 15, UiTheme.DIM)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc.custom_minimum_size = Vector2(300.0, 0.0)
+	box.add_child(desc)
+	var slots := int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS]))
+	var power := float(def.overrides.get(Stats.ECHO_POWER, Stats.DEFAULTS[Stats.ECHO_POWER]))
+	if slots <= 0:
+		box.add_child(UiTheme.label(Loc.t("select.no_echo"), 16, UiTheme.WARN))
+	else:
+		box.add_child(UiTheme.label(Loc.t("select.echo_line", [slots, int(round(power * 100.0))]), 16, UiTheme.ECHO))
+	var spacer := Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
+	if locked:
+		box.add_child(UiTheme.label(Loc.t("select.locked", [def.unlock_wave]), 14, UiTheme.WARN))
+	else:
+		box.add_child(UiTheme.label(Loc.t("select.ready"), 14, UiTheme.COIN))
+	return card
+
+
+func _on_card(id: StringName) -> void:
+	character_chosen.emit(id)

@@ -7,6 +7,7 @@ const STARTER_WEAPON := &"pistol"
 static var _weapons: Dictionary = {}
 static var _items: Dictionary = {}
 static var _enemies: Array[EnemyDef] = []
+static var _characters: Dictionary = {}
 
 
 static func weapons() -> Dictionary:
@@ -25,6 +26,16 @@ static func enemies() -> Array[EnemyDef]:
 	if _enemies.is_empty():
 		_build_enemies()
 	return _enemies
+
+
+static func characters() -> Dictionary:
+	if _characters.is_empty():
+		_build_characters()
+	return _characters
+
+
+static func character(id: StringName) -> CharacterDef:
+	return characters().get(id) as CharacterDef
 
 
 static func weapon(id: StringName) -> WeaponDef:
@@ -69,6 +80,13 @@ static func _enemy(id: StringName, props: Dictionary) -> void:
 	e.id = id
 	_fill(e, props)
 	_enemies.append(e)
+
+
+static func _character(id: StringName, props: Dictionary) -> void:
+	var ch := CharacterDef.new()
+	ch.id = id
+	_fill(ch, props)
+	_characters[id] = ch
 
 
 static func _build_weapons() -> void:
@@ -136,4 +154,24 @@ static func _build_enemies() -> void:
 	_enemy(&"paradox", {
 		"hp": 5200.0, "speed": 55.0, "damage": 8.0, "radius": 30.0, "cost": 0.0, "min_wave": 20,
 		"weight": 0.0, "drop": 40, "color": Color(0.8, 0.5, 1.0), "sides": 8, "is_boss": true,
+	})
+
+
+static func _build_characters() -> void:
+	_character(&"looper", {
+		"color": Color(1.0, 0.55, 0.9),
+		"overrides": {Stats.ECHO_SLOTS: 3.0, Stats.ECHO_POWER: 0.4},
+		"unlock_wave": 0,
+	})
+	_character(&"solo", {
+		"color": Color(0.5, 0.95, 1.0),
+		"overrides": {Stats.ECHO_SLOTS: 0.0},
+		"mods": {
+			Stats.DAMAGE_PCT: 0.6,
+			Stats.MAX_HP: 25.0,
+			Stats.MOVE_SPEED: 20.0,
+			Stats.ATTACK_SPEED_PCT: 0.25,
+			Stats.CRIT_CHANCE: 0.05,
+		},
+		"unlock_wave": 10,
 	})

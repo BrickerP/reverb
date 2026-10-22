@@ -24,6 +24,26 @@ static func item_name(id: StringName) -> String:
 	return t("item." + String(id))
 
 
+static func character_name(id: StringName) -> String:
+	match id:
+		&"looper":
+			return t("select.looper_name")
+		&"solo":
+			return t("select.solo_name")
+		_:
+			return String(id)
+
+
+static func character_desc(id: StringName) -> String:
+	match id:
+		&"looper":
+			return t("select.looper_desc")
+		&"solo":
+			return t("select.solo_desc")
+		_:
+			return ""
+
+
 static func stat_name(id: StringName) -> String:
 	return t("stat." + String(id))
 

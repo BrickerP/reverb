@@ -31,6 +31,7 @@ var _hooked := false
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SAVE", "user://smoke_save.json")
 	if OS.get_cmdline_user_args().has("--shots"):
 		_shots_dir = ProjectSettings.globalize_path("res://shots")
 		DirAccess.make_dir_recursive_absolute(_shots_dir)
@@ -47,6 +48,8 @@ func _hook_draw_counters() -> void:
 func _physics_process(_delta: float) -> bool:
 	var sim: Sim = _main.sim
 	if sim == null:
+		if _main.character_select != null and _main.character_select.visible:
+			_main.choose_character(&"looper")
 		return false
 	if not _hooked:
 		_hook_draw_counters()

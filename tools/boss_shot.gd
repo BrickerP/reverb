@@ -9,6 +9,7 @@ var _dir := ""
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SAVE", "user://boss_shot_save.json")
 	_dir = ProjectSettings.globalize_path("res://shots")
 	DirAccess.make_dir_recursive_absolute(_dir)
 	_main = (load("res://scenes/main.tscn") as PackedScene).instantiate()
@@ -16,7 +17,11 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
+	if _main.character_select == null:
+		return false
 	if _main.sim == null:
+		if _main.character_select.visible:
+			_main.choose_character(&"looper")
 		return false
 	_frame += 1
 	match _step:

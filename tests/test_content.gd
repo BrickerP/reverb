@@ -42,3 +42,30 @@ func test_enemy_roster(c: Check) -> void:
 		if e.min_wave == 1:
 			first_wave += 1
 	c.ok(first_wave >= 1, "something can spawn on wave 1")
+
+
+func test_characters_apply_to_a_run(c: Check) -> void:
+	var loop := Content.character(&"looper")
+	c.ok(loop != null, "looper exists")
+	var a := Sim.new(1)
+	loop.apply(a)
+	c.eq(a.echo_capacity(), 3, "looper gets a third echo slot")
+	c.near(a.echo_power(), 0.4, 0.001, "looper echoes are weaker")
+	c.near(a.player.stats.damage_mult(), 1.0, 0.001, "looper keeps full personal damage")
+	var solo := Content.character(&"solo")
+	c.ok(solo != null, "solo exists")
+	var b := Sim.new(1)
+	solo.apply(b)
+	c.eq(b.echo_capacity(), 0, "solo has no echoes")
+	c.near(b.player.max_hp(), 55.0, 0.001, "solo gets extra health")
+	c.near(b.player.stats.damage_mult(), 1.6, 0.001, "solo gets personal damage")
+
+
+func test_solo_does_not_record_takes(c: Check) -> void:
+	var s := Sim.new(1)
+	Content.character(&"solo").apply(s)
+	s.start_run()
+	s.wave_duration = 0.001
+	s.step(0.01, Vector2.ZERO)
+	c.eq(s.phase, Sim.Phase.SHOP, "wave ended")
+	c.eq(s.bank.takes.size(), 0, "no take is recorded without echo slots")

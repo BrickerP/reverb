@@ -124,8 +124,9 @@ func _core_grid(pl: PlayerState) -> Control:
 	_add_stat(grid, Loc.stat_name(Stats.MAX_HP), Loc.stat_value(Stats.MAX_HP, pl.max_hp(), false))
 	_add_stat(grid, Loc.stat_name(Stats.MOVE_SPEED), Loc.stat_value(Stats.MOVE_SPEED, pl.stats.get_stat(Stats.MOVE_SPEED), false))
 	_add_stat(grid, Loc.stat_name(Stats.CRIT_CHANCE), Loc.stat_value(Stats.CRIT_CHANCE, pl.stats.get_stat(Stats.CRIT_CHANCE), false))
-	_add_stat(grid, Loc.t("hud.echo"), Loc.t("shop.echo_value", [int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))),
-			int(round(pl.stats.get_stat(Stats.ECHO_POWER) * 100.0))]))
+	if int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))) > 0:
+		_add_stat(grid, Loc.t("hud.echo"), Loc.t("shop.echo_value", [int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))),
+				int(round(pl.stats.get_stat(Stats.ECHO_POWER) * 100.0))]))
 	_add_stat(grid, Loc.stat_name(Stats.HP_REGEN), Loc.stat_value(Stats.HP_REGEN, pl.stats.get_stat(Stats.HP_REGEN), false))
 	return grid
 
