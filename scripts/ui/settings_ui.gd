@@ -59,11 +59,13 @@ func _ready() -> void:
 
 	shake_check = CheckButton.new()
 	shake_check.text = Loc.t("settings.shake")
+	shake_check.flat = true
 	shake_check.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	shake_check.toggled.connect(_on_shake)
 	box.add_child(shake_check)
 	fullscreen_check = CheckButton.new()
 	fullscreen_check.text = Loc.t("settings.fullscreen")
+	fullscreen_check.flat = true
 	fullscreen_check.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	fullscreen_check.toggled.connect(_on_fullscreen)
 	box.add_child(fullscreen_check)
