@@ -126,6 +126,7 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.show_result(s)
 	c.ok(ui.visible, "shown")
 	c.eq(ui.size, _root().get_visible_rect().size, "end screen covers the whole screen")
+	c.ok(ui.best_take != null, "the strongest recorded take is shown")
 	var restarts := [0]
 	ui.restart_requested.connect(func() -> void: restarts[0] += 1)
 	ui.restart_button.pressed.emit()
@@ -133,6 +134,32 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	s.phase = Sim.Phase.WON
 	ui.show_result(s)
 	c.ok(ui.visible, "also shown on a win")
+	ui.free()
+
+
+func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
+	var s := _shop_sim()
+	s.bank.takes.clear()
+	var weak := EchoTake.new()
+	weak.wave = 1
+	weak.weapons.append(Content.weapon(&"pistol"))
+	var strong := EchoTake.new()
+	strong.wave = 2
+	strong.weapons.append(Content.weapon(&"rifle"))
+	s.bank.add(weak)
+	s.bank.add(strong)
+	s.phase = Sim.Phase.LOST
+	var ui := EndUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.show_result(s)
+	c.eq(ui.best_take, strong, "the highest-DPS take wins")
+	c.ok(ui._best_row.visible, "the echo row is shown")
+	s.bank.takes.clear()
+	ui.show_result(s)
+	c.eq(ui.best_take, null, "no take survives an early death")
+	c.ok(not ui._best_row.visible, "the echo row hides")
+	c.ok(ui._no_echo.visible, "the empty state is shown")
 	ui.free()
 
 
