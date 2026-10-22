@@ -11,6 +11,7 @@ static func register() -> void:
 	_bind(&"restart", [_key(KEY_R)])
 	_bind(&"retry", [_key(KEY_S)])
 	_bind(&"quit_run", [_key(KEY_Q)])
+	_bind(&"settings", [_key(KEY_O)])
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
 

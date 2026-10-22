@@ -404,6 +404,30 @@ func test_shop_merges_two_takes(c: Check) -> void:
 	ui.free()
 
 
+func test_main_settings_open_and_close(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.open_settings()
+	c.ok(main.settings_ui.visible, "settings opens from the title screen")
+	main.settings_ui.close()
+	c.ok(not main.settings_ui.visible, "settings closes")
+	main.free()
+
+
+func test_shake_can_be_disabled(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var view := ArenaView.new()
+	view.bind(s)
+	view.shake_enabled = false
+	view._on_hurt(1.0)
+	c.near(view._shake, 0.0, 0.001, "no shake when disabled")
+	view.shake_enabled = true
+	view._on_hurt(1.0)
+	c.ok(view._shake > 0.0, "shake when enabled")
+	view.free()
+
+
 func test_main_boots_into_character_select(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

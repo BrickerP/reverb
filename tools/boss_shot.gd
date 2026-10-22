@@ -11,6 +11,7 @@ var _dir := ""
 func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://boss_shot_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://boss_shot_runs.jsonl")
+	OS.set_environment("REVERB_SETTINGS", "user://boss_shot_settings.json")
 	_dir = ProjectSettings.globalize_path("res://shots")
 	DirAccess.make_dir_recursive_absolute(_dir)
 	_main = (load("res://scenes/main.tscn") as PackedScene).instantiate()

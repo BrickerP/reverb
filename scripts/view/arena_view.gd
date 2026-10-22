@@ -18,6 +18,7 @@ var _victory := false
 var _victory_time := 0.0
 var _victory_origin := Vector2.ZERO
 var _victory_color := Color.WHITE
+var shake_enabled := true
 
 
 func bind(s: Sim) -> void:
@@ -51,7 +52,8 @@ func play_record_beat(s: Sim) -> void:
 func play_victory_beat(s: Sim) -> void:
 	_victory = true
 	_victory_time = 0.0
-	_shake = minf(1.0, _shake + 0.9)
+	if shake_enabled:
+		_shake = minf(1.0, _shake + 0.9)
 	_victory_origin = s.player.pos
 	_victory_color = Color(1.0, 0.75, 1.0)
 	if s.boss != null:
@@ -138,7 +140,8 @@ func kill_color(source: int, fallback: Color) -> Color:
 
 
 func _on_hurt(_amount: float) -> void:
-	_shake = minf(1.0, _shake + 0.5)
+	if shake_enabled:
+		_shake = minf(1.0, _shake + 0.5)
 
 
 func _on_echo(actor: EchoActor) -> void:

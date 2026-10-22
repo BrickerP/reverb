@@ -16,6 +16,10 @@ static func t(key: String, args: Array = []) -> String:
 	return text % args if not args.is_empty() else text
 
 
+static func reset_lang() -> void:
+	lang = _detect()
+
+
 static func weapon_name(id: StringName) -> String:
 	return t("weapon." + String(id))
 

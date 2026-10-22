@@ -11,6 +11,7 @@ var _dir := ""
 func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://select_shot_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://select_shot_runs.jsonl")
+	OS.set_environment("REVERB_SETTINGS", "user://select_shot_settings.json")
 	var save := ProjectSettings.globalize_path("user://select_shot_save.json")
 	if FileAccess.file_exists(save):
 		DirAccess.remove_absolute(save)

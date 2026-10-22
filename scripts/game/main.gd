@@ -8,6 +8,8 @@ var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
 var character_select: CharacterSelectUi
+var settings_ui: SettingsUi
+var settings: Settings
 var meta: Meta
 var run_log: RunLog
 var audio: GameAudio
@@ -21,29 +23,45 @@ var _end_delay := 0.0
 var _recorded := false
 var _unlock_text := ""
 var _run_started_msec := 0
+var _settings_restore_pause := false
 
 
 func _ready() -> void:
 	Controls.register()
+	var sp := OS.get_environment("REVERB_SETTINGS")
+	settings = Settings.new(sp if sp != "" else Settings.DEFAULT_PATH)
+	if OS.get_environment("REVERB_LANG") == "" and settings.language != "":
+		Loc.lang = settings.language
+	_apply_audio()
+	_apply_display()
 	audio = GameAudio.new()
 	add_child(audio)
 	var theme := UiTheme.build()
 	_view = ArenaView.new()
+	_view.shake_enabled = settings.shake
 	add_child(_view)
 	hud = Hud.new()
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
 	character_select = CharacterSelectUi.new()
+	settings_ui = SettingsUi.new()
 	_add_layer(1, hud, theme)
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
 	_add_layer(4, character_select, theme)
+	_add_layer(5, settings_ui, theme)
 	shop_ui.start_requested.connect(_on_start_requested)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
 	end_ui.seed_retry_requested.connect(_retry_seed)
 	end_ui.open_log_requested.connect(_open_log_folder)
 	character_select.character_chosen.connect(choose_character)
+	character_select.settings_requested.connect(open_settings)
+	settings_ui.volume_changed.connect(_on_volume_changed)
+	settings_ui.shake_changed.connect(_on_shake_changed)
+	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
+	settings_ui.language_changed.connect(_on_language_changed)
+	settings_ui.closed.connect(_on_settings_closed)
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
 	var log_path := OS.get_environment("REVERB_RUN_LOG")
@@ -96,6 +114,60 @@ func _open_log_folder() -> void:
 	OS.shell_open(run_log.folder_path())
 
 
+func open_settings() -> void:
+	if settings_ui.visible:
+		return
+	_settings_restore_pause = paused
+	if sim != null and sim.phase == Sim.Phase.WAVE and not paused:
+		_set_paused(true)
+	settings_ui.open(settings)
+
+
+func _on_settings_closed() -> void:
+	if not _settings_restore_pause and sim != null and sim.phase == Sim.Phase.WAVE:
+		_set_paused(false)
+	_settings_restore_pause = false
+
+
+func _on_volume_changed(value: float) -> void:
+	settings.volume = value
+	settings.save()
+	_apply_audio()
+
+
+func _on_shake_changed(on: bool) -> void:
+	settings.shake = on
+	settings.save()
+	_view.shake_enabled = on
+
+
+func _on_fullscreen_changed(on: bool) -> void:
+	settings.fullscreen = on
+	settings.save()
+	_apply_display()
+
+
+func _on_language_changed(code: String) -> void:
+	settings.language = code
+	settings.save()
+	if code == "":
+		Loc.reset_lang()
+	else:
+		Loc.lang = code
+	get_tree().reload_current_scene()
+
+
+func _apply_audio() -> void:
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.001, settings.volume)))
+
+
+func _apply_display() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+	DisplayServer.window_set_mode(mode)
+
+
 func show_select() -> void:
 	if character_select == null:
 		return
@@ -118,7 +190,7 @@ func toggle_pause() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if paused or sim == null or character_select.visible:
+	if paused or sim == null or character_select.visible or settings_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -133,7 +205,15 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"pause"):
+	if settings_ui.visible:
+		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"settings"):
+			settings_ui.close()
+			get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"settings"):
+		open_settings()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"pause"):
 		toggle_pause()
 	elif event.is_action_pressed(&"restart") and end_ui.visible:
 		new_run()

@@ -36,6 +36,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 | 移动 | WASD / 方向键 / 左摇杆 / 十字键 |
 | 开火 | 自动 |
 | 暂停 | P / Esc / Start |
+| 设置（音量/全屏/震动/语言） | O |
 | 退出到选角（暂停时） | Q |
 | 静音 | M |
 | 重开（仅结算界面） | R |
@@ -45,7 +46,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.7 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.8 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -92,13 +93,14 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - Boss 1：悖论（第 20 波，会沉默回响并召唤跑者）
 - 角色 3：复读机、独行者（无回响，第 10 波解锁）、镜像（实时复制当前装备，通关一次解锁）
 - 系统：叠录（两张录像合成一个回响，走位与武器合并）
+- 设置面板：音量、屏幕震动、全屏、语言（自动/English/中文），保存到本地设置文件；切语言会重载回选角。
 - 本地存档：最佳波数、通关次数、角色解锁
 - 20 波，波次预算与血量随波数增长
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1680 项）
+make test     # 无头测试（当前 1743 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）

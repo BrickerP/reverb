@@ -21,6 +21,7 @@ var _peak_projectiles := 0
 func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://frame_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://frame_probe_runs.jsonl")
+	OS.set_environment("REVERB_SETTINGS", "user://frame_probe_settings.json")
 	if DisplayServer.get_name() == "headless":
 		printerr("frame_probe needs a real window: drop --headless")
 		quit(1)

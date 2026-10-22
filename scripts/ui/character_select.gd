@@ -2,6 +2,7 @@ class_name CharacterSelectUi
 extends Control
 
 signal character_chosen(id: StringName)
+signal settings_requested
 
 var _cards_box: HBoxContainer
 var _summary: Label
@@ -51,6 +52,12 @@ func _ready() -> void:
 	_summary = UiTheme.label("", 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_summary)
 	box.add_child(UiTheme.label(Loc.t("select.hint"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	var settings_button := Button.new()
+	settings_button.text = Loc.t("select.settings")
+	settings_button.custom_minimum_size = Vector2(160.0, 36.0)
+	settings_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	settings_button.pressed.connect(func() -> void: settings_requested.emit())
+	box.add_child(settings_button)
 
 
 func refresh(meta: Meta) -> void:
