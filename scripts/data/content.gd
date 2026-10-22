@@ -151,6 +151,10 @@ static func _build_enemies() -> void:
 		"hp": 42.0, "speed": 62.0, "damage": 6.0, "radius": 19.0, "cost": 4.5, "min_wave": 5,
 		"weight": 2.0, "drop": 3, "color": Color(0.8, 0.4, 1.0), "sides": 6,
 	})
+	_enemy(&"silencer", {
+		"hp": 18.0, "speed": 115.0, "damage": 3.0, "radius": 12.0, "cost": 2.0, "min_wave": 8,
+		"weight": 1.2, "drop": 1, "color": Color(0.65, 0.8, 1.0), "sides": 5, "silence_time": 2.0,
+	})
 	_enemy(&"paradox", {
 		"hp": 5200.0, "speed": 55.0, "damage": 8.0, "radius": 30.0, "cost": 0.0, "min_wave": 20,
 		"weight": 0.0, "drop": 40, "color": Color(0.8, 0.5, 1.0), "sides": 8, "is_boss": true,

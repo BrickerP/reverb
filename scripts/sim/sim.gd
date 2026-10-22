@@ -292,6 +292,9 @@ func _move_enemies(delta: float) -> void:
 			player.hp -= e.damage
 			player.iframes = IFRAME_TIME
 			player_hurt.emit(e.damage)
+			if e.def.silence_time > echo_silenced:
+				echo_silenced = e.def.silence_time
+				echoes_silenced.emit(e.def.silence_time)
 
 
 func _update_pickups(delta: float) -> void:

@@ -13,3 +13,4 @@ extends Resource
 @export var color: Color = Color.WHITE
 @export var sides: int = 0
 @export var is_boss: bool = false
+@export var silence_time: float = 0.0

@@ -38,6 +38,28 @@ func _finish_wave(s: Sim) -> void:
 	_run(s, 5)
 
 
+func test_silencer_touch_silences_echoes(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.player.weapons.clear()
+	s.player.cooldowns.clear()
+	var e := EnemyState.new()
+	e.uid = 4242
+	e.def = Content.enemy(&"silencer")
+	e.pos = s.player.pos
+	e.radius = e.def.radius
+	e.max_hp = 100.0
+	e.hp = 100.0
+	e.damage = 0.0
+	e.speed = 0.0
+	s.enemies.append(e)
+	var silences := [0]
+	s.echoes_silenced.connect(func(_duration: float) -> void: silences[0] += 1)
+	s.step(DT, Vector2.ZERO)
+	c.ok(s.echo_silenced >= 2.0, "the touch silences echoes")
+	c.eq(silences[0], 1, "the silence signal fires")
+
+
 func test_player_moves_and_stays_in_arena(c: Check) -> void:
 	var s := _sim()
 	var start := s.player.pos
