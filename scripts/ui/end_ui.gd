@@ -4,10 +4,12 @@ extends Control
 signal restart_requested
 signal character_requested
 signal seed_retry_requested(seed_value: int)
+signal open_log_requested
 
 var restart_button: Button
 var character_button: Button
 var retry_button: Button
+var open_log_button: Button
 var best_take: EchoTake
 
 var _title: Label
@@ -57,6 +59,10 @@ func _ready() -> void:
 	retry_button.custom_minimum_size = Vector2(150.0, 28.0)
 	retry_button.pressed.connect(_on_retry_seed)
 	seed_row.add_child(retry_button)
+	open_log_button = Button.new()
+	open_log_button.custom_minimum_size = Vector2(170.0, 28.0)
+	open_log_button.pressed.connect(func() -> void: open_log_requested.emit())
+	seed_row.add_child(open_log_button)
 	box.add_child(seed_row)
 	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_unlock)
@@ -110,6 +116,7 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
 	retry_button.text = Loc.t("end.retry_seed")
+	open_log_button.text = Loc.t("end.open_log")
 	visible = true
 	restart_button.grab_focus()
 

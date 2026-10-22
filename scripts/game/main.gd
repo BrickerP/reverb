@@ -42,6 +42,7 @@ func _ready() -> void:
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
 	end_ui.seed_retry_requested.connect(_retry_seed)
+	end_ui.open_log_requested.connect(_open_log_folder)
 	character_select.character_chosen.connect(choose_character)
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
@@ -89,6 +90,12 @@ func _retry_seed(seed_value: int) -> void:
 	new_run(seed_value, character_id)
 
 
+func _open_log_folder() -> void:
+	if run_log == null or DisplayServer.get_name() == "headless":
+		return
+	OS.shell_open(run_log.folder_path())
+
+
 func show_select() -> void:
 	if character_select == null:
 		return
@@ -132,6 +139,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		new_run()
 	elif event.is_action_pressed(&"retry") and end_ui.visible and sim != null:
 		_retry_seed(sim.run_seed)
+	elif event.is_action_pressed(&"quit_run") and paused:
+		show_select()
 	elif event.is_action_pressed(&"character") and end_ui.visible:
 		show_select()
 	elif event.is_action_pressed(&"mute"):

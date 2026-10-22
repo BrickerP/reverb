@@ -10,6 +10,10 @@ func _init(save_path: String = DEFAULT_PATH) -> void:
 	path = save_path
 
 
+func folder_path() -> String:
+	return ProjectSettings.globalize_path(path.get_base_dir())
+
+
 # Appends one finished run as a JSON line. Local only; never uploaded.
 func append(sim: Sim, character_id: StringName, seconds: float) -> void:
 	if sim == null:

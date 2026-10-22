@@ -10,6 +10,7 @@ static func register() -> void:
 	_bind(&"pause", [_key(KEY_P), _key(KEY_ESCAPE), _button(JOY_BUTTON_START)])
 	_bind(&"restart", [_key(KEY_R)])
 	_bind(&"retry", [_key(KEY_S)])
+	_bind(&"quit_run", [_key(KEY_Q)])
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
 

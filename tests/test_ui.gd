@@ -143,6 +143,10 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.seed_retry_requested.connect(func(seed_value: int) -> void: retried[0] = seed_value)
 	ui.retry_button.pressed.emit()
 	c.eq(retried[0], s.run_seed, "seed retry carries the run seed")
+	var logs := [0]
+	ui.open_log_requested.connect(func() -> void: logs[0] += 1)
+	ui.open_log_button.pressed.emit()
+	c.eq(logs[0], 1, "open log folder requested")
 	s.phase = Sim.Phase.WON
 	ui.show_result(s)
 	c.ok(ui.visible, "also shown on a win")
@@ -417,6 +421,20 @@ func test_main_boots_into_character_select(c: Check) -> void:
 	main.meta.unlocked[&"solo"] = true
 	main.choose_character(&"solo")
 	c.eq(main.sim.echo_capacity(), 0, "solo runs without echoes")
+	main.free()
+
+
+func test_pause_can_quit_to_select(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	main.toggle_pause()
+	var event := InputEventAction.new()
+	event.action = &"quit_run"
+	event.pressed = true
+	main._unhandled_input(event)
+	c.ok(main.character_select.visible, "quit returns to character select")
+	c.eq(main.sim, null, "the abandoned run is put away")
 	main.free()
 
 
