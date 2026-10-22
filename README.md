@@ -43,7 +43,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.0 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.1 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
