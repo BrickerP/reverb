@@ -31,6 +31,22 @@ static func pending(ci: CanvasItem, sim: Sim) -> void:
 		ci.draw_circle(ps.pos, 2.5, col)
 
 
+# Wave-end beat: the just-recorded route collapses into the player.
+static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float) -> void:
+	if take.samples.is_empty():
+		return
+	var p := clampf(t, 0.0, 1.0)
+	# Stay near the full route, then pull it in at the end.
+	var collapse := p * p
+	var target := sim.player.pos
+	var pts := PackedVector2Array()
+	for i in range(0, take.samples.size(), 3):
+		pts.append(take.samples[i].lerp(target, collapse))
+	if pts.size() >= 2:
+		ci.draw_polyline(pts, Color(take.tint(), 0.85 * (1.0 - p)), 3.0)
+	ci.draw_arc(target, 14.0 + 34.0 * collapse, 0.0, TAU, 32, Color(take.tint(), 0.7 * (1.0 - p)), 2.0)
+
+
 static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary) -> void:
 	var lifespan := maxi(1, sim.echo_lifespan())
 	for a in sim.echoes:

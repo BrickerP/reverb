@@ -1,11 +1,12 @@
 extends SceneTree
 # Windowed screenshots of UI states that the main smoke run never pauses on:
-# the first-wave controls hint, the pause panel, the echo path reveal, and a take arriving in the shop.
+# controls hint, pause panel, echo path reveal, wave-end recording beat, and a take arriving in the shop.
 # Usage: godot --path . --fixed-fps 60 --disable-vsync --script res://tools/ui_shots.gd
 
 var _main: Node
 var _frame := 0
 var _step := 0
+var _beat_frames := 0
 var _shop_frames := 0
 var _dir := ""
 
@@ -42,10 +43,13 @@ func _process(_delta: float) -> bool:
 				_step = 3
 		3:
 			if _frame >= 72:
+				_release()
 				_save("echoes")
 				_main.sim.wave_duration = 0.001
 				_frame = 0
 				_step = 4
+			else:
+				_drive_square()
 		4:
 			if _main.shop_ui.visible:
 				_shop_frames += 1
@@ -55,6 +59,10 @@ func _process(_delta: float) -> bool:
 					_save("shop_settled")
 					quit()
 					return true
+			elif _main.sim.phase == Sim.Phase.SHOP:
+				_beat_frames += 1
+				if _beat_frames == 12:
+					_save("record_beat")
 	return false
 
 
@@ -73,6 +81,24 @@ func _echo_demo() -> void:
 		take.samples = path
 		sim.bank.add(take)
 	sim.start_wave(2)
+
+
+func _drive_square() -> void:
+	_release()
+	match int(_frame / 18) % 4:
+		0:
+			Input.action_press(&"move_right")
+		1:
+			Input.action_press(&"move_down")
+		2:
+			Input.action_press(&"move_left")
+		3:
+			Input.action_press(&"move_up")
+
+
+func _release() -> void:
+	for action in [&"move_left", &"move_right", &"move_up", &"move_down"]:
+		Input.action_release(action)
 
 
 func _save(name: String) -> void:

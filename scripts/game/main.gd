@@ -1,5 +1,7 @@
 extends Node
 
+const RECORD_BEAT := 0.6
+
 var sim: Sim
 var hud: Hud
 var shop_ui: ShopUi
@@ -8,6 +10,7 @@ var paused: bool = false
 
 var _view: ArenaView
 var _phase: Sim.Phase = Sim.Phase.SHOP
+var _shop_delay := 0.0
 
 
 func _ready() -> void:
@@ -34,6 +37,7 @@ func new_run(seed_value: int = -1) -> void:
 	shop_ui.visible = false
 	end_ui.visible = false
 	_set_paused(false)
+	_shop_delay = 0.0
 	sim.start_run()
 	_phase = sim.phase
 
@@ -47,6 +51,10 @@ func _physics_process(delta: float) -> void:
 	if paused:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
+	if _shop_delay > 0.0:
+		_shop_delay -= delta
+		if _shop_delay <= 0.0:
+			_open_shop()
 	_sync_phase()
 
 
@@ -75,12 +83,25 @@ func _sync_phase() -> void:
 		return
 	_phase = sim.phase
 	_set_paused(false)
-	hud.visible = _phase != Sim.Phase.SHOP
 	match _phase:
+		Sim.Phase.WAVE:
+			hud.visible = true
 		Sim.Phase.SHOP:
-			shop_ui.open(sim)
+			# Hold on the arena for a beat: the wave is being recorded, then the shop opens.
+			hud.visible = true
+			_shop_delay = RECORD_BEAT
+			_view.play_record_beat(sim)
 		Sim.Phase.LOST, Sim.Phase.WON:
+			hud.visible = true
 			end_ui.show_result(sim)
+
+
+func _open_shop() -> void:
+	if sim.phase != Sim.Phase.SHOP or shop_ui.visible:
+		return
+	_shop_delay = 0.0
+	hud.visible = false
+	shop_ui.open(sim)
 
 
 func _set_paused(on: bool) -> void:

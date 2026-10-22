@@ -4,12 +4,15 @@ extends Node2D
 const MAX_SPARKS := 400
 const PATH_STRIDE := 3
 const REVEAL_TIME := 0.8
+const RECORD_BEAT := 0.6
 
 var sim: Sim
 var _paths: Dictionary = {}
 var _reveal: Dictionary = {}
 var _sparks: Array[Spark] = []
 var _shake: float = 0.0
+var _beat_take: EchoTake
+var _beat_time := 0.0
 
 
 func bind(s: Sim) -> void:
@@ -18,10 +21,21 @@ func bind(s: Sim) -> void:
 	_reveal.clear()
 	_sparks.clear()
 	_shake = 0.0
+	_beat_take = null
+	_beat_time = 0.0
 	sim.enemy_killed.connect(_on_kill)
 	sim.enemy_hit.connect(_on_hit)
 	sim.player_hurt.connect(_on_hurt)
 	sim.echo_spawned.connect(_on_echo)
+
+
+# Called by Main between the last frame of a wave and the shop opening.
+func play_record_beat(s: Sim) -> void:
+	if s.bank.takes.is_empty():
+		return
+	_beat_take = s.bank.takes[s.bank.takes.size() - 1]
+	_beat_time = 0.0
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
@@ -39,6 +53,10 @@ func _process(delta: float) -> void:
 	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
 	for actor in _reveal.keys():
 		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
+	if _beat_take != null:
+		_beat_time = minf(RECORD_BEAT, _beat_time + delta)
+		if _beat_time >= RECORD_BEAT:
+			_beat_take = null
 	queue_redraw()
 
 
@@ -47,7 +65,10 @@ func _draw() -> void:
 		return
 	ArenaPainter.arena(self)
 	ArenaPainter.pending(self, sim)
-	ArenaPainter.echo_paths(self, sim, _paths, _reveal)
+	if _beat_take == null:
+		ArenaPainter.echo_paths(self, sim, _paths, _reveal)
+	else:
+		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT)
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim)

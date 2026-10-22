@@ -81,7 +81,7 @@ func _play(sim: Sim) -> void:
 				_stage = Stage.DIE
 		Sim.Phase.SHOP:
 			_drive(Vector2.ZERO)
-			if sim.wave == TARGET_WAVE - 1 and _hold_for_shot("shop"):
+			if sim.wave == TARGET_WAVE - 1 and _main.shop_ui.visible and _hold_for_shot("shop"):
 				return
 			_shop_step()
 		_:

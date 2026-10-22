@@ -267,7 +267,11 @@ func test_main_runs_the_whole_loop(c: Check) -> void:
 	main._physics_process(DT)
 	main._physics_process(DT)
 	c.eq(s.phase, Sim.Phase.SHOP, "wave ended")
-	c.ok(main.shop_ui.visible, "shop opened by the phase change")
+	c.ok(main.hud.visible, "the HUD holds the arena for the record beat")
+	c.ok(not main.shop_ui.visible, "the shop waits for the beat")
+	for i in 60:
+		main._physics_process(DT)
+	c.ok(main.shop_ui.visible, "the shop opens after the beat")
 	c.ok(not main.hud.visible, "the HUD gives way to the shop")
 	main.toggle_pause()
 	c.ok(not main.paused, "cannot pause inside the shop")
