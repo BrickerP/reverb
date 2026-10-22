@@ -6,6 +6,7 @@ var sim: Sim
 var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
+var audio: GameAudio
 var paused: bool = false
 
 var _view: ArenaView
@@ -15,6 +16,8 @@ var _shop_delay := 0.0
 
 func _ready() -> void:
 	Controls.register()
+	audio = GameAudio.new()
+	add_child(audio)
 	var theme := UiTheme.build()
 	_view = ArenaView.new()
 	add_child(_view)
@@ -33,6 +36,7 @@ func new_run(seed_value: int = -1) -> void:
 	sim = Sim.new(seed_value if seed_value >= 0 else randi())
 	_view.bind(sim)
 	hud.bind(sim)
+	audio.bind(sim)
 	hud.visible = true
 	shop_ui.visible = false
 	end_ui.visible = false
@@ -63,6 +67,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_pause()
 	elif event.is_action_pressed(&"restart") and end_ui.visible:
 		new_run()
+	elif event.is_action_pressed(&"mute"):
+		audio.toggle_mute()
 
 
 func _add_layer(index: int, ui: Control, theme: Theme) -> void:

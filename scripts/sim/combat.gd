@@ -62,6 +62,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, s
 		p.color = w.color if source < 0 else w.color.lerp(tint, 0.55)
 		p.source = source
 		sim.projectiles.append(p)
+	sim.shot_fired.emit(source)
 
 
 static func step_projectiles(sim: Sim, delta: float) -> void:

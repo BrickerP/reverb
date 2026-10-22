@@ -53,6 +53,7 @@ func buy(sim: Sim, o: Offer) -> bool:
 	else:
 		sim.player.add_item(o.item)
 	o.sold = true
+	sim.purchased.emit()
 	return true
 
 
@@ -70,6 +71,7 @@ func replace_weapon(sim: Sim, o: Offer, index: int) -> bool:
 	sim.player.weapons[index] = o.weapon
 	sim.player.cooldowns[index] = 0.0
 	o.sold = true
+	sim.purchased.emit()
 	return true
 
 

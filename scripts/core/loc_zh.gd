@@ -11,6 +11,7 @@ const TABLE := {
 	"hud.pause": "暂停 / 继续",
 	"hud.auto_fire": "自动开火",
 	"hud.help_restart": "结算后重开",
+	"hud.mute": "静音 / 取消静音",
 	"hud.help_echo": "每波录制你的走位与武器，下一波回放",
 	"shop.title": "商店  ·  第 %d 波完成",
 	"shop.reroll": "刷新 (%d)",

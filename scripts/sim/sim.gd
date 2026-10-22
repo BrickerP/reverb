@@ -10,6 +10,9 @@ signal enemy_hit(pos: Vector2, amount: float, crit: bool, source: int)
 signal player_hurt(amount: float)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
+signal shot_fired(source: int)
+signal material_collected(amount: int)
+signal purchased
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
@@ -213,6 +216,7 @@ func _update_pickups(delta: float) -> void:
 		var d2 := to_player.length_squared()
 		if d2 <= COLLECT_RADIUS * COLLECT_RADIUS:
 			player.materials += pk.value
+			material_collected.emit(pk.value)
 			pk.value = 0
 			continue
 		if not pk.magnet and d2 <= pull * pull:

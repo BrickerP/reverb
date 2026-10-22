@@ -249,7 +249,7 @@ func _draw_onboarding() -> void:
 
 func _draw_pause() -> void:
 	draw_rect(Rect2(0.0, 0.0, WIDTH, HEIGHT), Color(0.0, 0.0, 0.0, 0.6))
-	var panel := Rect2(340.0, 190.0, 600.0, 330.0)
+	var panel := Rect2(340.0, 190.0, 600.0, 360.0)
 	draw_rect(panel, Color(0.02, 0.03, 0.08, 0.97))
 	draw_rect(panel, Color(0.35, 0.55, 0.95, 0.55), false, 2.0)
 	_text(Loc.t("hud.paused_title"), Vector2(panel.position.x + 40.0, panel.position.y + 54.0), 32, UiTheme.INK)
@@ -263,6 +263,9 @@ func _draw_pause() -> void:
 	row_y += 44.0
 	_keycap("R", Vector2(panel.position.x + 40.0, row_y), size)
 	_text(Loc.t("hud.help_restart"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
+	row_y += 44.0
+	_keycap("M", Vector2(panel.position.x + 40.0, row_y), size)
+	_text(Loc.t("hud.mute"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
 	row_y += 52.0
 	draw_line(Vector2(panel.position.x + 40.0, row_y), Vector2(panel.end.x - 40.0, row_y), Color(1, 1, 1, 0.12), 1.0)
 	row_y += 30.0

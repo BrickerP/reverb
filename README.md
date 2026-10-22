@@ -2,7 +2,7 @@
 
 Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和武器配置录成一张「回响」，下一波让过去的自己以 50% 威力替你打——但槽位有限，你必须决定留下哪个过去的自己。
 
-当前是**垂直切片**：20 波完整可玩，有商店和构筑；没有角色、元进度、Boss、音频。
+当前是**垂直切片**：20 波完整可玩，有商店、构筑和占位音效；没有角色、元进度、Boss。
 
 ![wave](docs/wave.png)
 ![shop](docs/shop.png)
@@ -30,6 +30,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 | 移动 | WASD / 方向键 / 左摇杆 / 十字键 |
 | 开火 | 自动 |
 | 暂停 | P / Esc / Start |
+| 静音 | M |
 | 重开（仅结算界面） | R |
 | 商店 | 鼠标点击卡片与按钮 |
 
@@ -58,10 +59,12 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1240 项）
+make test     # 无头测试（当前 1426 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
+make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
+python3 tools/gen_audio.py  # 重新生成程序合成音效
 ```
 
 代码结构：
@@ -72,14 +75,16 @@ scripts/echo/   回响录制、回放、库存
 scripts/data/   武器/道具/敌人定义
 scripts/view/   竞技场绘制与 HUD
 scripts/ui/     商店、结算、主题
+scripts/game/   主流程、输入、音频
 scripts/dev/    bot、压测场景
+audio/          程序合成的音效与环境音
 tests/          无头测试
-tools/          烟测、平衡、性能探针
+tools/          烟测、平衡、性能探针、音效生成
 ```
 
 ## 已知限制
 
-- 无音频。
+- 音效与环境音是程序合成的占位，未做混音、动态范围与音乐设计。
 - 难度只用 bot 验证过（带回响约 50% 通关率），真人手感未调。
 - 4–5 个回响同屏的可读性未验证。
 - Steam Deck / 低端机帧率未验证。

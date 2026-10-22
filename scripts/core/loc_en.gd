@@ -11,6 +11,7 @@ const TABLE := {
 	"hud.pause": "Pause / resume",
 	"hud.auto_fire": "Auto-fire",
 	"hud.help_restart": "Restart after the run ends",
+	"hud.mute": "Mute / unmute",
 	"hud.help_echo": "Each wave is recorded, then replayed next wave",
 	"shop.title": "Shop  ·  wave %d cleared",
 	"shop.reroll": "Reroll (%d)",
