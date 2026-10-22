@@ -1,7 +1,12 @@
 class_name BuildPanel
 extends PanelContainer
 
+var weapons_label: Label
+var items_label: Label
+
 var _box: VBoxContainer
+var _weapons_row: Control
+var _items_row: Control
 
 
 func _init() -> void:
@@ -15,12 +20,26 @@ func refresh(sim: Sim) -> void:
 	UiTheme.clear(_box)
 	var pl := sim.player
 	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
-	_box.add_child(UiTheme.label(Loc.t("shop.weapons", [pl.weapons.size(), Content.MAX_WEAPON_SLOTS]), 16, UiTheme.DIM))
-	_box.add_child(_weapon_chips(pl))
-	_box.add_child(UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM))
-	_box.add_child(_item_chips(pl))
+	weapons_label = UiTheme.label(Loc.t("shop.weapons", [pl.weapons.size(), Content.MAX_WEAPON_SLOTS]), 16, UiTheme.DIM)
+	_box.add_child(weapons_label)
+	_weapons_row = _weapon_chips(pl)
+	_box.add_child(_weapons_row)
+	items_label = UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM)
+	_box.add_child(items_label)
+	_items_row = _item_chips(pl)
+	_box.add_child(_items_row)
 	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
 	_box.add_child(_core_grid(pl))
+
+
+func flash_slots() -> void:
+	UiTheme.flash(weapons_label)
+	UiTheme.flash(_weapons_row)
+
+
+func flash_items() -> void:
+	UiTheme.flash(items_label)
+	UiTheme.flash(_items_row)
 
 
 func _flow() -> HFlowContainer:

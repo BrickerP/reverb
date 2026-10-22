@@ -52,14 +52,37 @@ func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 	ui.free()
 
 
-func test_poor_player_cannot_press_anything_but_start(c: Check) -> void:
+func test_poor_cards_stay_pressable_and_flash_materials(c: Check) -> void:
 	var s := _shop_sim(0)
 	var ui := _open_shop(s)
-	for card in ui.offers_box.get_children():
-		c.ok((card as OfferCard).disabled, "every card is disabled with no materials")
+	var first: OfferCard = null
+	for node in ui.offers_box.get_children():
+		var card := node as OfferCard
+		c.eq(card.blocked_reason, &"poor", "the reason is poor")
+		c.ok(not card.disabled, "the card is still pressable so it can explain")
+		if first == null:
+			first = card
 	c.ok(ui.reroll_button.disabled, "reroll disabled")
 	c.ok(not ui.start_button.disabled, "start still available")
+	var before := s.player.materials
+	first.pressed.emit()
+	c.eq(s.player.materials, before, "a blocked card buys nothing")
+	c.ok(first.modulate.g < 0.9, "the clicked card flashes red")
+	c.ok(ui._materials.modulate != Color.WHITE, "the materials counter flashes")
 	ui.free()
+
+
+func test_full_weapon_slots_flash_the_build_section(c: Check) -> void:
+	var s := _shop_sim(100)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	var bp := BuildPanel.new()
+	bp.theme = UiTheme.build()
+	_root().add_child(bp)
+	bp.refresh(s)
+	bp.flash_slots()
+	c.ok(bp.weapons_label.modulate != Color.WHITE, "the weapon section flashes")
+	bp.free()
 
 
 func test_reroll_button_restocks_and_charges(c: Check) -> void:

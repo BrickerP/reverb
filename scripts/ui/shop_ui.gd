@@ -70,7 +70,7 @@ func refresh(animate_echo: bool = false) -> void:
 		var card := OfferCard.new()
 		offers_box.add_child(card)
 		card.setup(o, sim)
-		card.pressed.connect(_on_offer.bind(o))
+		card.pressed.connect(_on_offer.bind(o, card))
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("shop.reroll", [cost])
 	reroll_button.disabled = sim.player.materials < cost
@@ -121,11 +121,27 @@ func _build_left() -> Control:
 	return column
 
 
-func _on_offer(o: Offer) -> void:
+func _on_offer(o: Offer, card: OfferCard) -> void:
+	var reason := sim.shop.block_reason(sim, o)
+	if reason != &"":
+		card.reject()
+		_flash_block(reason)
+		return
 	var index := sim.shop.offers.find(o)
 	if sim.shop.buy(sim, o):
 		refresh()
 		_focus_card(index)
+
+
+# Blocked clicks point at the resource that is missing, instead of only reading "can't buy".
+func _flash_block(reason: StringName) -> void:
+	match reason:
+		&"poor":
+			UiTheme.flash(_materials)
+		&"full":
+			_build_panel.flash_slots()
+		&"maxed":
+			_build_panel.flash_items()
 
 
 func _on_reroll() -> void:

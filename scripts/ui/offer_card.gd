@@ -4,6 +4,7 @@ extends Button
 const HEIGHT := 100.0
 
 var offer: Offer
+var blocked_reason: StringName = &""
 
 
 func _init() -> void:
@@ -29,8 +30,11 @@ static func weapon_dps(w: WeaponDef, stats: Stats) -> float:
 func setup(o: Offer, sim: Sim) -> void:
 	offer = o
 	var reason := sim.shop.block_reason(sim, o)
-	disabled = reason != &""
-	modulate.a = 0.4 if reason == &"sold" else (0.65 if disabled else 1.0)
+	blocked_reason = reason
+	# Sold cards are inert. Every other blocked card stays pressable so it can explain
+	# the constraint by flashing the resource it needs.
+	disabled = reason == &"sold"
+	modulate.a = 0.4 if reason == &"sold" else (0.72 if reason != &"" else 1.0)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
@@ -50,6 +54,14 @@ func setup(o: Offer, sim: Sim) -> void:
 		var desc := UiTheme.label(_description(o), 15, UiTheme.DIM)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(desc)
+
+
+func reject() -> void:
+	UiTheme.flash(self)
+	pivot_offset = size * 0.5
+	var tween := create_tween()
+	tween.tween_property(self, "scale", Vector2(1.02, 1.02), 0.05).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
 
 
 func _title_row(o: Offer, reason: StringName) -> Control:

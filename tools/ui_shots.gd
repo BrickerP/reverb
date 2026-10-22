@@ -57,12 +57,18 @@ func _process(_delta: float) -> bool:
 					_save("shop_arrive")
 				elif _shop_frames >= 70:
 					_save("shop_settled")
-					quit()
-					return true
+					_blocked_demo()
+					_frame = 0
+					_step = 5
 			elif _main.sim.phase == Sim.Phase.SHOP:
 				_beat_frames += 1
 				if _beat_frames == 12:
 					_save("record_beat")
+		5:
+			if _frame >= 3:
+				_save("shop_blocked")
+				quit()
+				return true
 	return false
 
 
@@ -81,6 +87,18 @@ func _echo_demo() -> void:
 		take.samples = path
 		sim.bank.add(take)
 	sim.start_wave(2)
+
+
+func _blocked_demo() -> void:
+	var ui: ShopUi = _main.shop_ui
+	_main.sim.player.materials = 0
+	_main.sim.shop.roll(_main.sim)
+	ui.refresh()
+	for node in ui.offers_box.get_children():
+		var card := node as OfferCard
+		if card.blocked_reason == &"poor":
+			card.pressed.emit()
+			return
 
 
 func _drive_square() -> void:

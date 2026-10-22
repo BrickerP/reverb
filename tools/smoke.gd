@@ -113,7 +113,7 @@ func _shop_step() -> void:
 	if not ui.visible:
 		return
 	for card: OfferCard in ui.offers_box.get_children():
-		if not card.disabled:
+		if not card.disabled and card.blocked_reason == &"":
 			card.pressed.emit()
 			_purchases += 1
 			return

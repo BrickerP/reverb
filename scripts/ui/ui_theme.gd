@@ -41,6 +41,16 @@ static func clear(node: Node) -> void:
 		child.queue_free()
 
 
+# Briefly tint a control and fade back: used when a shop action is blocked.
+static func flash(control: Control) -> void:
+	if control == null:
+		return
+	var alpha := control.modulate.a
+	control.modulate = Color(WARN.r, WARN.g, WARN.b, alpha)
+	var tween := control.create_tween()
+	tween.tween_property(control, "modulate", Color(1, 1, 1, alpha), 0.45).set_ease(Tween.EASE_OUT)
+
+
 static func box(fill: Color, border: Color, border_width: int = 2, radius: int = 6) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = fill
