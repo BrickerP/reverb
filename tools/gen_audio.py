@@ -139,6 +139,17 @@ def main():
     n = int(SR * 0.03)
     write("click", tone(n, 2600.0, 2200.0, amp=0.12, release=0.012, noise=0.2))
 
+    # boss arrival: low growl
+    n = int(SR * 0.9)
+    write("boss", mix(
+        tone(n, 72.0, 42.0, amp=0.4, kind="saw", attack=0.12, release=0.4, noise=0.08),
+        tone(n, 110.0, 55.0, amp=0.2, kind="sine", attack=0.1, release=0.4),
+    ))
+
+    # echo silence: a dull cut-off thud
+    n = int(SR * 0.45)
+    write("silence", tone(n, 300.0, 70.0, amp=0.35, kind="saw", attack=0.005, release=0.18, noise=0.06))
+
     # ambient loop: 12s, whole-cycle frequencies keep the seam quiet
     seconds = 12
     n = SR * seconds

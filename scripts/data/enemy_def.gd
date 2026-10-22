@@ -12,3 +12,4 @@ extends Resource
 @export var drop: int = 1
 @export var color: Color = Color.WHITE
 @export var sides: int = 0
+@export var is_boss: bool = false

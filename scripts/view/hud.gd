@@ -129,49 +129,71 @@ func _draw_echo_chips() -> void:
 	_text(Loc.t("hud.echo"), Vector2(40.0, 62.0), 14, UiTheme.DIM)
 	var lifespan := sim.echo_lifespan()
 	var now := Time.get_ticks_msec() / 1000.0
+	var muted := sim.echo_silenced > 0.0
 	for i in sim.echo_capacity():
 		var chip := Rect2(112.0 + float(i) * 28.0, 46.0, 22.0, 16.0)
 		if i < sim.echoes.size():
 			var take := sim.echoes[i].take
 			var remaining := echo_remaining(take)
 			var tint := take.tint()
-			draw_rect(chip, Color(tint, 0.9))
+			draw_rect(chip, Color(tint, 0.35 if muted else 0.9))
 			var segments := maxi(1, lifespan)
 			var seg_w := 20.0 / float(segments)
 			for k in segments:
 				var filled := k < remaining
 				var pip := Rect2(chip.position.x + 1.0 + float(k) * seg_w, chip.position.y + 11.0, seg_w - 1.0, 4.0)
-				draw_rect(pip, Color(1, 1, 1, 0.85) if filled else Color(0.02, 0.03, 0.08, 0.55))
+				var pip_col := Color(1, 1, 1, 0.35 if muted else 0.85) if filled else Color(0.02, 0.03, 0.08, 0.55)
+				draw_rect(pip, pip_col)
 			if remaining <= 1:
 				var pulse := 0.5 + 0.5 * sin(now * 8.0)
 				draw_rect(chip.grow(1.0), Color(UiTheme.WARN, 0.35 + 0.55 * pulse), false, 1.5)
 		else:
 			draw_rect(chip, Color(1, 1, 1, 0.28), false, 1.5)
+	if muted:
+		var width := float(sim.echo_capacity()) * 28.0 - 6.0
+		var ratio := clampf(sim.echo_silenced / Sim.BOSS_SILENCE_TIME, 0.0, 1.0)
+		draw_rect(Rect2(112.0, 64.0, width, 3.0), Color(1, 1, 1, 0.1))
+		draw_rect(Rect2(112.0, 64.0, width * ratio, 3.0), UiTheme.WARN)
 
 
 func _draw_wave() -> void:
-	var title := Loc.t("hud.wave", [sim.wave, WaveDirector.FINAL_WAVE])
-	_text(title, Vector2(440.0, 34.0), 28, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
-	var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
-	var urgent := left <= 5
-	var bar := Rect2(520.0, 44.0, 240.0, 6.0)
-	draw_rect(bar, Color(1, 1, 1, 0.12))
-	var ratio := clampf(sim.wave_time / maxf(0.01, sim.wave_duration), 0.0, 1.0)
-	var col := UiTheme.WARN if urgent else UiTheme.ACCENT
-	if urgent:
-		var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 90.0)
-		col = Color(col, pulse)
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), col)
-	_text("%d" % left, Vector2(768.0, 54.0), 16, UiTheme.WARN if urgent else UiTheme.DIM)
+	var boss_wave := sim.wave == WaveDirector.FINAL_WAVE
+	if boss_wave:
+		_text(Loc.t("hud.boss"), Vector2(440.0, 34.0), 26, Color(0.9, 0.8, 1.0),
+				HORIZONTAL_ALIGNMENT_CENTER, 400.0)
+		var boss_bar := Rect2(460.0, 44.0, 360.0, 8.0)
+		draw_rect(boss_bar, Color(1, 1, 1, 0.1))
+		var boss_ratio := 0.0
+		if sim.boss != null:
+			boss_ratio = clampf(sim.boss.hp / maxf(1.0, sim.boss.max_hp), 0.0, 1.0)
+		draw_rect(Rect2(boss_bar.position, Vector2(boss_bar.size.x * boss_ratio, boss_bar.size.y)),
+				Color(0.8, 0.5, 1.0))
+		draw_rect(boss_bar, Color(0.8, 0.5, 1.0, 0.7), false, 1.5)
+	else:
+		var title := Loc.t("hud.wave", [sim.wave, WaveDirector.FINAL_WAVE])
+		_text(title, Vector2(440.0, 34.0), 28, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
+		var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
+		var urgent := left <= 5
+		var bar := Rect2(520.0, 44.0, 240.0, 6.0)
+		draw_rect(bar, Color(1, 1, 1, 0.12))
+		var ratio := clampf(sim.wave_time / maxf(0.01, sim.wave_duration), 0.0, 1.0)
+		var col := UiTheme.WARN if urgent else UiTheme.ACCENT
+		if urgent:
+			var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 90.0)
+			col = Color(col, pulse)
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), col)
+		_text("%d" % left, Vector2(768.0, 54.0), 16, UiTheme.WARN if urgent else UiTheme.DIM)
 	# One pip per wave: the run's position at a glance.
 	var count := WaveDirector.FINAL_WAVE
 	var pip_w := 8.0
 	var gap := 2.0
 	var total := float(count) * pip_w + float(count - 1) * gap
 	var x := 640.0 - total * 0.5
+	var base_y := 60.0 if boss_wave else 56.0
 	for i in count:
 		var current := i == sim.wave - 1
-		var pip := Rect2(x + float(i) * (pip_w + gap), 55.0 if current else 56.0, pip_w, 7.0 if current else 5.0)
+		var pip := Rect2(x + float(i) * (pip_w + gap), base_y - (1.0 if current else 0.0), pip_w,
+				7.0 if current else 5.0)
 		if i < sim.wave - 1:
 			draw_rect(pip, Color(UiTheme.ACCENT, 0.55))
 		elif current:

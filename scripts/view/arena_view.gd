@@ -27,6 +27,8 @@ func bind(s: Sim) -> void:
 	sim.enemy_hit.connect(_on_hit)
 	sim.player_hurt.connect(_on_hurt)
 	sim.echo_spawned.connect(_on_echo)
+	sim.boss_spawned.connect(_on_boss_spawned)
+	sim.echoes_silenced.connect(_on_echo_silence)
 
 
 # Called by Main between the last frame of a wave and the shop opening.
@@ -118,6 +120,22 @@ func _on_echo(actor: EchoActor) -> void:
 	if ring != null:
 		ring.ring = true
 		ring.radius = PlayerState.RADIUS
+
+
+func _on_boss_spawned(enemy: EnemyState) -> void:
+	var ring := _spark(enemy.pos, enemy.def.color, 0.0, 0.9)
+	if ring != null:
+		ring.ring = true
+		ring.radius = enemy.radius
+
+
+func _on_echo_silence(_duration: float) -> void:
+	if sim == null or sim.boss == null:
+		return
+	var ring := _spark(sim.boss.pos, Color(1.0, 0.5, 0.9), 0.0, 0.8)
+	if ring != null:
+		ring.ring = true
+		ring.radius = sim.boss.radius
 
 
 func _spark(pos: Vector2, color: Color, speed: float, life: float) -> Spark:

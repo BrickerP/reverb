@@ -13,17 +13,23 @@ signal echo_recorded(take: EchoTake)
 signal shot_fired(source: int)
 signal material_collected(amount: int)
 signal purchased
+signal boss_spawned(enemy: EnemyState)
+signal boss_defeated
+signal echoes_silenced(duration: float)
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
 const ARENA := Rect2(40.0, 80.0, 1200.0, 600.0)
-const MAX_ENEMY_RADIUS := 24.0
+const MAX_ENEMY_RADIUS := 32.0
 const SPAWN_TELEGRAPH := 0.8
 const IFRAME_TIME := 0.45
 const WAVE_END_HEAL := 0.3
 const COLLECT_RADIUS := 16.0
 const MAGNET_ACCEL := 1800.0
 const START_MATERIALS := 20
+const BOSS_SILENCE_TIME := 3.0
+const BOSS_SILENCE_EVERY := 8.0
+const BOSS_MINION_EVERY := 10.0
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -38,6 +44,8 @@ var projectiles: Array[Projectile] = []
 var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
+var boss: EnemyState
+var echo_silenced := 0.0
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -46,6 +54,8 @@ var shop := Shop.new()
 var _plan: Array[SpawnEvent] = []
 var _plan_idx: int = 0
 var _next_uid: int = 1
+var _boss_silence_cd := 0.0
+var _boss_minion_cd := 0.0
 
 
 func _init(seed_value: int = 1) -> void:
@@ -85,8 +95,19 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
-	_plan = WaveDirector.plan(n, run_seed)
+	var mult := 0.35 if n == WaveDirector.FINAL_WAVE else 1.0
+	_plan = WaveDirector.plan(n, run_seed, mult)
+	if n == WaveDirector.FINAL_WAVE:
+		var boss_event := SpawnEvent.new()
+		boss_event.def = Content.enemy(&"paradox")
+		boss_event.time = 1.5
+		_plan.append(boss_event)
+		_plan.sort_custom(func(a: SpawnEvent, b: SpawnEvent) -> bool: return a.time < b.time)
 	_plan_idx = 0
+	boss = null
+	echo_silenced = 0.0
+	_boss_silence_cd = 0.0
+	_boss_minion_cd = 0.0
 	enemies.clear()
 	projectiles.clear()
 	pickups.clear()
@@ -110,25 +131,50 @@ func step(delta: float, move_dir: Vector2) -> void:
 	if phase != Phase.WAVE:
 		return
 	wave_time += delta
+	echo_silenced = maxf(0.0, echo_silenced - delta)
 	_move_player(delta, move_dir)
 	recorder.record(player.pos, delta)
 	for actor in echoes:
 		actor.step(delta)
 	_spawn_enemies(delta)
 	_move_enemies(delta)
+	_boss_step(delta)
 	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.cooldowns,
 			1.0, delta, -1, Color.WHITE)
-	for actor in echoes:
-		Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons,
-				actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
+	if echo_silenced <= 0.0:
+		for actor in echoes:
+			Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons,
+					actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
 	Combat.step_projectiles(self, delta)
 	_update_pickups(delta)
 	_compact()
 	if player.hp <= 0.0:
 		phase = Phase.LOST
 		run_lost.emit()
+	elif wave == WaveDirector.FINAL_WAVE:
+		if boss != null and boss.dead:
+			_end_wave()
 	elif wave_time >= wave_duration:
 		_end_wave()
+
+
+func _boss_step(delta: float) -> void:
+	if boss == null or boss.dead:
+		return
+	_boss_silence_cd -= delta
+	if _boss_silence_cd <= 0.0:
+		_boss_silence_cd = BOSS_SILENCE_EVERY
+		echo_silenced = BOSS_SILENCE_TIME
+		echoes_silenced.emit(BOSS_SILENCE_TIME)
+	_boss_minion_cd -= delta
+	if _boss_minion_cd <= 0.0:
+		_boss_minion_cd = BOSS_MINION_EVERY
+		for _i in 2:
+			var ps := PendingSpawn.new()
+			ps.def = Content.enemy(&"runner")
+			ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
+			ps.delay = SPAWN_TELEGRAPH
+			pending.append(ps)
 
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1) -> void:
@@ -145,6 +191,8 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	pk.value = e.def.drop
 	pickups.append(pk)
 	enemy_killed.emit(e.pos, e.def.color, source)
+	if e == boss:
+		boss_defeated.emit()
 
 
 func discard_take(take: EchoTake) -> void:
@@ -186,12 +234,21 @@ func _materialize(ps: PendingSpawn) -> void:
 	_next_uid += 1
 	e.def = ps.def
 	e.pos = ps.pos
-	e.max_hp = ps.def.hp * WaveDirector.hp_scale(wave)
+	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
+	e.max_hp = ps.def.hp * hp_scale
 	e.hp = e.max_hp
 	e.speed = ps.def.speed * WaveDirector.speed_scale(wave)
 	e.damage = ps.def.damage * WaveDirector.damage_scale(wave)
 	e.radius = ps.def.radius
+	if ps.def.is_boss:
+		var pad := e.radius + 16.0
+		e.pos = e.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
 	enemies.append(e)
+	if ps.def.is_boss:
+		boss = e
+		_boss_silence_cd = 5.0
+		_boss_minion_cd = 8.0
+		boss_spawned.emit(e)
 
 
 func _move_enemies(delta: float) -> void:

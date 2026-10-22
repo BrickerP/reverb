@@ -188,9 +188,23 @@ func test_final_wave_wins_the_run(c: Check) -> void:
 	var won := [0]
 	s.run_won.connect(func() -> void: won[0] += 1)
 	s.start_wave(WaveDirector.FINAL_WAVE)
-	_finish_wave(s)
+	_run(s, 200)
+	c.ok(s.boss != null, "the boss spawned")
+	s.damage_enemy(s.boss, 100000.0, Vector2.ZERO, false, -1)
+	_run(s, 1)
 	c.eq(s.phase, Sim.Phase.WON, "phase is WON")
 	c.eq(won[0], 1, "run_won emitted")
+
+
+func test_boss_silences_the_echoes(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.start_wave(WaveDirector.FINAL_WAVE)
+	_run(s, 200)
+	c.ok(s.boss != null, "the boss spawned")
+	s._boss_silence_cd = 0.01
+	_run(s, 2)
+	c.ok(s.echo_silenced > 0.0, "echoes are silenced")
 
 
 func test_enemy_stats_scale_with_wave(c: Check) -> void:

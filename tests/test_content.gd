@@ -34,7 +34,10 @@ func test_enemy_roster(c: Check) -> void:
 		c.ok(not ids.has(e.id), "%s: unique id" % e.id)
 		ids[e.id] = true
 		c.ok(e.hp > 0.0 and e.speed > 0.0 and e.damage > 0.0 and e.radius > 0.0, "%s: positive stats" % e.id)
-		c.ok(e.cost > 0.0 and e.weight > 0.0 and e.drop >= 1 and e.min_wave >= 1, "%s: spawn data" % e.id)
+		if e.is_boss:
+			c.ok(e.cost >= 0.0 and e.weight >= 0.0 and e.drop >= 1 and e.min_wave >= 1, "%s: boss spawn data" % e.id)
+		else:
+			c.ok(e.cost > 0.0 and e.weight > 0.0 and e.drop >= 1 and e.min_wave >= 1, "%s: spawn data" % e.id)
 		c.ok(e.radius <= Sim.MAX_ENEMY_RADIUS, "%s: fits the spatial grid query" % e.id)
 		if e.min_wave == 1:
 			first_wave += 1

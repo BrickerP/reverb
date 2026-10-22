@@ -79,6 +79,7 @@ func _process(_delta: float) -> bool:
 		7:
 			if _frame >= 8:
 				_save("shop_replaced")
+				_main.audio.stop_all()
 				quit()
 				return true
 	return false

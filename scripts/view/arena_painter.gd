@@ -56,6 +56,8 @@ static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dict
 		var tint := a.take.tint()
 		var remaining := clampi(lifespan - a.take.age, 0, lifespan)
 		var base_alpha := 0.07 + 0.15 * float(remaining) / float(lifespan)
+		if sim.echo_silenced > 0.0:
+			base_alpha *= 0.45
 		var progress := float(reveal.get(a, 1.0))
 		if progress <= 0.0:
 			ci.draw_polyline(pts, Color(tint, base_alpha * 0.6), 2.0)
@@ -97,7 +99,13 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 	var target := sim.player.pos
 	for e in sim.enemies:
 		var col := Color.WHITE if e.flash > 0.0 else e.def.color
-		if e.def.sides < 3:
+		if e.def.is_boss:
+			var spin := Time.get_ticks_msec() / 1000.0 * 0.7
+			ci.draw_colored_polygon(_ngon(e.pos, e.radius, 8, spin), Color(col, 0.9))
+			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
+			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
+			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
+		elif e.def.sides < 3:
 			ci.draw_circle(e.pos, e.radius, Color(col, 0.92))
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		else:
@@ -119,8 +127,9 @@ static func echoes(ci: CanvasItem, sim: Sim) -> void:
 	for a in sim.echoes:
 		var c := a.take.tint()
 		var remaining := maxi(0, lifespan - a.take.age)
-		ci.draw_circle(a.pos, r, Color(c, 0.2))
-		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.9), 2.0)
+		var muted := sim.echo_silenced > 0.0
+		ci.draw_circle(a.pos, r, Color(c, 0.12 if muted else 0.2))
+		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.3 if muted else 0.9), 2.0)
 		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
 		for k in segments:
 			var start := -PI * 0.5 + float(k) * step
@@ -128,7 +137,10 @@ static func echoes(ci: CanvasItem, sim: Sim) -> void:
 			ci.draw_arc(a.pos, r + 6.0, start, start + step * 0.82, 6, col, 2.0)
 		if remaining <= 1:
 			ci.draw_arc(a.pos, r + 9.0, 0.0, TAU, 28, Color(UiTheme.WARN, 0.2 + 0.5 * pulse), 1.5)
-		if a.rewinding:
+		if muted:
+			ci.draw_line(a.pos + Vector2(-5.0, -5.0), a.pos + Vector2(5.0, 5.0), Color(UiTheme.WARN, 0.9), 2.0)
+			ci.draw_line(a.pos + Vector2(5.0, -5.0), a.pos + Vector2(-5.0, 5.0), Color(UiTheme.WARN, 0.9), 2.0)
+		elif a.rewinding:
 			for dx in [-3.0, 2.0]:
 				var tip := a.pos + Vector2(dx - 2.5, 0.0)
 				var chevron := PackedVector2Array([tip + Vector2(5.0, -5.0), tip, tip + Vector2(5.0, 5.0)])

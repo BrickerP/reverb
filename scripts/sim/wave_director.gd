@@ -28,15 +28,15 @@ static func speed_scale(wave: int) -> float:
 	return minf(1.3, 1.0 + 0.015 * float(wave - 1))
 
 
-static func plan(wave: int, run_seed: int) -> Array[SpawnEvent]:
+static func plan(wave: int, run_seed: int, budget_mult: float = 1.0) -> Array[SpawnEvent]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run_seed * 7919 + wave * 104729
 	var pool: Array[EnemyDef] = []
 	for d in Content.enemies():
-		if d.min_wave <= wave:
+		if d.min_wave <= wave and not d.is_boss:
 			pool.append(d)
 	var picked: Array[EnemyDef] = []
-	var budget := budget_for(wave)
+	var budget := budget_for(wave) * budget_mult
 	while budget > 0.0:
 		var d := _pick(pool, rng)
 		if d.cost > budget and not picked.is_empty():

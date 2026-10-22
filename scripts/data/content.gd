@@ -35,6 +35,13 @@ static func item(id: StringName) -> ItemDef:
 	return items().get(id) as ItemDef
 
 
+static func enemy(id: StringName) -> EnemyDef:
+	for e in enemies():
+		if e.id == id:
+			return e
+	return null
+
+
 static func _fill(obj: Object, props: Dictionary) -> void:
 	for key: String in props:
 		if not (key in obj):
@@ -125,4 +132,8 @@ static func _build_enemies() -> void:
 	_enemy(&"brute", {
 		"hp": 42.0, "speed": 62.0, "damage": 6.0, "radius": 19.0, "cost": 4.5, "min_wave": 5,
 		"weight": 2.0, "drop": 3, "color": Color(0.8, 0.4, 1.0), "sides": 6,
+	})
+	_enemy(&"paradox", {
+		"hp": 5200.0, "speed": 55.0, "damage": 8.0, "radius": 30.0, "cost": 0.0, "min_wave": 20,
+		"weight": 0.0, "drop": 40, "color": Color(0.8, 0.5, 1.0), "sides": 8, "is_boss": true,
 	})

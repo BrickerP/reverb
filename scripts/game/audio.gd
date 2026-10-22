@@ -4,7 +4,7 @@ extends Node
 const POOL := 12
 const NAMES: Array[StringName] = [
 	&"shoot", &"hit", &"kill", &"pickup", &"buy", &"hurt", &"echo",
-	&"wave_start", &"wave_end", &"lose", &"win", &"click",
+	&"wave_start", &"wave_end", &"lose", &"win", &"click", &"boss", &"silence",
 ]
 const VOLUMES := {
 	&"shoot": -15.0,
@@ -19,6 +19,8 @@ const VOLUMES := {
 	&"lose": -7.0,
 	&"win": -7.0,
 	&"click": -18.0,
+	&"boss": -8.0,
+	&"silence": -9.0,
 }
 const COOLDOWNS := {
 	&"shoot": 0.035,
@@ -62,11 +64,15 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	stop_all()
+	_streams.clear()
+
+
+func stop_all() -> void:
 	if _music != null:
 		_music.stop()
 	for p in _players:
 		p.stop()
-	_streams.clear()
 
 
 func bind(sim: Sim) -> void:
@@ -84,6 +90,8 @@ func bind(sim: Sim) -> void:
 	sim.purchased.connect(_on_purchase)
 	sim.run_lost.connect(_on_lost)
 	sim.run_won.connect(_on_won)
+	sim.boss_spawned.connect(_on_boss)
+	sim.echoes_silenced.connect(_on_silence)
 
 
 func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0) -> bool:
@@ -173,3 +181,11 @@ func _on_lost() -> void:
 
 func _on_won() -> void:
 	play(&"win")
+
+
+func _on_boss(_enemy: EnemyState) -> void:
+	play(&"boss")
+
+
+func _on_silence(_duration: float) -> void:
+	play(&"silence")
