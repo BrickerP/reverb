@@ -61,6 +61,20 @@ func test_characters_apply_to_a_run(c: Check) -> void:
 	c.near(b.player.stats.damage_mult(), 1.6, 0.001, "solo gets personal damage")
 
 
+func test_mirror_uses_the_current_build(c: Check) -> void:
+	var s := Sim.new(1)
+	Content.character(&"mirror").apply(s)
+	c.ok(s.live_echo, "mirror echoes are live")
+	c.eq(s.echo_capacity(), 2, "two slots")
+	c.near(s.echo_power(), 0.3, 0.001, "thirty percent power")
+	var take := EchoTake.new()
+	take.weapons.append(Content.weapon(&"pistol"))
+	s.player.weapons.clear()
+	s.player.add_weapon(Content.weapon(&"rifle"))
+	c.near(s.echo_dps(take), Content.weapon(&"rifle").dps() * 0.3, 0.001,
+			"live echoes value the current weapon, not the snapshot")
+
+
 func test_solo_does_not_record_takes(c: Check) -> void:
 	var s := Sim.new(1)
 	Content.character(&"solo").apply(s)

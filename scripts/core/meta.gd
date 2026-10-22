@@ -22,7 +22,7 @@ func _defaults() -> void:
 	runs = 0
 	unlocked = {}
 	for def: CharacterDef in Content.characters().values():
-		unlocked[def.id] = def.unlock_wave <= 0
+		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
 
 
 func _load() -> void:
@@ -76,7 +76,7 @@ func record_run(sim: Sim) -> Array[StringName]:
 		wins += 1
 	var newly: Array[StringName] = []
 	for def: CharacterDef in Content.characters().values():
-		if not is_unlocked(def.id) and best_wave >= def.unlock_wave:
+		if not is_unlocked(def.id) and best_wave >= def.unlock_wave and wins >= def.unlock_wins:
 			unlocked[def.id] = true
 			newly.append(def.id)
 	save()

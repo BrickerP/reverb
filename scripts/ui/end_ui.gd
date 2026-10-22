@@ -84,12 +84,12 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_unlock.visible = unlocked_text != ""
 	best_take = null
 	for take: EchoTake in sim.bank.takes:
-		if best_take == null or take.power() > best_take.power():
+		if best_take == null or sim.echo_dps(take) > sim.echo_dps(best_take):
 			best_take = take
 	_best_row.visible = best_take != null
 	_no_echo.visible = best_take == null
 	if best_take != null:
-		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(best_take.power() * sim.echo_power()))])
+		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(sim.echo_dps(best_take)))])
 		_best_preview.setup(best_take, true)
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")

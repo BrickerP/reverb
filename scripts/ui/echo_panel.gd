@@ -51,7 +51,7 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 	var lifespan := sim.echo_lifespan()
 	var best := 1.0
 	for take: EchoTake in sim.bank.takes:
-		best = maxf(best, take.power() * sim.echo_power())
+		best = maxf(best, sim.echo_dps(take))
 	var newest_first := sim.bank.takes.duplicate()
 	newest_first.reverse()
 	var new_row: Control = null
@@ -102,7 +102,7 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool = 
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 4)
 	info.add_child(_title_line(take))
-	var dps := int(round(take.power() * sim.echo_power()))
+	var dps := int(round(sim.echo_dps(take)))
 	var meta := HBoxContainer.new()
 	meta.add_theme_constant_override("separation", 8)
 	meta.add_child(_pips(maxi(0, lifespan - take.age), lifespan, take.tint()))
@@ -114,7 +114,7 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool = 
 	meter.tint = take.tint()
 	meter.ratio = float(dps) / maxf(1.0, best)
 	info.add_child(meter)
-	var loadout := UiTheme.label(_loadout(take), 14, UiTheme.DIM)
+	var loadout := UiTheme.label(Loc.t("shop.live_loadout") if sim.live_echo else _loadout(take), 14, UiTheme.DIM)
 	loadout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(loadout)
 	row.add_child(info)

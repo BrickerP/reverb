@@ -46,6 +46,7 @@ var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
 var boss: EnemyState
 var echo_silenced := 0.0
+var live_echo := false
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -80,6 +81,15 @@ func echo_lifespan() -> int:
 
 func echo_power() -> float:
 	return maxf(0.0, player.stats.get_stat(Stats.ECHO_POWER))
+
+
+func echo_dps(take: EchoTake) -> float:
+	if live_echo:
+		var total := 0.0
+		for w in player.weapons:
+			total += w.dps()
+		return total * player.stats.damage_mult() / player.stats.cooldown_mult() * echo_power()
+	return take.power() * echo_power()
 
 
 func can_start_wave() -> bool:
@@ -143,8 +153,13 @@ func step(delta: float, move_dir: Vector2) -> void:
 			1.0, delta, -1, Color.WHITE)
 	if echo_silenced <= 0.0:
 		for actor in echoes:
-			Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons,
-					actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
+			if live_echo:
+				_fit_echo_cooldowns(actor)
+				Combat.step_weapons(self, actor.pos, player.stats, player.weapons,
+						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
+			else:
+				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons,
+						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
 	Combat.step_projectiles(self, delta)
 	_update_pickups(delta)
 	_compact()
@@ -156,6 +171,13 @@ func step(delta: float, move_dir: Vector2) -> void:
 			_end_wave()
 	elif wave_time >= wave_duration:
 		_end_wave()
+
+
+func _fit_echo_cooldowns(actor: EchoActor) -> void:
+	while actor.cooldowns.size() < player.weapons.size():
+		actor.cooldowns.append(0.0)
+	if actor.cooldowns.size() > player.weapons.size():
+		actor.cooldowns.resize(player.weapons.size())
 
 
 func _boss_step(delta: float) -> void:

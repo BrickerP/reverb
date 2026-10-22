@@ -6,6 +6,8 @@ extends Resource
 @export var overrides: Dictionary = {}
 @export var mods: Dictionary = {}
 @export var unlock_wave: int = 0
+@export var unlock_wins: int = 0
+@export var live_echo: bool = false
 
 
 func apply(sim: Sim) -> void:
@@ -14,3 +16,4 @@ func apply(sim: Sim) -> void:
 	for stat: StringName in mods:
 		sim.player.stats.add(stat, float(mods[stat]))
 	sim.player.hp = sim.player.max_hp()
+	sim.live_echo = live_echo

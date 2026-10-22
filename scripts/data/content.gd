@@ -175,3 +175,9 @@ static func _build_characters() -> void:
 		},
 		"unlock_wave": 10,
 	})
+	_character(&"mirror", {
+		"color": Color(1.0, 0.8, 0.4),
+		"overrides": {Stats.ECHO_SLOTS: 2.0, Stats.ECHO_POWER: 0.3},
+		"live_echo": true,
+		"unlock_wins": 1,
+	})

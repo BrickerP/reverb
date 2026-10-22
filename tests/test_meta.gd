@@ -26,6 +26,7 @@ func test_defaults_and_unlock_at_wave_ten(c: Check) -> void:
 	newly = meta.record_run(s)
 	c.eq(newly.size(), 1, "one character unlocked")
 	c.ok(meta.is_unlocked(&"solo"), "solo is unlocked at wave 10")
+	c.ok(not meta.is_unlocked(&"mirror"), "mirror still needs a win")
 	var loaded := Meta.new(PATH)
 	c.ok(loaded.is_unlocked(&"solo"), "unlock persists")
 	c.eq(loaded.runs, 2, "runs persist")
@@ -46,6 +47,7 @@ func test_wins_and_corrupt_file(c: Check) -> void:
 	s.wave = 20
 	meta.record_run(s)
 	c.eq(meta.wins, 1, "win counted")
+	c.ok(meta.is_unlocked(&"mirror"), "a win unlocks the mirror")
 	var loaded := Meta.new(PATH)
 	c.eq(loaded.wins, 1, "win persists")
 	_cleanup()

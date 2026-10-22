@@ -58,7 +58,7 @@ func refresh(meta: Meta) -> void:
 func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	var locked := not meta.is_unlocked(def.id)
 	var card := Button.new()
-	card.custom_minimum_size = Vector2(380.0, 280.0)
+	card.custom_minimum_size = Vector2(250.0, 300.0)
 	card.disabled = locked
 	card.modulate.a = 0.5 if locked else 1.0
 	var normal := UiTheme.box(Color(0.05, 0.06, 0.12), def.color, 2, 8)
@@ -80,20 +80,28 @@ func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	var desc := UiTheme.label(Loc.character_desc(def.id), 15, UiTheme.DIM)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	desc.custom_minimum_size = Vector2(300.0, 0.0)
+	desc.custom_minimum_size = Vector2(200.0, 0.0)
 	box.add_child(desc)
 	var slots := int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS]))
 	var power := float(def.overrides.get(Stats.ECHO_POWER, Stats.DEFAULTS[Stats.ECHO_POWER]))
 	if slots <= 0:
 		box.add_child(UiTheme.label(Loc.t("select.no_echo"), 16, UiTheme.WARN))
+	elif def.live_echo:
+		box.add_child(UiTheme.label(Loc.t("select.live_echo"), 16, def.color))
 	else:
-		box.add_child(UiTheme.label(Loc.t("select.echo_line", [slots, int(round(power * 100.0))]), 16, UiTheme.ECHO))
+		var echo_line := UiTheme.label(Loc.t("select.echo_line", [slots, int(round(power * 100.0))]), 16, UiTheme.ECHO)
+		echo_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		echo_line.custom_minimum_size = Vector2(200.0, 0.0)
+		box.add_child(echo_line)
 	var spacer := Control.new()
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(spacer)
 	if locked:
-		box.add_child(UiTheme.label(Loc.t("select.locked", [def.unlock_wave]), 14, UiTheme.WARN))
+		if def.unlock_wins > 0:
+			box.add_child(UiTheme.label(Loc.t("select.locked_wins"), 14, UiTheme.WARN))
+		else:
+			box.add_child(UiTheme.label(Loc.t("select.locked", [def.unlock_wave]), 14, UiTheme.WARN))
 	else:
 		box.add_child(UiTheme.label(Loc.t("select.ready"), 14, UiTheme.COIN))
 	return card

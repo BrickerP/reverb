@@ -30,6 +30,8 @@ static func character_name(id: StringName) -> String:
 			return t("select.looper_name")
 		&"solo":
 			return t("select.solo_name")
+		&"mirror":
+			return t("select.mirror_name")
 		_:
 			return String(id)
 
@@ -40,6 +42,8 @@ static func character_desc(id: StringName) -> String:
 			return t("select.looper_desc")
 		&"solo":
 			return t("select.solo_desc")
+		&"mirror":
+			return t("select.mirror_desc")
 		_:
 			return ""
 
