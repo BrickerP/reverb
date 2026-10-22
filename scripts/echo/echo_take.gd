@@ -17,6 +17,7 @@ var stats: Stats = Stats.new()
 var wave: int = 0
 var age: int = 0
 var tint_index: int = 0
+var merged: bool = false
 
 
 func tint() -> Color:

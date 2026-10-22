@@ -376,6 +376,26 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 	main.free()
 
 
+func test_shop_merges_two_takes(c: Check) -> void:
+	var s := _shop_sim(50, 3)
+	var ui := _open_shop(s)
+	c.ok(ui.echo_panel.merge_button != null, "merge is offered with multiple takes")
+	ui.echo_panel.merge_button.pressed.emit()
+	c.ok(ui.echo_panel.is_merging(), "merge mode starts")
+	ui.echo_panel.discard_buttons[0].pressed.emit()
+	c.ok(ui.echo_panel.discard_buttons[0].text == Loc.t("shop.selected"), "first take is selected")
+	ui.echo_panel.discard_buttons[1].pressed.emit()
+	c.eq(s.bank.takes.size(), 2, "two takes became one")
+	c.ok(not ui.echo_panel.is_merging(), "merge mode closes")
+	var merged := 0
+	for take: EchoTake in s.bank.takes:
+		if take.merged:
+			merged += 1
+	c.eq(merged, 1, "one merged take")
+	c.ok(not ui.start_button.disabled, "the overflow is resolved")
+	ui.free()
+
+
 func test_main_boots_into_character_select(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

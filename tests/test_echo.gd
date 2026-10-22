@@ -143,6 +143,28 @@ func test_echo_projectiles_tag_the_kill_source(c: Check) -> void:
 	c.eq(s.kills, 1, "kill counted")
 
 
+func test_merge_two_takes(c: Check) -> void:
+	var bank := EchoBank.new()
+	var a := _take([Vector2(0, 0), Vector2(10, 0), Vector2(20, 0)])
+	a.wave = 1
+	a.weapons.append(Content.weapon(&"pistol"))
+	a.weapons.append(Content.weapon(&"smg"))
+	bank.add(a)
+	a.age = 1
+	var b := _take([Vector2(100, 100), Vector2(120, 120)])
+	b.wave = 3
+	b.weapons.append(Content.weapon(&"rifle"))
+	bank.add(b)
+	var m := bank.merge(a, b)
+	c.ok(m != null and m.merged, "merged take")
+	c.eq(bank.takes.size(), 1, "two takes became one")
+	c.eq(m.wave, 3, "newest wave label")
+	c.eq(m.age, 1, "the older take's age is kept")
+	c.eq(m.weapons.size(), 3, "both loadouts are kept")
+	c.eq(m.samples.size(), a.samples.size() + EchoBank.BRIDGE_SAMPLES + b.samples.size(), "routes are joined")
+	c.ok(not bank.takes.has(a) and not bank.takes.has(b), "sources are consumed")
+
+
 func test_take_power_uses_stats(c: Check) -> void:
 	var t := _weapon_take([&"pistol"])
 	c.near(t.power(), 14.0, 0.001, "pistol power is its dps")

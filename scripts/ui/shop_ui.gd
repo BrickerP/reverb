@@ -46,6 +46,7 @@ func _ready() -> void:
 	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
+	echo_panel.merge_requested.connect(_on_merge)
 	columns.add_child(echo_panel)
 	root.add_child(_build_footer())
 	_overlay = Control.new()
@@ -208,6 +209,17 @@ func _on_reroll() -> void:
 func _on_discard(take: EchoTake) -> void:
 	sim.discard_take(take)
 	refresh()
+	if sim.can_start_wave():
+		start_button.grab_focus()
+	else:
+		echo_panel.focus_first_discard()
+
+
+func _on_merge(a: EchoTake, b: EchoTake) -> void:
+	var merged := sim.merge_takes(a, b)
+	refresh()
+	if merged == null:
+		return
 	if sim.can_start_wave():
 		start_button.grab_focus()
 	else:

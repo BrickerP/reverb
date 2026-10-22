@@ -221,6 +221,12 @@ func discard_take(take: EchoTake) -> void:
 	bank.discard(take)
 
 
+func merge_takes(a: EchoTake, b: EchoTake) -> EchoTake:
+	if phase != Phase.SHOP:
+		return null
+	return bank.merge(a, b)
+
+
 func _move_player(delta: float, move_dir: Vector2) -> void:
 	var dir := move_dir.limit_length(1.0)
 	if dir != Vector2.ZERO:

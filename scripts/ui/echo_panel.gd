@@ -2,11 +2,18 @@ class_name EchoPanel
 extends PanelContainer
 
 signal discard_requested(take: EchoTake)
+signal merge_requested(a: EchoTake, b: EchoTake)
 
 var discard_buttons: Array[Button] = []
+var merge_button: Button
 var last_new_row: Control
 var last_new_tint: Color = Color.WHITE
+
 var _box: VBoxContainer
+var _sim: Sim
+var _animate_new := false
+var _merge_mode := false
+var _merge_first: EchoTake
 
 
 class TakeMeter:
@@ -32,12 +39,45 @@ func _init() -> void:
 
 
 func refresh(sim: Sim, animate_new: bool = false) -> void:
+	_sim = sim
+	_animate_new = animate_new
+	_merge_mode = false
+	_merge_first = null
+	_render()
+	_animate_new = false
+
+
+func is_merging() -> bool:
+	return _merge_mode
+
+
+func _render() -> void:
 	UiTheme.clear(_box)
 	discard_buttons.clear()
+	merge_button = null
+	if _sim == null:
+		return
+	var sim := _sim
 	var capacity := sim.echo_capacity()
 	var over := sim.bank.overflow(capacity)
 	var heading := Loc.t("shop.echoes", [sim.bank.takes.size(), capacity])
-	_box.add_child(UiTheme.label(heading, 22, UiTheme.WARN if over > 0 else UiTheme.ECHO))
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	var title := UiTheme.label(heading, 22, UiTheme.WARN if over > 0 else UiTheme.ECHO)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	if capacity > 0 and not sim.bank.takes.is_empty():
+		merge_button = Button.new()
+		merge_button.text = Loc.t("shop.cancel") if _merge_mode else Loc.t("shop.merge")
+		merge_button.custom_minimum_size = Vector2(72.0, 30.0)
+		merge_button.disabled = not _merge_mode and sim.bank.takes.size() < 2
+		merge_button.pressed.connect(_on_merge_button)
+		head.add_child(merge_button)
+	_box.add_child(head)
+	if _merge_mode:
+		var hint := UiTheme.label(Loc.t("shop.merge_hint"), 14, UiTheme.ACCENT)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_box.add_child(hint)
 	if capacity <= 0:
 		var none := UiTheme.label(Loc.t("shop.echo_none_slots"), 16, UiTheme.DIM)
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -58,8 +98,8 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 	last_new_row = null
 	last_new_tint = Color.WHITE
 	for take: EchoTake in newest_first:
-		var is_new := animate_new and take.age == 0
-		var row := _row(take, sim, lifespan, best, is_new)
+		var is_new := _animate_new and take.age == 0
+		var row := _row(take, sim, lifespan, best, is_new, take == _merge_first)
 		_box.add_child(row)
 		if is_new:
 			new_row = row
@@ -87,12 +127,12 @@ func newest_tint() -> Color:
 	return last_new_tint
 
 
-func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool = false) -> Control:
+func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, selected: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	var strip := ColorRect.new()
-	strip.color = Color(take.tint(), 0.9)
-	strip.custom_minimum_size = Vector2(4.0, 0.0)
+	strip.color = Color(UiTheme.ACCENT, 0.95) if selected else Color(take.tint(), 0.9)
+	strip.custom_minimum_size = Vector2(6.0 if selected else 4.0, 0.0)
 	strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_child(strip)
 	var preview := PathPreview.new()
@@ -119,17 +159,50 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool = 
 	info.add_child(loadout)
 	row.add_child(info)
 	var button := Button.new()
-	button.text = Loc.t("shop.discard")
+	if _merge_mode:
+		button.text = Loc.t("shop.selected") if selected else Loc.t("shop.select")
+	else:
+		button.text = Loc.t("shop.discard")
 	button.custom_minimum_size = Vector2(84.0, 40.0)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	button.pressed.connect(_on_discard.bind(take))
+	button.pressed.connect(_on_row.bind(take))
 	discard_buttons.append(button)
 	row.add_child(button)
 	return row
 
 
+func _on_row(take: EchoTake) -> void:
+	if not _merge_mode:
+		discard_requested.emit(take)
+		return
+	if _merge_first == take:
+		_merge_first = null
+		_render()
+		focus_first_discard()
+		return
+	if _merge_first == null:
+		_merge_first = take
+		_render()
+		focus_first_discard()
+		return
+	var first := _merge_first
+	_merge_mode = false
+	_merge_first = null
+	merge_requested.emit(first, take)
+
+
+func _on_merge_button() -> void:
+	_merge_mode = not _merge_mode
+	_merge_first = null
+	_render()
+	if _merge_mode:
+		focus_first_discard()
+	elif merge_button != null:
+		merge_button.grab_focus()
+
+
 func _animate_new_row(row: Control) -> void:
-	# Keep the discard button at full contrast (it may hold keyboard focus); only the
+	# Keep the action button at full contrast (it may hold keyboard focus); only the
 	# identity strip and the take's text fade in.
 	var strip := row.get_child(0) as Control
 	var info := row.get_child(2) as Control
@@ -147,6 +220,8 @@ func _title_line(take: EchoTake) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 8)
 	line.add_child(UiTheme.label(Loc.t("shop.take", [take.wave]), 16))
+	if take.merged:
+		line.add_child(UiTheme.label("[%s]" % Loc.t("shop.merged"), 13, UiTheme.COIN))
 	if take.age == 0:
 		line.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 13, UiTheme.ACCENT))
 	return line
@@ -172,7 +247,3 @@ func _loadout(take: EchoTake) -> String:
 		var n: int = counts[id]
 		parts.append("%s ×%d" % [Loc.weapon_name(id), n] if n > 1 else Loc.weapon_name(id))
 	return ", ".join(parts)
-
-
-func _on_discard(take: EchoTake) -> void:
-	discard_requested.emit(take)
