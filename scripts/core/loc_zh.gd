@@ -64,7 +64,7 @@ const TABLE := {
 	"select.looper_name": "复读机",
 	"select.looper_desc": "3 个回响槽、40% 威力、+5 生命。",
 	"select.solo_name": "独行者",
-	"select.solo_desc": "没有回响。伤害 +70%，生命 +25，移速/攻速提升，暴击 +5%。",
+	"select.solo_desc": "没有回响。伤害 +65%，生命 +25，移速/攻速提升，暴击 +5%。",
 	"select.mirror_name": "镜像",
 	"select.mirror_desc": "2 个回响槽，实时复制你当前的武器与属性，+5 生命。通关一次解锁。",
 	"select.live_echo": "实时装备",

@@ -64,7 +64,7 @@ const TABLE := {
 	"select.looper_name": "Looper",
 	"select.looper_desc": "Three echo slots at 40% power, +5 HP.",
 	"select.solo_name": "Soloist",
-	"select.solo_desc": "No echoes. +70% damage, +25 HP, faster, +5% crit.",
+	"select.solo_desc": "No echoes. +65% damage, +25 HP, faster, +5% crit.",
 	"select.mirror_name": "Mirror",
 	"select.mirror_desc": "Two echo slots that copy your current weapons and stats, +5 HP. Win a run to unlock.",
 	"select.live_echo": "Live loadout",
