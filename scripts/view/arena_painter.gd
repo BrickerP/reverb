@@ -6,6 +6,14 @@ const GRID_COLOR := Color(0.3, 0.4, 0.8, 0.08)
 const BORDER := Color(0.4, 0.85, 1.0, 0.85)
 const PLAYER := Color(0.6, 1.0, 1.0)
 const GRID := 60.0
+# Above this many bullets, trails are dropped; the heads still carry direction and readability.
+const TRAIL_LIMIT := 160
+# Above this many bullets, heads are drawn through one MultiMesh instead of one draw call each.
+const BATCH_LIMIT := 80
+
+static var _bullet_mesh: MultiMesh
+static var _bullet_texture: ImageTexture
+static var _bullet_capacity := 0
 
 
 static func arena(ci: CanvasItem) -> void:
@@ -166,10 +174,56 @@ static func echoes(ci: CanvasItem, sim: Sim) -> void:
 
 
 static func projectiles(ci: CanvasItem, sim: Sim) -> void:
+	var count := sim.projectiles.size()
+	if count > BATCH_LIMIT:
+		if count <= TRAIL_LIMIT:
+			_bullet_trails(ci, sim)
+		_ensure_bullet_resources()
+		_ensure_bullet_capacity(count)
+		_bullet_mesh.visible_instance_count = count
+		for i in count:
+			var p := sim.projectiles[i]
+			_bullet_mesh.set_instance_transform_2d(i,
+					Transform2D(Vector2(p.radius, 0.0), Vector2(0.0, p.radius), p.pos))
+			_bullet_mesh.set_instance_color(i, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+		ci.draw_multimesh(_bullet_mesh, _bullet_texture)
+		return
 	for p in sim.projectiles:
 		var dir := p.vel.normalized()
 		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(p.color, 0.5), p.radius * 1.2)
 		ci.draw_circle(p.pos, p.radius, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+
+
+static func _bullet_trails(ci: CanvasItem, sim: Sim) -> void:
+	for p in sim.projectiles:
+		var dir := p.vel.normalized()
+		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(p.color, 0.5), p.radius * 1.2)
+
+
+static func _ensure_bullet_resources() -> void:
+	if _bullet_mesh != null:
+		return
+	var size := 32
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var c := float(size) * 0.5
+	for y in size:
+		for x in size:
+			var d := Vector2(float(x) + 0.5 - c, float(y) + 0.5 - c).length()
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(c - d, 0.0, 1.0)))
+	_bullet_texture = ImageTexture.create_from_image(image)
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.0, 2.0)
+	_bullet_mesh = MultiMesh.new()
+	_bullet_mesh.transform_format = MultiMesh.TRANSFORM_2D
+	_bullet_mesh.use_colors = true
+	_bullet_mesh.mesh = quad
+
+
+static func _ensure_bullet_capacity(count: int) -> void:
+	if count <= _bullet_capacity:
+		return
+	_bullet_capacity = ceili(float(count) / 64.0) * 64
+	_bullet_mesh.instance_count = _bullet_capacity
 
 
 static func player(ci: CanvasItem, sim: Sim) -> void:

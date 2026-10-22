@@ -1,13 +1,14 @@
 class_name ArenaView
 extends Node2D
 
-const MAX_SPARKS := 400
+const MAX_SPARKS := 260
 const PATH_STRIDE := 3
 const REVEAL_TIME := 0.8
 const RECORD_BEAT := 0.6
 const VICTORY_BEAT := 0.9
 
 var sim: Sim
+var _backdrop: ArenaBackdrop
 var _paths: Dictionary = {}
 var _reveal: Dictionary = {}
 var _sparks: Array[Spark] = []
@@ -19,6 +20,12 @@ var _victory_time := 0.0
 var _victory_origin := Vector2.ZERO
 var _victory_color := Color.WHITE
 var shake_enabled := true
+
+
+func _ready() -> void:
+	_backdrop = ArenaBackdrop.new()
+	_backdrop.show_behind_parent = true
+	add_child(_backdrop)
 
 
 func bind(s: Sim) -> void:
@@ -97,7 +104,6 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
-	ArenaPainter.arena(self)
 	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
 		ArenaPainter.echo_paths(self, sim, _paths, _reveal)
