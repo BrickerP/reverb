@@ -6,6 +6,9 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ![wave](docs/wave.png)
 ![shop](docs/shop.png)
+![echo route](docs/reveal.png)
+
+波开始时，上一波的路线会先快进画一遍，再切成淡色轨迹——回响从哪里来、为什么会经过那里，不需要文字解释。
 
 ## 怎么玩
 
