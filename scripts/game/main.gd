@@ -63,6 +63,7 @@ func _ready() -> void:
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
 	character_select.daily_requested.connect(start_daily)
+	history_ui.replay_requested.connect(_on_history_replay)
 	settings_ui.volume_changed.connect(_on_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
@@ -144,6 +145,11 @@ func open_history() -> void:
 	if history_ui.visible or settings_ui.visible or run_log == null:
 		return
 	history_ui.open(run_log)
+
+
+func _on_history_replay(seed_value: int, char_id: StringName) -> void:
+	history_ui.close()
+	choose_character(char_id, seed_value)
 
 
 func _on_settings_closed() -> void:

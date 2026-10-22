@@ -2,6 +2,7 @@ class_name HistoryUi
 extends Control
 
 signal closed
+signal replay_requested(seed_value: int, character: StringName)
 
 var close_button: Button
 
@@ -36,7 +37,7 @@ func _ready() -> void:
 	_empty = UiTheme.label(Loc.t("history.empty"), 18, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_empty)
 	_grid = GridContainer.new()
-	_grid.columns = 5
+	_grid.columns = 6
 	_grid.add_theme_constant_override("h_separation", 28)
 	_grid.add_theme_constant_override("v_separation", 8)
 	box.add_child(_grid)
@@ -63,15 +64,22 @@ func open(run_log: RunLog) -> void:
 	_add_cell(Loc.t("history.result"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.wave"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.kills"), UiTheme.DIM, 14)
+	_grid.add_child(UiTheme.label("", 14, UiTheme.DIM))
 	for run: Dictionary in runs:
 		var won := bool(run.get("won", false))
 		var char := StringName(str(run.get("character", "?")))
-		_add_cell(str(int(run.get("seed", 0))), UiTheme.INK, 16)
+		var seed_value := int(run.get("seed", 0))
+		_add_cell(str(seed_value), UiTheme.INK, 16)
 		_add_cell(Loc.character_name(char), UiTheme.INK, 16)
 		_add_cell(Loc.t("history.win") if won else Loc.t("history.loss"),
 				UiTheme.COIN if won else UiTheme.WARN, 16)
 		_add_cell(str(int(run.get("wave", 0))), UiTheme.INK, 16)
 		_add_cell(str(int(run.get("kills", 0))), UiTheme.INK, 16)
+		var replay := Button.new()
+		replay.text = Loc.t("history.replay")
+		replay.custom_minimum_size = Vector2(86.0, 30.0)
+		replay.pressed.connect(_on_replay.bind(seed_value, char))
+		_grid.add_child(replay)
 		_row_count += 1
 	visible = true
 	close_button.grab_focus()
@@ -79,6 +87,10 @@ func open(run_log: RunLog) -> void:
 
 func row_count() -> int:
 	return _row_count
+
+
+func _on_replay(seed_value: int, char: StringName) -> void:
+	replay_requested.emit(seed_value, char)
 
 
 func close() -> void:

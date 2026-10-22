@@ -30,6 +30,16 @@ func test_history_lists_recent_runs(c: Check) -> void:
 	ui.open(log)
 	c.ok(ui.visible, "history opens")
 	c.eq(ui.row_count(), 2, "two rows")
+	var got := [-1, &""]
+	ui.replay_requested.connect(func(seed_value: int, char: StringName) -> void:
+		got[0] = seed_value
+		got[1] = char)
+	for child in ui._grid.get_children():
+		if child is Button:
+			(child as Button).pressed.emit()
+			break
+	c.eq(got[0], 1, "replay carries the seed")
+	c.eq(got[1], &"looper", "replay carries the character")
 	ui.close()
 	c.ok(not ui.visible, "history closes")
 	ui.free()

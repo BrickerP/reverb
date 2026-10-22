@@ -91,6 +91,7 @@ const TABLE := {
 	"history.kills": "击杀",
 	"history.win": "通关",
 	"history.loss": "失败",
+	"history.replay": "重开",
 	"settings.title": "设置",
 	"settings.volume": "音量",
 	"settings.shake": "屏幕震动",

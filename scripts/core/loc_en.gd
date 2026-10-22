@@ -91,6 +91,7 @@ const TABLE := {
 	"history.kills": "Kills",
 	"history.win": "WIN",
 	"history.loss": "loss",
+	"history.replay": "Replay",
 	"settings.title": "Settings",
 	"settings.volume": "Volume",
 	"settings.shake": "Screen shake",

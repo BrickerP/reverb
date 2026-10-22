@@ -48,7 +48,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.11 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.12 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -96,7 +96,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 角色 3：复读机、独行者（无回响，第 10 波解锁）、镜像（实时复制当前装备，通关一次解锁）
 - 系统：叠录（两张录像合成一个回响，走位与武器合并）
 - 设置面板：音量、屏幕震动、全屏、语言（自动/English/中文），保存到本地设置文件；切语言会重载回选角。
-- 对局记录：选角页 `History` 或 H，显示最近 8 局的角色、种子、胜负、波数与击杀。
+- 对局记录：选角页 `History` 或 H，显示最近 8 局的角色、种子、胜负、波数与击杀；点 `Replay` 用原角色、原种子重开。
 - 每日挑战：选角页 `Daily`，固定复读机、用当天日期做种子，记录当日最佳波数；大家玩同一局。
 - 本地存档：最佳波数、通关次数、角色解锁
 - 20 波，波次预算与血量随波数增长
@@ -104,7 +104,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1832 项）
+make test     # 无头测试（当前 1839 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
