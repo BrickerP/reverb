@@ -81,3 +81,9 @@ tools/          烟测、平衡、性能探针
 - 4–5 个回响同屏的可读性未验证。
 - Steam Deck / 低端机帧率未验证。
 - 名称《回响》/ Reverb 为暂定，未做商标查重。
+
+## 许可
+
+- 游戏代码与文档：MIT，见 [`LICENSE`](LICENSE)。
+- `.agents/skills/`：来自 gamedev 技能包，Apache-2.0，详见 [`THIRD_PARTY.md`](THIRD_PARTY.md)。属于开发工具，不参与游戏运行。
+- 运行时使用系统中文字体，仓库不包含字体文件。
