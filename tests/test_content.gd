@@ -58,7 +58,7 @@ func test_characters_apply_to_a_run(c: Check) -> void:
 	solo.apply(b)
 	c.eq(b.echo_capacity(), 0, "solo has no echoes")
 	c.near(b.player.max_hp(), 55.0, 0.001, "solo gets extra health")
-	c.near(b.player.stats.damage_mult(), 1.6, 0.001, "solo gets personal damage")
+	c.near(b.player.stats.damage_mult(), 1.7, 0.001, "solo gets personal damage")
 
 
 func test_mirror_uses_the_current_build(c: Check) -> void:

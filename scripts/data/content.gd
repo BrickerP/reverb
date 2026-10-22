@@ -161,13 +161,14 @@ static func _build_characters() -> void:
 	_character(&"looper", {
 		"color": Color(1.0, 0.55, 0.9),
 		"overrides": {Stats.ECHO_SLOTS: 3.0, Stats.ECHO_POWER: 0.4},
+		"mods": {Stats.MAX_HP: 5.0},
 		"unlock_wave": 0,
 	})
 	_character(&"solo", {
 		"color": Color(0.5, 0.95, 1.0),
 		"overrides": {Stats.ECHO_SLOTS: 0.0},
 		"mods": {
-			Stats.DAMAGE_PCT: 0.6,
+			Stats.DAMAGE_PCT: 0.7,
 			Stats.MAX_HP: 25.0,
 			Stats.MOVE_SPEED: 20.0,
 			Stats.ATTACK_SPEED_PCT: 0.25,
@@ -178,6 +179,7 @@ static func _build_characters() -> void:
 	_character(&"mirror", {
 		"color": Color(1.0, 0.8, 0.4),
 		"overrides": {Stats.ECHO_SLOTS: 2.0, Stats.ECHO_POWER: 0.3},
+		"mods": {Stats.MAX_HP: 5.0},
 		"live_echo": true,
 		"unlock_wins": 1,
 	})
