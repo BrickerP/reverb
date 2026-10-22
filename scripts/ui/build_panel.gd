@@ -1,12 +1,16 @@
 class_name BuildPanel
 extends PanelContainer
 
+signal replace_cancelled
+
 var weapons_label: Label
 var items_label: Label
+var replacing: bool = false
 
 var _box: VBoxContainer
 var _weapons_row: Control
 var _items_row: Control
+var _slot_buttons: Array[Button] = []
 
 
 func _init() -> void:
@@ -16,20 +20,41 @@ func _init() -> void:
 	add_child(_box)
 
 
-func refresh(sim: Sim) -> void:
+func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable()) -> void:
 	UiTheme.clear(_box)
+	_slot_buttons.clear()
+	replacing = replace_with != ""
 	var pl := sim.player
 	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
 	weapons_label = UiTheme.label(Loc.t("shop.weapons", [pl.weapons.size(), Content.MAX_WEAPON_SLOTS]), 16, UiTheme.DIM)
 	_box.add_child(weapons_label)
-	_weapons_row = _weapon_chips(pl)
-	_box.add_child(_weapons_row)
+	if replacing:
+		var hint := UiTheme.label(Loc.t("shop.replace", [replace_with]), 14, UiTheme.ACCENT)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_box.add_child(hint)
+		_weapons_row = _slot_flow(pl, on_choose)
+		_box.add_child(_weapons_row)
+		var cancel := Button.new()
+		cancel.text = Loc.t("shop.cancel")
+		cancel.custom_minimum_size = Vector2(120.0, 32.0)
+		cancel.pressed.connect(replace_cancelled.emit)
+		_box.add_child(cancel)
+	else:
+		_weapons_row = _weapon_chips(pl)
+		_box.add_child(_weapons_row)
 	items_label = UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM)
 	_box.add_child(items_label)
 	_items_row = _item_chips(pl)
 	_box.add_child(_items_row)
 	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
 	_box.add_child(_core_grid(pl))
+
+
+func focus_first_slot() -> bool:
+	if _slot_buttons.is_empty():
+		return false
+	_slot_buttons[0].grab_focus()
+	return true
 
 
 func flash_slots() -> void:
@@ -46,6 +71,24 @@ func _flow() -> HFlowContainer:
 	var flow := HFlowContainer.new()
 	flow.add_theme_constant_override("h_separation", 14)
 	flow.add_theme_constant_override("v_separation", 2)
+	return flow
+
+
+func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 4)
+	for i in pl.weapons.size():
+		var w := pl.weapons[i]
+		var b := Button.new()
+		b.text = "%s  +%d" % [Loc.weapon_name(w.id), Shop.resale_value(w)]
+		b.custom_minimum_size = Vector2(0.0, 34.0)
+		b.add_theme_color_override("font_color", w.color)
+		b.add_theme_color_override("font_hover_color", w.color.lightened(0.25))
+		if on_choose.is_valid():
+			b.pressed.connect(on_choose.bind(i))
+		flow.add_child(b)
+		_slot_buttons.append(b)
 	return flow
 
 

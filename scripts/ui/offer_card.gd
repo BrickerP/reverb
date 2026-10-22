@@ -27,14 +27,18 @@ static func weapon_dps(w: WeaponDef, stats: Stats) -> float:
 	return w.damage * pellets * stats.damage_mult() * crit * rate
 
 
-func setup(o: Offer, sim: Sim) -> void:
+func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
 	offer = o
 	var reason := sim.shop.block_reason(sim, o)
 	blocked_reason = reason
 	# Sold cards are inert. Every other blocked card stays pressable so it can explain
 	# the constraint by flashing the resource it needs.
 	disabled = reason == &"sold"
-	modulate.a = 0.4 if reason == &"sold" else (0.72 if reason != &"" else 1.0)
+	modulate.a = 0.4 if reason == &"sold" else (1.0 if selected else (0.72 if reason != &"" else 1.0))
+	if selected:
+		var style := UiTheme.box(Color(0.06, 0.09, 0.18), UiTheme.ACCENT, 2, 6)
+		add_theme_stylebox_override("normal", style)
+		add_theme_stylebox_override("hover", style)
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
@@ -46,7 +50,7 @@ func setup(o: Offer, sim: Sim) -> void:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
-	box.add_child(_title_row(o, reason))
+	box.add_child(_title_row(o, reason, selected))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim))
 		box.add_child(_weapon_meta(o.weapon))
@@ -64,7 +68,7 @@ func reject() -> void:
 	tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
 
 
-func _title_row(o: Offer, reason: StringName) -> Control:
+func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
@@ -78,7 +82,7 @@ func _title_row(o: Offer, reason: StringName) -> Control:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
-	row.add_child(_price_label(o, reason))
+	row.add_child(_price_label(o, reason, selected))
 	return row
 
 
@@ -87,7 +91,13 @@ func _dps_row(w: WeaponDef, sim: Sim) -> Control:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
 	var before := total_dps(sim.player)
-	var after := before + weapon_dps(w, sim.player.stats)
+	var added := weapon_dps(w, sim.player.stats)
+	if sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS:
+		# With full slots this is a replacement, not an addition: show what the new
+		# weapon brings, without promising a total that depends on the discarded slot.
+		row.add_child(UiTheme.label(Loc.t("shop.dps_add", [int(round(before)), int(round(added))]), 16, UiTheme.COIN))
+		return row
+	var after := before + added
 	row.add_child(UiTheme.label(Loc.t("shop.dps_arrow", [int(round(before)), int(round(after))]), 16, UiTheme.COIN))
 	var gain := UiTheme.label("+%d" % int(round(after - before)), 14, UiTheme.COIN)
 	gain.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -108,8 +118,10 @@ func _weapon_meta(w: WeaponDef) -> Label:
 	return line
 
 
-func _price_label(o: Offer, reason: StringName) -> Label:
+func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 	var right := HORIZONTAL_ALIGNMENT_RIGHT
+	if selected and reason == &"full":
+		return UiTheme.label("%d  %s" % [o.price, Loc.t("shop.replace_action")], 16, UiTheme.ACCENT, right)
 	match reason:
 		&"sold":
 			return UiTheme.label(Loc.t("shop.sold"), 16, UiTheme.DIM, right)

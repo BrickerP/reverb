@@ -67,6 +67,18 @@ func _process(_delta: float) -> bool:
 		5:
 			if _frame >= 3:
 				_save("shop_blocked")
+				_replace_demo()
+				_frame = 0
+				_step = 6
+		6:
+			if _frame >= 8:
+				_save("shop_replace")
+				_main.shop_ui._on_replace_slot(0)
+				_frame = 0
+				_step = 7
+		7:
+			if _frame >= 8:
+				_save("shop_replaced")
 				quit()
 				return true
 	return false
@@ -99,6 +111,21 @@ func _blocked_demo() -> void:
 		if card.blocked_reason == &"poor":
 			card.pressed.emit()
 			return
+
+
+func _replace_demo() -> void:
+	var sim: Sim = _main.sim
+	while sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		sim.player.add_weapon(Content.weapon(&"pistol"))
+	sim.player.materials = 200
+	sim.shop.offers.clear()
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"shotgun")
+	o.price = 34
+	sim.shop.offers.append(o)
+	var ui: ShopUi = _main.shop_ui
+	ui.refresh()
+	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
 
 
 func _drive_square() -> void:

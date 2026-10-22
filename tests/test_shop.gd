@@ -129,3 +129,36 @@ func test_reroll_costs_and_restocks(c: Check) -> void:
 	c.ok(not s.shop.reroll(s), "cannot reroll when poor")
 	s.shop.roll(s)
 	c.eq(s.shop.reroll_cost(6), first, "a fresh shop resets the reroll cost")
+
+
+func test_replace_weapon_trades_in_the_old_one(c: Check) -> void:
+	var s := _shop_sim(1000)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"rifle")
+	o.price = 34
+	s.shop.offers.clear()
+	s.shop.offers.append(o)
+	var old := s.player.weapons[0]
+	var resale := Shop.resale_value(old)
+	var before := s.player.materials
+	c.ok(s.shop.replace_weapon(s, o, 0), "swap succeeds")
+	c.eq(s.player.weapons[0], o.weapon, "new weapon takes the slot")
+	c.eq(s.player.materials, before - o.price + resale, "trade-in is deducted from the price")
+	c.ok(o.sold, "offer is consumed")
+
+
+func test_replace_weapon_requires_the_net_cost(c: Check) -> void:
+	var s := _shop_sim(0)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"rifle")
+	o.price = 100
+	s.shop.offers.clear()
+	s.shop.offers.append(o)
+	var before := s.player.materials
+	c.ok(not s.shop.replace_weapon(s, o, 0), "cannot afford the net cost")
+	c.eq(s.player.materials, before, "materials untouched")
+	c.ok(not o.sold, "offer stays")

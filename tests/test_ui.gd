@@ -271,6 +271,55 @@ func test_echo_kills_use_the_echo_tint(c: Check) -> void:
 	view.free()
 
 
+func test_full_weapon_slots_can_swap_in_place(c: Check) -> void:
+	var s := _shop_sim(1000)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	var ui := _open_shop(s)
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"rifle")
+	o.price = 34
+	s.shop.offers.clear()
+	s.shop.offers.append(o)
+	ui.refresh()
+	var card := ui.offers_box.get_child(0) as OfferCard
+	c.eq(card.blocked_reason, &"full", "the offer reports full slots")
+	card.pressed.emit()
+	c.ok(ui.is_replacing(), "clicking a full weapon offer enters replace mode")
+	c.ok(ui.build_panel.replacing, "the build panel shows slot buttons")
+	var old := s.player.weapons[0]
+	var resale := Shop.resale_value(old)
+	var before := s.player.materials
+	ui._on_replace_slot(0)
+	c.eq(s.player.weapons[0], o.weapon, "the chosen slot gets the new weapon")
+	c.eq(s.player.materials, before - o.price + resale, "the old weapon is traded in")
+	c.ok(not ui.is_replacing(), "replace mode closes")
+	c.ok(o.sold, "the offer is consumed")
+	ui.free()
+
+
+func test_replace_mode_can_be_cancelled(c: Check) -> void:
+	var s := _shop_sim(1000)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	var ui := _open_shop(s)
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"rifle")
+	o.price = 34
+	s.shop.offers.clear()
+	s.shop.offers.append(o)
+	ui.refresh()
+	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+	var old := s.player.weapons[0]
+	var before := s.player.materials
+	ui._cancel_replace()
+	c.ok(not ui.is_replacing(), "cancel leaves replace mode")
+	c.eq(s.player.weapons[0], old, "weapon untouched")
+	c.eq(s.player.materials, before, "materials untouched")
+	c.ok(not o.sold, "offer stays available")
+	ui.free()
+
+
 func test_main_runs_the_whole_loop(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

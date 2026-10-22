@@ -8,12 +8,14 @@ var offers_box: VBoxContainer
 var reroll_button: Button
 var start_button: Button
 var echo_panel: EchoPanel
+var build_panel: BuildPanel
 
 var _title: Label
 var _materials: Label
 var _warning: Label
-var _build_panel: BuildPanel
 var _overlay: Control
+var _replacing: Offer
+var _replacing_index: int = -1
 
 
 func _ready() -> void:
@@ -39,8 +41,9 @@ func _ready() -> void:
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(columns)
 	columns.add_child(_build_left())
-	_build_panel = BuildPanel.new()
-	columns.add_child(_build_panel)
+	build_panel = BuildPanel.new()
+	build_panel.replace_cancelled.connect(_cancel_replace)
+	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
 	columns.add_child(echo_panel)
@@ -54,6 +57,8 @@ func _ready() -> void:
 func open(s: Sim) -> void:
 	sim = s
 	visible = true
+	_replacing = null
+	_replacing_index = -1
 	refresh(true)
 	_fly_take_token()
 	# If the bank is over capacity, the discard is the only legal action: put focus there.
@@ -63,13 +68,16 @@ func open(s: Sim) -> void:
 
 
 func refresh(animate_echo: bool = false) -> void:
+	if _replacing != null and (not sim.shop.offers.has(_replacing) or _replacing.sold):
+		_replacing = null
+		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
 		offers_box.add_child(card)
-		card.setup(o, sim)
+		card.setup(o, sim, o == _replacing)
 		card.pressed.connect(_on_offer.bind(o, card))
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("shop.reroll", [cost])
@@ -78,7 +86,12 @@ func refresh(animate_echo: bool = false) -> void:
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
 	_warning.text = Loc.t("shop.over", [over]) if over > 0 else ""
-	_build_panel.refresh(sim)
+	var replace_with := ""
+	var chooser := Callable()
+	if _replacing != null:
+		replace_with = Loc.weapon_name(_replacing.id())
+		chooser = _on_replace_slot
+	build_panel.refresh(sim, replace_with, chooser)
 	echo_panel.refresh(sim, animate_echo)
 
 
@@ -123,6 +136,12 @@ func _build_left() -> Control:
 
 func _on_offer(o: Offer, card: OfferCard) -> void:
 	var reason := sim.shop.block_reason(sim, o)
+	if reason == &"full" and o.is_weapon():
+		if _replacing == o:
+			_cancel_replace()
+		else:
+			_begin_replace(o)
+		return
 	if reason != &"":
 		card.reject()
 		_flash_block(reason)
@@ -133,18 +152,53 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 		_focus_card(index)
 
 
+func is_replacing() -> bool:
+	return _replacing != null
+
+
+func _begin_replace(o: Offer) -> void:
+	_replacing = o
+	_replacing_index = sim.shop.offers.find(o)
+	refresh()
+	build_panel.focus_first_slot()
+
+
+func _cancel_replace() -> void:
+	if _replacing == null:
+		return
+	var at := _replacing_index
+	_replacing = null
+	_replacing_index = -1
+	refresh()
+	_focus_card(maxi(0, at))
+
+
+func _on_replace_slot(index: int) -> void:
+	if _replacing == null:
+		return
+	if not sim.shop.replace_weapon(sim, _replacing, index):
+		UiTheme.flash(_materials)
+		return
+	_replacing = null
+	_replacing_index = -1
+	refresh()
+	_focus_card(0)
+
+
 # Blocked clicks point at the resource that is missing, instead of only reading "can't buy".
 func _flash_block(reason: StringName) -> void:
 	match reason:
 		&"poor":
 			UiTheme.flash(_materials)
 		&"full":
-			_build_panel.flash_slots()
+			build_panel.flash_slots()
 		&"maxed":
-			_build_panel.flash_items()
+			build_panel.flash_items()
 
 
 func _on_reroll() -> void:
+	_replacing = null
+	_replacing_index = -1
 	if sim.shop.reroll(sim):
 		refresh()
 		if reroll_button.disabled:
@@ -162,8 +216,16 @@ func _on_discard(take: EchoTake) -> void:
 
 func _on_start() -> void:
 	if sim.can_start_wave():
+		_replacing = null
+		_replacing_index = -1
 		visible = false
 		start_requested.emit()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _replacing != null and event.is_action_pressed(&"ui_cancel"):
+		_cancel_replace()
+		accept_event()
 
 
 func _focus_card(from: int) -> void:

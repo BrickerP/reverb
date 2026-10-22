@@ -3,6 +3,7 @@ extends RefCounted
 
 const OFFER_COUNT := 4
 const WEAPON_CHANCE := 0.4
+const RESALE_RATE := 0.5
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
@@ -10,6 +11,11 @@ var rerolls: int = 0
 
 static func price_for(base: int, wave: int) -> int:
 	return int(ceil(float(base) * (1.0 + 0.05 * float(wave))))
+
+
+# Half of the base price, independent of the current wave's markup.
+static func resale_value(w: WeaponDef) -> int:
+	return maxi(1, int(floor(float(w.price) * RESALE_RATE)))
 
 
 func reroll_cost(wave: int) -> int:
@@ -46,6 +52,23 @@ func buy(sim: Sim, o: Offer) -> bool:
 		sim.player.add_weapon(o.weapon)
 	else:
 		sim.player.add_item(o.item)
+	o.sold = true
+	return true
+
+
+# Swap a weapon in place: pay the offer, minus half the old weapon's base price.
+func replace_weapon(sim: Sim, o: Offer, index: int) -> bool:
+	if sim.phase != Sim.Phase.SHOP or o == null or not o.is_weapon() or o.sold:
+		return false
+	if not offers.has(o) or index < 0 or index >= sim.player.weapons.size():
+		return false
+	var old := sim.player.weapons[index]
+	var resale := resale_value(old)
+	if sim.player.materials + resale < o.price:
+		return false
+	sim.player.materials += resale - o.price
+	sim.player.weapons[index] = o.weapon
+	sim.player.cooldowns[index] = 0.0
 	o.sold = true
 	return true
 
