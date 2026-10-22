@@ -109,6 +109,40 @@ func test_bank_discard_and_tints(c: Check) -> void:
 	c.eq(bank.takes.size(), 1, "one left")
 
 
+func test_echo_projectiles_tag_the_kill_source(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.pickups.clear()
+	var def := Content.enemies()[0]
+	var e := EnemyState.new()
+	e.uid = 99
+	e.def = def
+	e.pos = Vector2(600.0, 400.0)
+	e.radius = def.radius
+	e.max_hp = 1.0
+	e.hp = 1.0
+	s.enemies.append(e)
+	var p := Projectile.new()
+	p.pos = e.pos - Vector2(8.0, 0.0)
+	p.vel = Vector2(120.0, 0.0)
+	p.damage = 10.0
+	p.radius = 5.0
+	p.life = 1.0
+	p.source = 2
+	s.projectiles.append(p)
+	s.grid.clear()
+	s.grid.insert(e)
+	var seen: Array[int] = []
+	s.enemy_killed.connect(func(_pos: Vector2, _color: Color, source: int) -> void: seen.append(source))
+	Combat.step_projectiles(s, DT)
+	c.ok(e.dead, "the projectile killed the enemy")
+	c.eq(seen.size(), 1, "one kill signal")
+	c.eq(seen[0], 2, "the echo slot is carried into the kill signal")
+	c.eq(s.kills, 1, "kill counted")
+
+
 func test_take_power_uses_stats(c: Check) -> void:
 	var t := _weapon_take([&"pistol"])
 	c.near(t.power(), 14.0, 0.001, "pistol power is its dps")

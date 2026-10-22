@@ -5,8 +5,8 @@ signal wave_started(wave: int)
 signal wave_ended(wave: int)
 signal run_lost
 signal run_won
-signal enemy_killed(pos: Vector2, color: Color)
-signal enemy_hit(pos: Vector2, amount: float, crit: bool)
+signal enemy_killed(pos: Vector2, color: Color, source: int)
+signal enemy_hit(pos: Vector2, amount: float, crit: bool, source: int)
 signal player_hurt(amount: float)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
@@ -128,11 +128,11 @@ func step(delta: float, move_dir: Vector2) -> void:
 		_end_wave()
 
 
-func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool) -> void:
+func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1) -> void:
 	e.hp -= amount
 	e.flash = 0.09
 	e.knock += knock
-	enemy_hit.emit(e.pos, amount, crit)
+	enemy_hit.emit(e.pos, amount, crit, source)
 	if e.hp > 0.0 or e.dead:
 		return
 	e.dead = true
@@ -141,7 +141,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool) -> v
 	pk.pos = e.pos
 	pk.value = e.def.drop
 	pickups.append(pk)
-	enemy_killed.emit(e.pos, e.def.color)
+	enemy_killed.emit(e.pos, e.def.color, source)
 
 
 func discard_take(take: EchoTake) -> void:

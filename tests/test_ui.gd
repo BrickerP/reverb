@@ -234,6 +234,20 @@ func test_shop_traces_the_new_take_only_on_open(c: Check) -> void:
 	ui.free()
 
 
+func test_echo_kills_use_the_echo_tint(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var take := EchoTake.new()
+	take.tint_index = 0
+	s.echoes.append(EchoActor.new(take, 0))
+	var view := ArenaView.new()
+	view.bind(s)
+	c.ok(view.kill_color(0, Color.WHITE) != Color.WHITE, "echo kills borrow the echo colour")
+	c.eq(view.kill_color(-1, Color.RED), Color.RED, "player kills keep the enemy colour")
+	c.eq(view.kill_color(9, Color.RED), Color.RED, "a missing echo falls back safely")
+	view.free()
+
+
 func test_main_runs_the_whole_loop(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

@@ -57,13 +57,29 @@ func _draw() -> void:
 	ArenaPainter.sparks(self, _sparks)
 
 
-func _on_kill(pos: Vector2, color: Color) -> void:
+func _on_kill(pos: Vector2, color: Color, source: int) -> void:
+	var tint := kill_color(source, color)
 	for i in 8:
-		_spark(pos, color, 90.0 + randf() * 160.0, 0.35 + randf() * 0.25)
+		_spark(pos, tint, 90.0 + randf() * 160.0, 0.35 + randf() * 0.25)
+	if source >= 0:
+		var ring := _spark(pos, tint, 0.0, 0.3)
+		if ring != null:
+			ring.ring = true
+			ring.radius = 6.0
 
 
-func _on_hit(pos: Vector2, _amount: float, crit: bool) -> void:
-	_spark(pos, Color(1.0, 1.0, 0.6) if crit else Color.WHITE, 60.0 + randf() * 80.0, 0.16)
+func _on_hit(pos: Vector2, _amount: float, crit: bool, source: int) -> void:
+	var color := Color(1.0, 1.0, 0.6) if crit else Color.WHITE
+	if source >= 0 and sim != null and source < sim.echoes.size():
+		color = sim.echoes[source].take.tint().lerp(Color.WHITE, 0.2 if crit else 0.0)
+	_spark(pos, color, 60.0 + randf() * 80.0, 0.16)
+
+
+# Echo kills burst in the echo's own colour; player kills keep the enemy colour.
+func kill_color(source: int, fallback: Color) -> Color:
+	if sim == null or source < 0 or source >= sim.echoes.size():
+		return fallback
+	return fallback.lerp(sim.echoes[source].take.tint(), 0.85)
 
 
 func _on_hurt(_amount: float) -> void:

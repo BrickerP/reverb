@@ -83,7 +83,7 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 				continue
 			if p.hit_uids.has(e.uid):
 				continue
-			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit)
+			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source)
 			if p.pierce_left > 0:
 				p.pierce_left -= 1
 				p.hit_uids.append(e.uid)

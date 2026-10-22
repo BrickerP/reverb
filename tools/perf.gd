@@ -125,7 +125,7 @@ func _crowd(count: int, chase: bool) -> void:
 			_ms(sorted[sorted.size() - 1]), peak_enemies, peak_projectiles, roundi(float(_hits) / float(MEASURED_STEPS))])
 
 
-func _on_hit(_pos: Vector2, _amount: float, _crit: bool) -> void:
+func _on_hit(_pos: Vector2, _amount: float, _crit: bool, _source: int) -> void:
 	_hits += 1
 
 
