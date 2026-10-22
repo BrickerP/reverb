@@ -43,12 +43,16 @@ func _ready() -> void:
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
 	columns.add_child(echo_panel)
+	root.add_child(_build_footer())
 
 
 func open(s: Sim) -> void:
 	sim = s
 	visible = true
 	refresh()
+	# If the bank is over capacity, the discard is the only legal action: put focus there.
+	if sim.bank.overflow(sim.echo_capacity()) > 0 and echo_panel.focus_first_discard():
+		return
 	_focus_card(0)
 
 
@@ -70,6 +74,10 @@ func refresh() -> void:
 	_warning.text = Loc.t("shop.over", [over]) if over > 0 else ""
 	_build_panel.refresh(sim)
 	echo_panel.refresh(sim)
+
+
+func _build_footer() -> Control:
+	return UiTheme.label(Loc.t("shop.keys"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 
 
 func _build_header() -> Control:

@@ -140,6 +140,8 @@ func _shot(name: String) -> void:
 	if _shots_dir == "" or _shots_taken.has(name):
 		return
 	_shots_taken[name] = true
+	# The viewport texture lags the simulation under --fixed-fps; force a present first.
+	RenderingServer.force_draw()
 	var image := root.get_texture().get_image()
 	image.save_png("%s/%s.png" % [_shots_dir, name])
 

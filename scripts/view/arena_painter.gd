@@ -35,7 +35,21 @@ static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary) -> void:
 	for a in sim.echoes:
 		var pts: PackedVector2Array = paths.get(a, PackedVector2Array())
 		if pts.size() >= 2:
-			ci.draw_polyline(pts, Color(a.take.tint(), 0.16), 2.0)
+			ci.draw_polyline(pts, Color(a.take.tint(), 0.22), 2.5)
+
+
+# Faint dashed circle: makes pickup range upgrades (and the magnet) legible without text.
+static func pickup_range(ci: CanvasItem, sim: Sim) -> void:
+	if sim.pickups.is_empty():
+		return
+	var radius := sim.player.stats.get_stat(Stats.PICKUP_RANGE)
+	if radius <= 0.0:
+		return
+	var segments := 32
+	var step := TAU / float(segments)
+	for k in segments:
+		if k % 2 == 0:
+			ci.draw_arc(sim.player.pos, radius, float(k) * step, float(k + 1) * step, 4, Color(0.6, 0.9, 1.0, 0.1), 1.0)
 
 
 static func pickups(ci: CanvasItem, sim: Sim) -> void:
@@ -63,10 +77,22 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 
 static func echoes(ci: CanvasItem, sim: Sim) -> void:
 	var r := PlayerState.RADIUS
+	var lifespan := sim.echo_lifespan()
+	var segments := maxi(1, lifespan)
+	var step := TAU / float(segments)
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 120.0)
 	for a in sim.echoes:
 		var c := a.take.tint()
+		var remaining := maxi(0, lifespan - a.take.age)
 		ci.draw_circle(a.pos, r, Color(c, 0.2))
 		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.9), 2.0)
+		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
+		for k in segments:
+			var start := -PI * 0.5 + float(k) * step
+			var col := Color(c, 0.85) if k < remaining else Color(c, 0.12)
+			ci.draw_arc(a.pos, r + 6.0, start, start + step * 0.82, 6, col, 2.0)
+		if remaining <= 1:
+			ci.draw_arc(a.pos, r + 9.0, 0.0, TAU, 28, Color(UiTheme.WARN, 0.2 + 0.5 * pulse), 1.5)
 		if a.rewinding:
 			for dx in [-3.0, 2.0]:
 				var tip := a.pos + Vector2(dx - 2.5, 0.0)

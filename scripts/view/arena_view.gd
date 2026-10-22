@@ -42,6 +42,7 @@ func _draw() -> void:
 	ArenaPainter.arena(self)
 	ArenaPainter.pending(self, sim)
 	ArenaPainter.echo_paths(self, sim, _paths)
+	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim)
 	ArenaPainter.echoes(self, sim)

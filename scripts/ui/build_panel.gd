@@ -19,8 +19,8 @@ func refresh(sim: Sim) -> void:
 	_box.add_child(_weapon_chips(pl))
 	_box.add_child(UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM))
 	_box.add_child(_item_chips(pl))
-	_box.add_child(UiTheme.label(Loc.t("shop.stats"), 16, UiTheme.DIM))
-	_box.add_child(_stat_grid(pl))
+	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
+	_box.add_child(_core_grid(pl))
 
 
 func _flow() -> HFlowContainer:
@@ -53,18 +53,26 @@ func _item_chips(pl: PlayerState) -> Control:
 	return flow
 
 
-func _stat_grid(pl: PlayerState) -> Control:
+# The six numbers that describe this run's identity. The rest live on the cards.
+func _core_grid(pl: PlayerState) -> Control:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("v_separation", 4)
-	for id in Stats.ORDER:
-		var echo_stat := String(id).begins_with("echo_")
-		var name_label := UiTheme.label(Loc.stat_name(id), 15, UiTheme.ECHO if echo_stat else UiTheme.DIM)
-		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(name_label)
-		var value := Loc.stat_value(id, pl.stats.get_stat(id), false)
-		grid.add_child(UiTheme.label(value, 15, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT))
+	_add_stat(grid, Loc.t("stat.dps"), "%d" % int(round(OfferCard.total_dps(pl))))
+	_add_stat(grid, Loc.stat_name(Stats.MAX_HP), Loc.stat_value(Stats.MAX_HP, pl.max_hp(), false))
+	_add_stat(grid, Loc.stat_name(Stats.MOVE_SPEED), Loc.stat_value(Stats.MOVE_SPEED, pl.stats.get_stat(Stats.MOVE_SPEED), false))
+	_add_stat(grid, Loc.stat_name(Stats.CRIT_CHANCE), Loc.stat_value(Stats.CRIT_CHANCE, pl.stats.get_stat(Stats.CRIT_CHANCE), false))
+	_add_stat(grid, Loc.t("hud.echo"), Loc.t("shop.echo_value", [int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))),
+			int(round(pl.stats.get_stat(Stats.ECHO_POWER) * 100.0))]))
+	_add_stat(grid, Loc.stat_name(Stats.HP_REGEN), Loc.stat_value(Stats.HP_REGEN, pl.stats.get_stat(Stats.HP_REGEN), false))
 	return grid
+
+
+func _add_stat(grid: GridContainer, name: String, value: String) -> void:
+	var name_label := UiTheme.label(name, 15, UiTheme.DIM)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(name_label)
+	grid.add_child(UiTheme.label(value, 15, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT))
 
 
 func _counted(label: String, n: int) -> String:

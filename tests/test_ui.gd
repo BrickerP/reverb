@@ -113,6 +113,63 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.free()
 
 
+func test_hud_weapon_slots_show_cooldown_readiness(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var h := Hud.new()
+	h.bind(s)
+	c.near(h.weapon_ready(0), 1.0, 0.01, "a fresh weapon reads as ready")
+	var w := s.player.weapons[0]
+	s.player.cooldowns[0] = w.cooldown * s.player.stats.cooldown_mult()
+	c.near(h.weapon_ready(0), 0.0, 0.02, "just fired reads as empty")
+	s.player.cooldowns[0] = w.cooldown * s.player.stats.cooldown_mult() * 0.5
+	c.near(h.weapon_ready(0), 0.5, 0.02, "the fill tracks the cooldown")
+	c.near(h.weapon_ready(99), 0.0, 0.001, "missing slot is empty")
+	h.free()
+
+
+func test_hud_echo_chips_count_remaining_waves(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var h := Hud.new()
+	h.bind(s)
+	var take := EchoTake.new()
+	take.age = 1
+	c.eq(h.echo_remaining(take), s.echo_lifespan() - 1, "age eats one wave of life")
+	take.age = 99
+	c.eq(h.echo_remaining(take), 0, "expired takes never go negative")
+	h.free()
+
+
+func test_hud_first_run_hint_fades(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var h := Hud.new()
+	h.bind(s)
+	c.near(h.hint_alpha(), 1.0, 0.001, "controls are visible at the start")
+	h._hint_time = 4.75
+	c.near(h.hint_alpha(), 0.5, 0.05, "the hint fades out")
+	h._hint_time = 6.0
+	c.near(h.hint_alpha(), 0.0, 0.001, "and is gone")
+	h._hint_time = 0.0
+	s.wave = 2
+	c.near(h.hint_alpha(), 0.0, 0.001, "only the first wave gets the hint")
+	h.free()
+
+
+func test_offer_card_compares_weapon_dps(c: Check) -> void:
+	var s := Sim.new(3)
+	s.start_run()
+	var stats := s.player.stats
+	c.near(OfferCard.weapon_dps(Content.weapon(&"pistol"), stats), 14.7, 0.05,
+			"pistol DPS includes the base crit chance")
+	c.near(OfferCard.total_dps(s.player), 14.7, 0.05, "one starting weapon")
+	s.player.add_item(Content.item(&"sharp_edge"))
+	c.near(OfferCard.weapon_dps(Content.weapon(&"pistol"), stats), 16.17, 0.05,
+			"damage items flow into the shown DPS")
+	c.ok(OfferCard.weapon_dps(Content.weapon(&"rifle"), stats) > 14.0, "rifle is comparable per shot")
+
+
 func test_main_runs_the_whole_loop(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

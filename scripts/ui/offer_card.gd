@@ -11,6 +11,21 @@ func _init() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
+# Expected single-target DPS of everything already equipped.
+static func total_dps(pl: PlayerState) -> float:
+	var total := 0.0
+	for w in pl.weapons:
+		total += weapon_dps(w, pl.stats)
+	return total
+
+
+static func weapon_dps(w: WeaponDef, stats: Stats) -> float:
+	var pellets := float(maxi(1, w.pellets))
+	var crit := 1.0 + maxf(0.0, stats.get_stat(Stats.CRIT_CHANCE))
+	var rate := 1.0 / maxf(0.01, w.cooldown * stats.cooldown_mult())
+	return w.damage * pellets * stats.damage_mult() * crit * rate
+
+
 func setup(o: Offer, sim: Sim) -> void:
 	offer = o
 	var reason := sim.shop.block_reason(sim, o)
@@ -28,9 +43,13 @@ func setup(o: Offer, sim: Sim) -> void:
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
 	box.add_child(_title_row(o, reason))
-	var desc := UiTheme.label(_description(o), 15, UiTheme.DIM)
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(desc)
+	if o.is_weapon():
+		box.add_child(_dps_row(o.weapon, sim))
+		box.add_child(_weapon_meta(o.weapon))
+	else:
+		var desc := UiTheme.label(_description(o), 15, UiTheme.DIM)
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(desc)
 
 
 func _title_row(o: Offer, reason: StringName) -> Control:
@@ -49,6 +68,32 @@ func _title_row(o: Offer, reason: StringName) -> Control:
 	row.add_child(spacer)
 	row.add_child(_price_label(o, reason))
 	return row
+
+
+func _dps_row(w: WeaponDef, sim: Sim) -> Control:
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	var before := total_dps(sim.player)
+	var after := before + weapon_dps(w, sim.player.stats)
+	row.add_child(UiTheme.label(Loc.t("shop.dps_arrow", [int(round(before)), int(round(after))]), 16, UiTheme.COIN))
+	var gain := UiTheme.label("+%d" % int(round(after - before)), 14, UiTheme.COIN)
+	gain.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gain.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(gain)
+	return row
+
+
+func _weapon_meta(w: WeaponDef) -> Label:
+	var parts := PackedStringArray()
+	parts.append(Loc.t("weapon.range", [int(w.reach)]))
+	if w.pierce >= 50:
+		parts.append(Loc.t("weapon.pierce_all"))
+	elif w.pierce > 0:
+		parts.append(Loc.t("weapon.pierce", [w.pierce]))
+	var line := UiTheme.label("  ·  ".join(parts), 14, UiTheme.DIM)
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return line
 
 
 func _price_label(o: Offer, reason: StringName) -> Label:
