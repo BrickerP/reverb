@@ -4,6 +4,8 @@ extends PanelContainer
 signal discard_requested(take: EchoTake)
 
 var discard_buttons: Array[Button] = []
+var last_new_row: Control
+var last_new_tint: Color = Color.WHITE
 var _box: VBoxContainer
 
 
@@ -29,7 +31,7 @@ func _init() -> void:
 	add_child(_box)
 
 
-func refresh(sim: Sim) -> void:
+func refresh(sim: Sim, animate_new: bool = false) -> void:
 	UiTheme.clear(_box)
 	discard_buttons.clear()
 	var capacity := sim.echo_capacity()
@@ -47,8 +49,19 @@ func refresh(sim: Sim) -> void:
 		best = maxf(best, take.power() * sim.echo_power())
 	var newest_first := sim.bank.takes.duplicate()
 	newest_first.reverse()
+	var new_row: Control = null
+	last_new_row = null
+	last_new_tint = Color.WHITE
 	for take: EchoTake in newest_first:
-		_box.add_child(_row(take, sim, lifespan, best))
+		var is_new := animate_new and take.age == 0
+		var row := _row(take, sim, lifespan, best, is_new)
+		_box.add_child(row)
+		if is_new:
+			new_row = row
+			last_new_row = row
+			last_new_tint = take.tint()
+	if new_row != null:
+		_animate_new_row(new_row)
 
 
 func focus_first_discard() -> bool:
@@ -58,7 +71,18 @@ func focus_first_discard() -> bool:
 	return true
 
 
-func _row(take: EchoTake, sim: Sim, lifespan: int, best: float) -> Control:
+func arrival_point() -> Vector2:
+	if last_new_row == null or not last_new_row.is_inside_tree():
+		return Vector2.ZERO
+	var rect := last_new_row.get_global_rect()
+	return Vector2(rect.position.x + 2.0, rect.position.y + rect.size.y * 0.5)
+
+
+func newest_tint() -> Color:
+	return last_new_tint
+
+
+func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool = false) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	var strip := ColorRect.new()
@@ -67,7 +91,7 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float) -> Control:
 	strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_child(strip)
 	var preview := PathPreview.new()
-	preview.setup(take)
+	preview.setup(take, animate)
 	row.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -97,6 +121,21 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float) -> Control:
 	discard_buttons.append(button)
 	row.add_child(button)
 	return row
+
+
+func _animate_new_row(row: Control) -> void:
+	# Keep the discard button at full contrast (it may hold keyboard focus); only the
+	# identity strip and the take's text fade in.
+	var strip := row.get_child(0) as Control
+	var info := row.get_child(2) as Control
+	if strip == null or info == null:
+		return
+	strip.modulate.a = 0.25
+	info.modulate.a = 0.35
+	var tween := row.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(strip, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
+	tween.tween_property(info, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
 
 
 func _title_line(take: EchoTake) -> Control:

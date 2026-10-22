@@ -1,11 +1,12 @@
 extends SceneTree
 # Windowed screenshots of UI states that the main smoke run never pauses on:
-# the first-wave controls hint, the pause panel, and the echo path reveal.
+# the first-wave controls hint, the pause panel, the echo path reveal, and a take arriving in the shop.
 # Usage: godot --path . --fixed-fps 60 --disable-vsync --script res://tools/ui_shots.gd
 
 var _main: Node
 var _frame := 0
 var _step := 0
+var _shop_frames := 0
 var _dir := ""
 
 
@@ -42,8 +43,18 @@ func _process(_delta: float) -> bool:
 		3:
 			if _frame >= 72:
 				_save("echoes")
-				quit()
-				return true
+				_main.sim.wave_duration = 0.001
+				_frame = 0
+				_step = 4
+		4:
+			if _main.shop_ui.visible:
+				_shop_frames += 1
+				if _shop_frames == 10:
+					_save("shop_arrive")
+				elif _shop_frames >= 70:
+					_save("shop_settled")
+					quit()
+					return true
 	return false
 
 

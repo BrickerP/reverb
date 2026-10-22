@@ -214,6 +214,26 @@ func test_echo_reveals_stagger_for_readability(c: Check) -> void:
 	view.free()
 
 
+func test_shop_traces_the_new_take_only_on_open(c: Check) -> void:
+	var s := _shop_sim(100, 3)
+	var ui := _open_shop(s)
+	var previews := ui.echo_panel.find_children("*", "PathPreview", true, false)
+	c.eq(previews.size(), 3, "one route preview per take")
+	var animating := 0
+	for node in previews:
+		if (node as PathPreview).is_animating():
+			animating += 1
+	c.eq(animating, 1, "only the new take traces in")
+	ui.refresh()
+	previews = ui.echo_panel.find_children("*", "PathPreview", true, false)
+	animating = 0
+	for node in previews:
+		if (node as PathPreview).is_animating():
+			animating += 1
+	c.eq(animating, 0, "buying or rerolling does not replay the arrival")
+	ui.free()
+
+
 func test_main_runs_the_whole_loop(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

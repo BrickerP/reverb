@@ -13,6 +13,7 @@ var _title: Label
 var _materials: Label
 var _warning: Label
 var _build_panel: BuildPanel
+var _overlay: Control
 
 
 func _ready() -> void:
@@ -44,19 +45,24 @@ func _ready() -> void:
 	echo_panel.discard_requested.connect(_on_discard)
 	columns.add_child(echo_panel)
 	root.add_child(_build_footer())
+	_overlay = Control.new()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_overlay)
+	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 func open(s: Sim) -> void:
 	sim = s
 	visible = true
-	refresh()
+	refresh(true)
+	_fly_take_token()
 	# If the bank is over capacity, the discard is the only legal action: put focus there.
 	if sim.bank.overflow(sim.echo_capacity()) > 0 and echo_panel.focus_first_discard():
 		return
 	_focus_card(0)
 
 
-func refresh() -> void:
+func refresh(animate_echo: bool = false) -> void:
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
 	UiTheme.clear(offers_box)
@@ -73,7 +79,7 @@ func refresh() -> void:
 	var over := sim.bank.overflow(sim.echo_capacity())
 	_warning.text = Loc.t("shop.over", [over]) if over > 0 else ""
 	_build_panel.refresh(sim)
-	echo_panel.refresh(sim)
+	echo_panel.refresh(sim, animate_echo)
 
 
 func _build_footer() -> Control:
@@ -155,3 +161,29 @@ func _focus_card(from: int) -> void:
 		if not b.disabled:
 			b.grab_focus()
 			return
+
+
+# A small token flies from the arena centre into the newly recorded take's row: the wave
+# is visibly "collected" rather than just appearing in a list.
+func _fly_take_token() -> void:
+	if not is_inside_tree() or _overlay == null:
+		return
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not visible or sim == null:
+		return
+	var target := echo_panel.arrival_point()
+	if target == Vector2.ZERO:
+		return
+	var token := ColorRect.new()
+	token.color = Color(echo_panel.newest_tint(), 0.95)
+	token.size = Vector2(10.0, 10.0)
+	token.rotation = PI * 0.25
+	token.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	token.position = Vector2(640.0, 380.0) - token.size * 0.5
+	_overlay.add_child(token)
+	var tween := token.create_tween()
+	tween.tween_property(token, "position", target - token.size * 0.5, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(token, "scale", Vector2(0.6, 0.6), 0.55)
+	tween.chain().tween_property(token, "modulate:a", 0.0, 0.12)
+	tween.tween_callback(token.queue_free)

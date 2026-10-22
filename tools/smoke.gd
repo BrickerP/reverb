@@ -9,7 +9,7 @@ const FRAME_CAP := 60 * 60 * 25
 const TARGET_WAVE := 4
 const SMOKE_SEED := 20261022
 const AFTER_FRAMES := 600
-const SHOT_DELAY := 6
+const SHOT_DELAY := 60
 
 var _main: Node
 var _bot := Bot.new()
