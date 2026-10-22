@@ -3,6 +3,7 @@ extends Control
 
 signal character_chosen(id: StringName)
 signal settings_requested
+signal history_requested
 
 var _cards_box: HBoxContainer
 var _summary: Label
@@ -52,12 +53,20 @@ func _ready() -> void:
 	_summary = UiTheme.label("", 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_summary)
 	box.add_child(UiTheme.label(Loc.t("select.hint"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	var settings_button := Button.new()
 	settings_button.text = Loc.t("select.settings")
 	settings_button.custom_minimum_size = Vector2(160.0, 36.0)
-	settings_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	settings_button.pressed.connect(func() -> void: settings_requested.emit())
-	box.add_child(settings_button)
+	buttons.add_child(settings_button)
+	var history_button := Button.new()
+	history_button.text = Loc.t("select.history")
+	history_button.custom_minimum_size = Vector2(160.0, 36.0)
+	history_button.pressed.connect(func() -> void: history_requested.emit())
+	buttons.add_child(history_button)
+	box.add_child(buttons)
 
 
 func refresh(meta: Meta) -> void:
@@ -67,7 +76,8 @@ func refresh(meta: Meta) -> void:
 		var card := _make_card(def, meta)
 		_cards_box.add_child(card)
 		_cards.append(card)
-	_summary.text = Loc.t("select.best", [meta.best_wave, meta.wins])
+	_summary.text = "%s  ·  v%s" % [Loc.t("select.best", [meta.best_wave, meta.wins]),
+			str(ProjectSettings.get_setting("application/config/version", ""))]
 	for card in _cards:
 		if not card.disabled:
 			card.grab_focus()

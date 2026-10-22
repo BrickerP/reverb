@@ -9,6 +9,7 @@ var shop_ui: ShopUi
 var end_ui: EndUi
 var character_select: CharacterSelectUi
 var settings_ui: SettingsUi
+var history_ui: HistoryUi
 var settings: Settings
 var meta: Meta
 var run_log: RunLog
@@ -45,11 +46,13 @@ func _ready() -> void:
 	end_ui = EndUi.new()
 	character_select = CharacterSelectUi.new()
 	settings_ui = SettingsUi.new()
+	history_ui = HistoryUi.new()
 	_add_layer(1, hud, theme)
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
 	_add_layer(4, character_select, theme)
 	_add_layer(5, settings_ui, theme)
+	_add_layer(6, history_ui, theme)
 	shop_ui.start_requested.connect(_on_start_requested)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
@@ -57,6 +60,7 @@ func _ready() -> void:
 	end_ui.open_log_requested.connect(_open_log_folder)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
+	character_select.history_requested.connect(open_history)
 	settings_ui.volume_changed.connect(_on_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
@@ -115,12 +119,18 @@ func _open_log_folder() -> void:
 
 
 func open_settings() -> void:
-	if settings_ui.visible:
+	if settings_ui.visible or history_ui.visible:
 		return
 	_settings_restore_pause = paused
 	if sim != null and sim.phase == Sim.Phase.WAVE and not paused:
 		_set_paused(true)
 	settings_ui.open(settings)
+
+
+func open_history() -> void:
+	if history_ui.visible or settings_ui.visible or run_log == null:
+		return
+	history_ui.open(run_log)
 
 
 func _on_settings_closed() -> void:
@@ -190,7 +200,7 @@ func toggle_pause() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if paused or sim == null or character_select.visible or settings_ui.visible:
+	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -205,6 +215,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if history_ui.visible:
+		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"history"):
+			history_ui.close()
+			get_viewport().set_input_as_handled()
+		return
 	if settings_ui.visible:
 		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"settings"):
 			settings_ui.close()
@@ -212,6 +227,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed(&"settings"):
 		open_settings()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"history") and (character_select.visible or end_ui.visible):
+		open_history()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"pause"):
 		toggle_pause()

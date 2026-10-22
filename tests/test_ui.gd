@@ -411,6 +411,10 @@ func test_main_settings_open_and_close(c: Check) -> void:
 	c.ok(main.settings_ui.visible, "settings opens from the title screen")
 	main.settings_ui.close()
 	c.ok(not main.settings_ui.visible, "settings closes")
+	main.open_history()
+	c.ok(main.history_ui.visible, "history opens from the title screen")
+	main.history_ui.close()
+	c.ok(not main.history_ui.visible, "history closes")
 	main.free()
 
 

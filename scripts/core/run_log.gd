@@ -14,6 +14,26 @@ func folder_path() -> String:
 	return ProjectSettings.globalize_path(path.get_base_dir())
 
 
+func recent(limit: int = 8) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not FileAccess.file_exists(path):
+		return out
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return out
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line == "":
+			continue
+		var json := JSON.new()
+		if json.parse(line) != OK or typeof(json.data) != TYPE_DICTIONARY:
+			continue
+		out.append(json.data)
+		if out.size() > limit:
+			out.pop_front()
+	return out
+
+
 # Appends one finished run as a JSON line. Local only; never uploaded.
 func append(sim: Sim, character_id: StringName, seconds: float) -> void:
 	if sim == null:
