@@ -57,6 +57,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
 - **Linux**：`Reverb-linux.zip` → 解压 → `chmod +x Reverb.x86_64` → 运行。
+- **校验**：同页 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt`（macOS 用 `shasum -a 256 -c`）。
 
 ## 试玩反馈
 
