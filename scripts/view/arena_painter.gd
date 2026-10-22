@@ -1,0 +1,112 @@
+class_name ArenaPainter
+extends RefCounted
+
+const FILL := Color(0.05, 0.055, 0.1)
+const GRID_COLOR := Color(0.3, 0.4, 0.8, 0.08)
+const BORDER := Color(0.4, 0.85, 1.0, 0.85)
+const PLAYER := Color(0.6, 1.0, 1.0)
+const GRID := 60.0
+
+
+static func arena(ci: CanvasItem) -> void:
+	var a := Sim.ARENA
+	ci.draw_rect(a, FILL)
+	var x := a.position.x + GRID
+	while x < a.end.x:
+		ci.draw_line(Vector2(x, a.position.y), Vector2(x, a.end.y), GRID_COLOR, 1.0)
+		x += GRID
+	var y := a.position.y + GRID
+	while y < a.end.y:
+		ci.draw_line(Vector2(a.position.x, y), Vector2(a.end.x, y), GRID_COLOR, 1.0)
+		y += GRID
+	ci.draw_rect(a.grow(4.0), Color(BORDER, 0.16), false, 8.0)
+	ci.draw_rect(a, BORDER, false, 3.0)
+
+
+static func pending(ci: CanvasItem, sim: Sim) -> void:
+	for ps in sim.pending:
+		var t := 1.0 - clampf(ps.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
+		var col := Color(ps.def.color, 0.25 + 0.6 * t)
+		ci.draw_arc(ps.pos, ps.def.radius + 2.0 + 14.0 * (1.0 - t), 0.0, TAU, 20, col, 2.0)
+		ci.draw_circle(ps.pos, 2.5, col)
+
+
+static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary) -> void:
+	for a in sim.echoes:
+		var pts: PackedVector2Array = paths.get(a, PackedVector2Array())
+		if pts.size() >= 2:
+			ci.draw_polyline(pts, Color(a.take.tint(), 0.16), 2.0)
+
+
+static func pickups(ci: CanvasItem, sim: Sim) -> void:
+	for pk in sim.pickups:
+		ci.draw_circle(pk.pos, 6.0, Color(UiTheme.COIN, 0.25))
+		ci.draw_circle(pk.pos, 3.2, UiTheme.COIN)
+
+
+static func enemies(ci: CanvasItem, sim: Sim) -> void:
+	var target := sim.player.pos
+	for e in sim.enemies:
+		var col := Color.WHITE if e.flash > 0.0 else e.def.color
+		if e.def.sides < 3:
+			ci.draw_circle(e.pos, e.radius, Color(col, 0.92))
+			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
+		else:
+			var rot := (target - e.pos).angle()
+			ci.draw_colored_polygon(_ngon(e.pos, e.radius + 2.0, e.def.sides, rot), Color(col, 0.92))
+		if e.radius >= 15.0 and e.hp < e.max_hp:
+			var top := e.pos + Vector2(-e.radius, -e.radius - 8.0)
+			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
+			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
+			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
+
+
+static func echoes(ci: CanvasItem, sim: Sim) -> void:
+	var r := PlayerState.RADIUS
+	for a in sim.echoes:
+		var c := a.take.tint()
+		ci.draw_circle(a.pos, r, Color(c, 0.2))
+		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.9), 2.0)
+		if a.rewinding:
+			for dx in [-3.0, 2.0]:
+				var tip := a.pos + Vector2(dx - 2.5, 0.0)
+				var chevron := PackedVector2Array([tip + Vector2(5.0, -5.0), tip, tip + Vector2(5.0, 5.0)])
+				ci.draw_polyline(chevron, Color(c, 0.95), 2.0)
+		else:
+			ci.draw_circle(a.pos, 3.0, Color(c, 0.9))
+
+
+static func projectiles(ci: CanvasItem, sim: Sim) -> void:
+	for p in sim.projectiles:
+		var dir := p.vel.normalized()
+		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(p.color, 0.5), p.radius * 1.2)
+		ci.draw_circle(p.pos, p.radius, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+
+
+static func player(ci: CanvasItem, sim: Sim) -> void:
+	var pl := sim.player
+	var alpha := 1.0
+	if pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
+		alpha = 0.35
+	var r := PlayerState.RADIUS
+	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
+	ci.draw_circle(pl.pos, r, Color(PLAYER, alpha))
+	ci.draw_circle(pl.pos, r * 0.45, Color(0.02, 0.05, 0.1, alpha))
+	ci.draw_line(pl.pos + pl.facing * r, pl.pos + pl.facing * (r + 7.0), Color(1, 1, 1, alpha), 3.0)
+
+
+static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
+	for s in list:
+		var t := s.life / s.max_life
+		if s.ring:
+			ci.draw_arc(s.pos, s.radius + (1.0 - t) * 46.0, 0.0, TAU, 28, Color(s.color, t), 2.0)
+		else:
+			ci.draw_circle(s.pos, 1.5 + 2.0 * t, Color(s.color, t))
+
+
+static func _ngon(center: Vector2, radius: float, sides: int, rot: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	pts.resize(sides)
+	for i in sides:
+		pts[i] = center + Vector2.from_angle(rot + TAU * float(i) / float(sides)) * radius
+	return pts
