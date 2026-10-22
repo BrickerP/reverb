@@ -5,6 +5,7 @@ const MAX_SPARKS := 400
 const PATH_STRIDE := 3
 const REVEAL_TIME := 0.8
 const RECORD_BEAT := 0.6
+const VICTORY_BEAT := 0.9
 
 var sim: Sim
 var _paths: Dictionary = {}
@@ -13,6 +14,10 @@ var _sparks: Array[Spark] = []
 var _shake: float = 0.0
 var _beat_take: EchoTake
 var _beat_time := 0.0
+var _victory := false
+var _victory_time := 0.0
+var _victory_origin := Vector2.ZERO
+var _victory_color := Color.WHITE
 
 
 func bind(s: Sim) -> void:
@@ -23,6 +28,8 @@ func bind(s: Sim) -> void:
 	_shake = 0.0
 	_beat_take = null
 	_beat_time = 0.0
+	_victory = false
+	_victory_time = 0.0
 	sim.enemy_killed.connect(_on_kill)
 	sim.enemy_hit.connect(_on_hit)
 	sim.player_hurt.connect(_on_hurt)
@@ -37,6 +44,25 @@ func play_record_beat(s: Sim) -> void:
 		return
 	_beat_take = s.bank.takes[s.bank.takes.size() - 1]
 	_beat_time = 0.0
+	queue_redraw()
+
+
+# Called by Main when the boss dies; the end screen waits for this beat.
+func play_victory_beat(s: Sim) -> void:
+	_victory = true
+	_victory_time = 0.0
+	_shake = minf(1.0, _shake + 0.9)
+	_victory_origin = s.player.pos
+	_victory_color = Color(1.0, 0.75, 1.0)
+	if s.boss != null:
+		_victory_origin = s.boss.pos
+		_victory_color = s.boss.def.color
+	for i in 30:
+		_spark(_victory_origin, _victory_color, 120.0 + randf() * 300.0, 0.5 + randf() * 0.4)
+	var ring := _spark(_victory_origin, _victory_color, 0.0, 0.9)
+	if ring != null:
+		ring.ring = true
+		ring.radius = 30.0
 	queue_redraw()
 
 
@@ -59,6 +85,10 @@ func _process(delta: float) -> void:
 		_beat_time = minf(RECORD_BEAT, _beat_time + delta)
 		if _beat_time >= RECORD_BEAT:
 			_beat_take = null
+	if _victory:
+		_victory_time = minf(VICTORY_BEAT, _victory_time + delta)
+		if _victory_time >= VICTORY_BEAT:
+			_victory = false
 	queue_redraw()
 
 
@@ -78,6 +108,8 @@ func _draw() -> void:
 	ArenaPainter.projectiles(self, sim)
 	ArenaPainter.player(self, sim)
 	ArenaPainter.sparks(self, _sparks)
+	if _victory:
+		ArenaPainter.victory(self, _victory_origin, _victory_color, _victory_time / VICTORY_BEAT)
 
 
 func _on_kill(pos: Vector2, color: Color, source: int) -> void:

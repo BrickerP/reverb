@@ -347,6 +347,27 @@ func test_replace_mode_can_be_cancelled(c: Check) -> void:
 	ui.free()
 
 
+func test_boss_death_holds_the_end_screen(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	var s: Sim = main.sim
+	s.player.stats.add(Stats.MAX_HP, 100000.0)
+	s.player.hp = s.player.max_hp()
+	s.start_wave(WaveDirector.FINAL_WAVE)
+	for i in 200:
+		main._physics_process(DT)
+	c.ok(s.boss != null, "the boss spawned")
+	s.damage_enemy(s.boss, 100000.0, Vector2.ZERO, false, -1)
+	main._physics_process(DT)
+	c.eq(s.phase, Sim.Phase.WON, "boss death wins")
+	c.ok(not main.end_ui.visible, "the end screen waits for the victory beat")
+	for i in 70:
+		main._physics_process(DT)
+	c.ok(main.end_ui.visible, "the end screen arrives after the beat")
+	main.free()
+
+
 func test_main_runs_the_whole_loop(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

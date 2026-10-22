@@ -305,6 +305,7 @@ func _compact() -> void:
 
 
 func _end_wave() -> void:
+	echo_silenced = 0.0
 	for pk in pickups:
 		player.materials += pk.value
 	pickups.clear()

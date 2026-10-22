@@ -34,10 +34,17 @@ func _process(_delta: float) -> bool:
 		2:
 			if _frame >= 10:
 				_save("boss_silenced")
-				_main.audio.stop_all()
+				if _main.sim.boss != null:
+					_main.sim.damage_enemy(_main.sim.boss, 1000000.0, Vector2.ZERO, false, -1)
 				_frame = 0
 				_step = 3
 		3:
+			if _main.sim.phase == Sim.Phase.WON and _frame >= 18:
+				_save("victory")
+				_main.audio.stop_all()
+				_frame = 0
+				_step = 4
+		4:
 			if _frame >= 8:
 				quit()
 				return true

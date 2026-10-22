@@ -47,6 +47,22 @@ static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float) -> v
 	ci.draw_arc(target, 14.0 + 34.0 * collapse, 0.0, TAU, 32, Color(take.tint(), 0.7 * (1.0 - p)), 2.0)
 
 
+# Boss death: a white impact flash, a vertical beam and three expanding rings.
+static func victory(ci: CanvasItem, origin: Vector2, color: Color, t: float) -> void:
+	var p := clampf(t, 0.0, 1.0)
+	var flash := 0.55 * maxf(0.0, 1.0 - p * 2.4)
+	ci.draw_rect(Sim.ARENA, Color(1.0, 1.0, 1.0, flash))
+	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
+			Color(color, 0.06 * (1.0 - p)), 48.0)
+	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
+			Color(color, 0.12 * (1.0 - p)), 16.0)
+	for k in 3:
+		var q := clampf(p * 1.55 - 0.16 * float(k), 0.0, 1.0)
+		if q <= 0.0:
+			continue
+		ci.draw_arc(origin, 30.0 + 540.0 * q, 0.0, TAU, 64, Color(color, 0.8 * (1.0 - q)), 3.0)
+
+
 static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary) -> void:
 	var lifespan := maxi(1, sim.echo_lifespan())
 	for a in sim.echoes:

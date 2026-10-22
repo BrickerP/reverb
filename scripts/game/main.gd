@@ -1,6 +1,7 @@
 extends Node
 
 const RECORD_BEAT := 0.6
+const VICTORY_BEAT := 0.9
 
 var sim: Sim
 var hud: Hud
@@ -12,6 +13,7 @@ var paused: bool = false
 var _view: ArenaView
 var _phase: Sim.Phase = Sim.Phase.SHOP
 var _shop_delay := 0.0
+var _end_delay := 0.0
 
 
 func _ready() -> void:
@@ -42,6 +44,7 @@ func new_run(seed_value: int = -1) -> void:
 	end_ui.visible = false
 	_set_paused(false)
 	_shop_delay = 0.0
+	_end_delay = 0.0
 	sim.start_run()
 	_phase = sim.phase
 
@@ -59,6 +62,10 @@ func _physics_process(delta: float) -> void:
 		_shop_delay -= delta
 		if _shop_delay <= 0.0:
 			_open_shop()
+	if _end_delay > 0.0:
+		_end_delay -= delta
+		if _end_delay <= 0.0:
+			_show_end()
 	_sync_phase()
 
 
@@ -97,9 +104,14 @@ func _sync_phase() -> void:
 			hud.visible = true
 			_shop_delay = RECORD_BEAT
 			_view.play_record_beat(sim)
-		Sim.Phase.LOST, Sim.Phase.WON:
+		Sim.Phase.LOST:
 			hud.visible = true
 			end_ui.show_result(sim)
+		Sim.Phase.WON:
+			# Let the boss death land before the summary covers it.
+			hud.visible = true
+			_end_delay = VICTORY_BEAT
+			_view.play_victory_beat(sim)
 
 
 func _open_shop() -> void:
@@ -108,6 +120,12 @@ func _open_shop() -> void:
 	_shop_delay = 0.0
 	hud.visible = false
 	shop_ui.open(sim)
+
+
+func _show_end() -> void:
+	_end_delay = 0.0
+	if not end_ui.visible:
+		end_ui.show_result(sim)
 
 
 func _set_paused(on: bool) -> void:
