@@ -49,6 +49,7 @@ const TABLE := {
 	"end.win": "撑过了全部 %d 波",
 	"end.lose": "倒在了第 %d 波",
 	"end.run": "第 %d / %d 波  ·  击杀 %d",
+	"end.seed": "种子 %d",
 	"end.best_echo": "最强回响",
 	"end.echo_stats": "第 %d 波录像  ·  DPS %d",
 	"end.no_echo": "这一局没有留下回响",

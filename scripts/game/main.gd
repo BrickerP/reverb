@@ -9,6 +9,7 @@ var shop_ui: ShopUi
 var end_ui: EndUi
 var character_select: CharacterSelectUi
 var meta: Meta
+var run_log: RunLog
 var audio: GameAudio
 var paused: bool = false
 var character_id: StringName = &"looper"
@@ -19,6 +20,7 @@ var _shop_delay := 0.0
 var _end_delay := 0.0
 var _recorded := false
 var _unlock_text := ""
+var _run_started_msec := 0
 
 
 func _ready() -> void:
@@ -42,6 +44,8 @@ func _ready() -> void:
 	character_select.character_chosen.connect(choose_character)
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
+	var log_path := OS.get_environment("REVERB_RUN_LOG")
+	run_log = RunLog.new(log_path if log_path != "" else RunLog.DEFAULT_PATH)
 	show_select()
 
 
@@ -65,6 +69,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	_end_delay = 0.0
 	_recorded = false
 	_unlock_text = ""
+	_run_started_msec = Time.get_ticks_msec()
 	sim.start_run()
 	_phase = sim.phase
 
@@ -166,6 +171,9 @@ func _record_run() -> void:
 		return
 	_recorded = true
 	var newly := meta.record_run(sim)
+	if run_log != null:
+		var seconds := float(Time.get_ticks_msec() - _run_started_msec) / 1000.0
+		run_log.append(sim, character_id, seconds)
 	if newly.is_empty():
 		return
 	var names := PackedStringArray()

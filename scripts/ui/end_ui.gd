@@ -10,6 +10,7 @@ var best_take: EchoTake
 
 var _title: Label
 var _stats: Label
+var _seed: Label
 var _unlock: Label
 var _best_row: HBoxContainer
 var _best_preview: PathPreview
@@ -44,6 +45,8 @@ func _ready() -> void:
 	_stats = UiTheme.label("", 20, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_title)
 	box.add_child(_stats)
+	_seed = UiTheme.label("", 12, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_seed)
 	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_unlock)
 	_best_row = HBoxContainer.new()
@@ -80,6 +83,7 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_title.text = Loc.t("end.win", [WaveDirector.FINAL_WAVE]) if won else Loc.t("end.lose", [sim.wave])
 	_title.add_theme_color_override("font_color", UiTheme.COIN if won else UiTheme.WARN)
 	_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
+	_seed.text = Loc.t("end.seed", [sim.run_seed])
 	_unlock.text = unlocked_text
 	_unlock.visible = unlocked_text != ""
 	best_take = null

@@ -6,9 +6,13 @@ const SUITE_DIR := "res://tests/"
 func _initialize() -> void:
 	# Keep Meta writes out of the player's real save during tests.
 	OS.set_environment("REVERB_SAVE", "user://test_save.json")
+	OS.set_environment("REVERB_RUN_LOG", "user://test_runs.jsonl")
 	var test_save := ProjectSettings.globalize_path("user://test_save.json")
 	if FileAccess.file_exists(test_save):
 		DirAccess.remove_absolute(test_save)
+	var test_runs := ProjectSettings.globalize_path("user://test_runs.jsonl")
+	if FileAccess.file_exists(test_runs):
+		DirAccess.remove_absolute(test_runs)
 	# Nodes added to the root during _initialize do not get _ready until the first frame.
 	await process_frame
 	var check := Check.new()
@@ -38,4 +42,6 @@ func _initialize() -> void:
 	print("Results: %d passed, %d failed" % [check.passed, check.failed])
 	if FileAccess.file_exists(test_save):
 		DirAccess.remove_absolute(test_save)
+	if FileAccess.file_exists(test_runs):
+		DirAccess.remove_absolute(test_runs)
 	quit(1 if check.failed > 0 else 0)

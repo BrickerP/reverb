@@ -49,6 +49,16 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
 - **Linux**：`Reverb-linux.zip` → 解压 → `chmod +x Reverb.x86_64` → 运行。
 
+## 试玩反馈
+
+构建会把每局结果追加到本机的 `user://runs.jsonl`，不上传任何东西。文件位置：
+
+- macOS：`~/Library/Application Support/Godot/app_userdata/Reverb/runs.jsonl`
+- Windows：`%APPDATA%\Godot\app_userdata\Reverb\runs.jsonl`
+- Linux：`~/.local/share/godot/app_userdata/Reverb/runs.jsonl`
+
+把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页也会显示本局种子，方便复现。
+
 ## 从源码运行
 
 需要本机装 Godot 4.7.x（开发与测试用的是 4.7.2）。
@@ -78,7 +88,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1632 项）
+make test     # 无头测试（当前 1649 项）
 make smoke    # 真实场景端到端烟测
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）

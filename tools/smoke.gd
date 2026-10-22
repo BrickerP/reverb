@@ -32,6 +32,7 @@ var _hooked := false
 
 func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://smoke_save.json")
+	OS.set_environment("REVERB_RUN_LOG", "user://smoke_runs.jsonl")
 	if OS.get_cmdline_user_args().has("--shots"):
 		_shots_dir = ProjectSettings.globalize_path("res://shots")
 		DirAccess.make_dir_recursive_absolute(_shots_dir)

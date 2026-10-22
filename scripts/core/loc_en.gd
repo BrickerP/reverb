@@ -49,6 +49,7 @@ const TABLE := {
 	"end.win": "You made it through all %d waves",
 	"end.lose": "You fell on wave %d",
 	"end.run": "Wave %d / %d  ·  Kills %d",
+	"end.seed": "Seed %d",
 	"end.best_echo": "Strongest echo",
 	"end.echo_stats": "Wave %d take  ·  DPS %d",
 	"end.no_echo": "No echo survived this run",
