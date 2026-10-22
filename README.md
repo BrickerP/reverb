@@ -1,5 +1,7 @@
 # 回响 / Reverb
 
+![Test](https://github.com/BrickerP/reverb/actions/workflows/test.yml/badge.svg)
+
 Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和武器配置录成一张「回响」，下一波让过去的自己以角色对应的威力替你打——但槽位有限，你必须决定留下哪个过去的自己。
 
 当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、3 个角色、叠录、本地解锁记录和占位音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
@@ -106,6 +108,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ```bash
 make test     # 无头测试（当前 1839 项）
 make smoke    # 真实场景端到端烟测
+# CI: Ubuntu + macOS 上自动跑 import / tests / smoke
 make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
 make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
