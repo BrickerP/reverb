@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "snapshot": {
+    "presentation_commit": "d2dd6959d658159f97b2d4df0a6bba9753f58961",
+    "mechanics_commit": "8f555e43f7bc63c3588b7ee18c4d59f76695c3a2",
+    "content_source": "scripts/data/content.gd",
+    "catalog_source": "scripts/view/presentation_assets.gd",
+    "status_meaning": {
+      "independent_art": "A distinct production asset exists for this identity.",
+      "reused_prototype": "A visible fallback exists but does not complete identity coverage.",
+      "missing_art": "No identity-specific raster/icon asset exists.",
+      "code_feedback": "Semantic code-drawn feedback exists in addition to any art status."
+    }
+  },
+  "ownership": {
+    "mechanics": ["scripts/sim/**", "scripts/data/**", "scripts/echo/**", "balance and rule tests"],
+    "presentation": ["scripts/view/**", "scripts/ui/**", "scripts/game/audio.gd", "visual/audio assets and presentation tools"],
+    "shared": ["scripts/game/main.gd", "scripts/core/loc*.gd", "project.godot", "export_presets.cfg", "version and release files"]
+  },
+  "evidence": {
+    "source_inspection": [
+      "scripts/data/content.gd",
+      "scripts/view/presentation_assets.gd",
+      "scripts/view/arena_painter.gd",
+      "scripts/view/arena_view.gd",
+      "scripts/view/hud.gd",
+      "scripts/ui/**",
+      "scripts/game/audio.gd",
+      "INTERFACES.md"
+    ],
+    "runtime": [
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-preview.mp4",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-select.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-combat.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-echoes.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-shop.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-replace.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-purchased.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/tests.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/smoke.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/frame-probe.log"
+    ],
+    "limits": "Only rows that name runtime evidence are runtime-verified. Source presence alone is not visual acceptance."
+  },
+  "weapons": [
+    {"id":"pistol","family":"sidearm","evolved":false,"art":"independent_art","asset":"weapon_pistol","runtime":"verified","priority":"done"},
+    {"id":"smg","family":"sidearm","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"fallback_verified","priority":"P1"},
+    {"id":"shotgun","family":"scatter","evolved":false,"art":"independent_art","asset":"weapon_shotgun","runtime":"verified","priority":"done"},
+    {"id":"rifle","family":"marksman","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"fallback_verified","priority":"P1"},
+    {"id":"orb","family":"arcane","evolved":false,"art":"independent_art","asset":"weapon_orb","runtime":"verified","priority":"done"},
+    {"id":"flechette","family":"scatter","evolved":false,"art":"reused_prototype","asset":"weapon_shotgun","runtime":"source_only","priority":"P1"},
+    {"id":"longbow","family":"marksman","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P1"},
+    {"id":"hex_bolt","family":"arcane","evolved":false,"art":"reused_prototype","asset":"weapon_orb","runtime":"source_only","priority":"P1"},
+    {"id":"twin_fangs","family":"sidearm","evolved":true,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P0"},
+    {"id":"flak_crown","family":"scatter","evolved":true,"art":"reused_prototype","asset":"weapon_shotgun","runtime":"source_only","priority":"P0","feedback":["explosion radius and particles"]},
+    {"id":"rail_spike","family":"marksman","evolved":true,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P0"},
+    {"id":"nova_core","family":"arcane","evolved":true,"art":"reused_prototype","asset":"weapon_orb","runtime":"source_only","priority":"P0","feedback":["homing projectile state"]}
+  ],
+  "items": [
+    {"id":"iron_heart","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"sneakers","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"sharp_edge","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"quick_trigger","art":"missing_art","feedback":"stat text and cooldown behavior","priority":"P1"},
+    {"id":"long_barrel","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"lucky_coin","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"magnet","art":"missing_art","feedback":"code_feedback: pickup range ring","priority":"P1"},
+    {"id":"regen_patch","art":"missing_art","feedback":"stat text only","priority":"P1"},
+    {"id":"spare_deck","art":"missing_art","feedback":"echo capacity UI","priority":"P1"},
+    {"id":"long_play","art":"missing_art","feedback":"echo lifespan segments","priority":"P1"},
+    {"id":"loud_speaker","art":"missing_art","feedback":"echo power text","priority":"P1"}
+  ],
+  "enemies": [
+    {"id":"grunt","art":"independent_art","asset":"enemy_grunt","feedback":["spawn tell","hit flash","health bar"],"runtime":"verified","priority":"done"},
+    {"id":"runner","art":"independent_art","asset":"enemy_runner","feedback":["spawn tell","fast stride"],"runtime":"verified","priority":"done"},
+    {"id":"brute","art":"reused_prototype","asset":"enemy_grunt","feedback":["scale","tint","health bar"],"runtime":"source_only","priority":"P0"},
+    {"id":"silencer","art":"reused_prototype","asset":"enemy_grunt","feedback":["tint","silence HUD/audio"],"runtime":"source_only","priority":"P0"},
+    {"id":"bomber","art":"reused_prototype","asset":"enemy_grunt","feedback":["death radius ring","explosion"],"runtime":"source_only","priority":"P0"},
+    {"id":"warden","art":"reused_prototype","asset":"enemy_grunt","feedback":["front shield arc","reduced-hit event available"],"runtime":"source_only","priority":"P0"},
+    {"id":"paradox","art":"reused_prototype","asset":"enemy_grunt","feedback":["boss rings","core","boss health","victory beam","silence"],"runtime":"source_only","priority":"P0"}
+  ],
+  "characters": [
+    {"id":"looper","art":"reused_prototype","asset":"player","identity":"color, echo slots and stats only","runtime":"verified","priority":"P1"},
+    {"id":"solo","art":"reused_prototype","asset":"player","identity":"selection color and no echoes","runtime":"selection_verified","priority":"P1"},
+    {"id":"mirror","art":"reused_prototype","asset":"player","identity":"selection color and live loadout echoes","runtime":"selection_verified","priority":"P1"},
+    {"id":"conductor","art":"reused_prototype","asset":"player","identity":"selection color, four echoes and synergy","runtime":"selection_verified","priority":"P1"}
+  ],
+  "ui_surfaces": [
+    {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","locked","unlocked","seed","focus"],"runtime":"four-card screenshot only","priority":"P1"},
+    {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon cooldowns","controls","debug"],"runtime":"combat/echo screenshots","priority":"P1"},
+    {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked"],"runtime":"EN/ZH and presentation screenshots","priority":"P0"},
+    {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","upgrade","evolve","replace","scroll"],"runtime":"full-loadout screenshot and bounds check","priority":"P0"},
+    {"id":"echo_panel","source":"scripts/ui/echo_panel.gd","states":["arrival","overflow","discard","merge","selected"],"runtime":"echo/shop screenshots; merge source only","priority":"P1"},
+    {"id":"direct_drop_undo","source":"scripts/ui/shop_ui.gd","states":["drag valid","drag invalid","commit","multi-undo","reroll lock","wave lock","stale offer"],"runtime":"missing","priority":"P0"},
+    {"id":"pause","source":"scripts/ui/pause_ui.gd","states":["resume","settings","history","quit"],"runtime":"source/tests only","priority":"P2"},
+    {"id":"settings","source":"scripts/ui/settings_ui.gd","states":["volume","shake","fullscreen","language"],"runtime":"source/tests only","priority":"P2"},
+    {"id":"history","source":"scripts/ui/history_ui.gd","states":["empty","runs","detail"],"runtime":"source/tests only","priority":"P2"},
+    {"id":"codex","source":"scripts/ui/codex_ui.gd","states":["all weapons","details","evolutions"],"runtime":"source/tests only","priority":"P1"},
+    {"id":"end","source":"scripts/ui/end_ui.gd","states":["loss","win","best echo","no echo","unlock","death cause"],"runtime":"source/tests only","priority":"P2"}
+  ],
+  "event_feedback": [
+    {"id":"shot_fired_info","mechanics":"available","visual":"not bound","audio":"legacy generic shoot","priority":"P0"},
+    {"id":"damage_event","mechanics":"available","visual":"not bound; legacy hit sparks","audio":"legacy generic hit","priority":"P0"},
+    {"id":"explosion_info","mechanics":"available","visual":"not bound; legacy generic ring","audio":"no cause-specific cue","priority":"P0"},
+    {"id":"weapon_changed","mechanics":"available from apply/undo","visual":"not bound","audio":"generic purchase only","priority":"P0"},
+    {"id":"enemy_killed","mechanics":"legacy available","visual":"spark tint","audio":"legacy kill","priority":"P1"},
+    {"id":"material_collected","mechanics":"available","visual":"pickup/pulse","audio":"legacy pickup","priority":"P1"},
+    {"id":"player_hurt","mechanics":"amount only","visual":"flash/shake","audio":"legacy hurt","priority":"P1"},
+    {"id":"echo_spawned","mechanics":"available","visual":"route reveal/actor","audio":"presentation echo","priority":"P1"},
+    {"id":"wave_started","mechanics":"available","visual":"HUD","audio":"legacy wave_start","priority":"P2"},
+    {"id":"wave_ended","mechanics":"available","visual":"record collapse","audio":"presentation wave_end","priority":"P1"},
+    {"id":"purchased","mechanics":"available","visual":"shop refresh only","audio":"presentation buy","priority":"P0"},
+    {"id":"boss_spawned","mechanics":"available","visual":"rings/HUD","audio":"legacy boss","priority":"P1"},
+    {"id":"echoes_silenced","mechanics":"available","visual":"HUD/cross","audio":"legacy silence","priority":"P1"},
+    {"id":"run_lost_won","mechanics":"available","visual":"result/victory beat","audio":"legacy lose/win","priority":"P2"}
+  ],
+  "audio": {
+    "event_names": ["shoot","hit","kill","pickup","buy","hurt","echo","wave_start","wave_end","lose","win","click","boss","silence"],
+    "independent_presentation_cues": ["click","buy","hit","echo","wave_end"],
+    "legacy_fallback_cues": ["shoot","kill","pickup","hurt","wave_start","lose","win","boss","silence"],
+    "rich_event_binding": "missing",
+    "mix_runtime_evidence": "12-second preview contains audio; no full cue-by-cue listening matrix yet"
+  },
+  "summary": {
+    "counts": {"weapons":12,"items":11,"enemies":7,"characters":4,"ui_surfaces":11,"event_feedback":14,"audio_events":14},
+    "independent_art": {"weapons":3,"items":0,"enemies":2,"characters":0},
+    "incomplete_identity": {"weapons":9,"items":11,"enemies":5,"characters":4},
+    "next_order": [
+      "P0 direct-drop/transaction undo UI and rich-event binding",
+      "P0 evolved weapons and special enemies/boss identity art",
+      "P1 base-weapon variants, items and character identity art",
+      "P1 full content-ID runtime gallery and regression assertions",
+      "P2 remaining UI-state actual-window and accessibility matrix"
+    ]
+  }
+}
