@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.3.1 开发版（含悖论 Phase 2 与家族专精），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.4.0 开发版（含悖论 Phase 2、家族专精与精英敌人），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -99,7 +99,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 
 - 武器 12：8 把基础武器 + 4 把进化形态
 - 道具 11：生命、移速、伤害、攻速、射程、暴击、拾取、回复、回响槽/寿命/威力
-- 敌人 6：杂兵、跑者（第 3 波）、重装（第 5 波）、自爆者（第 6 波，死亡爆炸）、守卫（第 8 波，正面盾）、静音者（第 8 波，碰触沉默回响 2 秒）
+- 敌人 6 种 + 精英变体：杂兵、跑者（第 3 波）、重装（第 5 波）、自爆者（第 6 波，死亡爆炸）、守卫（第 8 波，正面盾）、静音者（第 8 波，碰触沉默回响 2 秒）；第 10 波起每波 1 个「回响侵蚀精英」（超频 / 盾墙 / 爆裂，光环提示，掉落 ×2）
 - Boss 1：悖论（第 20 波，会沉默回响并召唤跑者；半血分裂成两个时间碎片，击杀全部才通关）
 - 角色 4：复读机（手枪开局）、独行者（咒矢开局，无回响，第 10 波解锁）、镜像（长弓开局，实时复制当前装备，通关一次解锁）、指挥（手枪开局、4 槽低威力，第 15 波解锁）
 - 系统：叠录（两张录像合成一个回响，走位与武器合并）
@@ -126,6 +126,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 选角页武器图鉴：全部武器、家族、稀有度、掉落概率、属性与进化链
 - 新敌人守卫（第 8 波起）：正面 90° 减伤 20%，需要侧后输出
 - 新敌人自爆者（第 6 波起）：死亡时在半径内爆炸，警告圈提示
+- 回响侵蚀精英（第 10 波起）：每波 1 个，超频（更快）/ 盾墙（正面减伤）/ 爆裂（死亡爆炸），光环颜色提示，掉落 ×2
 - 死亡原因：结算页显示最后伤害来源，runs.jsonl 记录，报告按敌人聚合
 - 第四角色指挥：4 个回响槽、22% 威力，每个活跃回响给全队 +4.5% 伤害/+2.5% 攻速
 - 悖论 Phase 2「双线」：半血分裂成两个时间碎片，保留总剩余血量；击杀一个后另一个加速并增伤，击杀全部才通关
@@ -135,7 +136,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 3994 项）
+make test     # 无头测试（当前 4693 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
