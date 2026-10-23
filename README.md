@@ -4,7 +4,7 @@
 
 Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和武器配置录成一张「回响」，下一波让过去的自己以角色对应的威力替你打——但槽位有限，你必须决定留下哪个过去的自己。
 
-完整的设计支柱、四层循环、机制规则、平衡数据与风险见 [DESIGN.md](DESIGN.md)；商店页文案、标签、预告片节奏与 press kit 清单见 [STORE.md](STORE.md)。
+完整的设计支柱、四层循环、机制规则、平衡数据与风险见 [DESIGN.md](DESIGN.md)；商店页文案、标签、预告片节奏与 press kit 清单见 [STORE.md](STORE.md)；英文工作名与更名检查清单见 [NAMING.md](NAMING.md)。
 
 当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、3 个角色、叠录、本地解锁记录和占位音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
 
