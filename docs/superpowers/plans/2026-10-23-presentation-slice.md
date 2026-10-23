@@ -12,12 +12,12 @@
 
 ## Global constraints
 
-- Work only in `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/reverb-presentation`, branch `codex/presentation`, now based on `d3d62b3`.
+- Work only in `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/reverb-presentation`, branch `codex/presentation`, initially based on `d3d62b3`; the completed presentation commit `650ac4e` subsequently integrates fixed mechanics `8f555e4`.
 - Do not edit `scripts/sim`, `scripts/data`, `scripts/echo`, version fields, releases, or the original OpenCode checkout.
 - No new package dependencies. Keep UI text localization-compatible; decorative images carry no embedded labels.
 - Use actual PNG assets, not newly drawn geometric substitutes. The source art may be cropped at render time by its alpha bounds, but retain original generated files and provenance.
 - Use isolated Godot user data during verification; local `override.cfg` must not be committed/exported.
-- Existing signals do not identify the firing weapon. Do not claim per-weapon shot timing or invent combat events; improve generic feedback now and document the remaining contract.
+- This slice retains legacy signals. Fixed mechanics `8f555e4` now supplies rich events; binding per-weapon timing and transaction UI remains a subsequent presentation task. Do not claim those adapters are implemented here.
 
 ## Task 1: Art and resource contract — parent
 
@@ -69,8 +69,10 @@ Files: `scripts/ui/ui_theme.gd`, `scripts/ui/offer_card.gd`, `scripts/ui/build_p
 - [x] Run an actual-window presentation scene or deterministic smoke; capture world/shop/echo images and a short recording showing motion, plus an audio sample if useful.
 - [x] Review the final diff for accidental sim/data/version changes and confirm the original mechanics checkout is untouched.
 - [x] Commit the complete presentation slice on `codex/presentation`. Do not publish a tag/release.
-- [x] Hand back the commit, runnable checkout, observed results and remaining limitations (notably per-weapon event payloads and complete animation coverage).
+- [x] Hand back the commit, runnable checkout, observed results and remaining limitations (notably rich-event adapters, transaction UI and complete animation coverage).
 
 ## Verification result
 
-2026-10-23: 2396 checks passed; headless import and smoke passed; real-window English/Chinese UI captures passed. The 12-second presentation movie and full-loadout horizontal bounds checks passed. Independent review closed first-use image scanning, minification, and scroll-width findings. M3 compatibility-renderer crowd probe completed (300 chasing enemies: average 12.81 ms, p99 18.55 ms; synthetic stress, not a universal FPS guarantee). The original mechanics checkout was not written by this work. During final verification its branch advanced independently to 8f555e4 (shop transactions/undo and rich combat events), with separate uncommitted character-starting-loadout work. This presentation slice was validated on d3d62b3 before any subsequent integration.
+Pre-integration, 2026-10-23: 2396 checks passed; headless import and smoke passed; real-window English/Chinese UI captures passed. The 12-second presentation movie and full-loadout horizontal bounds checks passed. Independent review closed first-use image scanning, minification, and scroll-width findings. M3 compatibility-renderer crowd probe completed (300 chasing enemies: average 12.81 ms, p99 18.55 ms; synthetic stress, not a universal FPS guarantee). The original mechanics checkout was not written by this work. During final verification its branch advanced independently to 8f555e4 (shop transactions/undo and rich combat events), with separate uncommitted character-starting-loadout work. This presentation slice was validated on d3d62b3 before any subsequent integration.
+
+The independent compatibility review found no touched-file overlap or mandatory legacy API migration in d3d62b3..8f555e4. Integration uses that immutable commit rather than following the moving mechanics branch; the combined tree is revalidated before handoff.

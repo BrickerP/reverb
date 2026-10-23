@@ -10,7 +10,9 @@ with mipmaps for stable minification, while the original PNGs remain unchanged.
 Style reference: `take-stack-visual-direction-v1.png`, the concept board produced
 in the same design session. The PNGs are single-pose sprites, not frame animation
 sheets or 3D models. World motion is currently procedural sway/bob; family variants
-reuse the closest silhouette. Per-weapon firing animation awaits richer events.
+reuse the closest silhouette. Rich combat events are available after integrating
+mechanics `8f555e4`; this slice still uses compatible legacy signals, so precise
+per-weapon firing animation and audio remain a presentation follow-up.
 
 ## Generation prompts
 

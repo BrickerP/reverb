@@ -1,8 +1,10 @@
 # Presentation slice
 
-This branch starts from `d3d62b3` (v0.1.36, including Conductor). It changes the
-presentation layer only. Rules, prices, collision radii, save formats and version
-fields remain on that baseline.
+The presentation commit `650ac4e` starts from `d3d62b3` (v0.1.36, including
+Conductor) and changes presentation only. The branch subsequently integrates the
+fixed mechanics commit `8f555e4`, including its shop transaction/undo API and rich
+combat events. Uncommitted work in the separate mechanics checkout is excluded.
+Version fields remain unchanged. Presentation adds no rules, prices or collisions.
 
 ## Assets and rendering
 
@@ -29,7 +31,8 @@ does not step the simulation or consume its RNG.
 Godot controls still own text, prices, focus and actions. The shop uses the same
 weapon assets as the world, a restrained dark equipment-panel theme, and a
 scrollable build panel for full loadouts. This slice does not add drag purchases
-or undo; those require the agreed mechanics transaction interface.
+or undo controls. The mechanics transaction API is present after integration, but
+the current UI still uses its compatible legacy action methods.
 
 Five CC0-derived cues replace click, purchase, hit, echo and wave-end sounds.
 Other sounds retain their existing files. `audio/presentation/SOURCES.md` records
@@ -53,15 +56,16 @@ godot --path . --fixed-fps 60 --disable-vsync \
   --script res://tools/presentation_preview.gd
 ```
 
-## Next mechanics interface
+## Next presentation adapters
 
-Exact muzzle flashes, recoil and distinct gunfire need a shot event containing
-source, weapon ID, origin, direction, pellet count and sequence. Richer damage and
-explosion events need weapon/source/target/direction or cause. Until then mounted
-weapons aim using current visible state and sound uses the existing generic event.
+`INTERFACES.md` documents the integrated `ShotInfo`, `DamageInfo`, `ExplosionInfo`
+and `WeaponChangeInfo` events. A subsequent pass can bind exact muzzle flashes,
+recoil and weapon-specific sounds to those events. This slice still uses legacy
+signals, with mounted weapons aiming from current visible state.
 
-Direct-drop transactions and repeated undo need mechanics-owned quote/apply
-results, history boundaries at successful reroll/start-wave, and change signals.
-The UI must consume those results instead of maintaining a second price or undo
-implementation. DeepSeek owns those rules and interfaces; Codex owns their visual
-and audio response, shared-file integration and eventual fixed-commit release.
+Direct-drop transactions and repeated undo must migrate UI calls to the available
+mechanics-owned `quote/apply/undo` API and consume its history/change signals.
+Legacy action methods do not record undo history. Undo restores fresh Offer
+objects, so the UI must rebuild its offer references. It must not maintain a
+second price or undo implementation. DeepSeek owns those rules and interfaces;
+Codex owns their visual/audio response and fixed-commit integration and release.
