@@ -62,6 +62,17 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		var level := levels[i] if i >= 0 and i < levels.size() else 0
 		fire(sim, origin, target.pos, w, level, family_damage_mult(weapons, w.family) * extra_damage,
 				stats, power_mult, source, tint)
+		sim.shot_sequence += 1
+		var info := ShotInfo.new()
+		info.source = source
+		info.weapon_id = w.id
+		info.origin = origin
+		info.direction = (target.pos - origin).normalized()
+		info.target = target.pos
+		info.count = maxi(1, w.pellets)
+		info.level = level
+		info.sequence = sim.shot_sequence
+		sim.shot_fired_info.emit(info)
 
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
@@ -95,6 +106,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		p.life = reach / w.projectile_speed + 0.1
 		p.color = w.color if source < 0 else w.color.lerp(tint, 0.55)
 		p.source = source
+		p.weapon_id = w.id
 		sim.projectiles.append(p)
 	sim.shot_fired.emit(source)
 
@@ -125,7 +137,7 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 			if p.hit_uids.has(e.uid):
 				continue
 			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source,
-					p.vel.normalized())
+					p.vel.normalized(), p.weapon_id, p.effect)
 			if p.explosion_radius > 0.0 and p.explosion_damage > 0.0:
 				_explode(sim, p, e)
 			if p.pierce_left > 0:
@@ -146,5 +158,15 @@ static func _explode(sim: Sim, p: Projectile, primary: EnemyState) -> void:
 		if dist > p.explosion_radius + e.radius:
 			continue
 		var push := (e.pos - p.pos).normalized() * p.knockback
-		sim.damage_enemy(e, p.damage * p.explosion_damage, push, false, p.source)
+		sim.damage_enemy(e, p.damage * p.explosion_damage, push, false, p.source,
+				Vector2.ZERO, p.weapon_id, &"explosion")
 	sim.explosion.emit(p.pos, p.explosion_radius, p.color)
+	var info := ExplosionInfo.new()
+	info.kind = ExplosionInfo.WEAPON
+	info.source = p.source
+	info.weapon_id = p.weapon_id
+	info.pos = p.pos
+	info.radius = p.explosion_radius
+	info.color = p.color
+	info.effect = &"weapon_explosion"
+	sim.explosion_info.emit(info)

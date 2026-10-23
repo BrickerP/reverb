@@ -237,6 +237,7 @@ static func _build_characters() -> void:
 	})
 	_character(&"solo", {
 		"color": Color(0.5, 0.95, 1.0),
+		"starting_weapon": &"hex_bolt",
 		"overrides": {Stats.ECHO_SLOTS: 0.0},
 		"mods": {
 			Stats.DAMAGE_PCT: 0.6,
@@ -249,6 +250,7 @@ static func _build_characters() -> void:
 	})
 	_character(&"mirror", {
 		"color": Color(1.0, 0.8, 0.4),
+		"starting_weapon": &"longbow",
 		"overrides": {Stats.ECHO_SLOTS: 2.0, Stats.ECHO_POWER: 0.4},
 		"mods": {Stats.MAX_HP: 5.0},
 		"live_echo": true,
@@ -256,6 +258,7 @@ static func _build_characters() -> void:
 	})
 	_character(&"conductor", {
 		"color": Color(0.55, 0.95, 0.85),
+		"starting_weapon": &"pistol",
 		"overrides": {Stats.ECHO_SLOTS: 4.0, Stats.ECHO_POWER: 0.22},
 		"mods": {Stats.MAX_HP: 5.0},
 		"synergy_damage_per_echo": 0.045,

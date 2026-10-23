@@ -3,6 +3,7 @@ extends Resource
 
 @export var id: StringName
 @export var color: Color = Color.WHITE
+@export var starting_weapon: StringName = &"pistol"
 @export var overrides: Dictionary = {}
 @export var mods: Dictionary = {}
 @export var unlock_wave: int = 0
@@ -17,6 +18,13 @@ func apply(sim: Sim) -> void:
 		sim.player.stats.values[stat] = float(overrides[stat])
 	for stat: StringName in mods:
 		sim.player.stats.add(stat, float(mods[stat]))
+	sim.player.weapons.clear()
+	sim.player.weapon_levels.clear()
+	sim.player.cooldowns.clear()
+	var starter := Content.weapon(starting_weapon)
+	if starter == null:
+		starter = Content.weapon(Content.STARTER_WEAPON)
+	sim.player.add_weapon(starter)
 	sim.player.hp = sim.player.max_hp()
 	sim.live_echo = live_echo
 	sim.synergy_damage_per_echo = synergy_damage_per_echo

@@ -305,11 +305,17 @@ func test_projectile_explosion_hits_neighbors(c: Check) -> void:
 	p.radius = 4.0
 	p.explosion_radius = 48.0
 	p.explosion_damage = 0.5
+	p.weapon_id = &"flak_crown"
 	p.source = -1
 	s.projectiles.append(p)
+	var blasts: Array[ExplosionInfo] = []
+	s.explosion_info.connect(func(info: ExplosionInfo) -> void: blasts.append(info))
 	Combat.step_projectiles(s, DT)
 	c.ok(primary.hp <= 90.0, "direct hit lands")
 	c.near(neighbor.hp, 95.0, 0.01, "explosion hits the neighbor for half damage")
+	c.eq(blasts.size(), 1, "weapon explosion info emitted")
+	c.eq(blasts[0].kind, ExplosionInfo.WEAPON, "weapon explosion kind")
+	c.eq(blasts[0].weapon_id, &"flak_crown", "weapon explosion source id")
 
 
 func test_homing_projectile_turns_toward_enemy(c: Check) -> void:
@@ -346,11 +352,15 @@ func test_bomber_explodes_when_killed_near_player(c: Check) -> void:
 	e.hp = 1.0
 	e.damage = 0.0
 	s.enemies.append(e)
+	var blasts: Array[ExplosionInfo] = []
+	s.explosion_info.connect(func(info: ExplosionInfo) -> void: blasts.append(info))
 	var before := s.player.hp
 	s.damage_enemy(e, 99.0, Vector2.ZERO, false, -1)
 	c.ok(s.player.hp < before, "death explosion damages the player")
 	c.ok(s.player.iframes > 0.0, "explosion grants iframes")
 	c.eq(s.last_damage_source, &"bomber", "explosion records its source")
+	c.eq(blasts.size(), 1, "explosion info emitted")
+	c.eq(blasts[0].kind, ExplosionInfo.BOMBER, "bomber kind recorded")
 
 
 func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
@@ -363,11 +373,56 @@ func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
 	e.hp = 100.0
 	e.radius = e.def.radius
 	s.enemies.append(e)
-	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.RIGHT)
+	var hits: Array[DamageInfo] = []
+	s.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.RIGHT, &"pistol", &"hit")
 	c.near(e.hp, 92.0, 0.01, "front hit is reduced by 20%")
+	c.ok(hits[0].reduced, "front hit is marked reduced")
 	e.hp = 100.0
-	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT)
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT, &"pistol", &"hit")
 	c.near(e.hp, 90.0, 0.01, "back hit takes full damage")
+
+
+func test_combat_events_carry_source_data(c: Check) -> void:
+	var s := _sim()
+	s.enemies.clear()
+	s.projectiles.clear()
+	var enemy := _spawn(s, s.player.pos + Vector2(100.0, 0.0), 100.0)
+	var shots: Array[ShotInfo] = []
+	var hits: Array[DamageInfo] = []
+	s.shot_fired_info.connect(func(info: ShotInfo) -> void: shots.append(info))
+	s.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
+	s.player.cooldowns[0] = 0.0
+	Combat.step_weapons(s, s.player.pos, s.player.stats, s.player.weapons, s.player.weapon_levels,
+			s.player.cooldowns, 1.0, DT, -1, Color.WHITE)
+	c.eq(shots.size(), 1, "one shot info emitted")
+	c.eq(shots[0].weapon_id, &"pistol", "shot carries weapon")
+	c.eq(shots[0].source, -1, "shot carries player source")
+	c.ok(shots[0].direction.x > 0.9, "shot carries direction")
+	c.eq(shots[0].target, enemy.pos, "shot carries target")
+	s.damage_enemy(enemy, 1.0, Vector2.ZERO, false, -1, Vector2.ZERO, &"pistol", &"hit")
+	c.eq(hits.size(), 1, "damage info emitted")
+	c.eq(hits[0].weapon_id, &"pistol", "damage carries weapon")
+	c.eq(hits[0].target_uid, enemy.uid, "damage carries target id")
+
+
+func test_player_hurt_event_carries_source(c: Check) -> void:
+	var s := _sim()
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.player.hp = s.player.max_hp()
+	s.player.iframes = 0.0
+	var e := _spawn(s, s.player.pos + Vector2(5.0, 0.0), 100.0)
+	e.damage = 5.0
+	e.speed = 0.0
+	var infos: Array[PlayerHurtInfo] = []
+	s.player_hurt_info.connect(func(info: PlayerHurtInfo) -> void: infos.append(info))
+	s._move_enemies(DT)
+	c.eq(infos.size(), 1, "hurt info emitted")
+	c.eq(infos[0].source, &"grunt", "hurt source")
+	c.near(infos[0].amount, 5.0, 0.001, "hurt amount")
+	c.eq(infos[0].effect, &"contact", "hurt effect")
+	c.ok(infos[0].direction.x < 0.0, "hurt direction points away from enemy")
 
 
 func test_same_seed_same_run(c: Check) -> void:
