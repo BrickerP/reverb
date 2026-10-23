@@ -44,6 +44,29 @@ func test_two_step_undo(c: Check) -> void:
 	c.ok(not s.shop.can_undo(), "history empty")
 
 
+func test_item_purchase_and_undo(c: Check) -> void:
+	var s := _shop_sim(100)
+	var offer := _item_offer(s, &"iron_heart", 10)
+	c.ok(s.shop.apply(ShopResult.BUY, s, offer).ok, "item buy applies")
+	c.eq(s.player.item_count(&"iron_heart"), 1, "item added")
+	c.near(s.player.max_hp(), 40.0, 0.001, "item stats applied")
+	s.shop.undo(s)
+	c.eq(s.player.item_count(&"iron_heart"), 0, "item removed")
+	c.near(s.player.max_hp(), 30.0, 0.001, "item stats restored")
+	c.ok(not s.shop.offers[0].sold, "item sale restored")
+
+
+func test_failed_reroll_keeps_history(c: Check) -> void:
+	var s := _shop_sim(100)
+	var offer := _weapon_offer(s, &"smg", 10)
+	c.ok(s.shop.apply(ShopResult.BUY, s, offer).ok, "buy creates history")
+	s.player.materials = 0
+	var failed := s.shop.apply(ShopResult.REROLL, s)
+	c.ok(not failed.ok, "reroll refuses when poor")
+	c.eq(failed.reason, &"poor", "reroll failure reason")
+	c.ok(s.shop.can_undo(), "failed reroll keeps history")
+
+
 func test_weapon_change_events(c: Check) -> void:
 	var s := _shop_sim(100)
 	var offer := _weapon_offer(s, &"smg", 20)

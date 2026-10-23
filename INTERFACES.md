@@ -109,3 +109,55 @@ events; current view/audio can migrate independently.
 If a mechanism task needs `loc`, `main.gd`, `project.godot`, export config, or version changes,
 list them in the delivery note before editing. Codex integrates both branches from a fixed
 commit; mechanism commits do not create tags or releases.
+
+## 8. Codex integration checklist
+
+Integration source: `mechanics/conductor` at `5a1e8c1`. Codex's current workspace base is
+`0276f67` / v0.1.35. The mechanism branch contains the Conductor commit plus M0–M4 and should be
+merged or cherry-picked as commits, not copied as uncommitted files.
+
+### Shop UI migration
+
+1. Replace direct `buy` / `replace_weapon` / `upgrade_weapon` / `evolve_weapon` calls with
+   `Shop.quote(...)` for preview and `Shop.apply(...)` for commitment.
+2. Drag/drop may only call `apply` after the mechanism has validated the target; UI must not
+   calculate cost, family effects, or refunds.
+3. Add an Undo control bound to `Shop.can_undo()` / `Shop.undo(sim)`. After undo, discard all old
+   `Offer` references and rebuild/refresh offer cards before animating.
+4. Subscribe to `Sim.shop.shop_action_resolved` and `shop_history_changed`; disable Undo when the
+   history is empty or the shop is locked.
+5. A successful reroll or start-wave clears history; failed actions do not.
+6. Build replacement/upgrade/evolution displays must use `Shop.resale_total`,
+   `Shop.upgrade_cost`, and `Shop.evolution_cost`, not local formulas.
+
+### Presentation event migration
+
+Prefer the rich events for new animation/audio; keep the old signals as fallback during migration:
+
+- `shot_fired_info`: weapon-specific fire sound, muzzle origin, direction/target, volley count.
+- `damage_event`: impact position, crit, shield-reduced hit, weapon identity.
+- `explosion_info`: distinguish weapon explosion from bomber explosion.
+- `weapon_changed`: animate card/slot in, replace, upgrade, evolution, and undo; removed slots have
+  `after_id = ""`.
+- `player_hurt_info`: hit direction, enemy source, lethal feedback.
+
+### Shared files and integration risks
+
+- `scripts/core/loc*.gd`: both branches add text; reconcile keys rather than overwrite tables.
+- `scripts/ui/character_select.gd` and `scripts/ui/build_panel.gd`: presentation-owned, but the
+  mechanism branch contains a 4-card layout change and one resale-total line; merge them explicitly.
+- `project.godot`, `export_presets.cfg`, `tests/test_run_log.gd`: version metadata must be aligned
+  with the final integrated release commit.
+- `scripts/game/main.gd`: shared boundary; no mechanism changes were made for M1/M2, but event
+  subscriptions and undo wiring belong on the presentation side.
+
+### Acceptance before release
+
+- Multi-step buy/replace/upgrade/evolve then Undo restores materials, stats, HP, weapons, levels,
+  sold offers and rerolls exactly.
+- Undo after a successful reroll is unavailable; failed reroll does not clear history.
+- Starting a wave clears history.
+- Drag/drop and click paths produce identical `ShopResult` and state.
+- Rich events and old signals agree on a seeded smoke run.
+- Mechanism tests + smoke stay green; Codex adds UI tests for Undo, drag/drop, and event wiring.
+

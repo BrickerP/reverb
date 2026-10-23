@@ -305,11 +305,17 @@ func test_projectile_explosion_hits_neighbors(c: Check) -> void:
 	p.radius = 4.0
 	p.explosion_radius = 48.0
 	p.explosion_damage = 0.5
+	p.weapon_id = &"flak_crown"
 	p.source = -1
 	s.projectiles.append(p)
+	var blasts: Array[ExplosionInfo] = []
+	s.explosion_info.connect(func(info: ExplosionInfo) -> void: blasts.append(info))
 	Combat.step_projectiles(s, DT)
 	c.ok(primary.hp <= 90.0, "direct hit lands")
 	c.near(neighbor.hp, 95.0, 0.01, "explosion hits the neighbor for half damage")
+	c.eq(blasts.size(), 1, "weapon explosion info emitted")
+	c.eq(blasts[0].kind, ExplosionInfo.WEAPON, "weapon explosion kind")
+	c.eq(blasts[0].weapon_id, &"flak_crown", "weapon explosion source id")
 
 
 func test_homing_projectile_turns_toward_enemy(c: Check) -> void:
