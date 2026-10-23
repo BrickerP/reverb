@@ -126,6 +126,28 @@ func can_undo() -> bool:
 	return not _undo_stack.is_empty()
 
 
+func locked_offer() -> Offer:
+	for o in offers:
+		if o.locked and not o.sold:
+			return o
+	return null
+
+
+# One free hold slot. Locking another offer moves the hold; the offer survives
+# rerolls and the next shop until it is bought, unlocked or replaced.
+func toggle_lock(sim: Sim, offer: Offer) -> bool:
+	if sim.phase != Sim.Phase.SHOP or offer == null or not offers.has(offer) or offer.sold:
+		return false
+	if offer.locked:
+		offer.locked = false
+		return true
+	var current := locked_offer()
+	if current != null:
+		current.locked = false
+	offer.locked = true
+	return true
+
+
 func clear_history() -> void:
 	if _undo_stack.is_empty():
 		return
@@ -294,7 +316,7 @@ func reroll_cost(wave: int) -> int:
 func roll(sim: Sim) -> void:
 	clear_history()
 	rerolls = 0
-	_fill(sim)
+	_fill(sim, locked_offer())
 
 
 func can_buy(sim: Sim, o: Offer) -> bool:
@@ -354,13 +376,17 @@ func reroll(sim: Sim) -> bool:
 		return false
 	sim.player.materials -= cost
 	rerolls += 1
-	_fill(sim)
+	_fill(sim, locked_offer())
 	clear_history()
 	return true
 
 
-func _fill(sim: Sim) -> void:
+func _fill(sim: Sim, keep: Offer = null) -> void:
 	offers.clear()
+	if keep != null:
+		keep.sold = false
+		keep.locked = true
+		offers.append(keep)
 	var tries := 0
 	while offers.size() < OFFER_COUNT and tries < 80:
 		tries += 1
