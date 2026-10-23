@@ -1,6 +1,7 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 events emitted; current Shop UI still uses legacy methods.**  
+Status: **M2 rich events, M5 Paradox phase 2, and quote/apply shop UI are implemented.**
+
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
 
@@ -161,3 +162,49 @@ Prefer the rich events for new animation/audio; keep the old signals as fallback
 - Drag/drop and click paths produce identical `ShopResult` and state.
 - Rich events and old signals agree on a seeded smoke run.
 - Mechanism tests + smoke stay green; Codex adds UI tests for Undo, drag/drop, and event wiring.
+
+## 9. Paradox phase 2: twin timelines
+
+At 50% health the final boss splits into two bodies. The remaining health is divided
+between them, not added: the split is a target-priority change, not a second health bar.
+
+Mechanism API:
+
+- `boss_phase: int` — `1` before the split, `2` after it.
+- `boss_shards: Array[EnemyState]` — one body in phase 1, two in phase 2; dead bodies stay
+  in the array until the next wave, so use `boss_alive_count()` rather than `size()`.
+- `boss_original_max_hp: float` — the pre-split maximum used by the combined HUD bar.
+- `boss_health_ratio() -> float` — total living health divided by the original maximum.
+- `boss_alive_count() -> int`, `boss_total_count() -> int`.
+- `boss_origin() -> Vector2` — first living body position; use this for silence/victory
+  effects instead of assuming `boss.pos`.
+- `boss` remains the first body for compatibility. After the split its `max_hp` is the
+  local phase-2 body scale; do **not** draw an overall bar from `boss.hp / boss.max_hp`.
+
+Signals:
+
+- `boss_phase_changed(phase)` — once per split; phase 2 only.
+- `boss_shard_spawned(enemy)` — the second body has been added and is active.
+- `boss_shard_defeated(enemy, remaining)` — every boss body death, including a phase-1
+  direct kill; `remaining` is the number of living bodies after the death.
+- `boss_enraged(enemy)` — exactly once, when the first of two bodies dies.
+- `boss_defeated` — only after all bodies are dead. A dead `boss` alone is no longer enough.
+- `echoes_silenced(duration)` — the split also emits a shorter transition silence; audio/view
+  may reuse the existing silence treatment.
+
+Presentation requirements:
+
+- HUD must use `boss_health_ratio()`, `boss_phase`, and the body counters. The phase-2 title
+  is `hud.boss_phase2`; the bar shows the combined total, with one pip per living body.
+- View/audio must use `boss_origin()` for effects while one body may be dead, and must not
+  end the run on `boss.dead`; wait for `boss_defeated`/phase `WON`.
+- The two bodies use the existing Paradox art. Do not add new enemy IDs or art for this slice.
+- Silence and summons share one cadence; the split must not double either cadence.
+
+Validation contract:
+
+- A hit that crosses 50% splits exactly once and preserves the health after that hit.
+- Splitting does not reroll or advance randomized wave planning.
+- One death emits `boss_shard_defeated` and `boss_enraged`; the survivor has the documented
+  speed/damage multiplier.
+- Both deaths emit `boss_defeated`; a lethal hit above 50% may skip phase 2 intentionally.

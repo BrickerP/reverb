@@ -179,6 +179,9 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
 			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
 			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
+			if sim.boss_phase >= 2 and sim.boss_shards.has(e):
+				ci.draw_arc(e.pos, e.radius + 19.0, -spin * 1.4, -spin * 1.4 + TAU * 0.6, 32,
+						Color(0.65, 0.8, 1.0, 0.55), 2.0)
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		if e.radius >= 15.0 and e.hp < e.max_hp:
@@ -197,6 +200,20 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			var half := deg_to_rad(e.def.shield_arc * 0.5)
 			ci.draw_arc(e.pos, e.radius + 6.0, front - half, front + half, 24,
 					Color(col, 0.75), 3.0)
+	if sim.boss_phase >= 2:
+		var alive: Array[EnemyState] = []
+		for boss_shard in sim.boss_shards:
+			if not boss_shard.dead:
+				alive.append(boss_shard)
+		if alive.size() == 2:
+			var a := alive[0]
+			var b := alive[1]
+			var mid := (a.pos + b.pos) * 0.5
+			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 5.0)
+			var link := Color(0.65, 0.8, 1.0, 0.18 + 0.16 * pulse)
+			ci.draw_line(a.pos, mid, link, 2.0)
+			ci.draw_line(mid, b.pos, link, 2.0)
+			ci.draw_circle(mid, 4.0 + pulse * 2.0, Color(0.75, 0.6, 1.0, 0.5))
 
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",

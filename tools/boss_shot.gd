@@ -42,16 +42,26 @@ func _process(_delta: float) -> bool:
 			if _frame >= 10:
 				_save("boss_silenced")
 				if _main.sim.boss != null:
-					_main.sim.damage_enemy(_main.sim.boss, 1000000.0, Vector2.ZERO, false, -1)
+					_main.sim.boss.hp = _main.sim.boss.max_hp * 0.51
+					_main.sim.damage_enemy(_main.sim.boss, _main.sim.boss.max_hp * 0.02,
+							Vector2.ZERO, false, -1)
 				_frame = 0
 				_step = 3
 		3:
+			if _main.sim.boss_phase >= 2 and _frame >= 14:
+				_save("boss_phase2")
+				for boss_shard in _main.sim.boss_shards:
+					if not boss_shard.dead:
+						_main.sim.damage_enemy(boss_shard, 1000000.0, Vector2.ZERO, false, -1)
+				_frame = 0
+				_step = 4
+		4:
 			if _main.sim.phase == Sim.Phase.WON and _frame >= 18:
 				_save("victory")
 				_main.audio.stop_all()
 				_frame = 0
-				_step = 4
-		4:
+				_step = 5
+		5:
 			if _frame >= 8:
 				quit()
 				return true
