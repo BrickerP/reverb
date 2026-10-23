@@ -59,7 +59,9 @@ func weapon_ready(index: int) -> float:
 	if sim == null or index < 0 or index >= sim.player.weapons.size():
 		return 0.0
 	var w := sim.player.weapons[index]
-	var duration := maxf(0.01, w.cooldown * sim.player.stats.cooldown_mult())
+	var duration := maxf(0.01, w.cooldown * sim.player.stats.cooldown_mult()
+			* Combat.family_cooldown_mult(sim.player.weapons, w.family)
+			* sim.synergy_cooldown_mult())
 	return clampf(1.0 - sim.player.cooldowns[index] / duration, 0.0, 1.0)
 
 

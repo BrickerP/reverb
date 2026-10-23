@@ -1,6 +1,7 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 events emitted; current Shop UI still uses legacy methods.**  
+Status: **M2 rich events and quote/apply shop UI implemented; M6 family mastery selectively integrated.**
+
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
 
@@ -161,3 +162,40 @@ Prefer the rich events for new animation/audio; keep the old signals as fallback
 - Drag/drop and click paths produce identical `ShopResult` and state.
 - Rich events and old signals agree on a seeded smoke run.
 - Mechanism tests + smoke stay green; Codex adds UI tests for Undo, drag/drop, and event wiring.
+
+## Selective integration boundary
+
+Family mastery is imported from fixed commit `78145876f55c851b30b6fc923bdc464a50f209f1`
+on the accepted `4594fce` mechanics baseline. Its parent Paradox phase-2 change
+`bb09c95` remains held; no Boss APIs or phase-2 code are imported. Release/version
+metadata is intentionally retained at 0.2.0 for this private presentation build.
+The immutable build commit identifies the exact composition.
+
+## 10. Family mastery
+
+Four pieces of one family replace the old generic +3% attack speed with a family rule:
+
+| Family | Mastery | Mechanism |
+|---|---|---|
+| sidearm | Gunslinger | `Combat.family_cooldown_mult` returns `0.94` at 4+ pieces (6% shorter firing interval) |
+| scatter | Point blank | `Combat.family_mastery_damage` returns `1.15` when the target is within 160 |
+| marksman | Overpenetration | `Combat.family_mastery_pierce` returns `+1` projectile pierce |
+| arcane | Resonance | `Sim.echo_power()` adds `0.08` while 4+ arcane weapons are equipped |
+
+Rules:
+
+- The 2-piece `+3% damage` and 6-piece `+3% damage` effects are unchanged.
+- Four pieces no longer grant a generic attack-speed bonus to scatter/marksman/arcane.
+- Sidearm haste is included in `OfferCard.weapon_dps`; scatter range, marksman pierce and
+  arcane echo power are situational or echo-side, so the UI must explain them in the family
+  summary instead of promising them as flat DPS.
+- `Sim.echo_power()` is the display source for the arcane bonus; do not recompute it in UI.
+- No new weapon IDs, art, drops or RNG streams were added for this slice.
+
+Presentation requirements:
+
+- `BuildPanel` family summary must show the active 4-piece mastery text for each family.
+- `hud`/shop core echo power should use `sim.echo_power()`, not the raw stat, so the arcane
+  mastery is visible.
+- Weapon detail may show base DPS; do not imply scatter/marksman/arcane mastery is already
+  included in single-target DPS.

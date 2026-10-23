@@ -104,7 +104,10 @@ func echo_lifespan() -> int:
 
 
 func echo_power() -> float:
-	return maxf(0.0, player.stats.get_stat(Stats.ECHO_POWER))
+	var power := player.stats.get_stat(Stats.ECHO_POWER)
+	if Combat.family_count(player.weapons, &"arcane") >= 4:
+		power += Combat.FAMILY_MASTERY_ARCANE_ECHO
+	return maxf(0.0, power)
 
 
 func synergy_damage_mult() -> float:

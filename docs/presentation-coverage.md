@@ -263,3 +263,24 @@ The accepted mechanics cursor remains `4594fce` and the playable build remains
 phase/shard/enrage events, surviving-body effect origins, reduced-effects lifecycle
 and audio coverage are pending acceptance. Evidence and reproduction are in
 `outputs/take-stack-boss-phase2-review/` in the parent task directory.
+
+## Selective family mastery integration
+
+The independent family patch from `78145876` is applied on base `4594fce` without
+the held Boss ancestry. The private preview retains version 0.2.0; its immutable
+build commit identifies the composition rather than claiming the upstream release.
+No new content ID, bitmap or sound is required for these four family rules.
+
+The build panel explains the four distinct masteries, reads effective arcane echo
+power from Sim, and updates after purchase/undo. HUD readiness now includes the
+actual family and synergy cooldown multipliers. A native screenshot exposed long
+English descriptions widening the entire shop; wrapped summary rows fix this,
+and the probe now checks the whole shop, columns, header and actions, as well as
+all wrapped text lines.
+
+Full tests pass 4208 assertions with zero failures. Smoke reaches wave 4 with
+three purchases across 5246 frames. EN/ZH and normal/reduced modes each pass all
+four families through three-to-four-piece purchase and undo, including arcane
+40% → 48% → 40%. All 32 captures and geometry receipts are under
+`outputs/take-stack-family-verification/`. These are automated fixtures; they do
+not establish human satisfaction or balance. The Boss phase-2 hold remains active.

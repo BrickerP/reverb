@@ -409,5 +409,25 @@
     ],
     "art": "candidate reuses the existing Paradox content ID and art; no new asset ID",
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-boss-phase2-review/"
+  },
+  "selective_family_mastery": {
+    "mechanics_source": "78145876f55c851b30b6fc923bdc464a50f209f1",
+    "accepted_base": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "excluded_ancestry": "bb09c95735e6270e095c5e344abecc299e527900 remains held",
+    "release_metadata": "0.2.0 retained for private presentation build; immutable build stamp identifies composition",
+    "content_ids": "unchanged; no new art/audio resources required",
+    "presentation": [
+      "Four distinct mastery descriptions in EN/ZH",
+      "Arcane core echo power reads Sim.echo_power and updates on undo",
+      "HUD cooldown includes authoritative family and synergy factors",
+      "Wrapped family summaries prevent long English copy from pushing shop offscreen"
+    ],
+    "verification": {
+      "assertions": "4208 passed, 0 failed",
+      "smoke": "5246 frames; wave4;3purchases;OK",
+      "native_matrix": "EN/ZH x normal/reduced;4families each;focusedbuy+undo;wholepage geometry;32screenshots",
+      "provenance": "fixtures only; no human playtest claims"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-family-verification/"
   }
 }
