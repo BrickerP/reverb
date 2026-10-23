@@ -17,10 +17,15 @@ func record(pos: Vector2, delta: float) -> void:
 		samples.append(pos)
 
 
-func finish(wave: int, weapons: Array[WeaponDef], stats: Stats) -> EchoTake:
+func finish(wave: int, weapons: Array[WeaponDef], stats: Stats, levels: Array[int] = []) -> EchoTake:
 	var take := EchoTake.new()
 	take.samples = samples.duplicate()
 	take.weapons = weapons.duplicate()
+	take.levels = levels.duplicate()
+	while take.levels.size() < take.weapons.size():
+		take.levels.append(0)
+	if take.levels.size() > take.weapons.size():
+		take.levels.resize(take.weapons.size())
 	take.stats = stats.copy()
 	take.wave = wave
 	return take

@@ -19,7 +19,8 @@ static func nearest_enemy(enemies: Array[EnemyState], from: Vector2, reach: floa
 
 
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
-		cooldowns: Array[float], power_mult: float, delta: float, source: int, tint: Color) -> void:
+		levels: Array[int], cooldowns: Array[float], power_mult: float, delta: float, source: int,
+		tint: Color) -> void:
 	for i in weapons.size():
 		cooldowns[i] -= delta
 		if cooldowns[i] > 0.0:
@@ -30,11 +31,12 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 			cooldowns[i] = 0.0
 			continue
 		cooldowns[i] += w.cooldown * stats.cooldown_mult()
-		fire(sim, origin, target.pos, w, stats, power_mult, source, tint)
+		var level := levels[i] if i >= 0 and i < levels.size() else 0
+		fire(sim, origin, target.pos, w, level, stats, power_mult, source, tint)
 
 
-static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, stats: Stats,
-		power_mult: float, source: int, tint: Color) -> void:
+static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
+		stats: Stats, power_mult: float, source: int, tint: Color) -> void:
 	var base_dir := (target_pos - origin).normalized()
 	if base_dir == Vector2.ZERO:
 		base_dir = Vector2.RIGHT
@@ -49,7 +51,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, s
 			angle = sim.rng.randf_range(-0.5, 0.5) * spread
 		var dir := base_dir.rotated(angle)
 		var p := Projectile.new()
-		p.damage = w.damage * stats.damage_mult() * power_mult
+		p.damage = w.damage * w.level_mult(level) * stats.damage_mult() * power_mult
 		if sim.rng.randf() < stats.get_stat(Stats.CRIT_CHANCE):
 			p.damage *= 2.0
 			p.crit = true

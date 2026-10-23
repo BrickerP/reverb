@@ -34,6 +34,21 @@ func _open_shop(s: Sim) -> ShopUi:
 	return ui
 
 
+func test_build_panel_can_upgrade_an_equipped_weapon(c: Check) -> void:
+	var s := _shop_sim(1000)
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	s.player.add_weapon(Content.weapon(&"pistol"))
+	var ui := _open_shop(s)
+	c.eq(ui.build_panel._upgrade_buttons.size(), 1, "one upgrade button per slot")
+	var before := s.player.materials
+	var cost := Shop.upgrade_cost(s.player.weapons[0], 0)
+	ui.build_panel._upgrade_buttons[0].pressed.emit()
+	c.eq(s.player.level_at(0), 1, "panel upgrade raises the slot level")
+	c.eq(s.player.materials, before - cost, "panel upgrade spends materials")
+	ui.free()
+
+
 func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 	var s := _shop_sim()
 	var ui := _open_shop(s)

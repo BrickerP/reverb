@@ -86,8 +86,8 @@ func echo_power() -> float:
 func echo_dps(take: EchoTake) -> float:
 	if live_echo:
 		var total := 0.0
-		for w in player.weapons:
-			total += w.dps()
+		for i in player.weapons.size():
+			total += player.weapons[i].level_dps(player.level_at(i))
 		return total * player.stats.damage_mult() / player.stats.cooldown_mult() * echo_power()
 	return take.power() * echo_power()
 
@@ -149,16 +149,16 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_spawn_enemies(delta)
 	_move_enemies(delta)
 	_boss_step(delta)
-	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.cooldowns,
-			1.0, delta, -1, Color.WHITE)
+	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.weapon_levels,
+			player.cooldowns, 1.0, delta, -1, Color.WHITE)
 	if echo_silenced <= 0.0:
 		for actor in echoes:
 			if live_echo:
 				_fit_echo_cooldowns(actor)
-				Combat.step_weapons(self, actor.pos, player.stats, player.weapons,
+				Combat.step_weapons(self, actor.pos, player.stats, player.weapons, player.weapon_levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
 			else:
-				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons,
+				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons, actor.take.levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
 	Combat.step_projectiles(self, delta)
 	_update_pickups(delta)
@@ -346,7 +346,7 @@ func _end_wave() -> void:
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * WAVE_END_HEAL)
 	bank.age_after_wave(echo_lifespan())
 	if echo_capacity() > 0:
-		var take := recorder.finish(wave, player.weapons, player.stats)
+		var take := recorder.finish(wave, player.weapons, player.stats, player.weapon_levels)
 		bank.add(take)
 		echo_recorded.emit(take)
 	wave_ended.emit(wave)

@@ -23,6 +23,7 @@ static func equip(sim: Sim) -> void:
 	gun.pierce = 99
 	gun.knockback = 0.0
 	sim.player.weapons.clear()
+	sim.player.weapon_levels.clear()
 	sim.player.cooldowns.clear()
 	for _w in Content.MAX_WEAPON_SLOTS:
 		sim.player.add_weapon(gun)
@@ -33,6 +34,7 @@ static func equip(sim: Sim) -> void:
 		var take := EchoTake.new()
 		take.wave = k + 1
 		take.weapons = sim.player.weapons.duplicate()
+		take.levels = sim.player.weapon_levels.duplicate()
 		take.stats = sim.player.stats.copy()
 		var path := PackedVector2Array()
 		for s in 300:

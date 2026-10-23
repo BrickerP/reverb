@@ -13,6 +13,7 @@ const PALETTE: Array[Color] = [
 
 var samples: PackedVector2Array = PackedVector2Array()
 var weapons: Array[WeaponDef] = []
+var levels: Array[int] = []
 var stats: Stats = Stats.new()
 var wave: int = 0
 var age: int = 0
@@ -22,6 +23,10 @@ var merged: bool = false
 
 func tint() -> Color:
 	return PALETTE[tint_index % PALETTE.size()]
+
+
+func level_at(index: int) -> int:
+	return levels[index] if index >= 0 and index < levels.size() else 0
 
 
 func duration() -> float:
@@ -53,6 +58,7 @@ func position_at(t: float) -> Vector2:
 
 func power() -> float:
 	var total := 0.0
-	for w in weapons:
-		total += w.dps()
+	for i in weapons.size():
+		var level := levels[i] if i >= 0 and i < levels.size() else 0
+		total += weapons[i].level_dps(level)
 	return total * stats.damage_mult() / stats.cooldown_mult()

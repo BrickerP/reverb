@@ -2,6 +2,7 @@ class_name BuildPanel
 extends PanelContainer
 
 signal replace_cancelled
+signal upgrade_requested(index: int)
 
 var weapons_label: Label
 var items_label: Label
@@ -11,6 +12,7 @@ var _box: VBoxContainer
 var _weapons_row: Control
 var _items_row: Control
 var _slot_buttons: Array[Button] = []
+var _upgrade_buttons: Array[Button] = []
 
 
 func _init() -> void:
@@ -23,6 +25,7 @@ func _init() -> void:
 func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable()) -> void:
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
+	_upgrade_buttons.clear()
 	replacing = replace_with != ""
 	var pl := sim.player
 	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
@@ -54,6 +57,13 @@ func focus_first_slot() -> bool:
 	if _slot_buttons.is_empty():
 		return false
 	_slot_buttons[0].grab_focus()
+	return true
+
+
+func focus_upgrade(index: int) -> bool:
+	if index < 0 or index >= _upgrade_buttons.size():
+		return false
+	_upgrade_buttons[index].grab_focus()
 	return true
 
 
@@ -97,23 +107,17 @@ func _weapon_chips(pl: PlayerState) -> Control:
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	var counts: Dictionary = {}
-	var first: Array[WeaponDef] = []
-	for w in pl.weapons:
-		if not counts.has(w.id):
-			first.append(w)
-		counts[w.id] = int(counts.get(w.id, 0)) + 1
-	if first.is_empty():
+	if pl.weapons.is_empty():
 		grid.add_child(UiTheme.label(Loc.t("shop.none"), 15, UiTheme.DIM))
 		return grid
-	for w in first:
-		grid.add_child(_weapon_card(w, counts[w.id], pl))
+	for i in pl.weapons.size():
+		grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl))
 	return grid
 
 
-func _weapon_card(w: WeaponDef, count: int, pl: PlayerState) -> Control:
+func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(142.0, 54.0)
+	card.custom_minimum_size = Vector2(142.0, 86.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var style := UiTheme.box(Color(0.035, 0.045, 0.10), Color(w.color, 0.55), 1, 6)
 	style.content_margin_left = 7.0
@@ -126,19 +130,31 @@ func _weapon_card(w: WeaponDef, count: int, pl: PlayerState) -> Control:
 	card.add_child(box)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 4)
-	top.add_child(UiTheme.label("■", 13, w.color))
-	var name_label := UiTheme.label(_counted(Loc.weapon_name(w.id), count), 13, UiTheme.INK)
+	top.add_child(UiTheme.label("■", 12, w.color))
+	var name_label := UiTheme.label(Loc.weapon_name(w.id), 12, UiTheme.INK)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_label)
+	top.add_child(UiTheme.label(Loc.t("shop.level", [level + 1]), 10, UiTheme.DIM))
 	box.add_child(top)
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 4)
-	bottom.add_child(UiTheme.label(Loc.weapon_family(w.family), 11, UiTheme.DIM))
-	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats))), 11, UiTheme.COIN)
+	var middle := HBoxContainer.new()
+	middle.add_theme_constant_override("separation", 4)
+	middle.add_child(UiTheme.label(Loc.weapon_family(w.family), 10, UiTheme.DIM))
+	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats, level))), 10, UiTheme.COIN)
 	dps.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	bottom.add_child(dps)
-	box.add_child(bottom)
+	middle.add_child(dps)
+	box.add_child(middle)
+	var upgrade := Button.new()
+	upgrade.custom_minimum_size = Vector2(0.0, 20.0)
+	upgrade.add_theme_font_size_override("font_size", 10)
+	if level >= WeaponDef.MAX_LEVEL:
+		upgrade.text = Loc.t("shop.max_level")
+		upgrade.disabled = true
+	else:
+		upgrade.text = Loc.t("shop.upgrade", [Shop.upgrade_cost(w, level)])
+		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
+	box.add_child(upgrade)
+	_upgrade_buttons.append(upgrade)
 	return card
 
 

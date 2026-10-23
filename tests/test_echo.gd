@@ -69,6 +69,12 @@ func test_recorder_finish_snapshots(c: Check) -> void:
 	c.ok(take.samples.size() > 1 and take.samples[0] == Vector2.ZERO, "samples are copied")
 
 
+func test_take_power_uses_weapon_levels(c: Check) -> void:
+	var t := _weapon_take([&"pistol"])
+	t.levels.append(2)
+	c.near(t.power(), Content.weapon(&"pistol").level_dps(2), 0.001, "level scales echo power")
+
+
 func test_bank_ages_and_expires(c: Check) -> void:
 	var bank := EchoBank.new()
 	var t := EchoTake.new()

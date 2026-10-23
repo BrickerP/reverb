@@ -24,7 +24,13 @@ func merge(a: EchoTake, b: EchoTake) -> EchoTake:
 	var out := EchoTake.new()
 	out.wave = maxi(a.wave, b.wave)
 	out.samples = _join(a.samples, b.samples)
-	out.weapons = _best_weapons(a.weapons, b.weapons)
+	var loadout := _best_loadout(a, b)
+	var best_weapons: Array = loadout[0]
+	var best_levels: Array = loadout[1]
+	for w: Variant in best_weapons:
+		out.weapons.append(w as WeaponDef)
+	for level: Variant in best_levels:
+		out.levels.append(int(level))
 	out.stats = (a.stats if a.power() >= b.power() else b.stats).copy()
 	var keep_age := maxi(a.age, b.age)
 	takes.erase(a)
@@ -47,14 +53,20 @@ func _join(a: PackedVector2Array, b: PackedVector2Array) -> PackedVector2Array:
 	return out
 
 
-func _best_weapons(a: Array[WeaponDef], b: Array[WeaponDef]) -> Array[WeaponDef]:
-	var all: Array[WeaponDef] = []
-	all.append_array(a)
-	all.append_array(b)
-	all.sort_custom(func(x: WeaponDef, y: WeaponDef) -> bool: return x.dps() > y.dps())
-	if all.size() > MAX_MERGED_WEAPONS:
-		all.resize(MAX_MERGED_WEAPONS)
-	return all
+func _best_loadout(a: EchoTake, b: EchoTake) -> Array:
+	var entries: Array[Dictionary] = []
+	for i in a.weapons.size():
+		entries.append({"weapon": a.weapons[i], "level": a.level_at(i)})
+	for i in b.weapons.size():
+		entries.append({"weapon": b.weapons[i], "level": b.level_at(i)})
+	entries.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return (x["weapon"] as WeaponDef).level_dps(x["level"]) > (y["weapon"] as WeaponDef).level_dps(y["level"]))
+	var weapons: Array[WeaponDef] = []
+	var levels: Array[int] = []
+	for entry: Dictionary in entries.slice(0, mini(MAX_MERGED_WEAPONS, entries.size())):
+		weapons.append(entry["weapon"])
+		levels.append(int(entry["level"]))
+	return [weapons, levels]
 
 
 func age_after_wave(lifespan: int) -> Array[EchoTake]:

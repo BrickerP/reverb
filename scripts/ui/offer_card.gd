@@ -15,16 +15,16 @@ func _init() -> void:
 # Expected single-target DPS of everything already equipped.
 static func total_dps(pl: PlayerState) -> float:
 	var total := 0.0
-	for w in pl.weapons:
-		total += weapon_dps(w, pl.stats)
+	for i in pl.weapons.size():
+		total += weapon_dps(pl.weapons[i], pl.stats, pl.level_at(i))
 	return total
 
 
-static func weapon_dps(w: WeaponDef, stats: Stats) -> float:
+static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0) -> float:
 	var pellets := float(maxi(1, w.pellets))
 	var crit := 1.0 + maxf(0.0, stats.get_stat(Stats.CRIT_CHANCE))
 	var rate := 1.0 / maxf(0.01, w.cooldown * stats.cooldown_mult())
-	return w.damage * pellets * stats.damage_mult() * crit * rate
+	return w.damage * w.level_mult(level) * pellets * stats.damage_mult() * crit * rate
 
 
 func setup(o: Offer, sim: Sim, selected: bool = false) -> void:

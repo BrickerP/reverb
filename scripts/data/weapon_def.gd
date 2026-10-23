@@ -15,6 +15,17 @@ extends Resource
 @export var price: int = 20
 @export var color: Color = Color.WHITE
 
+const MAX_LEVEL := 3
+const DAMAGE_PER_LEVEL := 0.2
+
 
 func dps() -> float:
 	return damage * float(maxi(1, pellets)) / cooldown
+
+
+func level_mult(level: int) -> float:
+	return 1.0 + DAMAGE_PER_LEVEL * float(clampi(level, 0, MAX_LEVEL))
+
+
+func level_dps(level: int) -> float:
+	return dps() * level_mult(level)

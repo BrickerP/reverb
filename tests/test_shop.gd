@@ -20,6 +20,25 @@ func _item_offer(id: StringName, price: int) -> Offer:
 	return o
 
 
+func test_weapon_upgrade_spends_materials_and_caps(c: Check) -> void:
+	var s := _shop_sim()
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	s.player.add_weapon(Content.weapon(&"pistol"))
+	var w := s.player.weapons[0]
+	var cost := Shop.upgrade_cost(w, 0)
+	s.player.materials = cost
+	c.ok(s.shop.upgrade_weapon(s, 0), "first upgrade succeeds")
+	c.eq(s.player.level_at(0), 1, "weapon level went up")
+	c.eq(s.player.materials, 0, "upgrade spent materials")
+	c.ok(not s.shop.upgrade_weapon(s, 0), "cannot upgrade without materials")
+	s.player.materials = 10000
+	for i in WeaponDef.MAX_LEVEL:
+		s.shop.upgrade_weapon(s, 0)
+	c.eq(s.player.level_at(0), WeaponDef.MAX_LEVEL, "level capped")
+	c.ok(not s.shop.upgrade_weapon(s, 0), "max level refuses further upgrades")
+
+
 func test_roll_is_unique_and_priced_by_wave(c: Check) -> void:
 	var s := _shop_sim()
 	s.wave = 5

@@ -43,6 +43,7 @@ func _ready() -> void:
 	columns.add_child(_build_left())
 	build_panel = BuildPanel.new()
 	build_panel.replace_cancelled.connect(_cancel_replace)
+	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
@@ -184,6 +185,14 @@ func _on_replace_slot(index: int) -> void:
 	_replacing_index = -1
 	refresh()
 	_focus_card(0)
+
+
+func _on_upgrade_weapon(index: int) -> void:
+	if sim.shop.upgrade_weapon(sim, index):
+		refresh()
+		build_panel.focus_upgrade(index)
+	else:
+		UiTheme.flash(_materials)
 
 
 # Blocked clicks point at the resource that is missing, instead of only reading "can't buy".

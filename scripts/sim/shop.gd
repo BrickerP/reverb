@@ -18,6 +18,31 @@ static func resale_value(w: WeaponDef) -> int:
 	return maxi(1, int(floor(float(w.price) * RESALE_RATE)))
 
 
+static func upgrade_cost(w: WeaponDef, level: int) -> int:
+	return maxi(1, int(round(float(w.price) * (0.6 + 0.35 * float(clampi(level, 0, WeaponDef.MAX_LEVEL))))))
+
+
+static func upgrade_block_reason(sim: Sim, index: int) -> StringName:
+	if sim.phase != Sim.Phase.SHOP or index < 0 or index >= sim.player.weapons.size():
+		return &"invalid"
+	if sim.player.level_at(index) >= WeaponDef.MAX_LEVEL:
+		return &"maxed"
+	if sim.player.materials < upgrade_cost(sim.player.weapons[index], sim.player.level_at(index)):
+		return &"poor"
+	return &""
+
+
+static func upgrade_weapon(sim: Sim, index: int) -> bool:
+	if upgrade_block_reason(sim, index) != &"":
+		return false
+	var cost := upgrade_cost(sim.player.weapons[index], sim.player.level_at(index))
+	sim.player.materials -= cost
+	if not sim.player.upgrade_weapon(index):
+		return false
+	sim.purchased.emit()
+	return true
+
+
 func reroll_cost(wave: int) -> int:
 	return 2 + int(float(wave) * 0.5) + 2 * rerolls
 
@@ -70,6 +95,9 @@ func replace_weapon(sim: Sim, o: Offer, index: int) -> bool:
 	sim.player.materials += resale - o.price
 	sim.player.weapons[index] = o.weapon
 	sim.player.cooldowns[index] = 0.0
+	while sim.player.weapon_levels.size() <= index:
+		sim.player.weapon_levels.append(0)
+	sim.player.weapon_levels[index] = 0
 	o.sold = true
 	sim.purchased.emit()
 	return true
