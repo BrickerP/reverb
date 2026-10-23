@@ -91,6 +91,7 @@ func _ready() -> void:
 
 
 func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
+	_detach_presentation_session()
 	if char_id != &"":
 		character_id = char_id
 	_daily_run = false
@@ -232,7 +233,7 @@ func _apply_display() -> void:
 func show_select() -> void:
 	if character_select == null:
 		return
-	sim = null
+	_detach_presentation_session()
 	_phase = Sim.Phase.SHOP
 	_set_paused(false)
 	_shop_delay = 0.0
@@ -245,6 +246,18 @@ func show_select() -> void:
 	character_select.refresh(meta, today_seed(),
 			meta.daily_best if meta.daily_seed == today_seed() else 0)
 	character_select.visible = true
+
+
+func _detach_presentation_session() -> void:
+	if _view != null:
+		_view.unbind()
+	if hud != null:
+		hud.unbind()
+	if shop_ui != null:
+		shop_ui.close_session()
+	if audio != null:
+		audio.bind(null)
+	sim = null
 
 
 func toggle_pause() -> void:
@@ -380,6 +393,10 @@ func _show_end() -> void:
 func _set_paused(on: bool) -> void:
 	paused = on
 	hud.paused = on
+	if _view != null:
+		_view.set_paused(on)
+	if audio != null:
+		audio.set_paused(on)
 	if pause_ui == null:
 		return
 	if on:

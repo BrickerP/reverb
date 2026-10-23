@@ -27,6 +27,9 @@ func _ready() -> void:
 
 
 func bind(s: Sim) -> void:
+	if s == null:
+		unbind()
+		return
 	sim = s
 	_hp_ghost = clampf(s.player.hp / maxf(1.0, s.player.max_hp()), 0.0, 1.0)
 	_prev_cd.clear()
@@ -37,6 +40,18 @@ func bind(s: Sim) -> void:
 	_prev_materials = s.player.materials
 	_mat_pulse = 0.0
 	_hint_time = 0.0
+
+
+func unbind() -> void:
+	sim = null
+	paused = false
+	_hp_ghost = 1.0
+	_prev_cd.clear()
+	_flash.clear()
+	_prev_materials = 0
+	_mat_pulse = 0.0
+	_hint_time = 0.0
+	queue_redraw()
 
 
 # 0 = just fired, 1 = ready. Drives the fill in each weapon slot.

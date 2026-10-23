@@ -4,9 +4,12 @@ extends PanelContainer
 var target_kind: StringName = &""
 var target_index: int = -1
 var highlighted: bool = false
+var feedback_runs: int = 0
+var last_feedback_reverse: bool = false
 var _quote_drop := Callable()
 var _apply_drop := Callable()
 var _clear_drop := Callable()
+var _feedback_tween: Tween
 
 
 func configure(kind: StringName, index: int, quote_drop: Callable, apply_drop: Callable,
@@ -46,20 +49,41 @@ func _notification(what: int) -> void:
 
 
 func settle() -> void:
+	feedback(false, false)
+
+
+func feedback(reverse: bool = false, reduced: bool = false) -> void:
+	reset_feedback()
+	feedback_runs += 1
+	last_feedback_reverse = reverse
 	pivot_offset = size * 0.5
-	scale = Vector2(0.97, 0.97)
-	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(1.025, 1.025), 0.08) \
-			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
+	var tint := Color(1.0, 0.62, 0.9) if reverse else Color(0.62, 1.0, 0.88)
+	modulate = tint
+	if not reduced:
+		scale = Vector2(0.94, 0.94) if reverse else Vector2(1.04, 1.04)
+	_feedback_tween = create_tween().set_parallel(true)
+	_feedback_tween.tween_property(self, "modulate", Color.WHITE, 0.2).set_trans(Tween.TRANS_SINE)
+	if not reduced:
+		_feedback_tween.tween_property(self, "scale", Vector2.ONE, 0.2) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func reset_feedback() -> void:
+	if _feedback_tween != null and _feedback_tween.is_valid():
+		_feedback_tween.kill()
+	_feedback_tween = null
+	highlighted = false
+	scale = Vector2.ONE
+	modulate = Color.WHITE
 
 
 func reject() -> void:
+	reset_feedback()
 	UiTheme.flash(self)
 	pivot_offset = size * 0.5
-	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(0.98, 0.98), 0.06)
-	tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
+	_feedback_tween = create_tween()
+	_feedback_tween.tween_property(self, "scale", Vector2(0.98, 0.98), 0.06)
+	_feedback_tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
 
 
 func clear_highlight() -> void:

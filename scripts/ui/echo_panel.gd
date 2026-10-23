@@ -47,6 +47,18 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 	_animate_new = false
 
 
+func close_session() -> void:
+	_sim = null
+	_animate_new = false
+	_merge_mode = false
+	_merge_first = null
+	discard_buttons.clear()
+	merge_button = null
+	last_new_row = null
+	last_new_tint = Color.WHITE
+	UiTheme.clear(_box)
+
+
 func is_merging() -> bool:
 	return _merge_mode
 

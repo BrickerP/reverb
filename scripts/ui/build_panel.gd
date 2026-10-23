@@ -93,6 +93,28 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_box.add_child(_core_grid(pl))
 
 
+func close_session() -> void:
+	reset_feedback()
+	UiTheme.clear(_box)
+	weapons_label = null
+	items_label = null
+	replacing = false
+	_weapons_row = null
+	_items_row = null
+	_slot_buttons.clear()
+	_upgrade_buttons.clear()
+	_cards.clear()
+	_card_weapons.clear()
+	_card_levels.clear()
+	slot_drop_targets.clear()
+	empty_drop_target = null
+	items_drop_target = null
+	_quote_drop = Callable()
+	_apply_drop = Callable()
+	_clear_drop = Callable()
+	_selected = 0
+
+
 func focus_first_slot() -> bool:
 	if _slot_buttons.is_empty():
 		return false
@@ -240,6 +262,32 @@ func settle_target(kind: StringName, index: int = -1) -> void:
 		items_drop_target.settle()
 	elif empty_drop_target != null:
 		empty_drop_target.settle()
+
+
+func pulse_weapon_slot(index: int, reverse: bool = false, reduced: bool = false) -> bool:
+	if index >= 0 and index < slot_drop_targets.size():
+		slot_drop_targets[index].feedback(reverse, reduced)
+		return true
+	if empty_drop_target != null:
+		empty_drop_target.feedback(reverse, reduced)
+		return true
+	return false
+
+
+func pulse_items(reverse: bool = false, reduced: bool = false) -> bool:
+	if items_drop_target == null:
+		return false
+	items_drop_target.feedback(reverse, reduced)
+	return true
+
+
+func reset_feedback() -> void:
+	for target in slot_drop_targets:
+		target.reset_feedback()
+	if empty_drop_target != null:
+		empty_drop_target.reset_feedback()
+	if items_drop_target != null:
+		items_drop_target.reset_feedback()
 
 
 func clear_drop_highlights() -> void:

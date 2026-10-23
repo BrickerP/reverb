@@ -169,7 +169,8 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 					Color(col, 0.75), 3.0)
 
 
-static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper") -> void:
+static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
+		recoils: Array[Dictionary] = []) -> void:
 	var r := PlayerState.RADIUS
 	var lifespan := sim.echo_lifespan()
 	var segments := maxi(1, lifespan)
@@ -193,7 +194,7 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		if sim.live_echo:
 			weapons = sim.player.weapons
 		_draw_weapon_loadout(ci, sim, a.pos, weapons, facing, bob, art_alpha,
-				c, 0.45, 0.82)
+				c, 0.45, 0.82, a.index, recoils)
 		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.3 if muted else 0.9), 2.0)
 		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
 		for k in segments:
@@ -267,17 +268,20 @@ static func _ensure_bullet_capacity(count: int) -> void:
 	_bullet_mesh.instance_count = _bullet_capacity
 
 
-static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper") -> void:
+static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
+		motion: Dictionary = {}, recoils: Array[Dictionary] = []) -> void:
 	var pl := sim.player
 	var alpha := 1.0
 	if pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
 		alpha = 0.35
 	var r := PlayerState.RADIUS
 	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
-	var bob := _motion_bob(sim.wave_time, pl.pos, 6.0, 1.6)
-	var move_weight := clampf(pl.facing.length(), 0.0, 1.0)
-	var sway := sin(sim.wave_time * 5.5 + pl.pos.x * 0.018) * 0.045 * move_weight
-	var breathe := 1.0 + sin(sim.wave_time * 3.6 + pl.pos.y * 0.012) * 0.022
+	var visual_time := float(motion.get("visual_time", sim.wave_time))
+	var move_weight := clampf(float(motion.get("amount", 0.0)), 0.0, 1.0)
+	var gait := visual_time * lerpf(3.2, 8.5, move_weight) + pl.pos.x * 0.012
+	var bob := sin(gait * 2.0) * lerpf(0.45, 1.8, move_weight)
+	var sway := sin(gait) * lerpf(0.012, 0.055, move_weight)
+	var breathe := 1.0 + sin(visual_time * 3.1 + pl.pos.y * 0.012) * lerpf(0.018, 0.01, move_weight)
 	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
 	var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
@@ -289,7 +293,7 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	# stable by aiming the mounted loadout at the nearest live enemy, then falling back to facing.
 	if count > 0:
 		_draw_weapon_loadout(ci, sim, pl.pos, pl.weapons, pl.facing, bob, alpha,
-				Color.WHITE, 0.0, 1.0)
+				Color.WHITE, 0.0, 1.0, -1, recoils)
 
 
 static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
@@ -299,6 +303,121 @@ static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
 			ci.draw_arc(s.pos, s.radius + (1.0 - t) * 46.0, 0.0, TAU, 28, Color(s.color, t), 2.0)
 		else:
 			ci.draw_circle(s.pos, 1.5 + 2.0 * t, Color(s.color, t))
+
+
+static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Array[Dictionary],
+		explosions: Array[Dictionary], hurts: Array[Dictionary], weapon_changes: Array[Dictionary],
+		reduced: bool) -> void:
+	for data in muzzles:
+		var t := float(data["life"]) / float(data["max_life"])
+		var pos: Vector2 = data["pos"]
+		var direction: Vector2 = data["direction"]
+		var profile: Dictionary = data["profile"]
+		var color: Color = profile["color"]
+		var level_scale := 1.0 + 0.06 * float(clampi(int(data["level"]), 0, WeaponDef.MAX_LEVEL))
+		var length := float(profile["length"]) * level_scale * (0.65 if reduced else 1.0)
+		match profile["style"]:
+			&"scatter":
+				for angle in [-0.2, 0.0, 0.2]:
+					ci.draw_line(pos, pos + direction.rotated(angle) * length, Color(color, 0.7 * t), 2.0)
+			&"arcane":
+				ci.draw_arc(pos, 4.0 + (1.0 - t) * 8.0, 0.0, TAU, 16, Color(color, 0.8 * t), 2.0)
+			&"marksman":
+				ci.draw_line(pos - direction * 4.0, pos + direction * length, Color(color, 0.9 * t), 2.5)
+			_:
+				ci.draw_line(pos, pos + direction * length, Color(color, 0.85 * t), 2.0)
+		# Event origin and direction are authoritative; this short reverse stroke is visual recoil,
+		# not a claim about which duplicate weapon slot fired.
+		var origin: Vector2 = data["origin"]
+		ci.draw_line(origin, origin - direction * float(profile["recoil"]) * t,
+				Color(color, 0.45 * t), 2.0)
+		if bool(profile["evolved"]):
+			ci.draw_arc(pos, 7.0 + 5.0 * (1.0 - t), 0.0, TAU, 14, Color(1.0, 1.0, 1.0, t), 1.5)
+	for data in hits:
+		var t := float(data["life"]) / float(data["max_life"])
+		var pos: Vector2 = data["pos"]
+		var direction: Vector2 = data["direction"]
+		var normal := Vector2(-direction.y, direction.x)
+		var base_color: Color = data["color"]
+		var color := base_color.lerp(Color(1.0, 1.0, 0.45), 0.8) if bool(data["crit"]) else base_color
+		if bool(data["has_direction"]):
+			ci.draw_line(pos - direction * 8.0, pos + direction * 3.0, Color(color, 0.9 * t), 2.0)
+			ci.draw_line(pos - normal * (6.0 if bool(data["crit"]) else 3.0),
+					pos + normal * (6.0 if bool(data["crit"]) else 3.0), Color(color, 0.8 * t), 2.0)
+		else:
+			ci.draw_arc(pos, 4.0 + (1.0 - t) * 7.0, 0.0, TAU, 16, Color(color, 0.85 * t), 2.0)
+			if bool(data["crit"]):
+				ci.draw_line(pos + Vector2(-6.0, 0.0), pos + Vector2(6.0, 0.0), Color(color, t), 2.0)
+				ci.draw_line(pos + Vector2(0.0, -6.0), pos + Vector2(0.0, 6.0), Color(color, t), 2.0)
+		if bool(data["reduced"]):
+			if bool(data["has_direction"]):
+				ci.draw_arc(pos, 10.0, direction.angle() - 0.65, direction.angle() + 0.65, 12,
+						Color(0.55, 0.8, 1.0, 0.9 * t), 2.5)
+			else:
+				ci.draw_arc(pos, 10.0, 0.0, TAU, 20, Color(0.55, 0.8, 1.0, 0.9 * t), 2.5)
+	for data in explosions:
+		var t := float(data["life"]) / float(data["max_life"])
+		var p := 1.0 - t
+		var radius := float(data["radius"])
+		var color: Color = data["color"]
+		var pos: Vector2 = data["pos"]
+		if data["kind"] == ExplosionInfo.BOMBER:
+			ci.draw_arc(pos, radius * (0.35 + 0.65 * p), 0.0, TAU, 28,
+					Color(UiTheme.WARN, 0.85 * t), 3.0)
+		else:
+			ci.draw_arc(pos, radius * (0.25 + 0.75 * p), 0.0, TAU, 32,
+					Color(color, 0.75 * t), 2.0)
+			ci.draw_circle(pos, maxf(2.0, radius * 0.12 * t), Color(color, 0.25 * t))
+	for data in hurts:
+		var t := float(data["life"]) / float(data["max_life"])
+		var direction: Vector2 = data["direction"]
+		var pos: Vector2 = data["pos"]
+		if bool(data["has_direction"]):
+			ci.draw_arc(pos, 20.0 + (1.0 - t) * 8.0, direction.angle() - 0.8,
+					direction.angle() + 0.8, 16, Color(UiTheme.WARN, 0.85 * t), 3.0)
+		else:
+			ci.draw_arc(pos, 20.0 + (1.0 - t) * 8.0, 0.0, TAU, 24,
+					Color(UiTheme.WARN, 0.7 * t), 2.5)
+		if bool(data["lethal"]):
+			ci.draw_arc(pos, 28.0 + (1.0 - t) * 20.0, 0.0, TAU, 28, Color(1.0, 0.2, 0.3, t), 3.0)
+	for data in weapon_changes:
+		var t := float(data["life"]) / float(data["max_life"])
+		var pos: Vector2 = data["pos"]
+		ci.draw_arc(pos, 15.0 + 12.0 * (1.0 - t),
+				0.0, TAU, 12, Color(UiTheme.ACCENT, 0.65 * t), 1.5)
+
+
+static func weapon_feedback_profile(id: StringName) -> Dictionary:
+	var style: StringName = &"sidearm"
+	var color := Color(0.55, 0.95, 1.0)
+	var length := 12.0
+	var recoil := 4.0
+	match id:
+		&"shotgun", &"flechette", &"flak_crown":
+			style = &"scatter"
+			color = Color(1.0, 0.68, 0.3)
+			length = 15.0
+			recoil = 6.0
+		&"rifle", &"longbow", &"rail_spike":
+			style = &"marksman"
+			color = Color(1.0, 0.5, 0.7)
+			length = 23.0
+			recoil = 5.0
+		&"orb", &"hex_bolt", &"nova_core":
+			style = &"arcane"
+			color = Color(0.75, 0.55, 1.0)
+			length = 12.0
+			recoil = 3.0
+		&"smg":
+			length = 9.0
+			recoil = 2.5
+			color = Color(0.55, 1.0, 0.6)
+		&"twin_fangs":
+			length = 14.0
+			recoil = 3.5
+	var evolved := id in [&"twin_fangs", &"flak_crown", &"rail_spike", &"nova_core"]
+	return {"weapon_id": id, "style": style, "color": color, "length": length,
+			"recoil": recoil, "evolved": evolved}
 
 
 static func _draw_art(ci: CanvasItem, key: StringName, center: Vector2, size: Vector2,
@@ -419,7 +538,8 @@ static func _echo_facing(actor: EchoActor) -> Vector2:
 
 static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 		weapons: Array[WeaponDef], fallback: Vector2, bob: float, alpha: float,
-		actor_tint: Color, tint_weight: float, size_mult: float) -> void:
+		actor_tint: Color, tint_weight: float, size_mult: float, source: int = -1,
+		recoils: Array[Dictionary] = []) -> void:
 	var count := weapons.size()
 	if count <= 0:
 		return
@@ -429,11 +549,23 @@ static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 	for i in count:
 		var w: WeaponDef = weapons[i]
 		var slot := _weapon_slot(i, count)
-		var mount := origin + aim * slot.x + normal * slot.y + Vector2(0.0, bob)
+		var recoil := _mounted_recoil(recoils, source, w.id)
+		var mount := origin + aim * (slot.x - recoil) + normal * slot.y + Vector2(0.0, bob)
 		var key := PresentationAssets.weapon_key(w)
 		var size := _weapon_size(key) * crowd_scale * size_mult
 		var color := w.color.lerp(actor_tint, tint_weight).lerp(Color.WHITE, 0.35)
 		_draw_art(ci, key, mount, size, aim.angle(), Color(color, alpha))
+
+
+static func _mounted_recoil(recoils: Array[Dictionary], source: int, weapon_id: StringName) -> float:
+	# ShotInfo has no slot. Matching duplicates deliberately kick as one source+ID visual group.
+	var amount := 0.0
+	for data in recoils:
+		if int(data["source"]) != source or data["weapon_id"] != weapon_id:
+			continue
+		var profile: Dictionary = data["profile"]
+		amount = maxf(amount, float(profile["recoil"]) * float(data["life"]) / float(data["max_life"]))
+	return amount
 
 
 static func _weapon_slot(index: int, count: int) -> Vector2:
@@ -459,13 +591,6 @@ static func _weapon_slot(index: int, count: int) -> Vector2:
 		return slots[index]
 	var angle := TAU * float(index) / float(maxi(1, count))
 	return Vector2(cos(angle), sin(angle)) * 28.0
-
-
-static func _art_aspect(key: StringName, fallback: float) -> float:
-	var source := PresentationAssets.region(key)
-	if not source.has_area() or source.size.y <= 0.0:
-		return fallback
-	return source.size.x / source.size.y
 
 
 static func _aim_direction(sim: Sim, origin: Vector2, fallback: Vector2) -> Vector2:

@@ -3,6 +3,9 @@ extends Control
 
 signal start_requested
 
+const MAX_PENDING_FEEDBACK := 8
+const FEEDBACK_EXPIRY_MSEC := 800
+
 var sim: Sim
 var offers_box: VBoxContainer
 var reroll_button: Button
@@ -20,7 +23,15 @@ var _overlay: Control
 var _replacing: Offer
 var _replacing_index: int = -1
 var _connected_shop: Shop
+var _connected_sim: Sim
 var _weapon_detail := ""
+var _pending_feedback: Dictionary = {}
+var _feedback_epoch := 0
+var _refresh_generation := 0
+var reduced_effects := false
+var last_feedback: Dictionary = {}
+var material_feedback_runs := 0
+var _material_feedback_tween: Tween
 
 
 func _ready() -> void:
@@ -72,6 +83,11 @@ func open(s: Sim) -> void:
 	sim = s
 	_connected_shop = sim.shop
 	_connected_shop.shop_history_changed.connect(_on_history_changed)
+	_connected_shop.shop_action_resolved.connect(_on_shop_action_resolved)
+	_connected_sim = sim
+	_connected_sim.weapon_changed.connect(_on_weapon_changed)
+	material_feedback_runs = 0
+	last_feedback.clear()
 	visible = true
 	_replacing = null
 	_replacing_index = -1
@@ -83,7 +99,27 @@ func open(s: Sim) -> void:
 	_focus_card(0)
 
 
+func close_session() -> void:
+	_disconnect_shop()
+	visible = false
+	sim = null
+	_replacing = null
+	_replacing_index = -1
+	_weapon_detail = ""
+	if offers_box != null:
+		UiTheme.clear(offers_box)
+	if build_panel != null:
+		build_panel.close_session()
+	if echo_panel != null:
+		echo_panel.close_session()
+	if _overlay != null:
+		UiTheme.clear(_overlay)
+	if _footer != null:
+		_footer.text = Loc.t("shop.keys")
+
+
 func refresh(animate_echo: bool = false) -> void:
+	_refresh_generation += 1
 	if _replacing != null and (not sim.shop.offers.has(_replacing) or _replacing.sold):
 		_replacing = null
 		_replacing_index = -1
@@ -115,6 +151,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_footer.text = Loc.t("shop.keys")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo)
+	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
 
 
 func _build_footer() -> Control:
@@ -299,6 +336,112 @@ func _on_history_changed(can_undo: bool) -> void:
 		undo_button.disabled = not can_undo
 
 
+func set_reduced_effects(on: bool) -> void:
+	reduced_effects = on
+	if on:
+		reset_feedback()
+
+
+func pending_feedback_count() -> int:
+	return _pending_feedback.size()
+
+
+func flush_feedback() -> void:
+	_flush_feedback_deferred(_feedback_epoch, _refresh_generation)
+
+
+func reset_feedback() -> void:
+	_pending_feedback.clear()
+	last_feedback.clear()
+	if build_panel != null:
+		build_panel.reset_feedback()
+	if _material_feedback_tween != null and _material_feedback_tween.is_valid():
+		_material_feedback_tween.kill()
+	_material_feedback_tween = null
+	if _materials != null:
+		_materials.scale = Vector2.ONE
+		_materials.modulate = Color.WHITE
+
+
+func _on_weapon_changed(info: WeaponChangeInfo) -> void:
+	if info == null or not info.ok:
+		return
+	_queue_feedback(StringName("slot_%d" % info.index), {
+		"kind": &"weapon", "index": info.index,
+		"reverse": info.reason == ShopResult.UNDO, "action": info.reason,
+		"before_id": info.before_id, "after_id": info.after_id,
+	})
+
+
+func _on_shop_action_resolved(result: ShopResult) -> void:
+	if result == null or not result.ok:
+		return
+	var reverse := result.action == ShopResult.UNDO
+	if result.before_state != null and result.after_state != null:
+		if result.before_state.items != result.after_state.items:
+			_queue_feedback(&"items", {
+				"kind": &"items", "index": -1, "reverse": reverse,
+				"action": result.action,
+			})
+		if result.before_state.materials != result.after_state.materials:
+			_queue_feedback(&"materials", {
+				"kind": &"materials", "index": -1, "reverse": reverse,
+				"action": result.action,
+			})
+	elif result.action == ShopResult.REROLL and result.cost != 0:
+		_queue_feedback(&"materials", {
+			"kind": &"materials", "index": -1, "reverse": false,
+			"action": result.action,
+		})
+
+
+func _queue_feedback(key: StringName, data: Dictionary) -> void:
+	data["queued_at_msec"] = Time.get_ticks_msec()
+	if not _pending_feedback.has(key) and _pending_feedback.size() >= MAX_PENDING_FEEDBACK:
+		_pending_feedback.erase(_pending_feedback.keys()[0])
+	_pending_feedback[key] = data
+
+
+func _flush_feedback_deferred(epoch: int, generation: int) -> void:
+	if epoch != _feedback_epoch or generation != _refresh_generation:
+		return
+	if not is_inside_tree() or not visible or sim == null or sim != _connected_sim:
+		_pending_feedback.clear()
+		return
+	var now := Time.get_ticks_msec()
+	var pending: Array = _pending_feedback.values()
+	_pending_feedback.clear()
+	for raw: Variant in pending:
+		var data: Dictionary = raw
+		if now - int(data.get("queued_at_msec", now)) > FEEDBACK_EXPIRY_MSEC:
+			continue
+		last_feedback = data.duplicate()
+		match data.get("kind", &""):
+			&"weapon":
+				build_panel.pulse_weapon_slot(int(data.get("index", -1)),
+						bool(data.get("reverse", false)), reduced_effects)
+			&"items":
+				build_panel.pulse_items(bool(data.get("reverse", false)), reduced_effects)
+			&"materials":
+				_pulse_materials(bool(data.get("reverse", false)))
+
+
+func _pulse_materials(reverse: bool) -> void:
+	if _materials == null:
+		return
+	if _material_feedback_tween != null and _material_feedback_tween.is_valid():
+		_material_feedback_tween.kill()
+	material_feedback_runs += 1
+	_materials.pivot_offset = _materials.size * 0.5
+	_materials.modulate = Color(1.0, 0.65, 0.9) if reverse else UiTheme.COIN
+	_materials.scale = Vector2.ONE if reduced_effects else Vector2(0.96, 0.96)
+	_material_feedback_tween = create_tween().set_parallel(true)
+	_material_feedback_tween.tween_property(_materials, "modulate", Color.WHITE, 0.2)
+	if not reduced_effects:
+		_material_feedback_tween.tween_property(_materials, "scale", Vector2.ONE, 0.2) \
+				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
 func drag_payload_for(o: Offer) -> Variant:
 	if sim == null or not visible or sim.phase != Sim.Phase.SHOP:
 		return null
@@ -402,10 +545,6 @@ func apply_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 	_replacing = null
 	_replacing_index = -1
 	refresh()
-	if target_kind == &"empty_weapon":
-		build_panel.settle_target(&"weapon_slot", sim.player.weapons.size() - 1)
-	else:
-		build_panel.settle_target(target_kind, index)
 	return result
 
 
@@ -422,7 +561,14 @@ func _flash_drop_failure(target_kind: StringName, index: int, reason: StringName
 func _disconnect_shop() -> void:
 	if _connected_shop != null and _connected_shop.shop_history_changed.is_connected(_on_history_changed):
 		_connected_shop.shop_history_changed.disconnect(_on_history_changed)
+	if _connected_shop != null and _connected_shop.shop_action_resolved.is_connected(_on_shop_action_resolved):
+		_connected_shop.shop_action_resolved.disconnect(_on_shop_action_resolved)
+	if _connected_sim != null and _connected_sim.weapon_changed.is_connected(_on_weapon_changed):
+		_connected_sim.weapon_changed.disconnect(_on_weapon_changed)
 	_connected_shop = null
+	_connected_sim = null
+	_feedback_epoch += 1
+	reset_feedback()
 
 
 func _on_discard(take: EchoTake) -> void:
@@ -477,9 +623,10 @@ func _focus_card(from: int) -> void:
 func _fly_take_token() -> void:
 	if not is_inside_tree() or _overlay == null:
 		return
+	var session_epoch := _feedback_epoch
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if not visible or sim == null:
+	if session_epoch != _feedback_epoch or not visible or sim == null:
 		return
 	var target := echo_panel.arrival_point()
 	if target == Vector2.ZERO:
