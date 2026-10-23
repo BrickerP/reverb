@@ -2,6 +2,8 @@ class_name GameAudio
 extends Node
 
 const POOL := 12
+const PRESENTATION_DIR := "res://audio/presentation"
+const LEGACY_AUDIO_DIR := "res://audio"
 const NAMES: Array[StringName] = [
 	&"shoot", &"hit", &"kill", &"pickup", &"buy", &"hurt", &"echo",
 	&"wave_start", &"wave_end", &"lose", &"win", &"click", &"boss", &"silence",
@@ -43,7 +45,7 @@ var _music: AudioStreamPlayer
 func _ready() -> void:
 	_silent = DisplayServer.get_name() == "headless"
 	for name in NAMES:
-		var stream := load("res://audio/%s.wav" % name)
+		var stream := load(stream_path(name))
 		if stream != null:
 			_streams[name] = stream
 	for i in POOL:
@@ -136,6 +138,13 @@ func stream_count() -> int:
 
 func play_count(name: StringName) -> int:
 	return int(_plays.get(name, 0))
+
+
+static func stream_path(name: StringName) -> String:
+	var preferred := "%s/%s.wav" % [PRESENTATION_DIR, name]
+	if ResourceLoader.exists(preferred):
+		return preferred
+	return "%s/%s.wav" % [LEGACY_AUDIO_DIR, name]
 
 
 func _on_shot(source: int) -> void:

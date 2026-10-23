@@ -23,6 +23,7 @@ var shake_enabled := true
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_backdrop = ArenaBackdrop.new()
 	_backdrop.show_behind_parent = true
 	add_child(_backdrop)

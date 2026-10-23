@@ -10,6 +10,7 @@ const GRID := 60.0
 const TRAIL_LIMIT := 160
 # Above this many bullets, heads are drawn through one MultiMesh instead of one draw call each.
 const BATCH_LIMIT := 80
+const PLAYER_ART_SIZE := Vector2(44.0, 52.0)
 
 static var _bullet_mesh: MultiMesh
 static var _bullet_texture: ImageTexture
@@ -123,25 +124,33 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 	var target := sim.player.pos
 	for e in sim.enemies:
 		var col := Color.WHITE if e.flash > 0.0 else e.def.color
+		var key: StringName = &"enemy_runner" if e.def.id == &"runner" else &"enemy_grunt"
+		var stride := sin(sim.wave_time * (7.5 if e.def.id == &"runner" else 4.5)
+				+ e.pos.x * 0.021 + e.pos.y * 0.013)
+		var facing := (target - e.pos).normalized()
+		if facing == Vector2.ZERO:
+			facing = Vector2.RIGHT
+		var art_height := maxf(24.0, e.radius * (2.45 if e.def.is_boss else 2.3))
+		var art_size := Vector2(art_height * _art_aspect(key, 1.0), art_height)
+		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
+		var art_tint := Color.WHITE if e.flash > 0.0 else e.def.color.lerp(Color.WHITE, 0.58)
+		var center := e.pos + Vector2(0.0, -e.radius * 0.2 + stride * minf(1.8, e.radius * 0.08))
+		var sway := stride * 0.045 * (-1.0 if facing.x < 0.0 else 1.0)
+		_draw_art(ci, key, center, art_size, sway, Color(art_tint, 0.96))
 		if e.def.is_boss:
-			var spin := Time.get_ticks_msec() / 1000.0 * 0.7
-			ci.draw_colored_polygon(_ngon(e.pos, e.radius, 8, spin), Color(col, 0.9))
+			var spin := sim.wave_time * 0.7
 			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
 			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
 			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
 		elif e.def.sides < 3:
-			ci.draw_circle(e.pos, e.radius, Color(col, 0.92))
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
-		else:
-			var rot := (target - e.pos).angle()
-			ci.draw_colored_polygon(_ngon(e.pos, e.radius + 2.0, e.def.sides, rot), Color(col, 0.92))
 		if e.radius >= 15.0 and e.hp < e.max_hp:
 			var top := e.pos + Vector2(-e.radius, -e.radius - 8.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
 			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
 		if e.def.death_radius > 0.0:
-			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 140.0)
+			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 7.0)
 			ci.draw_arc(e.pos, e.def.death_radius, 0.0, TAU, 32,
 					Color(col, 0.10 + 0.10 * pulse), 1.5)
 		if e.def.shield_arc > 0.0:
@@ -156,12 +165,23 @@ static func echoes(ci: CanvasItem, sim: Sim) -> void:
 	var lifespan := sim.echo_lifespan()
 	var segments := maxi(1, lifespan)
 	var step := TAU / float(segments)
-	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 120.0)
+	var pulse := 0.5 + 0.5 * sin(sim.wave_time * 8.0)
 	for a in sim.echoes:
 		var c := a.take.tint()
 		var remaining := maxi(0, lifespan - a.take.age)
 		var muted := sim.echo_silenced > 0.0
-		ci.draw_circle(a.pos, r, Color(c, 0.12 if muted else 0.2))
+		var bob := _motion_bob(sim.wave_time, a.pos, 5.0, 1.5)
+		var art_alpha := 0.22 if muted else 0.48
+		var breathe := 1.0 + sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.018
+		var art_size := PLAYER_ART_SIZE * Vector2(2.0 - breathe, breathe)
+		_draw_art(ci, &"player", a.pos + Vector2(0.0, r - PLAYER_ART_SIZE.y * 0.5 + bob),
+				art_size, sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035,
+				Color(c.lerp(Color.WHITE, 0.28), art_alpha))
+		var weapons: Array[WeaponDef] = a.take.weapons
+		if sim.live_echo:
+			weapons = sim.player.weapons
+		_draw_weapon_loadout(ci, sim, a.pos, weapons, Vector2.RIGHT, bob, art_alpha,
+				c, 0.45, 0.82)
 		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.3 if muted else 0.9), 2.0)
 		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
 		for k in segments:
@@ -242,20 +262,19 @@ static func player(ci: CanvasItem, sim: Sim) -> void:
 		alpha = 0.35
 	var r := PlayerState.RADIUS
 	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
-	ci.draw_circle(pl.pos, r, Color(PLAYER, alpha))
-	ci.draw_circle(pl.pos, r * 0.45, Color(0.02, 0.05, 0.1, alpha))
+	var bob := _motion_bob(sim.wave_time, pl.pos, 6.0, 1.6)
+	var move_weight := clampf(pl.facing.length(), 0.0, 1.0)
+	var sway := sin(sim.wave_time * 5.5 + pl.pos.x * 0.018) * 0.045 * move_weight
+	var breathe := 1.0 + sin(sim.wave_time * 3.6 + pl.pos.y * 0.012) * 0.022
+	var art_size := PLAYER_ART_SIZE * Vector2(2.0 - breathe, breathe)
+	var art_center := pl.pos + Vector2(0.0, r - PLAYER_ART_SIZE.y * 0.5 + bob)
+	_draw_art(ci, &"player", art_center, art_size, sway, Color(1.0, 1.0, 1.0, alpha))
 	var count := pl.weapons.size()
-	for i in count:
-		var w := pl.weapons[i]
-		var dir := Vector2.from_angle(-PI * 0.5 + TAU * float(i) / float(count))
-		var base := pl.pos + dir * (r + 3.0)
-		var tip := base + dir * 10.0
-		var back := Color(0.01, 0.02, 0.05, 0.85 * alpha)
-		ci.draw_line(base, tip, back, 7.0)
-		ci.draw_line(base, tip, Color(w.color, alpha), 3.0)
-		ci.draw_circle(base, 3.8, back)
-		ci.draw_circle(base, 2.4, Color(w.color, alpha))
-	ci.draw_line(pl.pos + pl.facing * r, pl.pos + pl.facing * (r + 7.0), Color(1, 1, 1, alpha), 3.0)
+	# shot_fired only identifies its source actor, not the weapon or target. Keep presentation
+	# stable by aiming the mounted loadout at the nearest live enemy, then falling back to facing.
+	if count > 0:
+		_draw_weapon_loadout(ci, sim, pl.pos, pl.weapons, pl.facing, bob, alpha,
+				Color.WHITE, 0.0, 1.0)
 
 
 static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
@@ -267,9 +286,105 @@ static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
 			ci.draw_circle(s.pos, 1.5 + 2.0 * t, Color(s.color, t))
 
 
-static func _ngon(center: Vector2, radius: float, sides: int, rot: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	pts.resize(sides)
-	for i in sides:
-		pts[i] = center + Vector2.from_angle(rot + TAU * float(i) / float(sides)) * radius
-	return pts
+static func _draw_art(ci: CanvasItem, key: StringName, center: Vector2, size: Vector2,
+		rotation: float, tint: Color) -> bool:
+	var tex := PresentationAssets.texture(key)
+	var source := PresentationAssets.region(key)
+	if tex == null or not source.has_area():
+		return false
+	var fitted := _contained_size(source.size, size)
+	ci.draw_set_transform(center, rotation)
+	ci.draw_texture_rect_region(tex, Rect2(-fitted * 0.5, fitted), source, tint)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	return true
+
+
+static func _contained_size(source: Vector2, bounds: Vector2) -> Vector2:
+	if source.x <= 0.0 or source.y <= 0.0 or bounds.x <= 0.0 or bounds.y <= 0.0:
+		return Vector2.ZERO
+	var scale := minf(bounds.x / source.x, bounds.y / source.y)
+	return source * scale
+
+
+static func _weapon_size(key: StringName) -> Vector2:
+	match key:
+		&"weapon_shotgun":
+			return Vector2(42.0, 20.0)
+		&"weapon_orb":
+			return Vector2(32.0, 24.0)
+		_:
+			return Vector2(36.0, 20.0)
+
+
+static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
+		weapons: Array[WeaponDef], fallback: Vector2, bob: float, alpha: float,
+		actor_tint: Color, tint_weight: float, size_mult: float) -> void:
+	var count := weapons.size()
+	if count <= 0:
+		return
+	var aim := _aim_direction(sim, origin, fallback)
+	var normal := Vector2(-aim.y, aim.x)
+	var crowd_scale := 0.78 if count >= 5 else (0.86 if count == 4 else 1.0)
+	for i in count:
+		var w: WeaponDef = weapons[i]
+		var slot := _weapon_slot(i, count)
+		var mount := origin + aim * slot.x + normal * slot.y + Vector2(0.0, bob)
+		var key := PresentationAssets.weapon_key(w)
+		var size := _weapon_size(key) * crowd_scale * size_mult
+		var color := w.color.lerp(actor_tint, tint_weight).lerp(Color.WHITE, 0.35)
+		_draw_art(ci, key, mount, size, aim.angle(), Color(color, alpha))
+
+
+static func _weapon_slot(index: int, count: int) -> Vector2:
+	var slots: Array[Vector2] = []
+	match count:
+		1:
+			slots = [Vector2(21.0, 0.0)]
+		2:
+			slots = [Vector2(17.0, -15.0), Vector2(17.0, 15.0)]
+		3:
+			slots = [Vector2(21.0, 0.0), Vector2(-3.0, -22.0), Vector2(-3.0, 22.0)]
+		4:
+			slots = [Vector2(18.0, -16.0), Vector2(18.0, 16.0),
+					Vector2(-16.0, -16.0), Vector2(-16.0, 16.0)]
+		5:
+			slots = [Vector2(22.0, 0.0), Vector2(7.0, -23.0), Vector2(7.0, 23.0),
+					Vector2(-19.0, -15.0), Vector2(-19.0, 15.0)]
+		_:
+			slots = [Vector2(20.0, -16.0), Vector2(20.0, 16.0),
+					Vector2(0.0, -27.0), Vector2(0.0, 27.0),
+					Vector2(-20.0, -16.0), Vector2(-20.0, 16.0)]
+	if index < slots.size():
+		return slots[index]
+	var angle := TAU * float(index) / float(maxi(1, count))
+	return Vector2(cos(angle), sin(angle)) * 28.0
+
+
+static func _art_aspect(key: StringName, fallback: float) -> float:
+	var source := PresentationAssets.region(key)
+	if not source.has_area() or source.size.y <= 0.0:
+		return fallback
+	return source.size.x / source.size.y
+
+
+static func _aim_direction(sim: Sim, origin: Vector2, fallback: Vector2) -> Vector2:
+	var closest: EnemyState
+	var best_distance := INF
+	for enemy in sim.enemies:
+		if enemy.dead:
+			continue
+		var distance := origin.distance_squared_to(enemy.pos)
+		if distance < best_distance:
+			best_distance = distance
+			closest = enemy
+	if closest != null:
+		var toward := (closest.pos - origin).normalized()
+		if toward != Vector2.ZERO:
+			return toward
+	if fallback != Vector2.ZERO:
+		return fallback.normalized()
+	return Vector2.RIGHT
+
+
+static func _motion_bob(wave_time: float, pos: Vector2, speed: float, distance: float) -> float:
+	return sin(wave_time * speed + pos.x * 0.017 + pos.y * 0.011) * distance

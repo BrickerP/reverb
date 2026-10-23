@@ -1,7 +1,7 @@
 class_name OfferCard
 extends Button
 
-const HEIGHT := 100.0
+const HEIGHT := 112.0
 
 var offer: Offer
 var blocked_reason: StringName = &""
@@ -58,7 +58,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 10)
+		margin.add_theme_constant_override("margin_" + side, 8)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var box := VBoxContainer.new()
@@ -90,18 +90,29 @@ func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 	row.add_theme_constant_override("separation", 8)
 	var color := o.weapon.color if o.is_weapon() else o.item.color
 	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
-	row.add_child(UiTheme.label("■", 18, color))
-	row.add_child(UiTheme.label(title, 22))
 	if o.is_weapon():
-		row.add_child(UiTheme.label("[%s]" % Loc.weapon_family(o.weapon.family), 12, UiTheme.DIM))
-		row.add_child(UiTheme.label("[%s]" % Loc.rarity_name(o.weapon.rarity), 12,
+		row.add_child(UiTheme.weapon_icon(o.weapon, Vector2(48.0, 36.0)))
+	else:
+		row.add_child(UiTheme.label("■", 18, color))
+	var identity := VBoxContainer.new()
+	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.add_theme_constant_override("separation", 1)
+	var name_label := UiTheme.label(title, 20)
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	identity.add_child(name_label)
+	row.add_child(identity)
+	if o.is_weapon():
+		var tags := HBoxContainer.new()
+		tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tags.add_theme_constant_override("separation", 7)
+		identity.add_child(tags)
+		tags.add_child(UiTheme.label(Loc.weapon_family(o.weapon.family), 12, UiTheme.DIM))
+		tags.add_child(UiTheme.label(Loc.rarity_name(o.weapon.rarity), 12,
 				_rarity_color(o.weapon.rarity)))
 	if not o.is_weapon() and o.item.echo_item:
-		row.add_child(UiTheme.label("[%s]" % Loc.t("shop.tag_echo"), 14, UiTheme.ECHO))
-	var spacer := Control.new()
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
+		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
 	row.add_child(_price_label(o, reason, selected))
 	return row
 

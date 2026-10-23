@@ -1,0 +1,102 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "assets": [
+    {
+      "file": "enemy_grunt.png",
+      "sha256": "c5818ddf86ae4ac567a4a14c052c40b914be1203cb6b26f01528ad24d7260c50",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        184,
+        273,
+        1090,
+        996
+      ]
+    },
+    {
+      "file": "enemy_runner.png",
+      "sha256": "a161caae0dc9254469bfe4730ec30fca75eb0664e6137efa27dc913398e20043",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        289,
+        207,
+        1074,
+        1047
+      ]
+    },
+    {
+      "file": "player.png",
+      "sha256": "196cb7c8d911515b06f1b89982fb72d266dd4d92a6e548195b69137291bd8ff7",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        379,
+        247,
+        904,
+        1063
+      ]
+    },
+    {
+      "file": "weapon_orb.png",
+      "sha256": "9c003f31a57051237bd08e892a2e6c20e1158ad0b1b06658b2a49a39a065109c",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        82,
+        318,
+        1207,
+        922
+      ]
+    },
+    {
+      "file": "weapon_pistol.png",
+      "sha256": "70f0d980f7186da2d6720248442018889113ee99bb38b6e4a4ec88980e096f95",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        145,
+        329,
+        1191,
+        968
+      ]
+    },
+    {
+      "file": "weapon_shotgun.png",
+      "sha256": "774ba9f17c157dc8fa0c50a932b186967cb505a3139ef31a3b3d8651a7f4e698",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        74,
+        403,
+        1218,
+        879
+      ]
+    }
+  ]
+}

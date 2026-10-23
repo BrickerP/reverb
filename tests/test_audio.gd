@@ -15,6 +15,20 @@ func test_streams_load(c: Check) -> void:
 	a.free()
 
 
+func test_presentation_streams_are_preferred_with_legacy_fallback(c: Check) -> void:
+	for name: StringName in [&"click", &"buy", &"hit", &"echo", &"wave_end"]:
+		c.eq(
+			GameAudio.stream_path(name),
+			"res://audio/presentation/%s.wav" % name,
+			"presentation cue %s" % name,
+		)
+	c.eq(
+		GameAudio.stream_path(&"shoot"),
+		"res://audio/shoot.wav",
+		"legacy fallback remains available",
+	)
+
+
 func test_play_and_cooldown(c: Check) -> void:
 	var a := _audio()
 	c.ok(a.play(&"hit"), "the first hit plays")

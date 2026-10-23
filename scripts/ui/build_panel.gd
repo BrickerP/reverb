@@ -25,7 +25,14 @@ func _init() -> void:
 	custom_minimum_size = Vector2(320.0, 0.0)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 8)
-	add_child(_box)
+	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_box)
+	add_child(scroll)
 
 
 func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable()) -> void:
@@ -131,7 +138,8 @@ func _weapon_chips(pl: PlayerState) -> Control:
 
 func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(142.0, 86.0)
+	# Leave room for the vertical scrollbar inside the fixed-width build panel.
+	card.custom_minimum_size = Vector2(136.0, 86.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
@@ -139,9 +147,11 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	card.add_child(box)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 4)
-	top.add_child(UiTheme.label("■", 12, w.color))
+	top.add_child(UiTheme.weapon_icon(w, Vector2(28.0, 22.0)))
 	var name_label := UiTheme.label(Loc.weapon_name(w.id), 12, UiTheme.INK)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(name_label)
 	top.add_child(UiTheme.label(Loc.t("shop.level", [level + 1]), 10, UiTheme.DIM))
 	box.add_child(top)
@@ -184,8 +194,8 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 
 
 func _apply_card_style(card: PanelContainer, w: WeaponDef, selected: bool) -> void:
-	var style := UiTheme.box(Color(0.035, 0.045, 0.10),
-			UiTheme.ACCENT if selected else Color(w.color, 0.55), 2 if selected else 1, 6)
+	var style := UiTheme.box(Color(0.10, 0.14, 0.16) if selected else Color(0.075, 0.09, 0.105),
+			UiTheme.ACCENT if selected else Color(w.color, 0.35), 2 if selected else 1, 6)
 	style.content_margin_left = 7.0
 	style.content_margin_right = 7.0
 	style.content_margin_top = 5.0

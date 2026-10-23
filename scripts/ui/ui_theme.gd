@@ -10,11 +10,11 @@ const FONT_NAMES: Array[String] = [
 	"Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei",
 	"WenQuanYi Micro Hei", "PingFang SC", "sans-serif",
 ]
-const INK := Color(0.88, 0.93, 1.0)
-const DIM := Color(0.56, 0.62, 0.78)
-const ACCENT := Color(0.4, 0.9, 1.0)
+const INK := Color(0.94, 0.93, 0.89)
+const DIM := Color(0.65, 0.69, 0.74)
+const ACCENT := Color(0.36, 0.83, 0.88)
 const WARN := Color(1.0, 0.45, 0.5)
-const COIN := Color(0.75, 1.0, 0.45)
+const COIN := Color(0.93, 0.77, 0.43)
 const ECHO := Color(1.0, 0.55, 0.9)
 
 static var _font: Font
@@ -50,6 +50,21 @@ static func clear(node: Node) -> void:
 		child.queue_free()
 
 
+static func weapon_icon(weapon: WeaponDef, icon_size: Vector2 = Vector2(48.0, 32.0)) -> TextureRect:
+	var key := PresentationAssets.weapon_key(weapon)
+	var atlas := AtlasTexture.new()
+	atlas.atlas = PresentationAssets.texture(key)
+	atlas.region = PresentationAssets.region(key)
+	var icon := TextureRect.new()
+	icon.texture = atlas
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	icon.custom_minimum_size = icon_size
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
+
+
 # Briefly tint a control and fade back: used when a shop action is blocked.
 static func flash(control: Control) -> void:
 	if control == null:
@@ -77,10 +92,15 @@ static func build() -> Theme:
 	var th := Theme.new()
 	th.default_font = font()
 	th.default_font_size = 18
-	th.set_stylebox("normal", "Button", box(Color(0.06, 0.07, 0.15), Color(0.25, 0.4, 0.7)))
-	th.set_stylebox("hover", "Button", box(Color(0.09, 0.12, 0.25), ACCENT))
-	th.set_stylebox("pressed", "Button", box(Color(0.14, 0.2, 0.38), ACCENT))
-	th.set_stylebox("disabled", "Button", box(Color(0.04, 0.04, 0.08), Color(0.15, 0.17, 0.25)))
+	var normal := box(Color(0.105, 0.125, 0.145), Color(0.31, 0.36, 0.40), 1, 7)
+	normal.set_border_width(SIDE_BOTTOM, 3)
+	normal.shadow_color = Color(0.0, 0.0, 0.0, 0.3)
+	normal.shadow_size = 3
+	normal.shadow_offset = Vector2(0.0, 2.0)
+	th.set_stylebox("normal", "Button", normal)
+	th.set_stylebox("hover", "Button", box(Color(0.15, 0.19, 0.21), ACCENT, 1, 7))
+	th.set_stylebox("pressed", "Button", box(Color(0.065, 0.09, 0.11), ACCENT, 1, 7))
+	th.set_stylebox("disabled", "Button", box(Color(0.055, 0.065, 0.075), Color(0.18, 0.21, 0.24), 1, 7))
 	var focus := box(Color(0, 0, 0, 0), Color(1.0, 0.9, 0.4), 3)
 	focus.draw_center = false
 	th.set_stylebox("focus", "Button", focus)
@@ -88,9 +108,9 @@ static func build() -> Theme:
 	th.set_color("font_hover_color", "Button", Color.WHITE)
 	th.set_color("font_disabled_color", "Button", Color(0.42, 0.45, 0.58))
 	th.set_color("font_color", "Label", INK)
-	th.set_stylebox("panel", "PanelContainer", box(Color(0.035, 0.04, 0.09, 0.94), Color(0.2, 0.3, 0.6, 0.8), 2, 8))
-	th.set_stylebox("normal", "LineEdit", box(Color(0.04, 0.05, 0.1), Color(0.25, 0.4, 0.7)))
-	th.set_stylebox("focus", "LineEdit", box(Color(0.04, 0.05, 0.1), ACCENT, 2))
+	th.set_stylebox("panel", "PanelContainer", box(Color(0.055, 0.07, 0.085, 0.98), Color(0.25, 0.30, 0.34), 1, 8))
+	th.set_stylebox("normal", "LineEdit", box(Color(0.04, 0.055, 0.065), Color(0.25, 0.30, 0.34), 1))
+	th.set_stylebox("focus", "LineEdit", box(Color(0.04, 0.055, 0.065), ACCENT, 1))
 	th.set_color("font_color", "LineEdit", INK)
 	th.set_color("font_placeholder_color", "LineEdit", DIM)
 	th.set_color("caret_color", "LineEdit", ACCENT)
