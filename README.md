@@ -23,7 +23,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - 一局 20 波，每波 20–60 秒；第 20 波是 Boss「悖论」：它会周期性让回响静默 3 秒，并召唤跑者。半血时分裂成两个「双线」时间碎片，击杀全部碎片才通关。
 - 第 8 波起出现「静音者」：碰到你会让回响静默 2 秒，优先点掉它。
 - 只控制移动，武器自动锁定射程内最近的敌人开火。
-- 击杀掉素材，波末自动拾取并进入商店：4 个报价，可买武器/道具，可花素材刷新。Build 面板可卖出已装备武器，返还基础价 + 50% 升级投入，空出槽位。
+- 击杀掉素材，波末自动拾取并进入商店：4 个报价，可买武器/道具，可花素材刷新；可锁定一个报价，刷新和下一商店都会保留。Build 面板可卖出已装备武器，返还基础价 + 50% 升级投入，空出槽位。
 - 最多 6 把武器，可重复购买。满 6 格后，点武器卡进入替换模式：选一个槽换掉，旧武器按基础价半价抵扣，Esc 取消。
 - 每波结束会录下你这波的走位与武器/属性快照，成为一张回响。
 - 下一波回响会以「倒带循环」方式重放走位，并用快照武器开火。
@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.4.1 开发版（含悖论 Phase 2、家族专精、精英敌人与武器卖出），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.5.0 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出与报价锁定），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -132,12 +132,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 悖论 Phase 2「双线」：半血分裂成两个时间碎片，保留总剩余血量；击杀一个后另一个加速并增伤，击杀全部才通关
 - 换装返还升级投入的 50%，转型不会全损
 - 武器卖出：Build 面板直接卖出任意非最后一把武器，返还基础价 + 50% 升级投入；卖出可撤销，空出的槽位可继续购买
+- 报价锁定：每张报价有 Lock 按钮；一次只保留 1 个，刷新和下一商店都保留，直到购买、解锁或被新的锁定替换
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 4743 项）
+make test     # 无头测试（当前 4793 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
