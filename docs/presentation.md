@@ -1,10 +1,11 @@
 # Presentation slice
 
 The presentation commit `650ac4e` starts from `d3d62b3` (v0.1.36, including
-Conductor) and changes presentation only. The branch subsequently integrates the
-fixed mechanics commit `8f555e4`, including its shop transaction/undo API and rich
-combat events. Uncommitted work in the separate mechanics checkout is excluded.
-Version fields remain unchanged. Presentation adds no rules, prices or collisions.
+Conductor) and changes presentation only. The branch now integrates fixed mechanics
+through `c2e184e`, including shop transactions, upgrade trade-in refunds and rich
+combat events. G002 presentation commit `2a44c2d` is integrated at `4b481d3`.
+Uncommitted work in the separate mechanics checkout is excluded. Version fields
+remain unchanged. Presentation adds no rules, prices or collisions.
 
 ## Assets and rendering
 
@@ -28,11 +29,15 @@ does not step the simulation or consume its RNG.
 
 ## UI and audio
 
-Godot controls still own text, prices, focus and actions. The shop uses the same
-weapon assets as the world, a restrained dark equipment-panel theme, and a
-scrollable build panel for full loadouts. This slice does not add drag purchases
-or undo controls. The mechanics transaction API is present after integration, but
-the current UI still uses its compatible legacy action methods.
+Godot controls still own text, focus and actions; mechanics owns validation, costs,
+refunds, snapshots and lock boundaries. The shop uses the same weapon assets as the
+world, a restrained dark equipment-panel theme, and a scrollable build panel.
+Dragging a weapon onto an empty or occupied valid slot commits BUY or REPLACE
+immediately; dragging an item onto the item target commits BUY. Keyboard/controller
+replacement, upgrade and evolve use the same transaction bridge. The Undo control
+walks back equipment actions within the current offer batch; successful reroll or
+wave start locks prior history. Echo discard/merge is intentionally outside undo.
+Undo rebuilds Offers, and stale exact-offer drag payloads are rejected.
 
 Five CC0-derived cues replace click, purchase, hit, echo and wave-end sounds.
 Other sounds retain their existing files. `audio/presentation/SOURCES.md` records
@@ -50,6 +55,11 @@ four-character selection, combat with two echoes and three weapon families, then
 a shop purchase through the existing UI action. Fixture resources and spawn setup
 are intentionally staged for readability; its outcomes are not balance evidence.
 
+At the G002 integration checkpoint, 2660 assertions passed with zero failures;
+smoke completed 5246 frames through wave 4 with three purchases. Native EN/ZH shop
+probes passed 76 targeted assertions and exercised nine operation counters. The
+32 images prepared for G003 are not yet catalog-mapped or runtime-accepted.
+
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
   --write-movie /absolute/output/preview.avi \
@@ -63,9 +73,10 @@ and `WeaponChangeInfo` events. A subsequent pass can bind exact muzzle flashes,
 recoil and weapon-specific sounds to those events. This slice still uses legacy
 signals, with mounted weapons aiming from current visible state.
 
-Direct-drop transactions and repeated undo must migrate UI calls to the available
-mechanics-owned `quote/apply/undo` API and consume its history/change signals.
-Legacy action methods do not record undo history. Undo restores fresh Offer
-objects, so the UI must rebuild its offer references. It must not maintain a
-second price or undo implementation. DeepSeek owns those rules and interfaces;
+Direct-drop transactions and repeated undo now use the mechanics-owned
+`quote/apply/undo` API and history signals. The remaining adapter work is visual and
+audio: consume `WeaponChangeInfo` for equipment/undo feedback and the rich combat
+events for exact firing and impact responses. G005 should also recheck the drag
+preview wrapper/offset so it never crowds the active target; this is non-blocking
+for the verified transaction behavior. DeepSeek owns the rules and interfaces;
 Codex owns their visual/audio response and fixed-commit integration and release.

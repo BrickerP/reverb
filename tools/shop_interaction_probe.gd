@@ -17,6 +17,7 @@ var _metrics := {
 	"weapon_buys": 0,
 	"replacements": 0,
 	"item_buys": 0,
+	"upgrades": 0,
 	"keyboard_replacements": 0,
 	"undos": 0,
 	"rerolls": 0,
@@ -180,6 +181,24 @@ func _run() -> void:
 	if not _require(after_buy != after_replace, "transaction checkpoints are distinct"):
 		return
 
+	# Upgrade through the real focused control before replacing. The next quote
+	# and slot label must include the mechanics-owned upgraded trade-in value.
+	var before_upgrade := _state()
+	if not _require(not ui.build_panel._upgrade_buttons.is_empty(),
+			"equipped weapon exposes a focusable upgrade action"):
+		return
+	var upgrade_cost: int = Shop.upgrade_cost(sim.player.weapons[0], sim.player.level_at(0))
+	if not (await _activate(ui.build_panel._upgrade_buttons[0])):
+		return
+	if not _require(sim.player.level_at(0) == 1, "focused upgrade raises the slot one level"):
+		return
+	if not _require(sim.player.materials == int(before_upgrade["materials"]) - upgrade_cost,
+			"focused upgrade spends its mechanics cost once"):
+		return
+	if not _require(sim.shop.can_undo(), "focused upgrade records undo history"):
+		return
+	_metrics.upgrades += 1
+
 	# Keyboard/controller parity: explicitly enter replace mode from the offer,
 	# then confirm the destination slot. Entering the chooser must not buy first.
 	var before_keyboard_replace := _state()
@@ -192,6 +211,10 @@ func _run() -> void:
 	var keyboard_quote: ShopResult = ui.quote_drop(keyboard_payload, &"weapon_slot", 0)
 	if not _require(keyboard_quote.ok, "keyboard replacement has a valid mechanics quote"):
 		return
+	var expected_trade_in: int = Shop.resale_total(sim.player.weapons[0], sim.player.level_at(0))
+	if not _require(keyboard_quote.cost == keyboard_card.offer.price - expected_trade_in,
+			"replacement quote refunds the upgraded weapon trade-in"):
+		return
 	ui.clear_drop_hint()
 	if not (await _activate(keyboard_card.swap_button)):
 		return
@@ -202,6 +225,12 @@ func _run() -> void:
 		return
 	if not _require(not ui.build_panel._slot_buttons.is_empty(),
 			"slot selection exposes a focusable replacement target"):
+		return
+	var expected_slot_text: String = "%s  +%d" % [
+		Loc.weapon_name(sim.player.weapons[0].id), expected_trade_in,
+	]
+	if not _require(ui.build_panel._slot_buttons[0].text == expected_slot_text,
+			"slot selection displays the mechanics upgraded trade-in"):
 		return
 	if not (await _activate(ui.build_panel._slot_buttons[0])):
 		return
@@ -219,9 +248,12 @@ func _run() -> void:
 	if not (await _activate(ui.undo_button)):
 		return
 	if not _require(_state() == before_keyboard_replace,
-			"UI undo restores the keyboard replacement snapshot"):
+			"UI undo restores the upgraded keyboard replacement snapshot"):
 		return
 	_metrics.undos += 1
+	if not _require(sim.player.level_at(0) == 1 and sim.shop.can_undo(),
+			"replacement undo preserves upgraded baseline and its earlier history"):
+		return
 
 	# A successful reroll is a history boundary owned by Shop.
 	var reroll_buy_card := _card_for(&"rifle")

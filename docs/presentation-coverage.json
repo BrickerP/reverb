@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "snapshot": {
-    "presentation_commit": "5aec5e244d01be2eabcb9bb94609fe8a8ca6ca4c",
-    "mechanics_commit": "dbce8a22de7150b9e23d73e8a6f55536181bb348",
+    "presentation_commit": "4b481d3c11fe6f5d74274cff2df6efb437ef6e4f",
+    "mechanics_commit": "c2e184e18f09800f59f3e2d8510c3b96b9587a4d",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
     "status_meaning": {
@@ -39,7 +39,16 @@
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-presentation-purchased.png",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/tests.log",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/smoke.log",
-      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/frame-probe.log"
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-verification/frame-probe.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g002-unit.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g002-drag-en.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g002-drag-zh.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/tests.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/smoke.log",
+      "shots/shop_drag_full.png",
+      "shots/shop_drag_highlight.png",
+      "shots/shop_drag_committed.png",
+      "shots/shop_drag_undone.png"
     ],
     "limits": "Only rows that name runtime evidence are runtime-verified. Source presence alone is not visual acceptance."
   },
@@ -88,10 +97,10 @@
   "ui_surfaces": [
     {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","locked","unlocked","seed","focus"],"runtime":"four-card screenshot only","priority":"P1"},
     {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon cooldowns","controls","debug"],"runtime":"combat/echo screenshots","priority":"P1"},
-    {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked"],"runtime":"EN/ZH and presentation screenshots","priority":"P0"},
-    {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","upgrade","evolve","replace","scroll"],"runtime":"full-loadout screenshot and bounds check","priority":"P0"},
+    {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked","quoted cost/refund","undo enabled/locked"],"runtime":"EN/ZH native interaction probes and presentation screenshots","priority":"P1"},
+    {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","empty-slot buy target","occupied-slot replace target","item target","upgrade","evolve","replace","scroll"],"runtime":"native drag probes, focused partial replacement, full-loadout screenshot and bounds check","priority":"P1"},
     {"id":"echo_panel","source":"scripts/ui/echo_panel.gd","states":["arrival","overflow","discard","merge","selected"],"runtime":"echo/shop screenshots; merge source only","priority":"P1"},
-    {"id":"direct_drop_undo","source":"scripts/ui/shop_ui.gd","states":["drag valid","drag invalid","commit","multi-undo","reroll lock","wave lock","stale offer"],"runtime":"missing","priority":"P0"},
+    {"id":"direct_drop_undo","source":"scripts/ui/shop_ui.gd","states":["weapon empty-slot BUY","weapon occupied partial-loadout REPLACE","item BUY","cancel no change","quoted cost/refund hint","focused partial replacement","upgrade","four undos","reroll lock","wave lock","stale exact-offer rejection"],"runtime":"verified in native EN/ZH probes; stale/transaction boundaries covered by 76 targeted assertions","priority":"done"},
     {"id":"pause","source":"scripts/ui/pause_ui.gd","states":["resume","settings","history","quit"],"runtime":"source/tests only","priority":"P2"},
     {"id":"settings","source":"scripts/ui/settings_ui.gd","states":["volume","shake","fullscreen","language"],"runtime":"source/tests only","priority":"P2"},
     {"id":"history","source":"scripts/ui/history_ui.gd","states":["empty","runs","detail"],"runtime":"source/tests only","priority":"P2"},
@@ -126,11 +135,27 @@
     "independent_art": {"weapons":3,"items":0,"enemies":2,"characters":0},
     "incomplete_identity": {"weapons":9,"items":11,"enemies":5,"characters":4},
     "next_order": [
-      "P0 direct-drop/transaction undo UI and rich-event binding",
+      "P0 rich-event binding for combat and equipment feedback",
       "P0 evolved weapons and special enemies/boss identity art",
       "P1 base-weapon variants, items and character identity art",
       "P1 full content-ID runtime gallery and regression assertions",
-      "P2 remaining UI-state actual-window and accessibility matrix"
-    ]
-  }
+      "P2 remaining UI-state actual-window and accessibility matrix",
+      "G005 polish: recheck drag-preview theme wrapping, intended offset and target occlusion"
+    ],
+    "g002_verification": {
+      "assertions": "2660 passed, 0 failed",
+      "smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "native_interaction": "EN and ZH; 76 targeted assertions and 9 operation counters"
+    },
+    "g003_preparation": "32 generated images are present and independently visually checked, but remain unmapped; all affected identity rows stay incomplete until integration and runtime verification."
+  },
+  "polish_followups": [
+    {
+      "goal": "G005",
+      "id": "drag_preview_position",
+      "status": "non_blocking",
+      "observation": "The intended preview offset still renders close to the target in the actual gallery.",
+      "verify": "Inspect wrapper/theme sizing and confirm the preview never obscures the active drop target."
+    }
+  ]
 }
