@@ -48,3 +48,56 @@ jobs:
       - name: Smoke test
         shell: bash
         run: '"${{ matrix.godot_bin }}" --headless --path . --fixed-fps 60 --script res://tools/smoke.gd'
+
+  export-linux:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
+
+      - name: Download Godot
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Cache export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/4.7.2.stable
+          key: godot-export-templates-4.7.2-stable
+
+      - name: Download export templates
+        if: steps.templates.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p /tmp/templates
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          mv /tmp/templates/templates "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+
+      - name: Import project
+        shell: bash
+        run: '/tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . --import'
+
+      - name: Export Linux build
+        shell: bash
+        run: |
+          mkdir -p build
+          /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . --export-release "Linux" build/TakeStack.x86_64
+
+      - name: Run exported build
+        shell: bash
+        run: |
+          chmod +x build/TakeStack.x86_64
+          timeout 60 ./build/TakeStack.x86_64 --headless --quit-after 60
+
