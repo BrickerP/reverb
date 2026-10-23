@@ -211,6 +211,22 @@ func test_replace_weapon_trades_in_the_old_one(c: Check) -> void:
 	c.ok(o.sold, "offer is consumed")
 
 
+func test_replace_weapon_refunds_half_of_upgrade_investment(c: Check) -> void:
+	var s := _shop_sim(0)
+	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	s.player.weapon_levels[0] = 2
+	var o := Offer.new()
+	o.weapon = Content.weapon(&"rifle")
+	o.price = 20
+	s.shop.offers.append(o)
+	var total := Shop.resale_total(s.player.weapons[0], 2)
+	c.ok(total > Shop.resale_value(s.player.weapons[0]), "upgrades add trade-in value")
+	c.ok(s.shop.replace_weapon(s, o, 0), "swap succeeds with trade-in value")
+	c.eq(s.player.materials, total - o.price, "half of upgrade spend is returned")
+	c.eq(s.player.level_at(0), 0, "new weapon starts at level 1")
+
+
 func test_replace_weapon_requires_the_net_cost(c: Check) -> void:
 	var s := _shop_sim(0)
 	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:

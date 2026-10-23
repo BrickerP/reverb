@@ -67,6 +67,10 @@ The old direct methods remain for compatibility:
 
 New UI must use `quote/apply` for equipment actions so history is recorded. Direct methods are migration-only.
 
+Replacement quotes include the base resale plus 50% of the material spent on the old weapon's
+upgrades. `Shop.resale_total(w, level)` is the display/quote source; `Shop.resale_value(w)` is
+only the base value.
+
 ## 4. Presentation event types
 
 These types are now emitted:

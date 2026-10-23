@@ -25,6 +25,20 @@ static func resale_value(w: WeaponDef) -> int:
 	return maxi(1, int(floor(float(w.price) * RESALE_RATE)))
 
 
+# Sum of the material actually spent to reach this upgrade level.
+static func upgrade_investment(w: WeaponDef, level: int) -> int:
+	var total := 0
+	for l in clampi(level, 0, WeaponDef.MAX_LEVEL):
+		total += upgrade_cost(w, l)
+	return total
+
+
+# Replacement returns the base resale plus half of the upgrade investment. This makes a
+# mid-build pivot expensive but not a total loss.
+static func resale_total(w: WeaponDef, level: int = 0) -> int:
+	return resale_value(w) + int(floor(float(upgrade_investment(w, level)) * 0.5))
+
+
 static func upgrade_cost(w: WeaponDef, level: int) -> int:
 	return maxi(1, int(round(float(w.price) * (0.9 + 0.5 * float(clampi(level, 0, WeaponDef.MAX_LEVEL))))))
 
@@ -109,8 +123,10 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 				return ShopResult.failure(action, &"invalid")
 			if not offers.has(offer) or index < 0 or index >= sim.player.weapons.size():
 				return ShopResult.failure(action, &"invalid", offer.price, index, offer.id())
-			var net := offer.price - resale_value(sim.player.weapons[index])
-			if sim.player.materials + resale_value(sim.player.weapons[index]) < offer.price:
+			var net := offer.price - resale_total(sim.player.weapons[index],
+					sim.player.level_at(index))
+			if sim.player.materials + resale_total(sim.player.weapons[index],
+					sim.player.level_at(index)) < offer.price:
 				return ShopResult.failure(action, &"poor", net, index, offer.id())
 			return ShopResult.success(action, net, index, offer.id())
 		ShopResult.UPGRADE:
@@ -262,7 +278,7 @@ func replace_weapon(sim: Sim, o: Offer, index: int) -> bool:
 	if not offers.has(o) or index < 0 or index >= sim.player.weapons.size():
 		return false
 	var old := sim.player.weapons[index]
-	var resale := resale_value(old)
+	var resale := resale_total(old, sim.player.level_at(index))
 	if sim.player.materials + resale < o.price:
 		return false
 	sim.player.materials += resale - o.price
