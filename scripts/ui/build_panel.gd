@@ -9,6 +9,9 @@ signal detail_changed(text: String)
 var weapons_label: Label
 var items_label: Label
 var replacing: bool = false
+var slot_drop_targets: Array[ShopDropTarget] = []
+var empty_drop_target: ShopDropTarget
+var items_drop_target: ShopDropTarget
 
 var _box: VBoxContainer
 var _weapons_row: Control
@@ -19,6 +22,9 @@ var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
 var _card_levels: Array[int] = []
 var _selected := 0
+var _quote_drop := Callable()
+var _apply_drop := Callable()
+var _clear_drop := Callable()
 
 
 func _init() -> void:
@@ -35,13 +41,21 @@ func _init() -> void:
 	add_child(scroll)
 
 
-func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable()) -> void:
+func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable(),
+		quote_drop: Callable = Callable(), apply_drop: Callable = Callable(),
+		clear_drop: Callable = Callable()) -> void:
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
+	slot_drop_targets.clear()
+	empty_drop_target = null
+	items_drop_target = null
+	_quote_drop = quote_drop
+	_apply_drop = apply_drop
+	_clear_drop = clear_drop
 	replacing = replace_with != ""
 	var pl := sim.player
 	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
@@ -62,6 +76,9 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	else:
 		_weapons_row = _weapon_chips(pl)
 		_box.add_child(_weapons_row)
+		if pl.weapons.size() < Content.MAX_WEAPON_SLOTS:
+			empty_drop_target = _empty_target(&"empty_weapon", Loc.t("shop.drop_weapon"))
+			_box.add_child(empty_drop_target)
 		_box.add_child(UiTheme.label(Loc.t("shop.family"), 14, UiTheme.DIM))
 		_box.add_child(_family_summary(pl))
 		_selected = clampi(_selected, 0, maxi(0, _cards.size() - 1))
@@ -70,6 +87,8 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_box.add_child(items_label)
 	_items_row = _item_chips(pl)
 	_box.add_child(_items_row)
+	items_drop_target = _empty_target(&"items", Loc.t("shop.drop_item"))
+	_box.add_child(items_drop_target)
 	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
 	_box.add_child(_core_grid(pl))
 
@@ -137,15 +156,18 @@ func _weapon_chips(pl: PlayerState) -> Control:
 
 
 func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
-	var card := PanelContainer.new()
+	var card := ShopDropTarget.new()
+	card.configure(&"weapon_slot", index, _quote_drop, _apply_drop, _clear_drop)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
 	card.custom_minimum_size = Vector2(136.0, 86.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	box.add_theme_constant_override("separation", 2)
 	card.add_child(box)
 	var top := HBoxContainer.new()
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_theme_constant_override("separation", 4)
 	top.add_child(UiTheme.weapon_icon(w, Vector2(28.0, 22.0)))
 	var name_label := UiTheme.label(Loc.weapon_name(w.id), 12, UiTheme.INK)
@@ -156,6 +178,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	top.add_child(UiTheme.label(Loc.t("shop.level", [level + 1]), 10, UiTheme.DIM))
 	box.add_child(top)
 	var middle := HBoxContainer.new()
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	middle.add_theme_constant_override("separation", 4)
 	middle.add_child(UiTheme.label(Loc.weapon_family(w.family), 10, UiTheme.DIM))
 	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats, level,
@@ -166,6 +189,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	middle.add_child(dps)
 	box.add_child(middle)
 	var upgrade := Button.new()
+	upgrade.mouse_filter = Control.MOUSE_FILTER_PASS
 	upgrade.custom_minimum_size = Vector2(0.0, 20.0)
 	upgrade.add_theme_font_size_override("font_size", 10)
 	if level >= WeaponDef.MAX_LEVEL:
@@ -188,9 +212,43 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	_cards.append(card)
 	_card_weapons.append(w)
 	_card_levels.append(level)
+	slot_drop_targets.append(card)
 	card.mouse_entered.connect(func() -> void: _select(index))
 	upgrade.focus_entered.connect(func() -> void: _select(index))
 	return card
+
+
+func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
+	var target := ShopDropTarget.new()
+	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
+	target.custom_minimum_size = Vector2(0.0, 36.0)
+	var style := UiTheme.box(Color(0.04, 0.06, 0.07, 0.78), Color(UiTheme.ACCENT, 0.32), 1, 6)
+	style.set_border_width_all(1)
+	target.add_theme_stylebox_override("panel", style)
+	var label := UiTheme.label(text, 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	target.add_child(label)
+	return target
+
+
+func settle_target(kind: StringName, index: int = -1) -> void:
+	if kind == &"weapon_slot" and index >= 0 and index < slot_drop_targets.size():
+		slot_drop_targets[index].settle()
+	elif kind == &"items" and items_drop_target != null:
+		items_drop_target.settle()
+	elif empty_drop_target != null:
+		empty_drop_target.settle()
+
+
+func clear_drop_highlights() -> void:
+	for target in slot_drop_targets:
+		target.clear_highlight()
+	if empty_drop_target != null:
+		empty_drop_target.clear_highlight()
+	if items_drop_target != null:
+		items_drop_target.clear_highlight()
 
 
 func _apply_card_style(card: PanelContainer, w: WeaponDef, selected: bool) -> void:

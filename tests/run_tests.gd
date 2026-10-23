@@ -33,9 +33,9 @@ func _initialize() -> void:
 		if filter != "" and not f.contains(filter):
 			continue
 		var script := load(SUITE_DIR + f) as GDScript
-		if script == null:
+		if script == null or not script.can_instantiate():
 			check.begin(f)
-			check.ok(false, "suite script failed to load")
+			check.ok(false, "suite script failed to load or instantiate")
 			continue
 		var suite: Object = script.new()
 		for m in suite.get_method_list():

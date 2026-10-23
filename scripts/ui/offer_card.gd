@@ -1,10 +1,16 @@
 class_name OfferCard
 extends Button
 
+signal replacement_requested(offer: Offer)
+
 const HEIGHT := 112.0
 
 var offer: Offer
 var blocked_reason: StringName = &""
+var swap_button: Button
+var _drag_payload := Callable()
+var _clear_drag_hint := Callable()
+var _suppress_next_pressed := false
 
 
 func _init() -> void:
@@ -43,8 +49,11 @@ static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
 	return w.damage * w.level_mult(level) * pellets * stats.damage_mult() * crit * family_damage * rate
 
 
-func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
+func setup(o: Offer, sim: Sim, selected: bool = false,
+		payload_provider: Callable = Callable(), clear_drag_hint: Callable = Callable()) -> void:
 	offer = o
+	_drag_payload = payload_provider
+	_clear_drag_hint = clear_drag_hint
 	var reason := sim.shop.block_reason(sim, o)
 	blocked_reason = reason
 	# Sold cards are inert. Every other blocked card stays pressable so it can explain
@@ -66,7 +75,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
-	box.add_child(_title_row(o, reason, selected))
+	box.add_child(_title_row(o, reason, selected, not sim.player.weapons.is_empty()))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim))
 		box.add_child(_weapon_meta(o.weapon))
@@ -74,6 +83,62 @@ func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
 		var desc := UiTheme.label(_description(o), 15, UiTheme.DIM)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(desc)
+
+
+func _get_drag_data(_at_position: Vector2) -> Variant:
+	if disabled or offer == null or not _drag_payload.is_valid():
+		return null
+	var data: Variant = _drag_payload.call(offer)
+	if data == null:
+		return null
+	drag_started()
+	var preview := _drag_preview()
+	set_drag_preview(preview)
+	return data
+
+
+func drag_started() -> void:
+	_suppress_next_pressed = true
+
+
+func consume_drag_click() -> bool:
+	if not _suppress_next_pressed:
+		return false
+	_suppress_next_pressed = false
+	return true
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and _suppress_next_pressed:
+		# BaseButton may emit pressed on release after a drag. Keep the guard through
+		# that release, then clear it for the next deliberate click.
+		call_deferred("_clear_drag_guard_deferred")
+		if _clear_drag_hint.is_valid():
+			_clear_drag_hint.call()
+
+
+func _clear_drag_guard_deferred() -> void:
+	_suppress_next_pressed = false
+
+
+func _drag_preview() -> Control:
+	var preview := PanelContainer.new()
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview.custom_minimum_size = Vector2(190.0, 58.0)
+	preview.position = Vector2(22.0, -72.0)
+	preview.add_theme_stylebox_override("panel",
+			UiTheme.box(Color(0.055, 0.08, 0.095, 0.96), UiTheme.ACCENT, 2, 7))
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 8)
+	preview.add_child(row)
+	if offer.is_weapon():
+		row.add_child(UiTheme.weapon_icon(offer.weapon, Vector2(52.0, 36.0)))
+		row.add_child(UiTheme.label(Loc.weapon_name(offer.id()), 16))
+	else:
+		row.add_child(UiTheme.label("■", 18, offer.item.color))
+		row.add_child(UiTheme.label(Loc.item_name(offer.id()), 16))
+	return preview
 
 
 func reject() -> void:
@@ -84,7 +149,7 @@ func reject() -> void:
 	tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
 
 
-func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
+func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
@@ -113,8 +178,26 @@ func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 				_rarity_color(o.weapon.rarity)))
 	if not o.is_weapon() and o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
+	if o.is_weapon() and reason != &"sold" and can_swap:
+		swap_button = Button.new()
+		swap_button.text = Loc.t("shop.replace_action")
+		swap_button.tooltip_text = Loc.t("shop.replace", [title])
+		swap_button.custom_minimum_size = Vector2(58.0, 26.0)
+		swap_button.add_theme_font_size_override("font_size", 10)
+		swap_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		swap_button.pressed.connect(_on_swap_pressed)
+		row.add_child(swap_button)
 	row.add_child(_price_label(o, reason, selected))
 	return row
+
+
+func _on_swap_pressed() -> void:
+	if offer == null or offer.sold or swap_button == null or swap_button.disabled:
+		return
+	# A nested focusable action must never bubble into the parent purchase button.
+	_suppress_next_pressed = true
+	replacement_requested.emit(offer)
+	call_deferred("_clear_drag_guard_deferred")
 
 
 func _rarity_color(rarity: StringName) -> Color:

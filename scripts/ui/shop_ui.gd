@@ -6,6 +6,7 @@ signal start_requested
 var sim: Sim
 var offers_box: VBoxContainer
 var reroll_button: Button
+var undo_button: Button
 var start_button: Button
 var echo_panel: EchoPanel
 var build_panel: BuildPanel
@@ -18,6 +19,8 @@ var _warning: Label
 var _overlay: Control
 var _replacing: Offer
 var _replacing_index: int = -1
+var _connected_shop: Shop
+var _weapon_detail := ""
 
 
 func _ready() -> void:
@@ -60,8 +63,15 @@ func _ready() -> void:
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
+func _exit_tree() -> void:
+	_disconnect_shop()
+
+
 func open(s: Sim) -> void:
+	_disconnect_shop()
 	sim = s
+	_connected_shop = sim.shop
+	_connected_shop.shop_history_changed.connect(_on_history_changed)
 	visible = true
 	_replacing = null
 	_replacing_index = -1
@@ -85,11 +95,14 @@ func refresh(animate_echo: bool = false) -> void:
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
 		offers_box.add_child(card)
-		card.setup(o, sim, o == _replacing)
+		card.setup(o, sim, o == _replacing, drag_payload_for, clear_drop_hint)
 		card.pressed.connect(_on_offer.bind(o, card))
+		card.replacement_requested.connect(_begin_replace)
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("shop.reroll", [cost])
 	reroll_button.disabled = sim.player.materials < cost
+	undo_button.text = Loc.t("shop.undo")
+	undo_button.disabled = not sim.shop.can_undo()
 	start_button.text = Loc.t("shop.start", [sim.wave + 1])
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
@@ -100,7 +113,7 @@ func refresh(animate_echo: bool = false) -> void:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
 	_footer.text = Loc.t("shop.keys")
-	build_panel.refresh(sim, replace_with, chooser)
+	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo)
 
 
@@ -113,6 +126,7 @@ func _build_footer() -> Control:
 func _on_weapon_detail(text: String) -> void:
 	if _footer == null:
 		return
+	_weapon_detail = text
 	_footer.text = text if text != "" else Loc.t("shop.keys")
 
 
@@ -142,9 +156,14 @@ func _build_left() -> Control:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	reroll_button = Button.new()
-	reroll_button.custom_minimum_size = Vector2(150.0, 48.0)
+	reroll_button.custom_minimum_size = Vector2(126.0, 48.0)
 	reroll_button.pressed.connect(_on_reroll)
 	buttons.add_child(reroll_button)
+	undo_button = Button.new()
+	undo_button.custom_minimum_size = Vector2(92.0, 48.0)
+	undo_button.tooltip_text = Loc.t("shop.undo_hint")
+	undo_button.pressed.connect(_on_undo)
+	buttons.add_child(undo_button)
 	start_button = Button.new()
 	start_button.custom_minimum_size = Vector2(0.0, 48.0)
 	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -158,6 +177,8 @@ func _build_left() -> Control:
 
 
 func _on_offer(o: Offer, card: OfferCard) -> void:
+	if card.consume_drag_click():
+		return
 	var reason := sim.shop.block_reason(sim, o)
 	if reason == &"full" and o.is_weapon():
 		if _replacing == o:
@@ -170,9 +191,13 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 		_flash_block(reason)
 		return
 	var index := sim.shop.offers.find(o)
-	if sim.shop.buy(sim, o):
+	var result := sim.shop.apply(ShopResult.BUY, sim, o)
+	if result.ok:
 		refresh()
 		_focus_card(index)
+	else:
+		card.reject()
+		_flash_block(result.reason)
 
 
 func is_replacing() -> bool:
@@ -180,6 +205,9 @@ func is_replacing() -> bool:
 
 
 func _begin_replace(o: Offer) -> void:
+	if sim == null or not visible or o == null or not o.is_weapon() or o.sold \
+			or not sim.shop.offers.has(o):
+		return
 	_replacing = o
 	_replacing_index = sim.shop.offers.find(o)
 	refresh()
@@ -199,8 +227,9 @@ func _cancel_replace() -> void:
 func _on_replace_slot(index: int) -> void:
 	if _replacing == null:
 		return
-	if not sim.shop.replace_weapon(sim, _replacing, index):
-		UiTheme.flash(_materials)
+	var result := sim.shop.apply(ShopResult.REPLACE, sim, _replacing, index)
+	if not result.ok:
+		_flash_block(result.reason)
 		return
 	_replacing = null
 	_replacing_index = -1
@@ -209,19 +238,21 @@ func _on_replace_slot(index: int) -> void:
 
 
 func _on_upgrade_weapon(index: int) -> void:
-	if sim.shop.upgrade_weapon(sim, index):
+	var result := sim.shop.apply(ShopResult.UPGRADE, sim, null, index)
+	if result.ok:
 		refresh()
 		build_panel.focus_upgrade(index)
 	else:
-		UiTheme.flash(_materials)
+		_flash_block(result.reason)
 
 
 func _on_evolve_weapon(index: int) -> void:
-	if sim.shop.evolve_weapon(sim, index):
+	var result := sim.shop.apply(ShopResult.EVOLVE, sim, null, index)
+	if result.ok:
 		refresh()
 		build_panel.focus_upgrade(index)
 	else:
-		UiTheme.flash(_materials)
+		_flash_block(result.reason)
 
 
 # Blocked clicks point at the resource that is missing, instead of only reading "can't buy".
@@ -238,10 +269,160 @@ func _flash_block(reason: StringName) -> void:
 func _on_reroll() -> void:
 	_replacing = null
 	_replacing_index = -1
-	if sim.shop.reroll(sim):
+	var result := sim.shop.apply(ShopResult.REROLL, sim)
+	if result.ok:
 		refresh()
 		if reroll_button.disabled:
 			_focus_card(0)
+	else:
+		_flash_block(result.reason)
+
+
+func _on_undo() -> void:
+	if sim == null:
+		return
+	_replacing = null
+	_replacing_index = -1
+	var result := sim.shop.undo(sim)
+	if not result.ok:
+		_on_history_changed(false)
+		return
+	refresh()
+	if not undo_button.disabled:
+		undo_button.grab_focus()
+	else:
+		_focus_card(0)
+
+
+func _on_history_changed(can_undo: bool) -> void:
+	if undo_button != null:
+		undo_button.disabled = not can_undo
+
+
+func drag_payload_for(o: Offer) -> Variant:
+	if sim == null or not visible or sim.phase != Sim.Phase.SHOP:
+		return null
+	if o == null or not sim.shop.offers.has(o) or o.sold:
+		return null
+	return {"kind": &"shop_offer", "shop_ui": self, "offer": o}
+
+
+func resolve_drag_offer(data: Variant) -> Offer:
+	if sim == null or not visible or sim.phase != Sim.Phase.SHOP or not (data is Dictionary):
+		return null
+	var payload: Dictionary = data
+	if payload.get("kind", &"") != &"shop_offer" or payload.get("shop_ui") != self:
+		return null
+	var candidate := payload.get("offer") as Offer
+	if candidate == null or candidate.sold or not sim.shop.offers.has(candidate):
+		return null
+	return candidate
+
+
+func quote_drop(data: Variant, target_kind: StringName, index: int = -1) -> ShopResult:
+	build_panel.clear_drop_highlights()
+	var o := resolve_drag_offer(data)
+	if o == null:
+		var invalid := ShopResult.failure(&"", &"invalid")
+		_show_drop_quote(invalid)
+		return invalid
+	var result: ShopResult
+	match target_kind:
+		&"weapon_slot":
+			if not o.is_weapon() or index < 0 or index >= sim.player.weapons.size():
+				result = ShopResult.failure(ShopResult.REPLACE, &"invalid")
+			else:
+				result = sim.shop.quote(ShopResult.REPLACE, sim, o, index)
+		&"empty_weapon":
+			if not o.is_weapon() or sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS:
+				result = ShopResult.failure(ShopResult.BUY, &"invalid")
+			else:
+				result = sim.shop.quote(ShopResult.BUY, sim, o)
+		&"items":
+			if o.is_weapon():
+				result = ShopResult.failure(ShopResult.BUY, &"invalid")
+			else:
+				result = sim.shop.quote(ShopResult.BUY, sim, o)
+		_:
+			result = ShopResult.failure(&"", &"invalid")
+	_show_drop_quote(result)
+	return result
+
+
+func clear_drop_hint() -> void:
+	if _footer != null:
+		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else Loc.t("shop.keys")
+
+
+func _show_drop_quote(result: ShopResult) -> void:
+	if _footer == null or result == null:
+		return
+	if not result.ok:
+		_footer.text = _drop_reason_text(result.reason)
+		return
+	if result.action == ShopResult.REPLACE:
+		if result.cost < 0:
+			_footer.text = Loc.t("shop.quote_refund", [absi(result.cost)])
+		elif result.cost == 0:
+			_footer.text = Loc.t("shop.quote_replace_free")
+		else:
+			_footer.text = Loc.t("shop.quote_replace", [result.cost])
+	else:
+		_footer.text = Loc.t("shop.quote_buy", [result.cost])
+
+
+func _drop_reason_text(reason: StringName) -> String:
+	match reason:
+		&"poor":
+			return Loc.t("shop.drop_poor")
+		&"full":
+			return Loc.t("shop.full")
+		&"maxed":
+			return Loc.t("shop.maxed")
+		&"sold":
+			return Loc.t("shop.sold")
+		_:
+			return Loc.t("shop.drop_invalid")
+
+
+func apply_drop(data: Variant, target_kind: StringName, index: int = -1) -> ShopResult:
+	var quoted := quote_drop(data, target_kind, index)
+	if not quoted.ok:
+		_flash_drop_failure(target_kind, index, quoted.reason)
+		return quoted
+	var o := resolve_drag_offer(data)
+	# Re-resolve immediately before applying: undo/reroll reconstructs offers and
+	# makes any payload from the previous batch stale.
+	if o == null:
+		return ShopResult.failure(quoted.action, &"invalid")
+	var result := sim.shop.apply(quoted.action, sim, o, index)
+	if not result.ok:
+		_flash_drop_failure(target_kind, index, result.reason)
+		return result
+	_replacing = null
+	_replacing_index = -1
+	refresh()
+	if target_kind == &"empty_weapon":
+		build_panel.settle_target(&"weapon_slot", sim.player.weapons.size() - 1)
+	else:
+		build_panel.settle_target(target_kind, index)
+	return result
+
+
+func _flash_drop_failure(target_kind: StringName, index: int, reason: StringName) -> void:
+	_flash_block(reason)
+	if target_kind == &"weapon_slot" and index >= 0 and index < build_panel.slot_drop_targets.size():
+		build_panel.slot_drop_targets[index].reject()
+	elif target_kind == &"items" and build_panel.items_drop_target != null:
+		build_panel.items_drop_target.reject()
+	elif build_panel.empty_drop_target != null:
+		build_panel.empty_drop_target.reject()
+
+
+func _disconnect_shop() -> void:
+	if _connected_shop != null and _connected_shop.shop_history_changed.is_connected(_on_history_changed):
+		_connected_shop.shop_history_changed.disconnect(_on_history_changed)
+	_connected_shop = null
 
 
 func _on_discard(take: EchoTake) -> void:
@@ -285,7 +466,7 @@ func _focus_card(from: int) -> void:
 		if not card.disabled:
 			card.grab_focus()
 			return
-	for b: Button in [start_button, reroll_button]:
+	for b: Button in [start_button, undo_button, reroll_button]:
 		if not b.disabled:
 			b.grab_focus()
 			return
