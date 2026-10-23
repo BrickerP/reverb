@@ -288,7 +288,7 @@
       },
       "exported_macos_ui": "live Chinese app flow passed: start, movement, pause, settings language guard, reduced toggle persistence, resume, quit to character select, clean exit 0",
       "review": "cleanup recorded; code review APPROVE with 0 findings; architecture CLEAR across 7 invariants",
-      "release": "local preview only; version remains 0.1.36; no tag, release or main move",
+      "release": "packaged as v0.2.0",
       "status": "complete"
     },
     "coverage_limit": "Complete static identity and front/back-derived direction coverage; full walk/attack frame animation and rich-event VFX/audio remain outside G003."
