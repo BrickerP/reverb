@@ -101,6 +101,20 @@ func test_mirror_uses_the_current_build(c: Check) -> void:
 			"live echoes value the current weapon, not the snapshot")
 
 
+func test_characters_start_with_their_direction(c: Check) -> void:
+	var expected := {
+		&"looper": &"pistol",
+		&"solo": &"hex_bolt",
+		&"mirror": &"longbow",
+		&"conductor": &"pistol",
+	}
+	for id: StringName in expected:
+		var s := Sim.new(1)
+		Content.character(id).apply(s)
+		c.eq(s.player.weapons.size(), 1, "%s: one starter" % id)
+		c.eq(s.player.weapons[0].id, expected[id], "%s: starter weapon" % id)
+
+
 func test_conductor_scales_with_active_echoes(c: Check) -> void:
 	var s := Sim.new(1)
 	Content.character(&"conductor").apply(s)
