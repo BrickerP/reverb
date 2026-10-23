@@ -26,6 +26,7 @@ signal boss_shard_defeated(enemy: EnemyState, remaining: int)
 signal boss_enraged(enemy: EnemyState)
 signal boss_defeated
 signal echoes_silenced(duration: float)
+signal contract_resolved(contract: AnomalyContract, success: bool, reward: int)
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
@@ -67,6 +68,13 @@ var wave: int = 0
 var wave_time: float = 0.0
 var wave_duration: float = 0.0
 var kills: int = 0
+var wave_kills: int = 0
+var wave_elite_kills: int = 0
+var wave_damage_taken: bool = false
+var active_contract: AnomalyContract
+var last_contract_done: bool = false
+var last_contract_success: bool = false
+var last_contract_reward: int = 0
 var player := PlayerState.new()
 var enemies: Array[EnemyState] = []
 var projectiles: Array[Projectile] = []
@@ -200,6 +208,12 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
+	wave_kills = 0
+	wave_elite_kills = 0
+	wave_damage_taken = false
+	last_contract_done = false
+	last_contract_success = false
+	last_contract_reward = 0
 	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
@@ -343,6 +357,9 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		return
 	e.dead = true
 	kills += 1
+	wave_kills += 1
+	if e.elite:
+		wave_elite_kills += 1
 	var pk := Pickup.new()
 	pk.pos = e.pos
 	pk.value = e.def.drop * e.drop_mult
@@ -427,6 +444,7 @@ func _bomber_explode(e: EnemyState) -> void:
 	if player.iframes > 0.0:
 		return
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
+		wave_damage_taken = true
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
 		last_damage_source = &"bomber"
@@ -542,6 +560,7 @@ func _move_enemies(delta: float) -> void:
 		grid.insert(e)
 		var touch := e.radius + PlayerState.RADIUS
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
+			wave_damage_taken = true
 			player.hp -= e.damage
 			player.iframes = IFRAME_TIME
 			last_damage_source = e.def.id
@@ -624,6 +643,17 @@ func _end_wave() -> void:
 	for pk in pickups:
 		player.materials += pk.value
 	pickups.clear()
+	if active_contract != null:
+		var contract := active_contract
+		var success := contract.is_complete(self)
+		var reward := contract.reward if success else 0
+		last_contract_done = true
+		last_contract_success = success
+		last_contract_reward = reward
+		if reward > 0:
+			player.materials += reward
+		contract_resolved.emit(contract, success, reward)
+		active_contract = null
 	last_wave_earned = maxi(0, player.materials - wave_start_materials)
 	last_interest = interest_for(player.materials)
 	player.materials += last_interest

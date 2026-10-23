@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -332,3 +332,37 @@ Presentation requirements:
   `shop.full` remains available in the footer/tooltip so the lock button does not squeeze
   the price.
 - Locking is free and must not show a material transaction animation.
+
+## 14. Anomaly contracts
+
+From wave 3 to 19, each shop may offer one optional contract. It is a risk/reward shop
+decision, not an equipment transaction.
+
+Mechanism API:
+
+- `AnomalyContract` kind: `clean` (no damage next wave), `clear` (kill `target` enemies),
+  or `hunt` (kill the wave elite). `hunt` is only generated from wave 10 onward.
+- `Shop.contract` is the current shop contract; `Contract.accepted` is its local spent flag.
+- `Shop.accept_contract(sim) -> bool` requires shop phase, an unaccepted contract,
+  no existing `sim.active_contract`, and enough materials. It deducts `deposit` once and
+  assigns `sim.active_contract`.
+- Contract goals read `Sim.wave_damage_taken`, `Sim.wave_kills`, and
+  `Sim.wave_elite_kills`; those counters reset in `Sim.start_wave`.
+- `Sim._end_wave` evaluates the active contract before computing `last_wave_earned`;
+  success adds `reward` before interest, failure adds nothing. The deposit is never
+  refunded on failure.
+- `Sim.contract_resolved(contract, success, reward)` fires once per evaluated contract.
+- `Sim.last_contract_done/success/reward` stay available for the following shop; they reset
+  on the next `start_wave`.
+- `Shop.roll` generates a fresh contract; `Shop.reroll` keeps the current one. Contract
+  state is not part of `ShopState` undo history.
+
+Presentation requirements:
+
+- Keep the contract strip between offers and the reroll/start row; show goal, deposit,
+  reward, and Accept in one line.
+- After accepting, show ACTIVE and disable Accept; do not charge again.
+- Show the previous contract result in the shop warning line; combine it with the
+  overcapacity warning when both are present.
+- Do not imply a contract is free: the deposit is material cost and a failure loses it.
+- Contract text must include "next wave" so the goal is not mistaken for the current shop.
