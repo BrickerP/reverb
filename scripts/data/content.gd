@@ -124,6 +124,27 @@ static func _build_weapons() -> void:
 		"projectile_radius": 11.0, "pierce": 99, "knockback": 20.0, "price": 38,
 		"color": Color(0.75, 0.55, 1.0),
 	})
+	_weapon(&"flechette", {
+		"family": &"scatter", "rarity": &"uncommon", "drop_weight": 1.5,
+		"evolves_to": &"flak_crown",
+		"damage": 4.0, "cooldown": 0.8, "reach": 260.0, "projectile_speed": 800.0,
+		"projectile_radius": 3.0, "pellets": 3, "spread_deg": 16.0, "pierce": 1,
+		"knockback": 35.0, "price": 28, "color": Color(1.0, 0.8, 0.5),
+	})
+	_weapon(&"longbow", {
+		"family": &"marksman", "rarity": &"uncommon", "drop_weight": 1.2,
+		"evolves_to": &"rail_spike",
+		"damage": 20.0, "cooldown": 1.4, "reach": 480.0, "projectile_speed": 1100.0,
+		"projectile_radius": 3.5, "pierce": 3, "knockback": 100.0, "price": 36,
+		"color": Color(1.0, 0.75, 0.55),
+	})
+	_weapon(&"hex_bolt", {
+		"family": &"arcane", "rarity": &"rare", "drop_weight": 1.5,
+		"evolves_to": &"nova_core",
+		"damage": 7.0, "cooldown": 0.9, "reach": 300.0, "projectile_speed": 420.0,
+		"projectile_radius": 7.0, "pierce": 2, "knockback": 20.0, "price": 30,
+		"color": Color(0.65, 0.8, 1.0),
+	})
 	# Evolution forms are not offered in the shop; they only come from a maxed weapon.
 	_weapon(&"twin_fangs", {
 		"family": &"sidearm", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,

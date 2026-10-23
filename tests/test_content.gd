@@ -4,6 +4,7 @@ extends RefCounted
 func test_weapons_are_sane(c: Check) -> void:
 	c.ok(Content.weapon(Content.STARTER_WEAPON) != null, "starter weapon exists")
 	c.ok(Content.weapons().size() >= 5, "at least five weapons")
+	var families := {}
 	for id: StringName in Content.weapons():
 		var w := Content.weapon(id)
 		c.eq(w.id, id, "%s: registry key matches id" % id)
@@ -11,6 +12,8 @@ func test_weapons_are_sane(c: Check) -> void:
 		c.ok(w.projectile_speed > 0.0 and w.projectile_radius > 0.0, "%s: positive projectile numbers" % id)
 		c.ok(w.pellets >= 1 and w.pierce >= 0 and w.price > 0, "%s: pellets, pierce, price" % id)
 		c.ok(not str(w.family).is_empty(), "%s: weapon family" % id)
+		if w.drops:
+			families[w.family] = int(families.get(w.family, 0)) + 1
 		c.ok(str(w.rarity) in ["common", "uncommon", "rare", "evolved"], "%s: known rarity" % id)
 		if w.drops:
 			c.ok(w.drop_weight > 0.0, "%s: drop weight" % id)
@@ -28,6 +31,8 @@ func test_weapons_are_sane(c: Check) -> void:
 		if w.homing_turn > 0.0:
 			c.ok(w.projectile_speed > 0.0, "%s: homing projectile moves" % id)
 		c.ok(w.dps() > 5.0 and w.dps() < 40.0, "%s: dps in a sane band (%s)" % [id, w.dps()])
+	for family in [&"sidearm", &"scatter", &"marksman", &"arcane"]:
+		c.ok(int(families.get(family, 0)) >= 2, "%s: at least two base weapons" % family)
 
 
 func test_items_only_touch_known_stats(c: Check) -> void:
