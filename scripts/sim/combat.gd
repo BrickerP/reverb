@@ -18,6 +18,29 @@ static func nearest_enemy(enemies: Array[EnemyState], from: Vector2, reach: floa
 	return best
 
 
+static func family_count(weapons: Array[WeaponDef], family: StringName) -> int:
+	var count := 0
+	for w in weapons:
+		if w.family == family:
+			count += 1
+	return count
+
+
+# 2 pieces: +10% damage. 4 pieces: +10% attack speed. 6 pieces: another +15% damage.
+static func family_damage_mult(weapons: Array[WeaponDef], family: StringName) -> float:
+	var count := family_count(weapons, family)
+	var mult := 1.0
+	if count >= 2:
+		mult *= 1.10
+	if count >= 6:
+		mult *= 1.15
+	return mult
+
+
+static func family_cooldown_mult(weapons: Array[WeaponDef], family: StringName) -> float:
+	return 0.90 if family_count(weapons, family) >= 4 else 1.0
+
+
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
 		levels: Array[int], cooldowns: Array[float], power_mult: float, delta: float, source: int,
 		tint: Color) -> void:
@@ -30,13 +53,14 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		if target == null:
 			cooldowns[i] = 0.0
 			continue
-		cooldowns[i] += w.cooldown * stats.cooldown_mult()
+		cooldowns[i] += w.cooldown * stats.cooldown_mult() * family_cooldown_mult(weapons, w.family)
 		var level := levels[i] if i >= 0 and i < levels.size() else 0
-		fire(sim, origin, target.pos, w, level, stats, power_mult, source, tint)
+		fire(sim, origin, target.pos, w, level, family_damage_mult(weapons, w.family), stats,
+				power_mult, source, tint)
 
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
-		stats: Stats, power_mult: float, source: int, tint: Color) -> void:
+		family_mult: float, stats: Stats, power_mult: float, source: int, tint: Color) -> void:
 	var base_dir := (target_pos - origin).normalized()
 	if base_dir == Vector2.ZERO:
 		base_dir = Vector2.RIGHT
@@ -51,7 +75,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 			angle = sim.rng.randf_range(-0.5, 0.5) * spread
 		var dir := base_dir.rotated(angle)
 		var p := Projectile.new()
-		p.damage = w.damage * w.level_mult(level) * stats.damage_mult() * power_mult
+		p.damage = w.damage * w.level_mult(level) * family_mult * stats.damage_mult() * power_mult
 		if sim.rng.randf() < stats.get_stat(Stats.CRIT_CHANCE):
 			p.damage *= 2.0
 			p.crit = true

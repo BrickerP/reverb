@@ -20,6 +20,21 @@ func _item_offer(id: StringName, price: int) -> Offer:
 	return o
 
 
+func test_family_combo_thresholds(c: Check) -> void:
+	var weapons: Array[WeaponDef] = []
+	var pistol := Content.weapon(&"pistol")
+	weapons.append(pistol)
+	c.near(Combat.family_damage_mult(weapons, &"sidearm"), 1.0, 0.001, "one piece has no bonus")
+	weapons.append(pistol)
+	c.near(Combat.family_damage_mult(weapons, &"sidearm"), 1.10, 0.001, "two pieces add damage")
+	weapons.append(pistol)
+	weapons.append(pistol)
+	c.near(Combat.family_cooldown_mult(weapons, &"sidearm"), 0.90, 0.001, "four pieces add speed")
+	weapons.append(pistol)
+	weapons.append(pistol)
+	c.near(Combat.family_damage_mult(weapons, &"sidearm"), 1.265, 0.001, "six pieces add master damage")
+
+
 func test_weapon_upgrade_spends_materials_and_caps(c: Check) -> void:
 	var s := _shop_sim()
 	s.player.weapons.clear()

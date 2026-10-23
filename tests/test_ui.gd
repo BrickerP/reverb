@@ -249,6 +249,8 @@ func test_offer_card_compares_weapon_dps(c: Check) -> void:
 	c.near(OfferCard.weapon_dps(Content.weapon(&"pistol"), stats), 16.17, 0.05,
 			"damage items flow into the shown DPS")
 	c.ok(OfferCard.weapon_dps(Content.weapon(&"rifle"), stats) > 14.0, "rifle is comparable per shot")
+	s.player.add_weapon(Content.weapon(&"pistol"))
+	c.ok(OfferCard.total_dps(s.player) > 2.0 * 16.17, "two sidearms activate the family bonus")
 
 
 func test_echo_path_reveals_at_wave_start(c: Check) -> void:

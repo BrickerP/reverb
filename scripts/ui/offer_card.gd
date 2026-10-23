@@ -14,17 +14,33 @@ func _init() -> void:
 
 # Expected single-target DPS of everything already equipped.
 static func total_dps(pl: PlayerState) -> float:
+	return list_dps(pl.weapons, pl.weapon_levels, pl.stats)
+
+
+static func list_dps(weapons: Array[WeaponDef], levels: Array[int], stats: Stats) -> float:
 	var total := 0.0
-	for i in pl.weapons.size():
-		total += weapon_dps(pl.weapons[i], pl.stats, pl.level_at(i))
+	for i in weapons.size():
+		var w := weapons[i]
+		var level := levels[i] if i >= 0 and i < levels.size() else 0
+		total += weapon_dps(w, stats, level, Combat.family_damage_mult(weapons, w.family),
+				Combat.family_cooldown_mult(weapons, w.family))
 	return total
 
 
-static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0) -> float:
+static func dps_with_added(pl: PlayerState, added: WeaponDef) -> float:
+	var weapons := pl.weapons.duplicate()
+	var levels := pl.weapon_levels.duplicate()
+	weapons.append(added)
+	levels.append(0)
+	return list_dps(weapons, levels, pl.stats)
+
+
+static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
+		family_damage: float = 1.0, family_cooldown: float = 1.0) -> float:
 	var pellets := float(maxi(1, w.pellets))
 	var crit := 1.0 + maxf(0.0, stats.get_stat(Stats.CRIT_CHANCE))
-	var rate := 1.0 / maxf(0.01, w.cooldown * stats.cooldown_mult())
-	return w.damage * w.level_mult(level) * pellets * stats.damage_mult() * crit * rate
+	var rate := 1.0 / maxf(0.01, w.cooldown * stats.cooldown_mult() * family_cooldown)
+	return w.damage * w.level_mult(level) * pellets * stats.damage_mult() * crit * family_damage * rate
 
 
 func setup(o: Offer, sim: Sim, selected: bool = false) -> void:
@@ -93,13 +109,15 @@ func _dps_row(w: WeaponDef, sim: Sim) -> Control:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
 	var before := total_dps(sim.player)
-	var added := weapon_dps(w, sim.player.stats)
+	var family_damage := Combat.family_damage_mult(sim.player.weapons, w.family)
+	var family_cooldown := Combat.family_cooldown_mult(sim.player.weapons, w.family)
+	var added := weapon_dps(w, sim.player.stats, 0, family_damage, family_cooldown)
 	if sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS:
 		# With full slots this is a replacement, not an addition: show what the new
 		# weapon brings, without promising a total that depends on the discarded slot.
 		row.add_child(UiTheme.label(Loc.t("shop.dps_add", [int(round(before)), int(round(added))]), 16, UiTheme.COIN))
 		return row
-	var after := before + added
+	var after := dps_with_added(sim.player, w)
 	row.add_child(UiTheme.label(Loc.t("shop.dps_arrow", [int(round(before)), int(round(after))]), 16, UiTheme.COIN))
 	var gain := UiTheme.label("+%d" % int(round(after - before)), 14, UiTheme.COIN)
 	gain.size_flags_horizontal = Control.SIZE_EXPAND_FILL

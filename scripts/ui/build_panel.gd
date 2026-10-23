@@ -45,6 +45,8 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	else:
 		_weapons_row = _weapon_chips(pl)
 		_box.add_child(_weapons_row)
+		_box.add_child(UiTheme.label(Loc.t("shop.family"), 14, UiTheme.DIM))
+		_box.add_child(_family_summary(pl))
 	items_label = UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM)
 	_box.add_child(items_label)
 	_items_row = _item_chips(pl)
@@ -139,7 +141,9 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	var middle := HBoxContainer.new()
 	middle.add_theme_constant_override("separation", 4)
 	middle.add_child(UiTheme.label(Loc.weapon_family(w.family), 10, UiTheme.DIM))
-	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats, level))), 10, UiTheme.COIN)
+	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats, level,
+			Combat.family_damage_mult(pl.weapons, w.family),
+			Combat.family_cooldown_mult(pl.weapons, w.family)))), 10, UiTheme.COIN)
 	dps.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	middle.add_child(dps)
@@ -156,6 +160,26 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
 	return card
+
+
+func _family_summary(pl: PlayerState) -> Control:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 10)
+	flow.add_theme_constant_override("v_separation", 2)
+	var counts: Dictionary = {}
+	for w in pl.weapons:
+		counts[w.family] = int(counts.get(w.family, 0)) + 1
+	for family: StringName in counts:
+		var count: int = counts[family]
+		var parts := PackedStringArray(["%s ×%d" % [Loc.weapon_family(family), count]])
+		if count >= 2:
+			parts.append(Loc.t("shop.family_damage"))
+		if count >= 4:
+			parts.append(Loc.t("shop.family_speed"))
+		if count >= 6:
+			parts.append(Loc.t("shop.family_master"))
+		flow.add_child(UiTheme.label(" · ".join(parts), 12, UiTheme.COIN if count >= 2 else UiTheme.DIM))
+	return flow
 
 
 func _item_chips(pl: PlayerState) -> Control:
