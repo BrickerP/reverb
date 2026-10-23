@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.32 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.33 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -99,7 +99,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 
 - 武器 5：手枪、冲锋枪、霰弹枪、步枪、法球
 - 道具 11：生命、移速、伤害、攻速、射程、暴击、拾取、回复、回响槽/寿命/威力
-- 敌人 4：杂兵、跑者（第 3 波）、重装（第 5 波）、静音者（第 8 波，碰触沉默回响 2 秒）
+- 敌人 5：杂兵、跑者（第 3 波）、重装（第 5 波）、自爆者（第 6 波，死亡爆炸）、静音者（第 8 波，碰触沉默回响 2 秒）
 - Boss 1：悖论（第 20 波，会沉默回响并召唤跑者）
 - 角色 3：复读机、独行者（无回响，第 10 波解锁）、镜像（实时复制当前装备，通关一次解锁）
 - 系统：叠录（两张录像合成一个回响，走位与武器合并）
@@ -123,12 +123,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 武器稀有度与加权掉落：Common / Uncommon / Rare，进化形态不掉落
 - 进化武器特殊效果：破片王冠命中爆炸，新星核心追踪弹
 - 选角页武器图鉴：全部武器、家族、稀有度、掉落概率、属性与进化链
+- 新敌人自爆者（第 6 波起）：死亡时在半径内爆炸，警告圈提示
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 2209 项）
+make test     # 无头测试（当前 2216 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
@@ -162,7 +163,7 @@ tools/          烟测、平衡、性能探针、音效生成
 - 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
 - Steam Deck / 低端机帧率未验证。本机 M3 窗口压力测试（720p、100 敌人、约 390 发弹幕）约 7ms/帧，200 敌人约 10ms；高弹量会自动降特效。
 - 手柄 UI 映射与暂停菜单尚未在 Steam Deck 实机验证。
-- 武器家族/进化/材料利息是首版规则；v0.1.31 50 seed bot（会升级/进化、不主动存钱）：复读机 32/50、独行者 34/50、镜像 32/50。真人未测。
+- 武器家族/进化/材料利息是首版规则；v0.1.33 50 seed bot（会升级/进化、不主动存钱）：复读机 28/50、独行者 34/50、镜像 30/50。真人未测。
 - 名称《回响》/ Take Stack 为工作名；Steam 已有多款 Reverb，英文名已更换；正式商标检索未做。
 
 ## 许可

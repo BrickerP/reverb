@@ -61,6 +61,8 @@ func test_enemy_roster(c: Check) -> void:
 		else:
 			c.ok(e.cost > 0.0 and e.weight > 0.0 and e.drop >= 1 and e.min_wave >= 1, "%s: spawn data" % e.id)
 		c.ok(e.radius <= Sim.MAX_ENEMY_RADIUS, "%s: fits the spatial grid query" % e.id)
+		if e.death_radius > 0.0:
+			c.ok(e.death_damage > 0.0, "%s: death explosion has damage" % e.id)
 		if e.min_wave == 1:
 			first_wave += 1
 	c.ok(first_wave >= 1, "something can spawn on wave 1")

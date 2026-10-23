@@ -140,6 +140,10 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
 			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
+		if e.def.death_radius > 0.0:
+			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 140.0)
+			ci.draw_arc(e.pos, e.def.death_radius, 0.0, TAU, 32,
+					Color(col, 0.10 + 0.10 * pulse), 1.5)
 
 
 static func echoes(ci: CanvasItem, sim: Sim) -> void:

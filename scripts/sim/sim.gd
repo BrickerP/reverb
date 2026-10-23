@@ -231,6 +231,20 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	enemy_killed.emit(e.pos, e.def.color, source)
 	if e == boss:
 		boss_defeated.emit()
+	if e.def.death_radius > 0.0:
+		_bomber_explode(e)
+
+
+func _bomber_explode(e: EnemyState) -> void:
+	var radius := e.def.death_radius
+	var damage := e.def.death_damage * WaveDirector.damage_scale(wave)
+	explosion.emit(e.pos, radius, e.def.color)
+	if player.iframes > 0.0:
+		return
+	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
+		player.hp -= damage
+		player.iframes = IFRAME_TIME
+		player_hurt.emit(damage)
 
 
 func discard_take(take: EchoTake) -> void:

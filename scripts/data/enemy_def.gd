@@ -14,3 +14,5 @@ extends Resource
 @export var sides: int = 0
 @export var is_boss: bool = false
 @export var silence_time: float = 0.0
+@export var death_radius: float = 0.0
+@export var death_damage: float = 0.0

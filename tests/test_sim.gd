@@ -333,6 +333,25 @@ func test_homing_projectile_turns_toward_enemy(c: Check) -> void:
 	c.ok(p.vel.x > 0.0, "homing bends toward the target")
 
 
+func test_bomber_explodes_when_killed_near_player(c: Check) -> void:
+	var s := _sim()
+	s.player.iframes = 0.0
+	s.player.hp = s.player.max_hp()
+	var e := EnemyState.new()
+	e.uid = 9100
+	e.def = Content.enemy(&"bomber")
+	e.pos = s.player.pos + Vector2(10.0, 0.0)
+	e.radius = e.def.radius
+	e.max_hp = 1.0
+	e.hp = 1.0
+	e.damage = 0.0
+	s.enemies.append(e)
+	var before := s.player.hp
+	s.damage_enemy(e, 99.0, Vector2.ZERO, false, -1)
+	c.ok(s.player.hp < before, "death explosion damages the player")
+	c.ok(s.player.iframes > 0.0, "explosion grants iframes")
+
+
 func test_same_seed_same_run(c: Check) -> void:
 	var a := _sim(5)
 	var b := _sim(5)
