@@ -61,7 +61,7 @@ UI reads them; it does not duplicate the formulas.
 
 These types are defined but not emitted yet:
 
-- `ShotInfo`: source, weapon_id, origin, direction, count, level, sequence
+- `ShotInfo`: source, weapon_id, origin, direction, target, count, level, sequence
 - `DamageInfo`: source, weapon_id, target_uid, pos, amount, crit, reduced, hit_dir, effect
 - `ExplosionInfo`: kind (`weapon` / `bomber`), source, weapon_id, pos, radius, color, effect
 - `WeaponChangeInfo`: index, before/after id and level, reason, ok
@@ -83,6 +83,7 @@ events once emitted.
 - Undo scope: **equipment operations only** for the first slice.
 - Buying, replacing, upgrading, and evolving push exact `ShopState` snapshots.
 - Undo restores the full state, not a recomputed refund.
+- `ShopState.restore` rebuilds `Offer` objects. UI must discard old offer references and re-read the restored list after undo; object identity is not preserved.
 - Failed operations do not lock history.
 - A successful reroll locks/clears prior history; the new offers start a new history.
 - A successfully started wave clears history.

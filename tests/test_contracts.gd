@@ -56,6 +56,50 @@ func test_shop_state_captures_and_restores_exact_state(c: Check) -> void:
 	c.eq(s.wave, 4, "wave restored")
 
 
+func test_shop_state_restores_after_real_shop_actions(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.phase = Sim.Phase.SHOP
+	s.player.materials = 100
+	s.shop.offers.clear()
+	var weapon_offer := Offer.new()
+	weapon_offer.weapon = Content.weapon(&"pistol")
+	weapon_offer.price = 10
+	s.shop.offers.append(weapon_offer)
+	var before_buy := ShopState.capture(s)
+	c.ok(s.shop.buy(s, weapon_offer), "weapon purchase succeeds")
+	c.eq(s.player.weapons.size(), 2, "weapon added")
+	c.eq(s.player.materials, 90, "materials spent")
+	c.ok(s.shop.offers[0].sold, "offer marked sold")
+	before_buy.restore(s)
+	c.eq(s.player.weapons.size(), 1, "purchase undone")
+	c.eq(s.player.materials, 100, "materials restored")
+	c.ok(not s.shop.offers[0].sold, "offer sale restored")
+
+	s.shop.offers.clear()
+	var item_offer := Offer.new()
+	item_offer.item = Content.item(&"iron_heart")
+	item_offer.price = 10
+	s.shop.offers.append(item_offer)
+	s.player.materials = 100
+	var before_item := ShopState.capture(s)
+	c.ok(s.shop.buy(s, item_offer), "item purchase succeeds")
+	c.near(s.player.max_hp(), 40.0, 0.001, "item changed max hp")
+	c.near(s.player.hp, 40.0, 0.001, "item changed current hp")
+	before_item.restore(s)
+	c.near(s.player.max_hp(), 30.0, 0.001, "item stats undone")
+	c.near(s.player.hp, 30.0, 0.001, "hp undone")
+	c.eq(s.player.item_count(&"iron_heart"), 0, "item removed")
+
+	s.player.materials = 100
+	var before_upgrade := ShopState.capture(s)
+	c.ok(s.shop.upgrade_weapon(s, 0), "upgrade succeeds")
+	c.eq(s.player.level_at(0), 1, "level increased")
+	before_upgrade.restore(s)
+	c.eq(s.player.level_at(0), 0, "upgrade level undone")
+	c.eq(s.player.materials, 100, "upgrade materials undone")
+
+
 func test_shop_result_contract(c: Check) -> void:
 	var ok := ShopResult.success(ShopResult.UPGRADE, 12, 0, &"pistol")
 	c.ok(ok.ok, "success flag")
@@ -75,6 +119,7 @@ func test_presentation_info_contract(c: Check) -> void:
 	shot.weapon_id = &"orb"
 	shot.origin = Vector2(10, 20)
 	shot.direction = Vector2.RIGHT
+	shot.target = Vector2(200, 20)
 	shot.count = 2
 	shot.level = 3
 	shot.sequence = 9
