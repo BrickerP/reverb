@@ -44,6 +44,7 @@ func bind(s: Sim) -> void:
 	sim.echo_spawned.connect(_on_echo)
 	sim.boss_spawned.connect(_on_boss_spawned)
 	sim.echoes_silenced.connect(_on_echo_silence)
+	sim.explosion.connect(_on_explosion)
 
 
 # Called by Main between the last frame of a wave and the shop opening.
@@ -177,6 +178,15 @@ func _on_echo_silence(_duration: float) -> void:
 	if ring != null:
 		ring.ring = true
 		ring.radius = sim.boss.radius
+
+
+func _on_explosion(pos: Vector2, radius: float, color: Color) -> void:
+	var ring := _spark(pos, color, 0.0, 0.35)
+	if ring != null:
+		ring.ring = true
+		ring.radius = maxf(2.0, radius * 0.4)
+	for i in 5:
+		_spark(pos, color, 60.0 + randf() * 90.0, 0.2 + randf() * 0.15)
 
 
 func _spark(pos: Vector2, color: Color, speed: float, life: float) -> Spark:

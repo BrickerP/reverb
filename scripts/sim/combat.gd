@@ -89,6 +89,9 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		p.radius = w.projectile_radius
 		p.pierce_left = w.pierce
 		p.knockback = w.knockback
+		p.explosion_radius = w.explosion_radius
+		p.explosion_damage = w.explosion_damage
+		p.homing_turn = w.homing_turn
 		p.life = reach / w.projectile_speed + 0.1
 		p.color = w.color if source < 0 else w.color.lerp(tint, 0.55)
 		p.source = source
@@ -100,6 +103,12 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 	var bounds := Sim.ARENA.grow(PROJECTILE_MARGIN)
 	var candidates: Array = []
 	for p in sim.projectiles:
+		if p.homing_turn > 0.0:
+			var homing_target := nearest_enemy(sim.enemies, p.pos, 220.0)
+			if homing_target != null:
+				var desired := (homing_target.pos - p.pos).normalized()
+				var turn := clampf(p.vel.angle_to(desired), -p.homing_turn * delta, p.homing_turn * delta)
+				p.vel = p.vel.rotated(turn)
 		p.pos += p.vel * delta
 		p.life -= delta
 		if p.life <= 0.0 or not bounds.has_point(p.pos):
@@ -116,9 +125,25 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 			if p.hit_uids.has(e.uid):
 				continue
 			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source)
+			if p.explosion_radius > 0.0 and p.explosion_damage > 0.0:
+				_explode(sim, p, e)
 			if p.pierce_left > 0:
 				p.pierce_left -= 1
 				p.hit_uids.append(e.uid)
 			else:
 				p.dead = true
 				break
+
+
+static func _explode(sim: Sim, p: Projectile, primary: EnemyState) -> void:
+	var candidates: Array = []
+	sim.grid.query(p.pos, p.explosion_radius + Sim.MAX_ENEMY_RADIUS, candidates)
+	for e: EnemyState in candidates:
+		if e.dead or e.uid == primary.uid:
+			continue
+		var dist := p.pos.distance_to(e.pos)
+		if dist > p.explosion_radius + e.radius:
+			continue
+		var push := (e.pos - p.pos).normalized() * p.knockback
+		sim.damage_enemy(e, p.damage * p.explosion_damage, push, false, p.source)
+	sim.explosion.emit(p.pos, p.explosion_radius, p.color)

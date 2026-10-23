@@ -210,6 +210,10 @@ func _detail_text(index: int) -> String:
 	var level := _card_levels[index]
 	var text := Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1,
 			Loc.weapon_family(w.family), Loc.weapon_line(w)])
+	if w.explosion_radius > 0.0:
+		text += "  ·  " + Loc.t("weapon.explosion", [int(w.explosion_radius)])
+	if w.homing_turn > 0.0:
+		text += "  ·  " + Loc.t("weapon.homing")
 	if w.evolves_to != &"":
 		text += "  ·  " + Loc.t("shop.evolve_detail", [
 			Loc.weapon_name(w.evolves_to), Shop.EVOLVE_FAMILY_COUNT, Shop.evolution_cost(w)])

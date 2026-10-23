@@ -18,6 +18,10 @@ func test_weapons_are_sane(c: Check) -> void:
 				c.eq(evolved.family, w.family, "%s: evolution keeps family" % id)
 				c.ok(not evolved.drops, "%s: evolved form is not a drop" % id)
 				c.eq(evolved.evolves_to, &"", "%s: evolution is one step" % id)
+		if w.explosion_radius > 0.0:
+			c.ok(w.explosion_damage > 0.0, "%s: explosion has damage" % id)
+		if w.homing_turn > 0.0:
+			c.ok(w.projectile_speed > 0.0, "%s: homing projectile moves" % id)
 		c.ok(w.dps() > 5.0 and w.dps() < 40.0, "%s: dps in a sane band (%s)" % [id, w.dps()])
 
 

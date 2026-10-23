@@ -118,6 +118,8 @@ const TABLE := {
 	"weapon.range": "Range %d",
 	"weapon.pierce": "Pierce %d",
 	"weapon.pierce_all": "Pierces all",
+	"weapon.explosion": "Explosion %d",
+	"weapon.homing": "Homing",
 	"weapon.pistol": "Pistol",
 	"weapon.smg": "SMG",
 	"weapon.shotgun": "Shotgun",

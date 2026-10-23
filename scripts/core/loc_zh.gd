@@ -118,6 +118,8 @@ const TABLE := {
 	"weapon.range": "射程 %d",
 	"weapon.pierce": "穿透 %d",
 	"weapon.pierce_all": "贯穿",
+	"weapon.explosion": "爆炸 %d",
+	"weapon.homing": "追踪",
 	"weapon.pistol": "手枪",
 	"weapon.smg": "冲锋枪",
 	"weapon.shotgun": "霰弹枪",

@@ -133,6 +133,10 @@ func _weapon_meta(w: WeaponDef) -> Label:
 		parts.append(Loc.t("weapon.pierce_all"))
 	elif w.pierce > 0:
 		parts.append(Loc.t("weapon.pierce", [w.pierce]))
+	if w.explosion_radius > 0.0:
+		parts.append(Loc.t("weapon.explosion", [int(w.explosion_radius)]))
+	if w.homing_turn > 0.0:
+		parts.append(Loc.t("weapon.homing"))
 	var line := UiTheme.label("  ·  ".join(parts), 14, UiTheme.DIM)
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return line

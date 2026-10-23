@@ -13,6 +13,7 @@ signal echo_recorded(take: EchoTake)
 signal shot_fired(source: int)
 signal material_collected(amount: int)
 signal purchased
+signal explosion(pos: Vector2, radius: float, color: Color)
 signal boss_spawned(enemy: EnemyState)
 signal boss_defeated
 signal echoes_silenced(duration: float)

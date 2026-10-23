@@ -16,6 +16,9 @@ extends Resource
 @export var knockback: float = 60.0
 @export var price: int = 20
 @export var color: Color = Color.WHITE
+@export var explosion_radius: float = 0.0
+@export var explosion_damage: float = 0.0
+@export var homing_turn: float = 0.0
 
 const MAX_LEVEL := 3
 const DAMAGE_PER_LEVEL := 0.15

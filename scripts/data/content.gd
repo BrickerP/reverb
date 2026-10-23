@@ -136,6 +136,7 @@ static func _build_weapons() -> void:
 		"damage": 4.0, "cooldown": 0.9, "reach": 230.0, "projectile_speed": 680.0,
 		"projectile_radius": 4.0, "pellets": 8, "spread_deg": 38.0, "pierce": 1,
 		"knockback": 90.0, "price": 45, "color": Color(1.0, 0.85, 0.4),
+		"explosion_radius": 48.0, "explosion_damage": 0.5,
 	})
 	_weapon(&"rail_spike", {
 		"family": &"marksman", "drops": false,
@@ -147,7 +148,7 @@ static func _build_weapons() -> void:
 		"family": &"arcane", "drops": false,
 		"damage": 12.0, "cooldown": 1.0, "reach": 300.0, "projectile_speed": 280.0,
 		"projectile_radius": 14.0, "pierce": 99, "knockback": 25.0, "price": 50,
-		"color": Color(0.9, 0.6, 1.0),
+		"color": Color(0.9, 0.6, 1.0), "homing_turn": 3.0,
 	})
 
 

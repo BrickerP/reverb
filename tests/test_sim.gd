@@ -286,6 +286,53 @@ func test_wave_end_splits_earned_and_interest(c: Check) -> void:
 	c.eq(s.player.materials, 109, "earnings plus interest")
 
 
+func test_projectile_explosion_hits_neighbors(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.pickups.clear()
+	var primary := _spawn(s, Vector2(600.0, 400.0), 100.0)
+	var neighbor := _spawn(s, Vector2(640.0, 400.0), 100.0)
+	s.grid.clear()
+	s.grid.insert(primary)
+	s.grid.insert(neighbor)
+	var p := Projectile.new()
+	p.pos = primary.pos
+	p.vel = Vector2.ZERO
+	p.life = 1.0
+	p.damage = 10.0
+	p.radius = 4.0
+	p.explosion_radius = 48.0
+	p.explosion_damage = 0.5
+	p.source = -1
+	s.projectiles.append(p)
+	Combat.step_projectiles(s, DT)
+	c.ok(primary.hp <= 90.0, "direct hit lands")
+	c.near(neighbor.hp, 95.0, 0.01, "explosion hits the neighbor for half damage")
+
+
+func test_homing_projectile_turns_toward_enemy(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.pickups.clear()
+	var target := _spawn(s, Vector2(700.0, 400.0), 100.0)
+	s.grid.clear()
+	s.grid.insert(target)
+	var p := Projectile.new()
+	p.pos = Vector2(600.0, 400.0)
+	p.vel = Vector2(0.0, -100.0)
+	p.life = 1.0
+	p.radius = 2.0
+	p.homing_turn = 3.0
+	p.source = -1
+	s.projectiles.append(p)
+	Combat.step_projectiles(s, DT)
+	c.ok(p.vel.x > 0.0, "homing bends toward the target")
+
+
 func test_same_seed_same_run(c: Check) -> void:
 	var a := _sim(5)
 	var b := _sim(5)
