@@ -375,6 +375,16 @@
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-guide.md",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-delivery.md"
     ],
-    "status": "ready_for_actual_human_playtest; no verified human feedback received"
+    "status": "ready_for_actual_human_playtest; no verified human feedback received",
+    "hud_followup": {
+      "trigger": "exported macOS fixture showed negative health text after lethal damage",
+      "change": "displayed HP floors at zero; simulation HP and positive rounding unchanged",
+      "native_verification": "10 EN/ZH draw-call cases passed; screenshots checked; raw simulation HP unchanged",
+      "unit_assertions": "4158 passed, 0 failed",
+      "mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
+      "deepseek_observed": "cba4dc9027594d8d2b3aa182a0270f5f2cc71e3c; no tree difference",
+      "manual_input": "default runs.jsonl and feedback.jsonl absent in previous isolated playtest directory",
+      "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-hud-fix-verification/"
+    }
   }
 }

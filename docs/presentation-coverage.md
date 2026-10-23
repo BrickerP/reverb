@@ -232,3 +232,18 @@ players may voluntarily provide theirs.
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as
 explicit incomplete rows until presentation coverage and verification land.
+
+## Playtest follow-up: lethal-hit health text
+
+The exported macOS playtest exposed a negative health label after lethal damage.
+The HUD now floors only the displayed number at zero. Simulation health and
+positive fractional-health rounding remain unchanged. A native EN/ZH probe
+observes the actual health draw call for raw HP -1.4, 0, 0.2, 34.2 and 35; all ten
+cases pass, with simulation HP unchanged and screenshots checked. The full suite
+passes 4158 assertions with zero failures. Evidence is in
+`outputs/take-stack-hud-fix-verification/` in the parent task directory.
+
+The mechanics cursor remains `4594fce`; the newly checked DeepSeek `cba4dc9`
+has no tree difference from it. No default manual run or feedback ledger exists
+in the previous playtest's isolated user directory, so this fix derives from
+automated runtime observation and makes no claim about human player feedback.

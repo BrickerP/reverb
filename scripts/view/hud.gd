@@ -138,7 +138,7 @@ func _draw_health() -> void:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 110.0)
 		border = Color(1.0, 0.25, 0.35, 0.5 + 0.5 * pulse)
 	draw_rect(bar, border, false, 2.0)
-	_text("%s  %d / %d" % [Loc.t("hud.hp"), ceili(pl.hp), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
+	_text("%s  %d / %d" % [Loc.t("hud.hp"), maxi(0, ceili(pl.hp)), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
 
 
 func _draw_echo_chips() -> void:
