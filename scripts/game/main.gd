@@ -74,15 +74,18 @@ func _ready() -> void:
 	pause_ui.resume_requested.connect(func() -> void: _set_paused(false))
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
-	pause_ui.mute_requested.connect(func() -> void: audio.toggle_mute())
+	pause_ui.mute_requested.connect(_on_mute_requested)
 	pause_ui.quit_requested.connect(show_select)
 	history_ui.replay_requested.connect(_on_history_replay)
 	settings_ui.volume_changed.connect(_on_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
+	settings_ui.reduced_effects_changed.connect(_on_reduced_effects_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
 	settings_ui.language_changed.connect(_on_language_changed)
 	settings_ui.closed.connect(_on_settings_closed)
 	history_ui.closed.connect(_on_history_closed)
+	codex_ui.closed.connect(_on_codex_closed)
+	_apply_reduced_effects()
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
 	var log_path := OS.get_environment("REVERB_RUN_LOG")
@@ -155,7 +158,7 @@ func open_settings() -> void:
 		_set_paused(true)
 	if pause_ui != null:
 		pause_ui.close()
-	settings_ui.open(settings)
+	settings_ui.open(settings, sim == null or sim.phase in [Sim.Phase.LOST, Sim.Phase.WON])
 
 
 func open_codex() -> void:
@@ -180,15 +183,23 @@ func _on_history_replay(seed_value: int, char_id: StringName) -> void:
 func _on_settings_closed() -> void:
 	if _settings_restore_pause:
 		if pause_ui != null:
-			pause_ui.open()
+			pause_ui.open(audio != null and audio.is_muted())
 	elif sim != null and sim.phase == Sim.Phase.WAVE:
 		_set_paused(false)
+	else:
+		_restore_underlay_focus()
 	_settings_restore_pause = false
 
 
 func _on_history_closed() -> void:
 	if paused and sim != null and sim.phase == Sim.Phase.WAVE and pause_ui != null:
-		pause_ui.open()
+		pause_ui.open(audio != null and audio.is_muted())
+	else:
+		_restore_underlay_focus()
+
+
+func _on_codex_closed() -> void:
+	_restore_underlay_focus()
 
 
 func _on_volume_changed(value: float) -> void:
@@ -201,6 +212,12 @@ func _on_shake_changed(on: bool) -> void:
 	settings.shake = on
 	settings.save()
 	_view.shake_enabled = on
+
+
+func _on_reduced_effects_changed(on: bool) -> void:
+	settings.reduced_effects = on
+	settings.save()
+	_apply_reduced_effects()
 
 
 func _on_fullscreen_changed(on: bool) -> void:
@@ -230,6 +247,17 @@ func _apply_display() -> void:
 	DisplayServer.window_set_mode(mode)
 
 
+func _apply_reduced_effects() -> void:
+	if settings == null:
+		return
+	if _view != null:
+		_view.set_reduced_effects(settings.reduced_effects)
+	if shop_ui != null:
+		shop_ui.set_reduced_effects(settings.reduced_effects)
+	if end_ui != null:
+		end_ui.set_reduced_effects(settings.reduced_effects)
+
+
 func show_select() -> void:
 	if character_select == null:
 		return
@@ -246,6 +274,7 @@ func show_select() -> void:
 	character_select.refresh(meta, today_seed(),
 			meta.daily_best if meta.daily_seed == today_seed() else 0)
 	character_select.visible = true
+	character_select.focus_default()
 
 
 func _detach_presentation_session() -> void:
@@ -317,7 +346,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"character") and end_ui.visible:
 		show_select()
 	elif event.is_action_pressed(&"mute"):
-		audio.toggle_mute()
+		_on_mute_requested()
 
 
 func _add_layer(index: int, ui: Control, theme: Theme) -> void:
@@ -400,6 +429,25 @@ func _set_paused(on: bool) -> void:
 	if pause_ui == null:
 		return
 	if on:
-		pause_ui.open()
+		pause_ui.open(audio != null and audio.is_muted())
 	else:
 		pause_ui.close()
+
+
+func _on_mute_requested() -> void:
+	if audio == null:
+		return
+	audio.toggle_mute()
+	if pause_ui != null and pause_ui.visible:
+		pause_ui.set_muted(audio.is_muted())
+
+
+func _restore_underlay_focus() -> void:
+	if paused and sim != null and sim.phase == Sim.Phase.WAVE and pause_ui != null:
+		pause_ui.open(audio != null and audio.is_muted())
+	elif end_ui != null and end_ui.visible:
+		end_ui.focus_default()
+	elif character_select != null and character_select.visible:
+		character_select.focus_default()
+	elif shop_ui != null and shop_ui.visible:
+		shop_ui.focus_default()

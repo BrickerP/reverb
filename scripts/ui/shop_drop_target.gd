@@ -77,9 +77,11 @@ func reset_feedback() -> void:
 	modulate = Color.WHITE
 
 
-func reject() -> void:
+func reject(reduced: bool = false) -> void:
 	reset_feedback()
 	UiTheme.flash(self)
+	if reduced:
+		return
 	pivot_offset = size * 0.5
 	_feedback_tween = create_tween()
 	_feedback_tween.tween_property(self, "scale", Vector2(0.98, 0.98), 0.06)

@@ -29,6 +29,19 @@ var _clear_drop := Callable()
 
 func _init() -> void:
 	custom_minimum_size = Vector2(320.0, 0.0)
+	var surface_source := UiTheme.surface_panel()
+	if surface_source != null:
+		var surface := surface_source.duplicate() as StyleBoxTexture
+		surface.region_rect = Rect2(32.0, 32.0, 448.0, 448.0)
+		surface.texture_margin_left = 10.0
+		surface.texture_margin_right = 10.0
+		surface.texture_margin_top = 10.0
+		surface.texture_margin_bottom = 10.0
+		surface.content_margin_left = 12.0
+		surface.content_margin_right = 12.0
+		surface.content_margin_top = 8.0
+		surface.content_margin_bottom = 8.0
+		add_theme_stylebox_override("panel", surface)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 8)
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -180,6 +193,8 @@ func _weapon_chips(pl: PlayerState) -> Control:
 func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
 	var card := ShopDropTarget.new()
 	card.configure(&"weapon_slot", index, _quote_drop, _apply_drop, _clear_drop)
+	card.accessibility_name = Loc.weapon_name(w.id)
+	card.accessibility_description = _detail_text_for(w, level)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
 	card.custom_minimum_size = Vector2(136.0, 86.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -243,6 +258,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	var target := ShopDropTarget.new()
 	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
+	target.accessibility_name = text
 	target.custom_minimum_size = Vector2(0.0, 36.0)
 	var style := UiTheme.box(Color(0.04, 0.06, 0.07, 0.78), Color(UiTheme.ACCENT, 0.32), 1, 6)
 	style.set_border_width_all(1)
@@ -322,8 +338,10 @@ func _select(index: int) -> void:
 func _detail_text(index: int) -> String:
 	if index < 0 or index >= _card_weapons.size():
 		return ""
-	var w := _card_weapons[index]
-	var level := _card_levels[index]
+	return _detail_text_for(_card_weapons[index], _card_levels[index])
+
+
+func _detail_text_for(w: WeaponDef, level: int) -> String:
 	var text := Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1,
 			Loc.weapon_family(w.family), Loc.weapon_line(w)])
 	text += "  ·  " + Loc.rarity_name(w.rarity)

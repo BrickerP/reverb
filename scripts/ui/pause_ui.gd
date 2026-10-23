@@ -26,8 +26,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(420.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.box(
-			Color(0.02, 0.03, 0.08, 0.97), Color(0.35, 0.55, 0.95, 0.55), 2, 10))
+	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
@@ -66,9 +65,18 @@ func _button(text: String) -> Button:
 	return b
 
 
-func open() -> void:
+func open(muted: bool = false) -> void:
+	set_muted(muted)
 	visible = true
+	UiFocus.cycle([resume_button, settings_button, history_button, mute_button, quit_button])
 	resume_button.grab_focus()
+
+
+func set_muted(muted: bool) -> void:
+	if mute_button == null:
+		return
+	mute_button.text = Loc.t("pause.unmute") if muted else Loc.t("pause.mute")
+	mute_button.accessibility_name = mute_button.text
 
 
 func close() -> void:

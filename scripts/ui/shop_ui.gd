@@ -150,7 +150,7 @@ func refresh(animate_echo: bool = false) -> void:
 		chooser = _on_replace_slot
 	_footer.text = Loc.t("shop.keys")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
-	echo_panel.refresh(sim, animate_echo)
+	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
 
 
@@ -224,7 +224,7 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 			_begin_replace(o)
 		return
 	if reason != &"":
-		card.reject()
+		card.reject(reduced_effects)
 		_flash_block(reason)
 		return
 	var index := sim.shop.offers.find(o)
@@ -233,7 +233,7 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 		refresh()
 		_focus_card(index)
 	else:
-		card.reject()
+		card.reject(reduced_effects)
 		_flash_block(result.reason)
 
 
@@ -338,8 +338,12 @@ func _on_history_changed(can_undo: bool) -> void:
 
 func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
+	if echo_panel != null:
+		echo_panel.set_reduced_effects(on)
 	if on:
 		reset_feedback()
+		if _overlay != null:
+			UiTheme.clear(_overlay)
 
 
 func pending_feedback_count() -> int:
@@ -551,11 +555,11 @@ func apply_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 func _flash_drop_failure(target_kind: StringName, index: int, reason: StringName) -> void:
 	_flash_block(reason)
 	if target_kind == &"weapon_slot" and index >= 0 and index < build_panel.slot_drop_targets.size():
-		build_panel.slot_drop_targets[index].reject()
+		build_panel.slot_drop_targets[index].reject(reduced_effects)
 	elif target_kind == &"items" and build_panel.items_drop_target != null:
-		build_panel.items_drop_target.reject()
+		build_panel.items_drop_target.reject(reduced_effects)
 	elif build_panel.empty_drop_target != null:
-		build_panel.empty_drop_target.reject()
+		build_panel.empty_drop_target.reject(reduced_effects)
 
 
 func _disconnect_shop() -> void:
@@ -603,6 +607,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _replacing != null and event.is_action_pressed(&"ui_cancel"):
 		_cancel_replace()
 		accept_event()
+	elif echo_panel != null and echo_panel.is_merging() and event.is_action_pressed(&"ui_cancel"):
+		echo_panel.cancel_merge()
+		accept_event()
 
 
 func _focus_card(from: int) -> void:
@@ -618,15 +625,19 @@ func _focus_card(from: int) -> void:
 			return
 
 
+func focus_default() -> void:
+	_focus_card(0)
+
+
 # A small token flies from the arena centre into the newly recorded take's row: the wave
 # is visibly "collected" rather than just appearing in a list.
 func _fly_take_token() -> void:
-	if not is_inside_tree() or _overlay == null:
+	if reduced_effects or not is_inside_tree() or _overlay == null:
 		return
 	var session_epoch := _feedback_epoch
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if session_epoch != _feedback_epoch or not visible or sim == null:
+	if reduced_effects or session_epoch != _feedback_epoch or not visible or sim == null:
 		return
 	var target := echo_panel.arrival_point()
 	if target == Vector2.ZERO:

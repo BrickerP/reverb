@@ -1,0 +1,15 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "assets": [
+    {
+      "id": "take_stack_app_icon",
+      "file": "take_stack_icon.png",
+      "source": "exec-58c0da93-538f-46eb-a93a-54b16c73e999.png",
+      "sha256": "9bd5689b1fe4c560f1cebca2b9966517ed70842bbed8b03d13810a9e6f510169",
+      "size": [1254, 1254],
+      "mode": "RGB",
+      "bounds_ltrb": [0, 0, 1254, 1254]
+    }
+  ]
+}

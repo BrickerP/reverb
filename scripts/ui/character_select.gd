@@ -26,8 +26,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(1180.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.box(
-			Color(0.03, 0.04, 0.09, 0.98), Color(0.3, 0.5, 0.9, 0.6), 2, 10))
+	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
@@ -99,6 +98,13 @@ func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 			break
 
 
+func focus_default() -> void:
+	for card in _cards:
+		if not card.disabled:
+			card.grab_focus()
+			return
+
+
 func chosen_seed() -> int:
 	var text := seed_edit.text.strip_edges()
 	return int(text) if text.is_valid_int() else -1
@@ -109,7 +115,7 @@ func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	var card := Button.new()
 	card.custom_minimum_size = Vector2(245.0, 300.0)
 	card.disabled = locked
-	card.modulate.a = 0.5 if locked else 1.0
+	card.accessibility_name = Loc.character_name(def.id)
 	var normal := UiTheme.box(Color(0.05, 0.06, 0.12), def.color, 2, 8)
 	var hover := UiTheme.box(Color(0.08, 0.1, 0.2), def.color.lightened(0.2), 3, 8)
 	card.add_theme_stylebox_override("normal", normal)
@@ -163,13 +169,14 @@ func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(spacer)
+	var status_text := Loc.t("select.ready")
 	if locked:
 		if def.unlock_wins > 0:
-			box.add_child(UiTheme.label(Loc.t("select.locked_wins"), 14, UiTheme.WARN))
+			status_text = Loc.t("select.locked_wins")
 		else:
-			box.add_child(UiTheme.label(Loc.t("select.locked", [def.unlock_wave]), 14, UiTheme.WARN))
-	else:
-		box.add_child(UiTheme.label(Loc.t("select.ready"), 14, UiTheme.COIN))
+			status_text = Loc.t("select.locked", [def.unlock_wave])
+	box.add_child(UiTheme.label(status_text, 14, UiTheme.WARN if locked else UiTheme.COIN))
+	card.accessibility_description = "%s · %s" % [Loc.character_desc(def.id), status_text]
 	return card
 
 

@@ -8,12 +8,16 @@ var discard_buttons: Array[Button] = []
 var merge_button: Button
 var last_new_row: Control
 var last_new_tint: Color = Color.WHITE
+var reduced_effects := false
 
 var _box: VBoxContainer
 var _sim: Sim
 var _animate_new := false
 var _merge_mode := false
 var _merge_first: EchoTake
+var _new_row_tween: Tween
+var _animated_strip: Control
+var _animated_info: Control
 
 
 class TakeMeter:
@@ -33,6 +37,19 @@ class TakeMeter:
 
 func _init() -> void:
 	custom_minimum_size = Vector2(448.0, 0.0)
+	var surface_source := UiTheme.surface_panel()
+	if surface_source != null:
+		var surface := surface_source.duplicate() as StyleBoxTexture
+		surface.region_rect = Rect2(32.0, 32.0, 448.0, 448.0)
+		surface.texture_margin_left = 10.0
+		surface.texture_margin_right = 10.0
+		surface.texture_margin_top = 10.0
+		surface.texture_margin_bottom = 10.0
+		surface.content_margin_left = 12.0
+		surface.content_margin_right = 12.0
+		surface.content_margin_top = 8.0
+		surface.content_margin_bottom = 8.0
+		add_theme_stylebox_override("panel", surface)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 8)
 	add_child(_box)
@@ -40,7 +57,7 @@ func _init() -> void:
 
 func refresh(sim: Sim, animate_new: bool = false) -> void:
 	_sim = sim
-	_animate_new = animate_new
+	_animate_new = animate_new and not reduced_effects
 	_merge_mode = false
 	_merge_first = null
 	_render()
@@ -48,6 +65,7 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 
 
 func close_session() -> void:
+	_finish_new_row_animation()
 	_sim = null
 	_animate_new = false
 	_merge_mode = false
@@ -63,7 +81,27 @@ func is_merging() -> bool:
 	return _merge_mode
 
 
+func set_reduced_effects(on: bool) -> void:
+	reduced_effects = on
+	if on:
+		_finish_new_row_animation()
+		for preview in find_children("*", "PathPreview", true, false):
+			(preview as PathPreview).finish_immediately()
+
+
+func cancel_merge() -> bool:
+	if not _merge_mode:
+		return false
+	_merge_mode = false
+	_merge_first = null
+	_render()
+	if merge_button != null:
+		merge_button.grab_focus()
+	return true
+
+
 func _render() -> void:
+	_finish_new_row_animation()
 	UiTheme.clear(_box)
 	discard_buttons.clear()
 	merge_button = null
@@ -148,18 +186,25 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_child(strip)
 	var preview := PathPreview.new()
-	preview.setup(take, animate)
+	preview.setup(take, animate and not reduced_effects)
+	var cartridge := UiTheme.cartridge_icon(Vector2(30.0, 20.0))
+	cartridge.position = Vector2(76.0, 3.0)
+	preview.add_child(cartridge)
 	row.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 4)
 	info.add_child(_title_line(take))
 	var dps := int(round(sim.echo_dps(take)))
-	var meta := HBoxContainer.new()
-	meta.add_theme_constant_override("separation", 8)
+	var meta := HFlowContainer.new()
+	meta.add_theme_constant_override("h_separation", 8)
+	meta.add_theme_constant_override("v_separation", 2)
 	meta.add_child(_pips(maxi(0, lifespan - take.age), lifespan, take.tint()))
+	if take.merged:
+		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.merged"), 12, UiTheme.COIN))
+	if take.age == 0:
+		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 12, UiTheme.ACCENT))
 	var dps_label := UiTheme.label(Loc.t("shop.take_dps", [dps]), 14, UiTheme.DIM)
-	dps_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	meta.add_child(dps_label)
 	info.add_child(meta)
 	var meter := TakeMeter.new()
@@ -204,6 +249,9 @@ func _on_row(take: EchoTake) -> void:
 
 
 func _on_merge_button() -> void:
+	if _merge_mode:
+		cancel_merge()
+		return
 	_merge_mode = not _merge_mode
 	_merge_first = null
 	_render()
@@ -214,6 +262,8 @@ func _on_merge_button() -> void:
 
 
 func _animate_new_row(row: Control) -> void:
+	if reduced_effects:
+		return
 	# Keep the action button at full contrast (it may hold keyboard focus); only the
 	# identity strip and the take's text fade in.
 	var strip := row.get_child(0) as Control
@@ -222,20 +272,29 @@ func _animate_new_row(row: Control) -> void:
 		return
 	strip.modulate.a = 0.25
 	info.modulate.a = 0.35
-	var tween := row.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(strip, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
-	tween.tween_property(info, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
+	_animated_strip = strip
+	_animated_info = info
+	_new_row_tween = row.create_tween().set_parallel(true)
+	_new_row_tween.tween_property(strip, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
+	_new_row_tween.tween_property(info, "modulate:a", 1.0, 0.55).set_delay(0.1).set_ease(Tween.EASE_OUT)
+
+
+func _finish_new_row_animation() -> void:
+	if _new_row_tween != null and _new_row_tween.is_valid():
+		_new_row_tween.kill()
+	_new_row_tween = null
+	if is_instance_valid(_animated_strip):
+		_animated_strip.modulate.a = 1.0
+	if is_instance_valid(_animated_info):
+		_animated_info.modulate.a = 1.0
+	_animated_strip = null
+	_animated_info = null
 
 
 func _title_line(take: EchoTake) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 8)
 	line.add_child(UiTheme.label(Loc.t("shop.take", [take.wave]), 16))
-	if take.merged:
-		line.add_child(UiTheme.label("[%s]" % Loc.t("shop.merged"), 13, UiTheme.COIN))
-	if take.age == 0:
-		line.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 13, UiTheme.ACCENT))
 	return line
 
 

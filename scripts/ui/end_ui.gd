@@ -11,6 +11,7 @@ var character_button: Button
 var retry_button: Button
 var open_log_button: Button
 var best_take: EchoTake
+var reduced_effects := false
 
 var _title: Label
 var _stats: Label
@@ -35,8 +36,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(720.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.box(
-			Color(0.03, 0.04, 0.09, 0.97), Color(0.3, 0.5, 0.9, 0.6), 2, 10))
+	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
@@ -114,13 +114,25 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_no_echo.visible = best_take == null
 	if best_take != null:
 		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(sim.echo_dps(best_take)))])
-		_best_preview.setup(best_take, true)
+		_best_preview.setup(best_take, not reduced_effects)
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
 	retry_button.text = Loc.t("end.retry_seed")
 	open_log_button.text = Loc.t("end.open_log")
 	visible = true
-	restart_button.grab_focus()
+	UiFocus.cycle([retry_button, open_log_button, restart_button, character_button])
+	focus_default()
+
+
+func set_reduced_effects(on: bool) -> void:
+	reduced_effects = on
+	if on and _best_preview != null:
+		_best_preview.finish_immediately()
+
+
+func focus_default() -> void:
+	if restart_button != null:
+		restart_button.grab_focus()
 
 
 func _on_retry_seed() -> void:

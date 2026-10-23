@@ -33,6 +33,12 @@ func is_animating() -> bool:
 	return _progress < 1.0
 
 
+func finish_immediately() -> void:
+	_progress = 1.0
+	set_process(false)
+	queue_redraw()
+
+
 func _process(delta: float) -> void:
 	_progress = minf(1.0, _progress + delta / TRACE_TIME)
 	if _progress >= 1.0:

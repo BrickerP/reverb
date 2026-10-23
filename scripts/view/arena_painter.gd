@@ -12,15 +12,22 @@ const TRAIL_LIMIT := 160
 const BATCH_LIMIT := 80
 const PLAYER_ART_SIZE := Vector2(44.0, 52.0)
 const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
+const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
+const REDUCED_MOTION_SCALE := 0.3
 
 static var _bullet_mesh: MultiMesh
 static var _bullet_texture: ImageTexture
 static var _bullet_capacity := 0
+static var _arena_floor_texture: Texture2D
 
 
 static func arena(ci: CanvasItem) -> void:
 	var a := Sim.ARENA
 	ci.draw_rect(a, FILL)
+	var floor_texture := arena_floor_texture()
+	if floor_texture != null:
+		ci.draw_texture_rect(floor_texture, a, false, Color(0.72, 0.76, 0.86, 0.64))
+		ci.draw_rect(a, Color(FILL, 0.24))
 	var x := a.position.x + GRID
 	while x < a.end.x:
 		ci.draw_line(Vector2(x, a.position.y), Vector2(x, a.end.y), GRID_COLOR, 1.0)
@@ -33,6 +40,12 @@ static func arena(ci: CanvasItem) -> void:
 	ci.draw_rect(a, BORDER, false, 3.0)
 
 
+static func arena_floor_texture() -> Texture2D:
+	if _arena_floor_texture == null:
+		_arena_floor_texture = load(ARENA_FLOOR_PATH) as Texture2D
+	return _arena_floor_texture
+
+
 static func pending(ci: CanvasItem, sim: Sim) -> void:
 	for ps in sim.pending:
 		var t := 1.0 - clampf(ps.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
@@ -42,38 +55,52 @@ static func pending(ci: CanvasItem, sim: Sim) -> void:
 
 
 # Wave-end beat: the just-recorded route collapses into the player.
-static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float) -> void:
+static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float,
+		reduced: bool = false) -> void:
 	if take.samples.is_empty():
 		return
 	var p := clampf(t, 0.0, 1.0)
 	# Stay near the full route, then pull it in at the end.
-	var collapse := p * p
+	var collapse := p * p * (0.25 if reduced else 1.0)
 	var target := sim.player.pos
 	var pts := PackedVector2Array()
 	for i in range(0, take.samples.size(), 3):
 		pts.append(take.samples[i].lerp(target, collapse))
 	if pts.size() >= 2:
-		ci.draw_polyline(pts, Color(take.tint(), 0.85 * (1.0 - p)), 3.0)
-	ci.draw_arc(target, 14.0 + 34.0 * collapse, 0.0, TAU, 32, Color(take.tint(), 0.7 * (1.0 - p)), 2.0)
+		ci.draw_polyline(pts, Color(take.tint(), (0.4 if reduced else 0.85) * (1.0 - p)),
+				2.0 if reduced else 3.0)
+	ci.draw_arc(target, 14.0 + 34.0 * collapse, 0.0, TAU, 32,
+			Color(take.tint(), (0.35 if reduced else 0.7) * (1.0 - p)), 2.0)
 
 
 # Boss death: a white impact flash, a vertical beam and three expanding rings.
-static func victory(ci: CanvasItem, origin: Vector2, color: Color, t: float) -> void:
+static func victory(ci: CanvasItem, origin: Vector2, color: Color, t: float,
+		reduced: bool = false) -> void:
 	var p := clampf(t, 0.0, 1.0)
-	var flash := 0.55 * maxf(0.0, 1.0 - p * 2.4)
-	ci.draw_rect(Sim.ARENA, Color(1.0, 1.0, 1.0, flash))
+	var flash := victory_flash_alpha(p, reduced)
+	if flash > 0.0:
+		ci.draw_rect(Sim.ARENA, Color(1.0, 1.0, 1.0, flash))
+	var beam_scale := 0.35 if reduced else 1.0
 	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
-			Color(color, 0.06 * (1.0 - p)), 48.0)
+			Color(color, 0.06 * beam_scale * (1.0 - p)), 48.0 * beam_scale)
 	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
-			Color(color, 0.12 * (1.0 - p)), 16.0)
-	for k in 3:
+			Color(color, 0.12 * beam_scale * (1.0 - p)), 16.0 * beam_scale)
+	var ring_count := 1 if reduced else 3
+	var ring_distance := 180.0 if reduced else 540.0
+	for k in ring_count:
 		var q := clampf(p * 1.55 - 0.16 * float(k), 0.0, 1.0)
 		if q <= 0.0:
 			continue
-		ci.draw_arc(origin, 30.0 + 540.0 * q, 0.0, TAU, 64, Color(color, 0.8 * (1.0 - q)), 3.0)
+		ci.draw_arc(origin, 30.0 + ring_distance * q, 0.0, TAU, 64,
+				Color(color, (0.5 if reduced else 0.8) * (1.0 - q)), 3.0)
 
 
-static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary) -> void:
+static func victory_flash_alpha(progress: float, reduced: bool) -> float:
+	return 0.0 if reduced else 0.55 * maxf(0.0, 1.0 - clampf(progress, 0.0, 1.0) * 2.4)
+
+
+static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary,
+		reduced: bool = false) -> void:
 	var lifespan := maxi(1, sim.echo_lifespan())
 	for a in sim.echoes:
 		var pts: PackedVector2Array = paths.get(a, PackedVector2Array())
@@ -84,6 +111,9 @@ static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dict
 		var base_alpha := 0.07 + 0.15 * float(remaining) / float(lifespan)
 		if sim.echo_silenced > 0.0:
 			base_alpha *= 0.45
+		if reduced:
+			ci.draw_polyline(pts, Color(tint, base_alpha * 0.8), 2.0)
+			continue
 		var progress := float(reveal.get(a, 1.0))
 		if progress <= 0.0:
 			ci.draw_polyline(pts, Color(tint, base_alpha * 0.6), 2.0)
@@ -121,13 +151,13 @@ static func pickups(ci: CanvasItem, sim: Sim) -> void:
 		ci.draw_circle(pk.pos, 3.2, UiTheme.COIN)
 
 
-static func enemies(ci: CanvasItem, sim: Sim) -> void:
+static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	var target := sim.player.pos
 	for e in sim.enemies:
 		var col := Color.WHITE if e.flash > 0.0 else e.def.color
 		var key := PresentationAssets.enemy_key(e.def)
 		var stride := sin(sim.wave_time * (7.5 if e.def.id == &"runner" else 4.5)
-				+ e.pos.x * 0.021 + e.pos.y * 0.013)
+				+ e.pos.x * 0.021 + e.pos.y * 0.013) * (REDUCED_MOTION_SCALE if reduced else 1.0)
 		var facing := (target - e.pos).normalized()
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
@@ -170,7 +200,7 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
-		recoils: Array[Dictionary] = []) -> void:
+		recoils: Array[Dictionary] = [], reduced: bool = false) -> void:
 	var r := PlayerState.RADIUS
 	var lifespan := sim.echo_lifespan()
 	var segments := maxi(1, lifespan)
@@ -180,15 +210,16 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		var c := a.take.tint()
 		var remaining := maxi(0, lifespan - a.take.age)
 		var muted := sim.echo_silenced > 0.0
-		var bob := _motion_bob(sim.wave_time, a.pos, 5.0, 1.5)
+		var motion_scale := REDUCED_MOTION_SCALE if reduced else 1.0
+		var bob := _motion_bob(sim.wave_time, a.pos, 5.0, 1.5) * motion_scale
 		var art_alpha := 0.22 if muted else 0.48
-		var breathe := 1.0 + sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.018
+		var breathe := 1.0 + sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.018 * motion_scale
 		var facing := _echo_facing(a)
 		var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
 		var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
 		var foot := a.pos + Vector2(0.0, r + bob)
 		_draw_art_foot(ci, key, foot, art_size,
-				sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035,
+				sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035 * motion_scale,
 				Color(c.lerp(Color.WHITE, 0.28), art_alpha), _horizontal_flip(facing))
 		var weapons: Array[WeaponDef] = a.take.weapons
 		if sim.live_echo:
@@ -215,10 +246,10 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 			ci.draw_circle(a.pos, 3.0, Color(c, 0.9))
 
 
-static func projectiles(ci: CanvasItem, sim: Sim) -> void:
+static func projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	var count := sim.projectiles.size()
 	if count > BATCH_LIMIT:
-		if count <= TRAIL_LIMIT:
+		if projectile_trails_enabled(reduced, count):
 			_bullet_trails(ci, sim)
 		_ensure_bullet_resources()
 		_ensure_bullet_capacity(count)
@@ -232,8 +263,14 @@ static func projectiles(ci: CanvasItem, sim: Sim) -> void:
 		return
 	for p in sim.projectiles:
 		var dir := p.vel.normalized()
-		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(p.color, 0.5), p.radius * 1.2)
+		if projectile_trails_enabled(reduced, count):
+			ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos,
+					Color(p.color, 0.5), p.radius * 1.2)
 		ci.draw_circle(p.pos, p.radius, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+
+
+static func projectile_trails_enabled(reduced: bool, count: int) -> bool:
+	return not reduced and count <= TRAIL_LIMIT
 
 
 static func _bullet_trails(ci: CanvasItem, sim: Sim) -> void:
@@ -278,10 +315,12 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
 	var visual_time := float(motion.get("visual_time", sim.wave_time))
 	var move_weight := clampf(float(motion.get("amount", 0.0)), 0.0, 1.0)
+	var reduced := bool(motion.get("reduced", false))
+	var motion_scale := REDUCED_MOTION_SCALE if reduced else 1.0
 	var gait := visual_time * lerpf(3.2, 8.5, move_weight) + pl.pos.x * 0.012
-	var bob := sin(gait * 2.0) * lerpf(0.45, 1.8, move_weight)
-	var sway := sin(gait) * lerpf(0.012, 0.055, move_weight)
-	var breathe := 1.0 + sin(visual_time * 3.1 + pl.pos.y * 0.012) * lerpf(0.018, 0.01, move_weight)
+	var bob := sin(gait * 2.0) * lerpf(0.45, 1.8, move_weight) * motion_scale
+	var sway := sin(gait) * lerpf(0.012, 0.055, move_weight) * motion_scale
+	var breathe := 1.0 + sin(visual_time * 3.1 + pl.pos.y * 0.012) * lerpf(0.018, 0.01, move_weight) * motion_scale
 	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
 	var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))

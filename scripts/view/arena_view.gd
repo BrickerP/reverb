@@ -115,6 +115,18 @@ func set_paused(on: bool) -> void:
 		position = Vector2.ZERO
 
 
+func set_reduced_effects(on: bool) -> void:
+	reduced_effects = on
+	if not on:
+		return
+	_shake = 0.0
+	position = Vector2.ZERO
+	_sparks.clear()
+	_muzzles.clear()
+	_weapon_changes.clear()
+	queue_redraw()
+
+
 # Called by Main between the last frame of a wave and the shop opening.
 func play_record_beat(s: Sim) -> void:
 	if s.bank.takes.is_empty():
@@ -128,14 +140,15 @@ func play_record_beat(s: Sim) -> void:
 func play_victory_beat(s: Sim) -> void:
 	_victory = true
 	_victory_time = 0.0
-	if shake_enabled:
+	if shake_enabled and not reduced_effects:
 		_shake = minf(1.0, _shake + 0.9)
 	_victory_origin = s.player.pos
 	_victory_color = Color(1.0, 0.75, 1.0)
 	if s.boss != null:
 		_victory_origin = s.boss.pos
 		_victory_color = s.boss.def.color
-	for i in 30:
+	var spark_count := 10 if reduced_effects else 30
+	for i in spark_count:
 		_spark(_victory_origin, _victory_color, 120.0 + _noise01(i) * 300.0,
 				0.5 + _noise01(i + 41) * 0.4)
 	var ring := _spark(_victory_origin, _victory_color, 0.0, 0.9)
@@ -190,25 +203,27 @@ func _draw() -> void:
 		return
 	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
-		ArenaPainter.echo_paths(self, sim, _paths, _reveal)
+		ArenaPainter.echo_paths(self, sim, _paths, _reveal, reduced_effects)
 	else:
-		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT)
+		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT, reduced_effects)
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.pickups(self, sim)
-	ArenaPainter.enemies(self, sim)
-	ArenaPainter.echoes(self, sim, character_id, _muzzles)
-	ArenaPainter.projectiles(self, sim)
+	ArenaPainter.enemies(self, sim, reduced_effects)
+	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects)
+	ArenaPainter.projectiles(self, sim, reduced_effects)
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
 			reduced_effects)
 	ArenaPainter.sparks(self, _sparks)
 	if _victory:
-		ArenaPainter.victory(self, _victory_origin, _victory_color, _victory_time / VICTORY_BEAT)
+		ArenaPainter.victory(self, _victory_origin, _victory_color,
+				_victory_time / VICTORY_BEAT, reduced_effects)
 
 
 func _on_kill(pos: Vector2, color: Color, source: int) -> void:
 	var tint := kill_color(source, color)
-	for i in 8:
+	var spark_count := 4 if reduced_effects else 8
+	for i in spark_count:
 		_spark(pos, tint, 90.0 + _noise01(i) * 160.0, 0.35 + _noise01(i + 9) * 0.25)
 	if source >= 0:
 		var ring := _spark(pos, tint, 0.0, 0.3)
@@ -338,7 +353,8 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 	if ring != null:
 		ring.ring = true
 		ring.radius = maxf(2.0, info.radius * 0.4)
-	for i in 5:
+	var spark_count := 2 if reduced_effects else 5
+	for i in spark_count:
 		_spark(info.pos, info.color, 60.0 + _noise01(i + 21) * 90.0, 0.2 + _noise01(i + 31) * 0.15)
 
 

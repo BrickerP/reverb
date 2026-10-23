@@ -19,15 +19,18 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(1120.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.box(
-			Color(0.03, 0.04, 0.09, 0.98), Color(0.3, 0.5, 0.9, 0.6), 2, 10))
+	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20)
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
+	# Four detail-rich rows already consume most of the 720p height. Keep the full
+	# card content and recover the final pixels from the three outer gaps.
+	box.add_theme_constant_override("separation", 8)
 	margin.add_child(box)
 	box.add_child(UiTheme.label(Loc.t("codex.title"), 32, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UiTheme.label(Loc.t("codex.subtitle"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
@@ -100,7 +103,13 @@ func _card(w: WeaponDef, total_weight: float) -> PanelContainer:
 
 func open() -> void:
 	visible = true
-	close_button.grab_focus()
+	UiFocus.cycle([close_button])
+	focus_default()
+
+
+func focus_default() -> void:
+	if close_button != null:
+		close_button.grab_focus()
 
 
 func close() -> void:

@@ -56,6 +56,15 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	_clear_drag_hint = clear_drag_hint
 	var reason := sim.shop.block_reason(sim, o)
 	blocked_reason = reason
+	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
+	accessibility_name = title
+	var state := Loc.t("shop.quote_buy", [o.price])
+	match reason:
+		&"sold": state = Loc.t("shop.sold")
+		&"full": state = Loc.t("shop.full")
+		&"maxed": state = Loc.t("shop.maxed")
+		&"poor": state = Loc.t("shop.drop_poor")
+	accessibility_description = "%s · %s" % [_description(o), state]
 	# Sold cards are inert. Every other blocked card stays pressable so it can explain
 	# the constraint by flashing the resource it needs.
 	disabled = reason == &"sold"
@@ -122,15 +131,22 @@ func _clear_drag_guard_deferred() -> void:
 
 
 func _drag_preview() -> Control:
+	# Viewport positions the preview root at the pointer. Offset a child instead so
+	# the physical card never covers the socket and its quote while hovering.
+	var preview_root := Control.new()
+	preview_root.theme = UiTheme.build()
+	preview_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview_root.custom_minimum_size = Vector2.ONE
+	preview_root.set_meta(&"shop_drag_preview", true)
 	var preview := PanelContainer.new()
 	# Drag previews are reparented below the viewport and cannot rely on the shop's
 	# inherited Theme for CJK text or button styling.
-	preview.theme = UiTheme.build()
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview.custom_minimum_size = Vector2(190.0, 58.0)
-	preview.position = Vector2(22.0, -72.0)
+	preview.position = Vector2(24.0, -70.0)
 	preview.add_theme_stylebox_override("panel",
 			UiTheme.box(Color(0.055, 0.08, 0.095, 0.96), UiTheme.ACCENT, 2, 7))
+	preview_root.add_child(preview)
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
@@ -141,11 +157,14 @@ func _drag_preview() -> Control:
 	else:
 		row.add_child(UiTheme.item_icon(offer.item, Vector2(42.0, 42.0)))
 		row.add_child(UiTheme.label(Loc.item_name(offer.id()), 16))
-	return preview
+	return preview_root
 
 
-func reject() -> void:
+func reject(reduced: bool = false) -> void:
 	UiTheme.flash(self)
+	scale = Vector2.ONE
+	if reduced:
+		return
 	pivot_offset = size * 0.5
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector2(1.02, 1.02), 0.05).set_trans(Tween.TRANS_SINE)

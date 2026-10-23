@@ -6,6 +6,7 @@ const DEFAULT_PATH := "user://settings.json"
 var path: String
 var volume: float = 0.8
 var shake: bool = true
+var reduced_effects: bool = false
 var fullscreen: bool = false
 var language: String = ""
 
@@ -30,6 +31,7 @@ func _load() -> void:
 	var values: Dictionary = data
 	volume = clampf(float(values.get("volume", volume)), 0.0, 1.0)
 	shake = bool(values.get("shake", shake))
+	reduced_effects = bool(values.get("reduced_effects", reduced_effects))
 	fullscreen = bool(values.get("fullscreen", fullscreen))
 	var lang := str(values.get("language", language))
 	language = lang if lang in ["", "en", "zh"] else ""
@@ -42,6 +44,7 @@ func save() -> void:
 	file.store_string(JSON.stringify({
 		"volume": volume,
 		"shake": shake,
+		"reduced_effects": reduced_effects,
 		"fullscreen": fullscreen,
 		"language": language,
 	}, "\t"))

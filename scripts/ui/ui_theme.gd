@@ -6,6 +6,11 @@ extends RefCounted
 # PingFang SC is deliberately late in the list: the engine loads the first face of PingFang.ttc
 # on macOS, which is the Hong Kong one and lacks simplified-only glyphs such as 杀.
 const BUNDLED_FONT := "res://assets/fonts/NotoSansCJKsc-Regular.otf"
+const SURFACE_PANEL_PATH := "res://assets/presentation/surfaces/panel_skin.png"
+const RECORDING_CARTRIDGE_PATH := "res://assets/presentation/surfaces/recording_cartridge.png"
+const RECORDING_CARTRIDGE_SOURCE_SIZE := Vector2(1536.0, 1024.0)
+const RECORDING_CARTRIDGE_SOURCE_REGION := Rect2(45.0, 141.0, 1446.0, 706.0)
+const SURFACE_PANEL_TEXTURE_MARGIN := 32.0
 const FONT_NAMES: Array[String] = [
 	"Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei",
 	"WenQuanYi Micro Hei", "PingFang SC", "sans-serif",
@@ -18,6 +23,7 @@ const COIN := Color(0.93, 0.77, 0.43)
 const ECHO := Color(1.0, 0.55, 0.9)
 
 static var _font: Font
+static var _surface_panel: StyleBoxTexture
 
 
 static func font() -> Font:
@@ -78,6 +84,45 @@ static func item_icon(item: ItemDef, icon_size: Vector2 = Vector2(36.0, 36.0)) -
 
 static func character_icon(id: StringName, icon_size: Vector2 = Vector2(72.0, 84.0)) -> TextureRect:
 	return art_icon(PresentationAssets.character_key(id), icon_size)
+
+
+static func cartridge_icon(icon_size: Vector2 = Vector2(72.0, 48.0)) -> TextureRect:
+	var icon := TextureRect.new()
+	var texture := load(RECORDING_CARTRIDGE_PATH) as Texture2D
+	if texture != null:
+		var scale := texture.get_size() / RECORDING_CARTRIDGE_SOURCE_SIZE
+		var atlas := AtlasTexture.new()
+		atlas.atlas = texture
+		atlas.region = Rect2(RECORDING_CARTRIDGE_SOURCE_REGION.position * scale,
+				RECORDING_CARTRIDGE_SOURCE_REGION.size * scale)
+		icon.texture = atlas
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	icon.custom_minimum_size = icon_size
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.set_meta(&"presentation_key", &"recording_cartridge")
+	return icon
+
+
+static func surface_panel() -> StyleBoxTexture:
+	if _surface_panel != null:
+		return _surface_panel
+	var texture := load(SURFACE_PANEL_PATH) as Texture2D
+	if texture == null:
+		return null
+	var style := StyleBoxTexture.new()
+	style.texture = texture
+	style.texture_margin_left = SURFACE_PANEL_TEXTURE_MARGIN
+	style.texture_margin_top = SURFACE_PANEL_TEXTURE_MARGIN
+	style.texture_margin_right = SURFACE_PANEL_TEXTURE_MARGIN
+	style.texture_margin_bottom = SURFACE_PANEL_TEXTURE_MARGIN
+	style.content_margin_left = 14.0
+	style.content_margin_top = 12.0
+	style.content_margin_right = 14.0
+	style.content_margin_bottom = 12.0
+	_surface_panel = style
+	return _surface_panel
 
 
 # Briefly tint a control and fade back: used when a shop action is blocked.
