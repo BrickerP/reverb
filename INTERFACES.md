@@ -112,9 +112,10 @@ commit; mechanism commits do not create tags or releases.
 
 ## 8. Codex integration checklist
 
-Integration source: `mechanics/conductor` at `5a1e8c1`. Codex's current workspace base is
-`0276f67` / v0.1.35. The mechanism branch contains the Conductor commit plus M0–M4 and should be
-merged or cherry-picked as commits, not copied as uncommitted files.
+Historical presentation starting baseline: `0276f67` / v0.1.35. The latest fixed
+mechanics cutoff integrated here is `075a2bd`; the current runtime/export source and
+integration split are tracked in `docs/presentation-coverage.md`. Mechanism changes
+must be merged or cherry-picked as commits, not copied as uncommitted files.
 
 ### Shop UI migration
 
@@ -160,4 +161,3 @@ Prefer the rich events for new animation/audio; keep the old signals as fallback
 - Drag/drop and click paths produce identical `ShopResult` and state.
 - Rich events and old signals agree on a seeded smoke run.
 - Mechanism tests + smoke stay green; Codex adds UI tests for Undo, drag/drop, and event wiring.
-

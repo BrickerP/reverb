@@ -2,8 +2,10 @@
   "schema_version": 1,
   "snapshot": {
     "presentation_commit": "d4a0e73784e775d996b2a27f0a5de6c9befa4aaa",
-    "presentation_state": "G001-G006 complete; local preview/export artifacts verified",
-    "mechanics_commit": "5a1e8c1c3fbbb64ac2228ef8fa28fd892cc98522",
+    "integration_commit": "dee0fd728569db0f28d5396f638e4586f8e2f869",
+    "presentation_state": "G001-G006 complete; runtime/export source fixed at d4a0e73; later integration adds docs and tests only",
+    "mechanics_commit": "075a2bd2744741fa891e2854388b0741488ca723",
+    "runtime_mechanics_commit": "5a1e8c1c3fbbb64ac2228ef8fa28fd892cc98522",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
     "status_meaning": {
@@ -88,11 +90,13 @@
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-final-verification/",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/result.json",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/delivery-manifest.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/runtime-equivalence.json",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-macOS-d4a0e73.zip",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Windows-d4a0e73.zip",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Linux-d4a0e73.zip",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/Take Stack Preview.app",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/试玩表现版.command",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/deepseek-checkpoints/final-delivery.json",
       "shots/feedback_summary.json",
       "shots/feedback_shot.png",
       "shots/feedback_blocked.png",
@@ -255,6 +259,13 @@
       "post_cleanup_assertions": "3915 passed, 0 failed",
       "post_cleanup_smoke": "OK; 5246 frames, max wave 4, 3 purchases",
       "post_cleanup_ui": "English and Chinese passed at 2026-10-23T21:34:16+08:00 on fixed HEAD d4a0e73",
+      "late_contract_test_integration": {
+        "integration_head": "dee0fd728569db0f28d5396f638e4586f8e2f869",
+        "mechanics_cutoff": "075a2bd2744741fa891e2854388b0741488ca723",
+        "scope": "INTERFACES.md, README.md and 2 test files; runtime/export inputs unchanged from d4a0e73/5a1e8c1",
+        "assertions": "3928 passed, 0 failed",
+        "smoke_and_ui": "smoke plus English and Chinese UI passed at 2026-10-23T21:45:35+08:00"
+      },
       "stress": {
         "fixture": "100 and 300 enemy cases; dense cases include all 7 enemies, player 6 weapons and 4 echoes",
         "source_head": "d4a0e73784e775d996b2a27f0a5de6c9befa4aaa",

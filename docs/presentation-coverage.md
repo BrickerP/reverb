@@ -1,7 +1,8 @@
 # Take Stack presentation coverage
 
-Final snapshot: presentation `d4a0e73` (G003 source `a5d7cea`, G004 `9e808ff`,
-G005 `24f4fd4`), fixed mechanics cursor `5a1e8c1`. Source of
+Final runtime/export snapshot: presentation `d4a0e73` (G003 source `a5d7cea`, G004
+`9e808ff`, G005 `24f4fd4`) with runtime mechanics `5a1e8c1`. Latest contract/test
+integration is `dee0fd7` at mechanics cutoff `075a2bd`. Source of
 content truth: `scripts/data/content.gd`; `scripts/data/character_def.gd` applies
 the configured starting weapon. A family/body fallback is marked **prototype
 reuse**, never complete art coverage.
@@ -181,6 +182,14 @@ Final source is `d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`; version remains
 and the independent architect verdict is CLEAR across seven invariants. No tag,
 Release or main-branch move was performed. G006 is complete for this local preview
 delivery.
+
+After that immutable export, DeepSeek delivered `075a2bd` plus `6325bcb`: interface
+documentation, README text and 13 additional assertions in two test files. They are
+integrated at `dee0fd728569db0f28d5396f638e4586f8e2f869`; no runtime/export input
+changed. The latest integrated verification is therefore the headline result:
+3928 assertions, smoke, import and English/Chinese UI all pass at 2026-10-23
+21:45:35 +08:00. The audited packages and performance evidence remain tied to the
+byte-identical runtime source `d4a0e73`.
 
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as

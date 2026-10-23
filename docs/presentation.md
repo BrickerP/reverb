@@ -1,11 +1,12 @@
 # Presentation slice
 
 The presentation line starts at `d3d62b3` (v0.1.36, including Conductor), integrates
-fixed mechanics through `5a1e8c1`, and ends at immutable source
-`d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`. Uncommitted work in the separate
-mechanics checkout is excluded. Version fields remain 0.1.36. Presentation adds no
-rules, prices or collisions, and this local delivery does not create a tag, Release
-or main-branch move.
+runtime mechanics through `5a1e8c1`, and freezes runtime/export source at
+`d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`. A later contract/test-only mechanics
+handoff `075a2bd` is integrated at `dee0fd728569db0f28d5396f638e4586f8e2f869`;
+it changes interface/README text and tests, not runtime/export inputs. Version fields
+remain 0.1.36. Presentation adds no rules, prices or collisions, and this local
+delivery does not create a tag, Release or main-branch move.
 
 ## Assets and rendering
 
@@ -114,6 +115,10 @@ files with no forbidden content and identical PCK hashes. macOS passes isolated
 headless smoke and a live Chinese app flow without modifying normal user data.
 Windows/Linux packages are compiled and audited but not natively launched. Final
 code review is APPROVE with zero findings and architecture review is CLEAR.
+
+The latest integrated verification at `dee0fd7` passes 3928 assertions, import,
+smoke and English/Chinese UI. Export packages and performance numbers remain tied
+to the unchanged immutable runtime source `d4a0e73`.
 
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
