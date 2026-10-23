@@ -24,12 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install CJK fonts
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
-
       - name: Download Godot
         shell: bash
         run: |
@@ -55,11 +49,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install CJK fonts
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
 
       - name: Download Godot
         shell: bash

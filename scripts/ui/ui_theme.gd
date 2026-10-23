@@ -1,8 +1,11 @@
 class_name UiTheme
 extends RefCounted
 
-# PingFang SC is deliberately late in the list: the engine loads the first face of PingFang.ttc on macOS,
-# which is the Hong Kong one and lacks simplified-only glyphs such as 杀.
+# The game ships Noto Sans CJK SC so Windows, Linux and Steam Deck do not depend on a
+# system CJK font. The system list remains a fallback for stripped-down builds.
+# PingFang SC is deliberately late in the list: the engine loads the first face of PingFang.ttc
+# on macOS, which is the Hong Kong one and lacks simplified-only glyphs such as 杀.
+const BUNDLED_FONT := "res://assets/fonts/NotoSansCJKsc-Regular.otf"
 const FONT_NAMES: Array[String] = [
 	"Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei",
 	"WenQuanYi Micro Hei", "PingFang SC", "sans-serif",
@@ -14,13 +17,19 @@ const WARN := Color(1.0, 0.45, 0.5)
 const COIN := Color(0.75, 1.0, 0.45)
 const ECHO := Color(1.0, 0.55, 0.9)
 
-static var _font: SystemFont
+static var _font: Font
 
 
 static func font() -> Font:
-	if _font == null:
-		_font = SystemFont.new()
-		_font.font_names = PackedStringArray(FONT_NAMES)
+	if _font != null:
+		return _font
+	var bundled := load(BUNDLED_FONT) as Font
+	if bundled != null:
+		_font = bundled
+	else:
+		var system := SystemFont.new()
+		system.font_names = PackedStringArray(FONT_NAMES)
+		_font = system
 	return _font
 
 

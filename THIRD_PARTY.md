@@ -12,10 +12,16 @@ by the game at runtime. `skills-lock.json` records the installed versions.
 
 ## Fonts
 
-The game renders with system fonts installed on the player's machine
-(Hiragino Sans GB, PingFang SC, Noto Sans CJK SC, Source Han Sans SC,
-Microsoft YaHei, WenQuanYi Micro Hei). No font files are distributed in this
-repository.
+The game bundles **Noto Sans CJK SC Regular** at
+`assets/fonts/NotoSansCJKsc-Regular.otf` so Chinese text does not depend on a
+system font. It is licensed under the SIL Open Font License 1.1; the full text
+is in `assets/fonts/OFL.txt`.
+
+Source: <https://github.com/notofonts/noto-cjk>
+
+System CJK fonts (Hiragino Sans GB, PingFang SC, Noto Sans CJK SC, Source Han
+Sans SC, Microsoft YaHei, WenQuanYi Micro Hei) remain as a fallback when the
+bundled font cannot be loaded.
 
 ## Godot Engine
 

@@ -52,7 +52,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.14 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.15 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -107,12 +107,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 每日挑战：选角页 `Daily`，固定复读机、用当天日期做种子，记录当日最佳波数；大家玩同一局。
 - 本地存档：最佳波数、通关次数、角色解锁
 - 20 波，波次预算与血量随波数增长
+- 内置 Noto Sans CJK SC，Windows/Linux/Steam Deck 不依赖系统中文字体
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1846 项）
+make test     # 无头测试（当前 1847 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
@@ -151,4 +152,4 @@ tools/          烟测、平衡、性能探针、音效生成
 
 - 游戏代码与文档：MIT，见 [`LICENSE`](LICENSE)。
 - `.agents/skills/`：来自 gamedev 技能包，Apache-2.0，详见 [`THIRD_PARTY.md`](THIRD_PARTY.md)。属于开发工具，不参与游戏运行。
-- 运行时使用系统中文字体，仓库不包含字体文件。
+- 内置 Noto Sans CJK SC（SIL OFL 1.1，见 `assets/fonts/OFL.txt`），系统字体仅作兜底。

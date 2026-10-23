@@ -81,13 +81,14 @@ func test_keys_used_in_code_are_defined_and_defined_keys_are_used(c: Check) -> v
 
 func test_ui_font_can_draw_every_zh_character(c: Check) -> void:
 	var font := UiTheme.font()
+	c.ok(font is FontFile, "bundled CJK font is used")
 	var missing := PackedStringArray()
 	for text: String in LocZh.TABLE.values():
 		for ch in text:
 			var code := ch.unicode_at(0)
 			if code > 127 and not font.has_char(code) and not missing.has(ch):
 				missing.append(ch)
-	c.eq(" ".join(missing), "", "zh characters the UI font lacks (depends on installed system fonts)")
+	c.eq(" ".join(missing), "", "zh characters the bundled font lacks")
 
 
 func test_lookup_falls_back_to_english_then_the_key(c: Check) -> void:
