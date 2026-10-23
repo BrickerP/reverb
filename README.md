@@ -127,12 +127,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 新敌人自爆者（第 6 波起）：死亡时在半径内爆炸，警告圈提示
 - 死亡原因：结算页显示最后伤害来源，runs.jsonl 记录，报告按敌人聚合
 - 第四角色指挥：4 个回响槽、22% 威力，每个活跃回响给全队 +4.5% 伤害/+2.5% 攻速
+- 换装返还升级投入的 50%，转型不会全损
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 2407 项）
+make test     # 无头测试（当前 2411 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

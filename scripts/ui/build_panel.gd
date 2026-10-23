@@ -131,7 +131,7 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 	for i in pl.weapons.size():
 		var w := pl.weapons[i]
 		var b := Button.new()
-		b.text = "%s  +%d" % [Loc.weapon_name(w.id), Shop.resale_value(w)]
+		b.text = "%s  +%d" % [Loc.weapon_name(w.id), Shop.resale_total(w, pl.level_at(i))]
 		b.custom_minimum_size = Vector2(0.0, 34.0)
 		b.add_theme_color_override("font_color", w.color)
 		b.add_theme_color_override("font_hover_color", w.color.lightened(0.25))
