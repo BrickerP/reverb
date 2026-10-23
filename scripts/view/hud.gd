@@ -177,20 +177,31 @@ func _draw_echo_chips() -> void:
 func _draw_wave() -> void:
 	var boss_wave := sim.wave == WaveDirector.FINAL_WAVE
 	if boss_wave:
-		if sim.boss != null and sim.boss.dead:
+		var phase2 := sim.boss_phase >= 2
+		var defeated := sim.boss != null and sim.boss_alive_count() == 0
+		if defeated:
 			_text(Loc.t("hud.boss_down"), Vector2(440.0, 34.0), 26, UiTheme.COIN,
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 		else:
-			_text(Loc.t("hud.boss"), Vector2(440.0, 34.0), 26, Color(0.9, 0.8, 1.0),
+			var title := Loc.t("hud.boss_phase2") if phase2 else Loc.t("hud.boss")
+			var title_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.9, 0.8, 1.0)
+			_text(title, Vector2(440.0, 34.0), 26, title_color,
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 			var boss_bar := Rect2(460.0, 44.0, 360.0, 8.0)
 			draw_rect(boss_bar, Color(1, 1, 1, 0.1))
-			var boss_ratio := 0.0
-			if sim.boss != null:
-				boss_ratio = clampf(sim.boss.hp / maxf(1.0, sim.boss.max_hp), 0.0, 1.0)
+			var boss_ratio := sim.boss_health_ratio()
+			var bar_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.8, 0.5, 1.0)
 			draw_rect(Rect2(boss_bar.position, Vector2(boss_bar.size.x * boss_ratio, boss_bar.size.y)),
-					Color(0.8, 0.5, 1.0))
-			draw_rect(boss_bar, Color(0.8, 0.5, 1.0, 0.7), false, 1.5)
+					bar_color)
+			draw_rect(boss_bar, Color(bar_color, 0.7), false, 1.5)
+			if phase2:
+				draw_line(Vector2(boss_bar.position.x + boss_bar.size.x * 0.5, boss_bar.position.y),
+						Vector2(boss_bar.position.x + boss_bar.size.x * 0.5, boss_bar.end.y),
+						Color(1, 1, 1, 0.25), 1.0)
+				for i in sim.boss_total_count():
+					var alive := i < sim.boss_alive_count()
+					draw_circle(Vector2(830.0 + float(i) * 12.0, 48.0), 3.5,
+							Color(bar_color, 0.95) if alive else Color(1, 1, 1, 0.14))
 	else:
 		var title := Loc.t("hud.wave", [sim.wave, WaveDirector.FINAL_WAVE])
 		_text(title, Vector2(440.0, 34.0), 28, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
