@@ -44,6 +44,23 @@ func test_two_step_undo(c: Check) -> void:
 	c.ok(not s.shop.can_undo(), "history empty")
 
 
+func test_weapon_change_events(c: Check) -> void:
+	var s := _shop_sim(100)
+	var offer := _weapon_offer(s, &"smg", 20)
+	var changes: Array[WeaponChangeInfo] = []
+	s.weapon_changed.connect(func(info: WeaponChangeInfo) -> void: changes.append(info))
+	c.ok(s.shop.apply(ShopResult.BUY, s, offer).ok, "buy for event")
+	c.eq(changes.size(), 1, "purchase emits weapon change")
+	c.eq(changes[0].after_id, &"smg", "new weapon id")
+	c.eq(changes[0].reason, ShopResult.BUY, "purchase reason")
+	s.shop.undo(s)
+	c.eq(changes.size(), 2, "undo emits weapon change")
+	c.eq(changes[1].index, 1, "undo removes the bought slot")
+	c.eq(changes[1].before_id, &"smg", "undo before id")
+	c.eq(changes[1].after_id, &"", "undo clears the slot")
+	c.eq(changes[1].reason, ShopResult.UNDO, "undo reason")
+
+
 func test_quote_does_not_mutate_state(c: Check) -> void:
 	var s := _shop_sim(100)
 	var offer := _weapon_offer(s, &"smg", 20)

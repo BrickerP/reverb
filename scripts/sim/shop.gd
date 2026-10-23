@@ -166,8 +166,10 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 		return ShopResult.failure(action, &"invalid", quoted.cost, index,
 				offer.id() if offer != null else &"")
 	_push_history(before)
+	var after := ShopState.capture(sim)
 	var result := ShopResult.success(action, quoted.cost, index,
-			offer.id() if offer != null else &"", before, ShopState.capture(sim))
+			offer.id() if offer != null else &"", before, after)
+	_emit_weapon_changes(sim, before, after, action)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
@@ -176,12 +178,35 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 func undo(sim: Sim) -> ShopResult:
 	if _undo_stack.is_empty():
 		return ShopResult.failure(ShopResult.UNDO, &"empty")
+	var pre := ShopState.capture(sim)
 	var before: ShopState = _undo_stack.pop_back()
 	before.restore(sim)
-	var result := ShopResult.success(ShopResult.UNDO, 0, -1, &"", before, ShopState.capture(sim))
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(ShopResult.UNDO, 0, -1, &"", pre, after)
+	_emit_weapon_changes(sim, pre, after, ShopResult.UNDO)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
+
+
+func _emit_weapon_changes(sim: Sim, before: ShopState, after: ShopState, reason: StringName) -> void:
+	var count := maxi(before.weapons.size(), after.weapons.size())
+	for i in count:
+		var before_id: StringName = before.weapons[i] if i < before.weapons.size() else &""
+		var after_id: StringName = after.weapons[i] if i < after.weapons.size() else &""
+		var before_level: int = before.weapon_levels[i] if i < before.weapon_levels.size() else 0
+		var after_level: int = after.weapon_levels[i] if i < after.weapon_levels.size() else 0
+		if before_id == after_id and before_level == after_level:
+			continue
+		var info := WeaponChangeInfo.new()
+		info.index = i
+		info.before_id = before_id
+		info.after_id = after_id
+		info.before_level = before_level
+		info.after_level = after_level
+		info.reason = reason
+		info.ok = true
+		sim.weapon_changed.emit(info)
 
 
 func _push_history(state: ShopState) -> void:

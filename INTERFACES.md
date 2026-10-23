@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M1 mechanism API implemented; UI not wired yet.**  
+Status: **M2 events emitted; current Shop UI still uses legacy methods.**  
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
 
@@ -69,24 +69,15 @@ New UI must use `quote/apply` for equipment actions so history is recorded. Dire
 
 ## 4. Presentation event types
 
-These types are defined but not emitted yet:
+These types are now emitted:
 
-- `ShotInfo`: source, weapon_id, origin, direction, target, count, level, sequence
-- `DamageInfo`: source, weapon_id, target_uid, pos, amount, crit, reduced, hit_dir, effect
-- `ExplosionInfo`: kind (`weapon` / `bomber`), source, weapon_id, pos, radius, color, effect
-- `WeaponChangeInfo`: index, before/after id and level, reason, ok
+- `ShotInfo` via `shot_fired_info(info)`, once per weapon volley; old `shot_fired(source)` remains.
+- `DamageInfo` via `damage_event(info)` for direct hits and explosions; old `enemy_hit(...)` remains. `reduced` marks a shield-reduced hit.
+- `ExplosionInfo` via `explosion_info(info)` for weapon and bomber explosions; old `explosion(...)` remains.
+- `WeaponChangeInfo` via `weapon_changed(info)` for applied equipment actions and undo; one event per changed slot. Removed slots report `after_id = ""`.
 
-Compatibility rule: add new signals and keep old signals until presentation has migrated.
-Planned additions:
-
-- `shot_fired_info(info)` alongside `shot_fired(source)`
-- `damage_event(info)` alongside `enemy_hit(...)`
-- `explosion_info(info)` alongside `explosion(...)`
-- `weapon_changed(info)` from shop actions
-- `shop_action_resolved(result)` and `shop_history_changed(can_undo)`
-
-The old signals remain valid for current view/audio. New presentation should prefer the rich
-events once emitted.
+Compatibility rule: old signals remain valid. New presentation should prefer the rich
+events; current view/audio can migrate independently.
 
 ## 5. Undo semantics (implemented)
 
@@ -102,9 +93,9 @@ events once emitted.
 
 ## 6. Current known gaps
 
-- Shop operations still mutate directly when UI uses the legacy methods; only `apply` records undo history.
+- Shop operations still mutate directly when UI uses the legacy methods; only `apply` records undo history and emits `weapon_changed`.
 - Undo transaction/history is implemented in mechanism API, but the current Shop UI still calls legacy methods and has no undo control.
-- Combat events do not carry weapon/origin/direction/source-kind information.
+- Combat rich events are emitted, but current view/audio still subscribe to the old signals.
 - Drag/drop is presentation-owned and is not part of the mechanism API yet.
 - UI currently recalculates display strings but reads costs/validation from Shop functions.
 

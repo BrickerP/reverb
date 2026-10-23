@@ -346,11 +346,15 @@ func test_bomber_explodes_when_killed_near_player(c: Check) -> void:
 	e.hp = 1.0
 	e.damage = 0.0
 	s.enemies.append(e)
+	var blasts: Array[ExplosionInfo] = []
+	s.explosion_info.connect(func(info: ExplosionInfo) -> void: blasts.append(info))
 	var before := s.player.hp
 	s.damage_enemy(e, 99.0, Vector2.ZERO, false, -1)
 	c.ok(s.player.hp < before, "death explosion damages the player")
 	c.ok(s.player.iframes > 0.0, "explosion grants iframes")
 	c.eq(s.last_damage_source, &"bomber", "explosion records its source")
+	c.eq(blasts.size(), 1, "explosion info emitted")
+	c.eq(blasts[0].kind, ExplosionInfo.BOMBER, "bomber kind recorded")
 
 
 func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
@@ -363,11 +367,37 @@ func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
 	e.hp = 100.0
 	e.radius = e.def.radius
 	s.enemies.append(e)
-	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.RIGHT)
+	var hits: Array[DamageInfo] = []
+	s.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.RIGHT, &"pistol", &"hit")
 	c.near(e.hp, 92.0, 0.01, "front hit is reduced by 20%")
+	c.ok(hits[0].reduced, "front hit is marked reduced")
 	e.hp = 100.0
-	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT)
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT, &"pistol", &"hit")
 	c.near(e.hp, 90.0, 0.01, "back hit takes full damage")
+
+
+func test_combat_events_carry_source_data(c: Check) -> void:
+	var s := _sim()
+	s.enemies.clear()
+	s.projectiles.clear()
+	var enemy := _spawn(s, s.player.pos + Vector2(100.0, 0.0), 100.0)
+	var shots: Array[ShotInfo] = []
+	var hits: Array[DamageInfo] = []
+	s.shot_fired_info.connect(func(info: ShotInfo) -> void: shots.append(info))
+	s.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
+	s.player.cooldowns[0] = 0.0
+	Combat.step_weapons(s, s.player.pos, s.player.stats, s.player.weapons, s.player.weapon_levels,
+			s.player.cooldowns, 1.0, DT, -1, Color.WHITE)
+	c.eq(shots.size(), 1, "one shot info emitted")
+	c.eq(shots[0].weapon_id, &"pistol", "shot carries weapon")
+	c.eq(shots[0].source, -1, "shot carries player source")
+	c.ok(shots[0].direction.x > 0.9, "shot carries direction")
+	c.eq(shots[0].target, enemy.pos, "shot carries target")
+	s.damage_enemy(enemy, 1.0, Vector2.ZERO, false, -1, Vector2.ZERO, &"pistol", &"hit")
+	c.eq(hits.size(), 1, "damage info emitted")
+	c.eq(hits[0].weapon_id, &"pistol", "damage carries weapon")
+	c.eq(hits[0].target_uid, enemy.uid, "damage carries target id")
 
 
 func test_same_seed_same_run(c: Check) -> void:

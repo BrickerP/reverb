@@ -11,6 +11,10 @@ signal player_hurt(amount: float)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
 signal shot_fired(source: int)
+signal shot_fired_info(info: ShotInfo)
+signal damage_event(info: DamageInfo)
+signal explosion_info(info: ExplosionInfo)
+signal weapon_changed(info: WeaponChangeInfo)
 signal material_collected(amount: int)
 signal purchased
 signal explosion(pos: Vector2, radius: float, color: Color)
@@ -56,6 +60,7 @@ var last_interest := 0
 var last_wave_earned := 0
 var wave_start_materials := 0
 var last_damage_source: StringName = &""
+var shot_sequence := 0
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -81,6 +86,7 @@ func start_run() -> void:
 	last_wave_earned = 0
 	wave_start_materials = player.materials
 	last_damage_source = &""
+	shot_sequence = 0
 	start_wave(1)
 
 
@@ -233,16 +239,29 @@ func _boss_step(delta: float) -> void:
 
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
-		hit_dir: Vector2 = Vector2.ZERO) -> void:
+		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit") -> void:
 	var actual := amount
+	var reduced := false
 	if e.def.shield_arc > 0.0 and hit_dir != Vector2.ZERO:
 		var front := (player.pos - e.pos).normalized()
 		if (-hit_dir.normalized()).dot(front) >= cos(deg_to_rad(e.def.shield_arc * 0.5)):
 			actual *= 1.0 - clampf(e.def.shield_reduction, 0.0, 1.0)
+			reduced = true
 	e.hp -= actual
 	e.flash = 0.09
 	e.knock += knock
 	enemy_hit.emit(e.pos, actual, crit, source)
+	var info := DamageInfo.new()
+	info.source = source
+	info.weapon_id = weapon_id
+	info.target_uid = e.uid
+	info.pos = e.pos
+	info.amount = actual
+	info.crit = crit
+	info.reduced = reduced
+	info.hit_dir = hit_dir
+	info.effect = effect
+	damage_event.emit(info)
 	if e.hp > 0.0 or e.dead:
 		return
 	e.dead = true
@@ -262,6 +281,13 @@ func _bomber_explode(e: EnemyState) -> void:
 	var radius := e.def.death_radius
 	var damage := e.def.death_damage * WaveDirector.damage_scale(wave)
 	explosion.emit(e.pos, radius, e.def.color)
+	var info := ExplosionInfo.new()
+	info.kind = ExplosionInfo.BOMBER
+	info.pos = e.pos
+	info.radius = radius
+	info.color = e.def.color
+	info.effect = &"bomber_explosion"
+	explosion_info.emit(info)
 	if player.iframes > 0.0:
 		return
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
