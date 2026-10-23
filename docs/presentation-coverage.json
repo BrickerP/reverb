@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "snapshot": {
-    "presentation_commit": "d2dd6959d658159f97b2d4df0a6bba9753f58961",
-    "mechanics_commit": "8f555e43f7bc63c3588b7ee18c4d59f76695c3a2",
+    "presentation_commit": "5aec5e244d01be2eabcb9bb94609fe8a8ca6ca4c",
+    "mechanics_commit": "dbce8a22de7150b9e23d73e8a6f55536181bb348",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
     "status_meaning": {
@@ -20,6 +20,7 @@
   "evidence": {
     "source_inspection": [
       "scripts/data/content.gd",
+      "scripts/data/character_def.gd",
       "scripts/view/presentation_assets.gd",
       "scripts/view/arena_painter.gd",
       "scripts/view/arena_view.gd",
@@ -79,10 +80,10 @@
     {"id":"paradox","art":"reused_prototype","asset":"enemy_grunt","feedback":["boss rings","core","boss health","victory beam","silence"],"runtime":"source_only","priority":"P0"}
   ],
   "characters": [
-    {"id":"looper","art":"reused_prototype","asset":"player","identity":"color, echo slots and stats only","runtime":"verified","priority":"P1"},
-    {"id":"solo","art":"reused_prototype","asset":"player","identity":"selection color and no echoes","runtime":"selection_verified","priority":"P1"},
-    {"id":"mirror","art":"reused_prototype","asset":"player","identity":"selection color and live loadout echoes","runtime":"selection_verified","priority":"P1"},
-    {"id":"conductor","art":"reused_prototype","asset":"player","identity":"selection color, four echoes and synergy","runtime":"selection_verified","priority":"P1"}
+    {"id":"looper","starting_weapon":"pistol","art":"reused_prototype","asset":"player","identity":"color, echo slots, stats and starting weapon only","runtime":"verified","priority":"P1"},
+    {"id":"solo","starting_weapon":"hex_bolt","art":"reused_prototype","asset":"player","identity":"selection color, no echoes and starting weapon","runtime":"selection_verified","priority":"P1"},
+    {"id":"mirror","starting_weapon":"longbow","art":"reused_prototype","asset":"player","identity":"selection color, live loadout echoes and starting weapon","runtime":"selection_verified","priority":"P1"},
+    {"id":"conductor","starting_weapon":"pistol","art":"reused_prototype","asset":"player","identity":"selection color, four echoes, synergy and starting weapon","runtime":"selection_verified","priority":"P1"}
   ],
   "ui_surfaces": [
     {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","locked","unlocked","seed","focus"],"runtime":"four-card screenshot only","priority":"P1"},

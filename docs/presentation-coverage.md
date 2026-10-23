@@ -1,8 +1,9 @@
 # Take Stack presentation coverage
 
-Snapshot: presentation `d2dd695`, fixed mechanics cursor `8f555e4`. Source of
-content truth: `scripts/data/content.gd`. A family/body fallback is marked
-**prototype reuse**, never complete art coverage.
+Snapshot: presentation `5aec5e2`, fixed mechanics cursor `dbce8a2`. Source of
+content truth: `scripts/data/content.gd`; `scripts/data/character_def.gd` applies
+the configured starting weapon. A family/body fallback is marked **prototype
+reuse**, never complete art coverage.
 
 Evidence is deliberately split. Source inspection proves that a path exists;
 runtime evidence proves only the states visible in the checked screenshots/movie.
@@ -24,8 +25,10 @@ still a color block/text identity; magnet additionally has a pickup-range ring.
 Brute, silencer, bomber, warden and Paradox reuse the grunt body, although their
 existing scale/tint, explosion radius, shield, silence and boss tells remain.
 
-All characters share the operator sprite. Their selection color, echo rules and
-statistics distinguish them, but there is no character-specific battle silhouette.
+All characters share the operator sprite. Their selection color, echo rules,
+statistics and starting weapons distinguish them: Looper and Conductor start with
+pistol, Solo with hex bolt, and Mirror with longbow. There is still no
+character-specific battle silhouette, so this remains prototype art coverage.
 
 ## UI and event state
 
