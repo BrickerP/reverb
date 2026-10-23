@@ -11,6 +11,7 @@ var character_select: CharacterSelectUi
 var pause_ui: PauseUi
 var settings_ui: SettingsUi
 var history_ui: HistoryUi
+var codex_ui: CodexUi
 var settings: Settings
 var meta: Meta
 var run_log: RunLog
@@ -51,6 +52,7 @@ func _ready() -> void:
 	pause_ui = PauseUi.new()
 	settings_ui = SettingsUi.new()
 	history_ui = HistoryUi.new()
+	codex_ui = CodexUi.new()
 	_add_layer(1, hud, theme)
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
@@ -58,6 +60,7 @@ func _ready() -> void:
 	_add_layer(4, pause_ui, theme)
 	_add_layer(5, settings_ui, theme)
 	_add_layer(6, history_ui, theme)
+	_add_layer(7, codex_ui, theme)
 	shop_ui.start_requested.connect(_on_start_requested)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
@@ -67,6 +70,7 @@ func _ready() -> void:
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
 	character_select.daily_requested.connect(start_daily)
+	character_select.codex_requested.connect(open_codex)
 	pause_ui.resume_requested.connect(func() -> void: _set_paused(false))
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
@@ -153,6 +157,12 @@ func open_settings() -> void:
 	settings_ui.open(settings)
 
 
+func open_codex() -> void:
+	if settings_ui.visible or history_ui.visible:
+		return
+	codex_ui.open()
+
+
 func open_history() -> void:
 	if history_ui.visible or settings_ui.visible or run_log == null:
 		return
@@ -227,6 +237,7 @@ func show_select() -> void:
 	_set_paused(false)
 	_shop_delay = 0.0
 	_end_delay = 0.0
+	codex_ui.close()
 	hud.visible = false
 	shop_ui.visible = false
 	end_ui.visible = false
@@ -257,6 +268,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if codex_ui.visible:
+		if event.is_action_pressed(&"ui_cancel"):
+			codex_ui.close()
+			get_viewport().set_input_as_handled()
+		return
 	if history_ui.visible:
 		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"history"):
 			history_ui.close()

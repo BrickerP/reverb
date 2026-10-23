@@ -5,6 +5,7 @@ signal character_chosen(id: StringName)
 signal settings_requested
 signal history_requested
 signal daily_requested
+signal codex_requested
 
 var _cards_box: HBoxContainer
 var _summary: Label
@@ -58,6 +59,11 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	var codex_button := Button.new()
+	codex_button.text = Loc.t("select.codex")
+	codex_button.custom_minimum_size = Vector2(160.0, 36.0)
+	codex_button.pressed.connect(func() -> void: codex_requested.emit())
+	buttons.add_child(codex_button)
 	var settings_button := Button.new()
 	settings_button.text = Loc.t("select.settings")
 	settings_button.custom_minimum_size = Vector2(160.0, 36.0)

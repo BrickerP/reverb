@@ -512,6 +512,18 @@ func test_f3_toggles_debug_overlay(c: Check) -> void:
 	main.free()
 
 
+func test_codex_lists_all_weapons(c: Check) -> void:
+	var ui := CodexUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.open()
+	c.eq(ui.card_count(), Content.weapons().size(), "one card per weapon")
+	c.ok(ui.visible, "codex is shown")
+	ui.close()
+	c.ok(not ui.visible, "codex closes")
+	ui.free()
+
+
 func test_pause_menu_exposes_controller_actions(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)
