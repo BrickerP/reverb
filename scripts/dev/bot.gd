@@ -119,6 +119,18 @@ func _spend_on_weapons(sim: Sim) -> void:
 			if sim.shop.evolve_weapon(sim, i):
 				evolutions += 1
 	# Then spend spare materials on the best marginal DPS per material.
+	if style == &"family":
+		var target := _family_target(sim)
+		while target >= 0 and sim.shop.upgrade_block_reason(sim, target) == &"":
+			var w := sim.player.weapons[target]
+			var level := sim.player.level_at(target)
+			var cost := Shop.upgrade_cost(w, level)
+			if sim.player.materials < cost + reserve:
+				break
+			if not sim.shop.upgrade_weapon(sim, target):
+				break
+			upgrades += 1
+		return
 	for _step in 20:
 		var best := -1
 		var best_ratio := 0.0
@@ -176,4 +188,21 @@ func _dominant_family(sim: Sim) -> StringName:
 		if n > best_count:
 			best = w.family
 			best_count = n
+	return best
+
+
+func _family_target(sim: Sim) -> int:
+	var family := _dominant_family(sim)
+	var best := -1
+	var best_level := -1
+	var best_dps := -1.0
+	for i in sim.player.weapons.size():
+		var w := sim.player.weapons[i]
+		if w.family != family:
+			continue
+		var level := sim.player.level_at(i)
+		if level > best_level or (level == best_level and w.dps() > best_dps):
+			best = i
+			best_level = level
+			best_dps = w.dps()
 	return best
