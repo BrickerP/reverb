@@ -4,6 +4,7 @@ extends PanelContainer
 signal replace_cancelled
 signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
+signal detail_changed(text: String)
 
 var weapons_label: Label
 var items_label: Label
@@ -14,6 +15,10 @@ var _weapons_row: Control
 var _items_row: Control
 var _slot_buttons: Array[Button] = []
 var _upgrade_buttons: Array[Button] = []
+var _cards: Array[PanelContainer] = []
+var _card_weapons: Array[WeaponDef] = []
+var _card_levels: Array[int] = []
+var _selected := 0
 
 
 func _init() -> void:
@@ -27,6 +32,9 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
+	_cards.clear()
+	_card_weapons.clear()
+	_card_levels.clear()
 	replacing = replace_with != ""
 	var pl := sim.player
 	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
@@ -43,11 +51,14 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 		cancel.custom_minimum_size = Vector2(120.0, 32.0)
 		cancel.pressed.connect(replace_cancelled.emit)
 		_box.add_child(cancel)
+		detail_changed.emit("")
 	else:
 		_weapons_row = _weapon_chips(pl)
 		_box.add_child(_weapons_row)
 		_box.add_child(UiTheme.label(Loc.t("shop.family"), 14, UiTheme.DIM))
 		_box.add_child(_family_summary(pl))
+		_selected = clampi(_selected, 0, maxi(0, _cards.size() - 1))
+		_select(_selected)
 	items_label = UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM)
 	_box.add_child(items_label)
 	_items_row = _item_chips(pl)
@@ -122,12 +133,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(142.0, 86.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var style := UiTheme.box(Color(0.035, 0.045, 0.10), Color(w.color, 0.55), 1, 6)
-	style.content_margin_left = 7.0
-	style.content_margin_right = 7.0
-	style.content_margin_top = 5.0
-	style.content_margin_bottom = 5.0
-	card.add_theme_stylebox_override("panel", style)
+	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	card.add_child(box)
@@ -169,7 +175,47 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
+	_cards.append(card)
+	_card_weapons.append(w)
+	_card_levels.append(level)
+	card.mouse_entered.connect(func() -> void: _select(index))
+	upgrade.focus_entered.connect(func() -> void: _select(index))
 	return card
+
+
+func _apply_card_style(card: PanelContainer, w: WeaponDef, selected: bool) -> void:
+	var style := UiTheme.box(Color(0.035, 0.045, 0.10),
+			UiTheme.ACCENT if selected else Color(w.color, 0.55), 2 if selected else 1, 6)
+	style.content_margin_left = 7.0
+	style.content_margin_right = 7.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 5.0
+	card.add_theme_stylebox_override("panel", style)
+
+
+func _select(index: int) -> void:
+	if index < 0 or index >= _cards.size():
+		detail_changed.emit("")
+		return
+	_selected = index
+	for i in _cards.size():
+		_apply_card_style(_cards[i], _card_weapons[i], i == index)
+	detail_changed.emit(_detail_text(index))
+
+
+func _detail_text(index: int) -> String:
+	if index < 0 or index >= _card_weapons.size():
+		return ""
+	var w := _card_weapons[index]
+	var level := _card_levels[index]
+	var text := Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1,
+			Loc.weapon_family(w.family), Loc.weapon_line(w)])
+	if w.evolves_to != &"":
+		text += "  ·  " + Loc.t("shop.evolve_detail", [
+			Loc.weapon_name(w.evolves_to), Shop.EVOLVE_FAMILY_COUNT, Shop.evolution_cost(w)])
+	elif not w.drops:
+		text += "  ·  " + Loc.t("shop.evolved_detail")
+	return text
 
 
 func _family_summary(pl: PlayerState) -> Control:

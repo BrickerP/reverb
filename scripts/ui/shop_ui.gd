@@ -13,6 +13,7 @@ var build_panel: BuildPanel
 var _title: Label
 var _materials: Label
 var _interest: Label
+var _footer: Label
 var _warning: Label
 var _overlay: Control
 var _replacing: Offer
@@ -46,6 +47,7 @@ func _ready() -> void:
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
+	build_panel.detail_changed.connect(_on_weapon_detail)
 	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
@@ -97,12 +99,21 @@ func refresh(animate_echo: bool = false) -> void:
 	if _replacing != null:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
+	_footer.text = Loc.t("shop.keys")
 	build_panel.refresh(sim, replace_with, chooser)
 	echo_panel.refresh(sim, animate_echo)
 
 
 func _build_footer() -> Control:
-	return UiTheme.label(Loc.t("shop.keys"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	_footer = UiTheme.label(Loc.t("shop.keys"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return _footer
+
+
+func _on_weapon_detail(text: String) -> void:
+	if _footer == null:
+		return
+	_footer.text = text if text != "" else Loc.t("shop.keys")
 
 
 func _build_header() -> Control:
