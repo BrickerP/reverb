@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
   "snapshot": {
-    "presentation_commit": "4b481d3c11fe6f5d74274cff2df6efb437ef6e4f",
-    "mechanics_commit": "c2e184e18f09800f59f3e2d8510c3b96b9587a4d",
+    "presentation_commit": "2fa373557fcabb7c6f9e4b024c5cbf1cbff35a0c",
+    "presentation_state": "G003 source a5d7cea with fixed mechanics integration",
+    "mechanics_commit": "5a1e8c1c3fbbb64ac2228ef8fa28fd892cc98522",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
     "status_meaning": {
@@ -27,6 +28,11 @@
       "scripts/view/hud.gd",
       "scripts/ui/**",
       "scripts/game/audio.gd",
+      "assets/presentation/SOURCES.md",
+      "assets/presentation/characters/manifest.json",
+      "assets/presentation/enemies/manifest.json",
+      "assets/presentation/items/manifest.json",
+      "assets/presentation/weapons/manifest.json",
       "INTERFACES.md"
     ],
     "runtime": [
@@ -48,55 +54,62 @@
       "shots/shop_drag_full.png",
       "shots/shop_drag_highlight.png",
       "shots/shop_drag_committed.png",
-      "shots/shop_drag_undone.png"
+      "shots/shop_drag_undone.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-weapons.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-items.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-enemies.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-characters.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-en.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-zh.png",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-verification/"
     ],
     "limits": "Only rows that name runtime evidence are runtime-verified. Source presence alone is not visual acceptance."
   },
   "weapons": [
-    {"id":"pistol","family":"sidearm","evolved":false,"art":"independent_art","asset":"weapon_pistol","runtime":"verified","priority":"done"},
-    {"id":"smg","family":"sidearm","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"fallback_verified","priority":"P1"},
-    {"id":"shotgun","family":"scatter","evolved":false,"art":"independent_art","asset":"weapon_shotgun","runtime":"verified","priority":"done"},
-    {"id":"rifle","family":"marksman","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"fallback_verified","priority":"P1"},
-    {"id":"orb","family":"arcane","evolved":false,"art":"independent_art","asset":"weapon_orb","runtime":"verified","priority":"done"},
-    {"id":"flechette","family":"scatter","evolved":false,"art":"reused_prototype","asset":"weapon_shotgun","runtime":"source_only","priority":"P1"},
-    {"id":"longbow","family":"marksman","evolved":false,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P1"},
-    {"id":"hex_bolt","family":"arcane","evolved":false,"art":"reused_prototype","asset":"weapon_orb","runtime":"source_only","priority":"P1"},
-    {"id":"twin_fangs","family":"sidearm","evolved":true,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P0"},
-    {"id":"flak_crown","family":"scatter","evolved":true,"art":"reused_prototype","asset":"weapon_shotgun","runtime":"source_only","priority":"P0","feedback":["explosion radius and particles"]},
-    {"id":"rail_spike","family":"marksman","evolved":true,"art":"reused_prototype","asset":"weapon_pistol","runtime":"source_only","priority":"P0"},
-    {"id":"nova_core","family":"arcane","evolved":true,"art":"reused_prototype","asset":"weapon_orb","runtime":"source_only","priority":"P0","feedback":["homing projectile state"]}
+    {"id":"pistol","family":"sidearm","evolved":false,"art":"independent_art","asset":"weapon_pistol","runtime":"gallery_verified","priority":"done"},
+    {"id":"smg","family":"sidearm","evolved":false,"art":"independent_art","asset":"weapon_smg","runtime":"gallery_verified","priority":"done"},
+    {"id":"shotgun","family":"scatter","evolved":false,"art":"independent_art","asset":"weapon_shotgun","runtime":"gallery_verified","priority":"done"},
+    {"id":"rifle","family":"marksman","evolved":false,"art":"independent_art","asset":"weapon_rifle","runtime":"gallery_verified","priority":"done"},
+    {"id":"orb","family":"arcane","evolved":false,"art":"independent_art","asset":"weapon_orb","runtime":"gallery_verified","priority":"done"},
+    {"id":"flechette","family":"scatter","evolved":false,"art":"independent_art","asset":"weapon_flechette","runtime":"gallery_verified","priority":"done"},
+    {"id":"longbow","family":"marksman","evolved":false,"art":"independent_art","asset":"weapon_longbow","runtime":"gallery_verified","priority":"done"},
+    {"id":"hex_bolt","family":"arcane","evolved":false,"art":"independent_art","asset":"weapon_hex_bolt","runtime":"gallery_verified","priority":"done"},
+    {"id":"twin_fangs","family":"sidearm","evolved":true,"art":"independent_art","asset":"weapon_twin_fangs","runtime":"gallery_verified","priority":"done"},
+    {"id":"flak_crown","family":"scatter","evolved":true,"art":"independent_art","asset":"weapon_flak_crown","runtime":"gallery_verified","priority":"done","feedback":["explosion radius and particles"]},
+    {"id":"rail_spike","family":"marksman","evolved":true,"art":"independent_art","asset":"weapon_rail_spike","runtime":"gallery_verified","priority":"done"},
+    {"id":"nova_core","family":"arcane","evolved":true,"art":"independent_art","asset":"weapon_nova_core","runtime":"gallery_verified","priority":"done","feedback":["homing projectile state"]}
   ],
   "items": [
-    {"id":"iron_heart","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"sneakers","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"sharp_edge","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"quick_trigger","art":"missing_art","feedback":"stat text and cooldown behavior","priority":"P1"},
-    {"id":"long_barrel","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"lucky_coin","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"magnet","art":"missing_art","feedback":"code_feedback: pickup range ring","priority":"P1"},
-    {"id":"regen_patch","art":"missing_art","feedback":"stat text only","priority":"P1"},
-    {"id":"spare_deck","art":"missing_art","feedback":"echo capacity UI","priority":"P1"},
-    {"id":"long_play","art":"missing_art","feedback":"echo lifespan segments","priority":"P1"},
-    {"id":"loud_speaker","art":"missing_art","feedback":"echo power text","priority":"P1"}
+    {"id":"iron_heart","art":"independent_art","asset":"item_iron_heart","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"sneakers","art":"independent_art","asset":"item_sneakers","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"sharp_edge","art":"independent_art","asset":"item_sharp_edge","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"quick_trigger","art":"independent_art","asset":"item_quick_trigger","runtime":"gallery_verified","feedback":"stat text and cooldown behavior","priority":"done"},
+    {"id":"long_barrel","art":"independent_art","asset":"item_long_barrel","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"lucky_coin","art":"independent_art","asset":"item_lucky_coin","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"magnet","art":"independent_art","asset":"item_magnet","runtime":"gallery_verified","feedback":"code_feedback: pickup range ring","priority":"done"},
+    {"id":"regen_patch","art":"independent_art","asset":"item_regen_patch","runtime":"gallery_verified","feedback":"stat text","priority":"done"},
+    {"id":"spare_deck","art":"independent_art","asset":"item_spare_deck","runtime":"gallery_verified","feedback":"echo capacity UI","priority":"done"},
+    {"id":"long_play","art":"independent_art","asset":"item_long_play","runtime":"gallery_verified","feedback":"echo lifespan segments","priority":"done"},
+    {"id":"loud_speaker","art":"independent_art","asset":"item_loud_speaker","runtime":"gallery_verified","feedback":"echo power text","priority":"done"}
   ],
   "enemies": [
     {"id":"grunt","art":"independent_art","asset":"enemy_grunt","feedback":["spawn tell","hit flash","health bar"],"runtime":"verified","priority":"done"},
     {"id":"runner","art":"independent_art","asset":"enemy_runner","feedback":["spawn tell","fast stride"],"runtime":"verified","priority":"done"},
-    {"id":"brute","art":"reused_prototype","asset":"enemy_grunt","feedback":["scale","tint","health bar"],"runtime":"source_only","priority":"P0"},
-    {"id":"silencer","art":"reused_prototype","asset":"enemy_grunt","feedback":["tint","silence HUD/audio"],"runtime":"source_only","priority":"P0"},
-    {"id":"bomber","art":"reused_prototype","asset":"enemy_grunt","feedback":["death radius ring","explosion"],"runtime":"source_only","priority":"P0"},
-    {"id":"warden","art":"reused_prototype","asset":"enemy_grunt","feedback":["front shield arc","reduced-hit event available"],"runtime":"source_only","priority":"P0"},
-    {"id":"paradox","art":"reused_prototype","asset":"enemy_grunt","feedback":["boss rings","core","boss health","victory beam","silence"],"runtime":"source_only","priority":"P0"}
+    {"id":"brute","art":"independent_art","asset":"enemy_brute","feedback":["scale","tint","health bar"],"runtime":"gallery_verified","priority":"done"},
+    {"id":"silencer","art":"independent_art","asset":"enemy_silencer","feedback":["tint","silence HUD/audio"],"runtime":"gallery_verified","priority":"done"},
+    {"id":"bomber","art":"independent_art","asset":"enemy_bomber","feedback":["death radius ring","explosion"],"runtime":"gallery_verified","priority":"done"},
+    {"id":"warden","art":"independent_art","asset":"enemy_warden","feedback":["front shield arc","reduced-hit event available","authored-axis pivot fix"],"runtime":"gallery_verified","priority":"done"},
+    {"id":"paradox","art":"independent_art","asset":"enemy_paradox","feedback":["boss rings","core","boss health","victory beam","silence"],"runtime":"gallery_verified","priority":"done"}
   ],
   "characters": [
-    {"id":"looper","starting_weapon":"pistol","art":"reused_prototype","asset":"player","identity":"color, echo slots, stats and starting weapon only","runtime":"verified","priority":"P1"},
-    {"id":"solo","starting_weapon":"hex_bolt","art":"reused_prototype","asset":"player","identity":"selection color, no echoes and starting weapon","runtime":"selection_verified","priority":"P1"},
-    {"id":"mirror","starting_weapon":"longbow","art":"reused_prototype","asset":"player","identity":"selection color, live loadout echoes and starting weapon","runtime":"selection_verified","priority":"P1"},
-    {"id":"conductor","starting_weapon":"pistol","art":"reused_prototype","asset":"player","identity":"selection color, four echoes, synergy and starting weapon","runtime":"selection_verified","priority":"P1"}
+    {"id":"looper","starting_weapon":"pistol","art":"independent_art","assets":{"front":"character_looper_front","back":"character_looper_back"},"direction_coverage":"front/back authored; left/right horizontal flip","runtime":"gallery_and_selection_verified","priority":"done"},
+    {"id":"solo","starting_weapon":"hex_bolt","art":"independent_art","assets":{"front":"character_solo_front","back":"character_solo_back"},"direction_coverage":"front/back authored; left/right horizontal flip","runtime":"gallery_and_selection_verified","priority":"done"},
+    {"id":"mirror","starting_weapon":"longbow","art":"independent_art","assets":{"front":"character_mirror_front","back":"character_mirror_back"},"direction_coverage":"front/back authored; left/right horizontal flip","runtime":"gallery_and_selection_verified","priority":"done"},
+    {"id":"conductor","starting_weapon":"pistol","art":"independent_art","assets":{"front":"character_conductor_front","back":"character_conductor_back"},"direction_coverage":"front/back authored; left/right horizontal flip","runtime":"gallery_and_selection_verified","priority":"done"}
   ],
   "ui_surfaces": [
-    {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","locked","unlocked","seed","focus"],"runtime":"four-card screenshot only","priority":"P1"},
-    {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon cooldowns","controls","debug"],"runtime":"combat/echo screenshots","priority":"P1"},
+    {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","portraits","locked","unlocked","seed","focus"],"runtime":"strict EN/ZH four-card geometry verified","priority":"done"},
+    {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon icons/cooldowns","controls","debug"],"runtime":"combat/echo screenshots and content gallery","priority":"P1"},
     {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked","quoted cost/refund","undo enabled/locked"],"runtime":"EN/ZH native interaction probes and presentation screenshots","priority":"P1"},
     {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","empty-slot buy target","occupied-slot replace target","item target","upgrade","evolve","replace","scroll"],"runtime":"native drag probes, focused partial replacement, full-loadout screenshot and bounds check","priority":"P1"},
     {"id":"echo_panel","source":"scripts/ui/echo_panel.gd","states":["arrival","overflow","discard","merge","selected"],"runtime":"echo/shop screenshots; merge source only","priority":"P1"},
@@ -114,7 +127,7 @@
     {"id":"weapon_changed","mechanics":"available from apply/undo","visual":"not bound","audio":"generic purchase only","priority":"P0"},
     {"id":"enemy_killed","mechanics":"legacy available","visual":"spark tint","audio":"legacy kill","priority":"P1"},
     {"id":"material_collected","mechanics":"available","visual":"pickup/pulse","audio":"legacy pickup","priority":"P1"},
-    {"id":"player_hurt","mechanics":"amount only","visual":"flash/shake","audio":"legacy hurt","priority":"P1"},
+    {"id":"player_hurt","mechanics":"PlayerHurtInfo available at 5a1e8c1","visual":"rich event not bound; legacy flash/shake","audio":"legacy hurt","priority":"P0"},
     {"id":"echo_spawned","mechanics":"available","visual":"route reveal/actor","audio":"presentation echo","priority":"P1"},
     {"id":"wave_started","mechanics":"available","visual":"HUD","audio":"legacy wave_start","priority":"P2"},
     {"id":"wave_ended","mechanics":"available","visual":"record collapse","audio":"presentation wave_end","priority":"P1"},
@@ -132,22 +145,37 @@
   },
   "summary": {
     "counts": {"weapons":12,"items":11,"enemies":7,"characters":4,"ui_surfaces":11,"event_feedback":14,"audio_events":14},
-    "independent_art": {"weapons":3,"items":0,"enemies":2,"characters":0},
-    "incomplete_identity": {"weapons":9,"items":11,"enemies":5,"characters":4},
+    "independent_art": {"weapons":12,"items":11,"enemies":7,"characters":4},
+    "incomplete_identity": {"weapons":0,"items":0,"enemies":0,"characters":0},
     "next_order": [
       "P0 rich-event binding for combat and equipment feedback",
-      "P0 evolved weapons and special enemies/boss identity art",
-      "P1 base-weapon variants, items and character identity art",
-      "P1 full content-ID runtime gallery and regression assertions",
+      "P0 consume PlayerHurtInfo for directional hurt feedback",
       "P2 remaining UI-state actual-window and accessibility matrix",
-      "G005 polish: recheck drag-preview theme wrapping, intended offset and target occlusion"
+      "G005 polish: recheck drag-preview theme wrapping, intended offset and target occlusion",
+      "G006 dense-combat and arena-boundary readability verification"
     ],
     "g002_verification": {
       "assertions": "2660 passed, 0 failed",
       "smoke": "OK; 5246 frames, max wave 4, 3 purchases",
       "native_interaction": "EN and ZH; 76 targeted assertions and 9 operation counters"
     },
-    "g003_preparation": "32 generated images are present and independently visually checked, but remain unmapped; all affected identity rows stay incomplete until integration and runtime verification."
+    "g003_verification": {
+      "runtime_pngs": 38,
+      "new_pngs": 32,
+      "catalog_keys": 39,
+      "catalog_alias": "player is a documented alias of character_looper_front",
+      "gallery": "4 pages plus summary passed with stable content IDs and linear mipmaps",
+      "character_direction_cases": 16,
+      "selection": "strict English and Chinese four-card geometry passed",
+      "regressions": "native G002 nine-counter interaction probe passed",
+      "pre_integration_assertions": "3464 passed, 0 failed",
+      "pre_integration_smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "post_integration_assertions": "3470 passed, 0 failed",
+      "post_integration_smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "post_integration_import_and_ui": "resource import plus English and Chinese UI passed",
+      "post_integration_checked_at": "2026-10-23T19:15:17+08:00"
+    },
+    "coverage_limit": "Complete static identity and front/back-derived direction coverage; full walk/attack frame animation and rich-event VFX/audio remain outside G003."
   },
   "polish_followups": [
     {
@@ -156,6 +184,20 @@
       "status": "non_blocking",
       "observation": "The intended preview offset still renders close to the target in the actual gallery.",
       "verify": "Inspect wrapper/theme sizing and confirm the preview never obscures the active drop target."
+    },
+    {
+      "goal": "G005",
+      "id": "surface_assets",
+      "status": "prepared_not_runtime_complete",
+      "observation": "Three surface PNGs are prepared but do not yet have runtime acceptance evidence.",
+      "verify": "Integrate and inspect each target surface in the actual UI."
+    },
+    {
+      "goal": "G006",
+      "id": "dense_boundary_readability",
+      "status": "verification_pending",
+      "observation": "Silencer is narrow and Longbow uses a light silhouette.",
+      "verify": "Check dense combat and arena-boundary readability; these are verification targets, not known failures."
     }
   ]
 }

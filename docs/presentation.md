@@ -10,18 +10,19 @@ remain unchanged. Presentation adds no rules, prices or collisions.
 ## Assets and rendering
 
 `PresentationAssets` is the shared catalog for world sprites and shop thumbnails.
-The six generated originals and their hashes/prompts are in
-`assets/presentation/`. Their offline-measured visible regions are stored as
-source-pixel rectangles in the catalog, then scaled to the imported texture size.
-When replacing an original, update its manifest and source metadata together.
-Godot imports at 512 px with mipmaps; rendering uses linear mipmap filtering.
+The 38 runtime PNGs and their hashes/prompts are documented by
+`assets/presentation/SOURCES.md` and the character, enemy, item and weapon
+manifests. Offline-measured visible regions are stored as source-pixel rectangles
+in the catalog, then scaled to the imported texture size. Godot imports at 512 px
+with mipmaps; rendering uses linear mipmap filtering. The catalog has 39 keys only
+because `player` is a documented alias of Looper front.
 
-The player and echoes share one operator sprite. Grunts and runners have separate
-silhouettes; other enemies reuse the grunt body with their existing tint, size and
-special tells. Sidearms/marksman weapons share the pistol image, scatter weapons
-the shotgun image, and arcane weapons the emitter image. World art keeps its
-aspect ratio, with deterministic sway/bob and visible weapon mounts. These are
-single-pose images with procedural motion, not directional animation sheets.
+Every weapon, item and enemy Content ID has explicit art. Each character has an
+authored front and back; horizontal mirroring supplies left/right. This is complete
+static identity and front/back-derived direction coverage, not full walk/attack
+frame animation. World art keeps its aspect ratio, with deterministic sway/bob and
+visible weapon mounts. Warden has an authored-axis/pivot correction so its shield
+and visual front agree with gameplay facing.
 
 Boss rings, shield arcs, bomber radii, health bars, spawn warnings, echo lifespan
 segments, rewind/silence marks and projectile batching remain active. Rendering
@@ -57,8 +58,14 @@ are intentionally staged for readability; its outcomes are not balance evidence.
 
 At the G002 integration checkpoint, 2660 assertions passed with zero failures;
 smoke completed 5246 frames through wave 4 with three purchases. Native EN/ZH shop
-probes passed 76 targeted assertions and exercised nine operation counters. The
-32 images prepared for G003 are not yet catalog-mapped or runtime-accepted.
+probes passed 76 targeted assertions and exercised nine operation counters.
+
+G003 adds four runtime gallery pages covering 12 weapons, 11 items, 7 enemies and
+4 characters across 16 direction cases. Gallery/content-ID/linear-mipmap checks,
+actual-size visual review, Warden facing, strict EN/ZH card geometry and the G002
+interaction regression pass. On final HEAD `2fa3735` with fixed mechanics
+`5a1e8c1`, resource import, English/Chinese UI, 3470 assertions and the 5246-frame
+smoke pass. Three surface PNGs are prepared for G005 but are not runtime-complete.
 
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
@@ -68,10 +75,11 @@ godot --path . --fixed-fps 60 --disable-vsync \
 
 ## Next presentation adapters
 
-`INTERFACES.md` documents the integrated `ShotInfo`, `DamageInfo`, `ExplosionInfo`
-and `WeaponChangeInfo` events. A subsequent pass can bind exact muzzle flashes,
-recoil and weapon-specific sounds to those events. This slice still uses legacy
-signals, with mounted weapons aiming from current visible state.
+`INTERFACES.md` documents the integrated `ShotInfo`, `DamageInfo`, `ExplosionInfo`,
+`WeaponChangeInfo` and `PlayerHurtInfo` events. A subsequent pass can bind exact
+muzzle flashes, recoil, directional hurt and weapon-specific sounds to those
+events. This slice still uses legacy presentation signals, with mounted weapons
+aiming from current visible state.
 
 Direct-drop transactions and repeated undo now use the mechanics-owned
 `quote/apply/undo` API and history signals. The remaining adapter work is visual and

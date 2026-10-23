@@ -1,7 +1,7 @@
 # Take Stack presentation coverage
 
-Snapshot: presentation `4b481d3`, fixed mechanics cursor `c2e184e`. G002 production
-commit: `2a44c2d`. Source of
+Snapshot: presentation `2fa3735` (G003 source `a5d7cea`), fixed mechanics cursor
+`5a1e8c1`. G002 production commit: `2a44c2d`. Source of
 content truth: `scripts/data/content.gd`; `scripts/data/character_def.gd` applies
 the configured starting weapon. A family/body fallback is marked **prototype
 reuse**, never complete art coverage.
@@ -14,22 +14,21 @@ The authoritative machine-readable ledger is `docs/presentation-coverage.json`.
 
 | Content | Total | Independent art | Prototype reuse / missing |
 | --- | ---: | ---: | ---: |
-| Weapons | 12 | 3 | 9 |
-| Items | 11 | 0 | 11 |
-| Enemies | 7 | 2 | 5 |
-| Characters | 4 | 0 character-specific | 4 share the operator |
+| Weapons | 12 | 12 | 0 |
+| Items | 11 | 11 | 0 |
+| Enemies | 7 | 7 | 0 |
+| Characters | 4 | 4 front/back sets | 0 |
 
-Independent art currently covers pistol, shotgun, orb, grunt and runner. SMG,
-rifle, flechette, longbow and hex bolt reuse family art. All four evolutions also
-reuse family art, so their transformation is not visually complete. Every item is
-still a color block/text identity; magnet additionally has a pickup-range ring.
-Brute, silencer, bomber, warden and Paradox reuse the grunt body, although their
-existing scale/tint, explosion radius, shield, silence and boss tells remain.
+All 12 weapons, 11 items and 7 enemies now resolve to explicit, unique content-ID
+art. The four characters each have authored front/back assets; horizontal mirroring
+provides left/right, giving 16 verified character-direction cases across the roster.
+The legacy `player` catalog key is the single documented alias of Looper front, so
+39 catalog keys resolve to 38 runtime PNGs (32 new plus 6 retained originals).
 
-All characters share the operator sprite. Their selection color, echo rules,
-statistics and starting weapons distinguish them: Looper and Conductor start with
-pistol, Solo with hex bolt, and Mirror with longbow. There is still no
-character-specific battle silhouette, so this remains prototype art coverage.
+This completes static identity and front/back-derived direction coverage. It does
+not claim full walk/attack frame animation. Existing gameplay tells remain layered
+over the new enemy art. Warden received a pivot/authored-axis correction so its
+shield and visual front follow gameplay facing.
 
 ## UI and event state
 
@@ -51,7 +50,8 @@ failures; smoke completed 5246 frames through wave 4 with three purchases.
 Rich `ShotInfo`, `DamageInfo`, `ExplosionInfo` and `WeaponChangeInfo` events exist
 at the mechanics cursor. View/audio still consume compatible legacy signals, so
 weapon-specific recoil, muzzle position, impact direction, explosion cause and
-equipment/undo feedback are not implemented.
+equipment/undo feedback are not implemented. `PlayerHurtInfo` is also present at
+`5a1e8c1`; consuming it belongs to G004.
 
 Audio exposes 14 events. Five have new documented presentation cues (click, buy,
 hit, echo, wave end); nine use the pre-existing fallback files. The 12-second movie
@@ -71,6 +71,13 @@ Runtime evidence:
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g002-drag-zh.log`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/tests.log`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/smoke.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-weapons.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-items.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-enemies.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-gallery-characters.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-en.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-zh.png`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-verification/`
 - `shots/shop_drag_full.png`, `shop_drag_highlight.png`,
   `shop_drag_committed.png`, `shop_drag_undone.png`
 
@@ -81,20 +88,25 @@ version files are shared and require an announced integration boundary.
 
 ## Work order
 
-1. P0: bind rich combat/equipment events to precise view and audio feedback.
-2. P0: give the four evolved weapons and five special enemies/boss distinct identity.
-3. P1: complete base-weapon variants, 11 item icons and four character identities.
-4. P1: add a complete content-ID gallery and coverage assertions.
-5. P2: capture the remaining UI state/accessibility matrix and finish mix QA.
+1. P0: bind rich combat/equipment/player-hurt events to precise view and audio feedback.
+2. P2: capture the remaining UI state/accessibility matrix and finish mix QA.
+3. G006: verify dense-combat and arena-boundary readability before final delivery.
 
 G005 polish note: the drag preview's intended offset still appears close to its
 target in the actual gallery. Recheck its wrapper/theme sizing and target occlusion;
 this does not block the functional G002 transaction milestone.
 
-G003 preparation note: 32 generated source images are present and independently
-visually checked, but they are not mapped into the presentation catalog/runtime.
-Their affected rows therefore remain prototype reuse or missing art until the
-integration and content-ID runtime gallery pass.
+G003 is complete for static/front-back-derived art coverage. Four production
+gallery pages and their summary pass with stable Content IDs and linear mipmaps;
+the actual weapon/icon/world sizes and all gallery pages passed independent visual
+review. Strict English/Chinese four-card geometry and the native G002 nine-counter
+probe also pass. On final HEAD `2fa3735` with fixed mechanics `5a1e8c1`, resource
+import, English/Chinese UI, 3470 assertions and smoke (5246 frames, wave 4, three
+purchases) passed at 2026-10-23 19:15:17 +08:00.
+
+Three surface PNGs are prepared for G005 but lack runtime acceptance. G006 should
+exercise the narrow Silencer and light Longbow silhouette in dense combat and at
+arena boundaries; these are verification targets, not known failures.
 
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as
