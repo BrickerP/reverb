@@ -8,6 +8,7 @@ const RECORD_BEAT := 0.6
 const VICTORY_BEAT := 0.9
 
 var sim: Sim
+var character_id: StringName = &"looper"
 var _backdrop: ArenaBackdrop
 var _paths: Dictionary = {}
 var _reveal: Dictionary = {}
@@ -29,8 +30,9 @@ func _ready() -> void:
 	add_child(_backdrop)
 
 
-func bind(s: Sim) -> void:
+func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim = s
+	character_id = id
 	_paths.clear()
 	_reveal.clear()
 	_sparks.clear()
@@ -114,9 +116,9 @@ func _draw() -> void:
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim)
-	ArenaPainter.echoes(self, sim)
+	ArenaPainter.echoes(self, sim, character_id)
 	ArenaPainter.projectiles(self, sim)
-	ArenaPainter.player(self, sim)
+	ArenaPainter.player(self, sim, character_id)
 	ArenaPainter.sparks(self, _sparks)
 	if _victory:
 		ArenaPainter.victory(self, _victory_origin, _victory_color, _victory_time / VICTORY_BEAT)

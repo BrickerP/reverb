@@ -1,0 +1,52 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "visible_alpha_min": 20,
+  "assets": [
+    {
+      "id": "brute",
+      "file": "brute.png",
+      "source_file": "exec-f286a18a-8244-455d-8ebd-8edf6a48bdf8.png",
+      "sha256": "e621dfd2fa4932d17be26c97387ee67f62057fd96a7231a0042702c36a2b4160",
+      "size": [1402, 1122],
+      "mode": "RGBA",
+      "bounds_ltrb": [77, 111, 1356, 1048]
+    },
+    {
+      "id": "silencer",
+      "file": "silencer.png",
+      "source_file": "exec-d5404e39-9f9a-4025-8da9-8839ed83a72a.png",
+      "sha256": "d2220b6d38ac3519d065801771ea322131d98c5c404d52d141a286751556aeed",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [302, 36, 1052, 1186]
+    },
+    {
+      "id": "bomber",
+      "file": "bomber.png",
+      "source_file": "exec-1d352aad-9ad8-4af0-9df2-879938c645ae.png",
+      "sha256": "b74ecaa4a62190463d3fe691022bc160b36a60c8e21e982122a4879529ec388b",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [145, 252, 1134, 1098]
+    },
+    {
+      "id": "warden",
+      "file": "warden.png",
+      "source_file": "exec-c696e748-99fa-4a54-80e6-974e43208f8b.png",
+      "sha256": "3dea99300c1b8121ec03f73c4bd1617231f6f42699f9d8027387e0b97c8b4345",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [120, 233, 1192, 1097]
+    },
+    {
+      "id": "paradox",
+      "file": "paradox.png",
+      "source_file": "exec-fd1a26f8-d05b-4a12-a8fc-7b6670d8b482.png",
+      "sha256": "910eb3f5a7617fdeff606721005f69315894307c736d1a5ed0b2f11a5b3a7459",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [23, 131, 1247, 1158]
+    }
+  ]
+}

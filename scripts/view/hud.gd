@@ -21,6 +21,7 @@ var _hint_time := 0.0
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -224,16 +225,35 @@ func _draw_weapons() -> void:
 	for i in Content.MAX_WEAPON_SLOTS:
 		var slot := Rect2(40.0 + float(i) * SLOT_GAP, SLOT_Y, SLOT_W, SLOT_H)
 		if i < sim.player.weapons.size():
-			var w := sim.player.weapons[i]
+			var w: WeaponDef = sim.player.weapons[i]
 			var ready := weapon_ready(i)
-			draw_rect(slot, Color(w.color, 0.2))
-			var fill_h := slot.size.y * ready
-			draw_rect(Rect2(slot.position.x, slot.end.y - fill_h, slot.size.x, fill_h), Color(w.color, 0.95))
+			draw_rect(slot, Color(0.025, 0.035, 0.08, 0.94))
+			var key := PresentationAssets.weapon_key(w)
+			var texture := PresentationAssets.texture(key)
+			var source := PresentationAssets.region(key)
+			if texture != null and source.has_area():
+				var thumb := _weapon_thumbnail_rect(slot, source.size)
+				draw_texture_rect_region(texture, thumb, source, Color(1.0, 1.0, 1.0, 0.98))
+			var cooldown_h := (slot.size.y - 2.0) * (1.0 - ready)
+			if cooldown_h > 0.0:
+				draw_rect(Rect2(slot.position + Vector2(1.0, 1.0),
+						Vector2(slot.size.x - 2.0, cooldown_h)), Color(0.01, 0.015, 0.04, 0.68))
+			var readiness := Rect2(slot.position + Vector2(2.0, slot.size.y - 4.0),
+					Vector2(slot.size.x - 4.0, 2.0))
+			draw_rect(readiness, Color(1.0, 1.0, 1.0, 0.14))
+			draw_rect(Rect2(readiness.position, Vector2(readiness.size.x * ready, readiness.size.y)),
+					Color(w.color, 0.95))
 			draw_rect(slot, Color(1, 1, 1, 0.25), false, 1.0)
 			if i < _flash.size() and _flash[i] > 0.0:
 				draw_rect(slot.grow(1.0), Color(1, 1, 1, _flash[i] * 0.9), false, 2.0)
 		else:
 			draw_rect(slot, Color(1, 1, 1, 0.22), false, 1.5)
+
+
+static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:
+	var area := slot.grow(-3.0)
+	var fitted := ArenaPainter._contained_size(source_size, area.size)
+	return Rect2(area.get_center() - fitted * 0.5, fitted)
 
 
 func _draw_controls() -> void:

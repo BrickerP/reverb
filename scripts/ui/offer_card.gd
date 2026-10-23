@@ -123,6 +123,9 @@ func _clear_drag_guard_deferred() -> void:
 
 func _drag_preview() -> Control:
 	var preview := PanelContainer.new()
+	# Drag previews are reparented below the viewport and cannot rely on the shop's
+	# inherited Theme for CJK text or button styling.
+	preview.theme = UiTheme.build()
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview.custom_minimum_size = Vector2(190.0, 58.0)
 	preview.position = Vector2(22.0, -72.0)
@@ -136,7 +139,7 @@ func _drag_preview() -> Control:
 		row.add_child(UiTheme.weapon_icon(offer.weapon, Vector2(52.0, 36.0)))
 		row.add_child(UiTheme.label(Loc.weapon_name(offer.id()), 16))
 	else:
-		row.add_child(UiTheme.label("■", 18, offer.item.color))
+		row.add_child(UiTheme.item_icon(offer.item, Vector2(42.0, 42.0)))
 		row.add_child(UiTheme.label(Loc.item_name(offer.id()), 16))
 	return preview
 
@@ -153,12 +156,11 @@ func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) ->
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 8)
-	var color := o.weapon.color if o.is_weapon() else o.item.color
 	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
 	if o.is_weapon():
 		row.add_child(UiTheme.weapon_icon(o.weapon, Vector2(48.0, 36.0)))
 	else:
-		row.add_child(UiTheme.label("■", 18, color))
+		row.add_child(UiTheme.item_icon(o.item, Vector2(42.0, 42.0)))
 	var identity := VBoxContainer.new()
 	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL

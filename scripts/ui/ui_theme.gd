@@ -50,19 +50,34 @@ static func clear(node: Node) -> void:
 		child.queue_free()
 
 
-static func weapon_icon(weapon: WeaponDef, icon_size: Vector2 = Vector2(48.0, 32.0)) -> TextureRect:
-	var key := PresentationAssets.weapon_key(weapon)
-	var atlas := AtlasTexture.new()
-	atlas.atlas = PresentationAssets.texture(key)
-	atlas.region = PresentationAssets.region(key)
+static func art_icon(key: StringName, icon_size: Vector2 = Vector2(48.0, 32.0)) -> TextureRect:
 	var icon := TextureRect.new()
-	icon.texture = atlas
+	var texture := PresentationAssets.texture(key)
+	var visible := PresentationAssets.region(key)
+	if texture != null and visible.has_area():
+		var atlas := AtlasTexture.new()
+		atlas.atlas = texture
+		atlas.region = visible
+		icon.texture = atlas
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	icon.custom_minimum_size = icon_size
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.set_meta(&"presentation_key", key)
 	return icon
+
+
+static func weapon_icon(weapon: WeaponDef, icon_size: Vector2 = Vector2(48.0, 32.0)) -> TextureRect:
+	return art_icon(PresentationAssets.weapon_key(weapon), icon_size)
+
+
+static func item_icon(item: ItemDef, icon_size: Vector2 = Vector2(36.0, 36.0)) -> TextureRect:
+	return art_icon(PresentationAssets.item_key(item), icon_size)
+
+
+static func character_icon(id: StringName, icon_size: Vector2 = Vector2(72.0, 84.0)) -> TextureRect:
+	return art_icon(PresentationAssets.character_key(id), icon_size)
 
 
 # Briefly tint a control and fade back: used when a shop action is blocked.

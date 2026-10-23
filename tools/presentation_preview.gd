@@ -227,13 +227,32 @@ func _release() -> void:
 
 
 func _save(name: String) -> void:
+	RenderingServer.force_draw()
+	if name == "select":
+		_check_character_select_layout()
 	if name in ["shop", "purchased"]:
 		_check_shop_layout()
-	RenderingServer.force_draw()
 	var image := root.get_texture().get_image()
 	var path := _shots_dir.path_join("presentation_%s.png" % name)
 	image.save_png(path)
 	print("wrote shots/presentation_%s.png" % name)
+
+
+func _check_character_select_layout() -> void:
+	var ui: CharacterSelectUi = _main.character_select
+	var viewport_rect := root.get_visible_rect()
+	for card: Button in ui._cards:
+		var card_rect := card.get_global_rect()
+		if not viewport_rect.encloses(card_rect):
+			push_error("Presentation preview: character card leaves the viewport")
+		for node in card.find_children("*", "Control", true, false):
+			var control := node as Control
+			if control == null or not control.is_visible_in_tree():
+				continue
+			if not card_rect.grow(0.5).encloses(control.get_global_rect()):
+				push_error("Presentation preview: character card content overflows: %s card=%s child=%s" % [
+						control, card_rect, control.get_global_rect()])
+	print("presentation layout: four character cards checked")
 
 
 func _check_shop_layout() -> void:

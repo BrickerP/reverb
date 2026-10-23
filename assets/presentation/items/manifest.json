@@ -1,0 +1,18 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "visible_alpha_min": 20,
+  "assets": [
+    {"id":"iron_heart","file":"iron_heart.png","source":"exec-7b150613-5213-403f-8603-f4170c4a6618.png","sha256":"14c96be0cedea1e003d0276ebebd5c503f363023036ab66302d0db3be900c114","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[68,97,1198,1151]},
+    {"id":"sneakers","file":"sneakers.png","source":"exec-0f112704-a838-4c8e-b203-5b3854f024cd.png","sha256":"ce77f13517e8df284c7639e1e88ad7951d1fed42cf04f294100d6e18f177483d","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[10,125,1246,1129]},
+    {"id":"sharp_edge","file":"sharp_edge.png","source":"exec-343a94bf-1110-40ce-95bb-721f966556c9.png","sha256":"071ca19797977d3945263f95fca1382c9068fe97198a8015675baf1142eab907","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[59,176,1230,1071]},
+    {"id":"quick_trigger","file":"quick_trigger.png","source":"exec-01045cdc-9b87-41fc-bd4e-dbc2b2bd1556.png","sha256":"21be0a0b453fb173bb7a7979877d4ee0de918009922ed05870aa87488ba6cd01","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[60,81,1215,1133]},
+    {"id":"long_barrel","file":"long_barrel.png","source":"exec-5a5d0adc-0b9e-41e8-8010-7071f3466bf4.png","sha256":"1b33bff067004f147f971ed195a6c798bd5b6f536c8b1f65cebae9d2b3e40701","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[11,202,1243,1024]},
+    {"id":"lucky_coin","file":"lucky_coin.png","source":"exec-d667ca33-7a39-4fca-8dee-1d5a2bdfe07a.png","sha256":"0e492a2c57f0f4d679a8386fbbf0a549832b5fe1f661e4f711ef77d0bce41777","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[118,139,1145,1109]},
+    {"id":"magnet","file":"magnet.png","source":"exec-86eb1bb1-c80b-4e0f-954f-437b5c93b35c.png","sha256":"191c6b06694f077063eca3be7887852183dea5d2927ad277ee164020e0930a56","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[69,67,1186,1201]},
+    {"id":"regen_patch","file":"regen_patch.png","source":"exec-b66bb754-8d49-49a4-b15f-cb22e4fcfdb6.png","sha256":"b563e02e61d0a43ce6a1593d8125576b7f92b4e8262d714bbdef8c9dca0263fa","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[152,116,1107,1174]},
+    {"id":"spare_deck","file":"spare_deck.png","source":"exec-42156a55-c4da-4d17-9fbf-e97308827563.png","sha256":"b5b673f1869fc6aa73f02c89def6d9b68469778351600afc731949c2235dcbc7","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[46,61,1213,1205]},
+    {"id":"long_play","file":"long_play.png","source":"exec-d186db56-5b8d-4c0b-8970-001bd4de587b.png","sha256":"3625c3727553ad904a1f2ae76f28d4109977d26a961960414212fb6027b2c503","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[20,113,1233,1134]},
+    {"id":"loud_speaker","file":"loud_speaker.png","source":"exec-e0a0701b-afd4-4d87-b005-d5d7829196dd.png","sha256":"a62e88c9da282110cbafdb711316b0ff46ece391fd21e71c0c941fad0743a27d","size":[1254,1254],"mode":"RGBA","bounds_ltrb":[112,84,1149,1188]}
+  ]
+}

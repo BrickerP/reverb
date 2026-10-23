@@ -317,7 +317,12 @@ func _item_chips(pl: PlayerState) -> Control:
 		flow.add_child(UiTheme.label(Loc.t("shop.none"), 16, UiTheme.DIM))
 	for id: StringName in pl.items:
 		var it := Content.item(id)
-		flow.add_child(UiTheme.label(_counted(Loc.item_name(id), pl.items[id]), 16, it.color))
+		var chip := HBoxContainer.new()
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_theme_constant_override("separation", 4)
+		chip.add_child(UiTheme.item_icon(it, Vector2(26.0, 26.0)))
+		chip.add_child(UiTheme.label(_counted(Loc.item_name(id), pl.items[id]), 14, it.color))
+		flow.add_child(chip)
 	return flow
 
 

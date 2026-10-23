@@ -1,0 +1,70 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "visible_alpha_min": 20,
+  "assets": [
+    {
+      "id": "looper_back",
+      "file": "looper_back.png",
+      "source_file": "exec-7720b07a-12d7-4078-9d59-7a3b2b56515b.png",
+      "sha256": "f3b5224bb40b350171816a1cf6b0d838a949b462b1f45ce6521df98e803f7796",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [386, 233, 903, 1065]
+    },
+    {
+      "id": "solo_front",
+      "file": "solo_front.png",
+      "source_file": "exec-92f9d898-026f-4be1-9093-e06b85994128.png",
+      "sha256": "93fa880295c89230fb2c8231fd0b864731f7babb6d1c51b85adc9a6b44fb8de6",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [395, 169, 933, 1141]
+    },
+    {
+      "id": "solo_back",
+      "file": "solo_back.png",
+      "source_file": "exec-1e91c0a8-87ff-4116-bc52-74047c1ea98b.png",
+      "sha256": "5e0d4bb9728dd147314e773641549fbef2af10688b9d9eba5ac00e85430f4671",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [385, 152, 891, 1153]
+    },
+    {
+      "id": "mirror_front",
+      "file": "mirror_front.png",
+      "source_file": "exec-5a91d0d6-5b4f-4cc1-8da3-e26c8e16647c.png",
+      "sha256": "fcd9cefd566daa60ad0015418d6fb65c8635b834900ce9e71bf4ed10df7a6e20",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [333, 162, 969, 1152]
+    },
+    {
+      "id": "mirror_back",
+      "file": "mirror_back.png",
+      "source_file": "exec-14a1d45f-76cc-4510-aa5e-2e2196a63459.png",
+      "sha256": "0b237e77125d00f181de2a7ab43df5c1f8a4f663bcc0e8fd83dab129cbfe24ab",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [330, 177, 939, 1148]
+    },
+    {
+      "id": "conductor_front",
+      "file": "conductor_front.png",
+      "source_file": "exec-7b60cd6e-7dfb-4887-9db9-3814fc9dc688.png",
+      "sha256": "378c2eb56e4223a6aaa98bda536b2409d9ddaaa44536d328bd0cd8efa7696362",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [292, 148, 1051, 1143]
+    },
+    {
+      "id": "conductor_back",
+      "file": "conductor_back.png",
+      "source_file": "exec-93e80b83-8021-4942-bc95-65c28705ea6c.png",
+      "sha256": "efbbfdeaf662f5a02faf40a45e595f863b00cea665a3a1e19b290a51aa0f6d3e",
+      "size": [1254, 1254],
+      "mode": "RGBA",
+      "bounds_ltrb": [241, 86, 1038, 1178]
+    }
+  ]
+}

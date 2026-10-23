@@ -11,6 +11,7 @@ const TRAIL_LIMIT := 160
 # Above this many bullets, heads are drawn through one MultiMesh instead of one draw call each.
 const BATCH_LIMIT := 80
 const PLAYER_ART_SIZE := Vector2(44.0, 52.0)
+const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
 
 static var _bullet_mesh: MultiMesh
 static var _bullet_texture: ImageTexture
@@ -124,19 +125,25 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 	var target := sim.player.pos
 	for e in sim.enemies:
 		var col := Color.WHITE if e.flash > 0.0 else e.def.color
-		var key: StringName = &"enemy_runner" if e.def.id == &"runner" else &"enemy_grunt"
+		var key := PresentationAssets.enemy_key(e.def)
 		var stride := sin(sim.wave_time * (7.5 if e.def.id == &"runner" else 4.5)
 				+ e.pos.x * 0.021 + e.pos.y * 0.013)
 		var facing := (target - e.pos).normalized()
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
-		var art_height := maxf(24.0, e.radius * (2.45 if e.def.is_boss else 2.3))
-		var art_size := Vector2(art_height * _art_aspect(key, 1.0), art_height)
+		var radius_scale := e.radius / maxf(1.0, e.def.radius)
+		var art_size := _enemy_bounds(e.def.id) * radius_scale
 		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
 		var art_tint := Color.WHITE if e.flash > 0.0 else e.def.color.lerp(Color.WHITE, 0.58)
-		var center := e.pos + Vector2(0.0, -e.radius * 0.2 + stride * minf(1.8, e.radius * 0.08))
-		var sway := stride * 0.045 * (-1.0 if facing.x < 0.0 else 1.0)
-		_draw_art(ci, key, center, art_size, sway, Color(art_tint, 0.96))
+		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + stride * minf(1.8, e.radius * 0.08))
+		var rotation := _warden_rotation(facing) if e.def.id == &"warden" else 0.0
+		var flip := facing.x > 0.0 and e.def.id != &"warden"
+		if e.def.id == &"warden":
+			# The shield arc is centered on e.pos. Rotate the authored shield body around the same
+			# point; a foot pivot makes its center orbit away from the gameplay-facing arc.
+			_draw_art(ci, key, e.pos, art_size, rotation, Color(art_tint, 0.96))
+		else:
+			_draw_art_foot(ci, key, foot, art_size, rotation, Color(art_tint, 0.96), flip)
 		if e.def.is_boss:
 			var spin := sim.wave_time * 0.7
 			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
@@ -145,7 +152,9 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		if e.radius >= 15.0 and e.hp < e.max_hp:
-			var top := e.pos + Vector2(-e.radius, -e.radius - 8.0)
+			var fitted := _fitted_art_size(key, art_size)
+			var art_top := e.pos.y - fitted.y * 0.5 if e.def.id == &"warden" else foot.y - fitted.y
+			var top := Vector2(e.pos.x - e.radius, art_top - 6.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
 			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
@@ -160,7 +169,7 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 					Color(col, 0.75), 3.0)
 
 
-static func echoes(ci: CanvasItem, sim: Sim) -> void:
+static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper") -> void:
 	var r := PlayerState.RADIUS
 	var lifespan := sim.echo_lifespan()
 	var segments := maxi(1, lifespan)
@@ -173,14 +182,17 @@ static func echoes(ci: CanvasItem, sim: Sim) -> void:
 		var bob := _motion_bob(sim.wave_time, a.pos, 5.0, 1.5)
 		var art_alpha := 0.22 if muted else 0.48
 		var breathe := 1.0 + sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.018
-		var art_size := PLAYER_ART_SIZE * Vector2(2.0 - breathe, breathe)
-		_draw_art(ci, &"player", a.pos + Vector2(0.0, r - PLAYER_ART_SIZE.y * 0.5 + bob),
-				art_size, sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035,
-				Color(c.lerp(Color.WHITE, 0.28), art_alpha))
+		var facing := _echo_facing(a)
+		var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
+		var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
+		var foot := a.pos + Vector2(0.0, r + bob)
+		_draw_art_foot(ci, key, foot, art_size,
+				sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035,
+				Color(c.lerp(Color.WHITE, 0.28), art_alpha), _horizontal_flip(facing))
 		var weapons: Array[WeaponDef] = a.take.weapons
 		if sim.live_echo:
 			weapons = sim.player.weapons
-		_draw_weapon_loadout(ci, sim, a.pos, weapons, Vector2.RIGHT, bob, art_alpha,
+		_draw_weapon_loadout(ci, sim, a.pos, weapons, facing, bob, art_alpha,
 				c, 0.45, 0.82)
 		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.3 if muted else 0.9), 2.0)
 		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
@@ -255,7 +267,7 @@ static func _ensure_bullet_capacity(count: int) -> void:
 	_bullet_mesh.instance_count = _bullet_capacity
 
 
-static func player(ci: CanvasItem, sim: Sim) -> void:
+static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper") -> void:
 	var pl := sim.player
 	var alpha := 1.0
 	if pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
@@ -266,9 +278,12 @@ static func player(ci: CanvasItem, sim: Sim) -> void:
 	var move_weight := clampf(pl.facing.length(), 0.0, 1.0)
 	var sway := sin(sim.wave_time * 5.5 + pl.pos.x * 0.018) * 0.045 * move_weight
 	var breathe := 1.0 + sin(sim.wave_time * 3.6 + pl.pos.y * 0.012) * 0.022
-	var art_size := PLAYER_ART_SIZE * Vector2(2.0 - breathe, breathe)
-	var art_center := pl.pos + Vector2(0.0, r - PLAYER_ART_SIZE.y * 0.5 + bob)
-	_draw_art(ci, &"player", art_center, art_size, sway, Color(1.0, 1.0, 1.0, alpha))
+	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
+	var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
+	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
+	var foot := pl.pos + Vector2(0.0, r + bob)
+	_draw_art_foot(ci, key, foot, art_size, sway, Color(1.0, 1.0, 1.0, alpha),
+			_horizontal_flip(facing))
 	var count := pl.weapons.size()
 	# shot_fired only identifies its source actor, not the weapon or target. Keep presentation
 	# stable by aiming the mounted loadout at the nearest live enemy, then falling back to facing.
@@ -287,14 +302,28 @@ static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
 
 
 static func _draw_art(ci: CanvasItem, key: StringName, center: Vector2, size: Vector2,
-		rotation: float, tint: Color) -> bool:
+		rotation: float, tint: Color, flip_x: bool = false) -> bool:
 	var tex := PresentationAssets.texture(key)
 	var source := PresentationAssets.region(key)
 	if tex == null or not source.has_area():
 		return false
 	var fitted := _contained_size(source.size, size)
-	ci.draw_set_transform(center, rotation)
+	ci.draw_set_transform(center, rotation, Vector2(-1.0 if flip_x else 1.0, 1.0))
 	ci.draw_texture_rect_region(tex, Rect2(-fitted * 0.5, fitted), source, tint)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	return true
+
+
+static func _draw_art_foot(ci: CanvasItem, key: StringName, foot: Vector2, bounds: Vector2,
+		rotation: float, tint: Color, flip_x: bool = false) -> bool:
+	var tex := PresentationAssets.texture(key)
+	var source := PresentationAssets.region(key)
+	if tex == null or not source.has_area():
+		return false
+	var fitted := _contained_size(source.size, bounds)
+	var local_center := _foot_center(Vector2.ZERO, fitted)
+	ci.draw_set_transform(foot, rotation, Vector2(-1.0 if flip_x else 1.0, 1.0))
+	ci.draw_texture_rect_region(tex, Rect2(local_center - fitted * 0.5, fitted), source, tint)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
 
@@ -306,14 +335,86 @@ static func _contained_size(source: Vector2, bounds: Vector2) -> Vector2:
 	return source * scale
 
 
+static func _foot_center(foot: Vector2, fitted_size: Vector2) -> Vector2:
+	return foot - Vector2(0.0, fitted_size.y * 0.5)
+
+
+static func _fitted_art_size(key: StringName, bounds: Vector2) -> Vector2:
+	var source := PresentationAssets.region(key)
+	return _contained_size(source.size, bounds) if source.has_area() else Vector2.ZERO
+
+
 static func _weapon_size(key: StringName) -> Vector2:
 	match key:
+		&"weapon_longbow":
+			return Vector2(30.0, 46.0)
+		&"weapon_rifle", &"weapon_rail_spike":
+			return Vector2(48.0, 17.0)
+		&"weapon_smg":
+			return Vector2(40.0, 19.0)
 		&"weapon_shotgun":
-			return Vector2(42.0, 20.0)
+			return Vector2(44.0, 20.0)
+		&"weapon_flechette", &"weapon_hex_bolt", &"weapon_twin_fangs":
+			return Vector2(40.0, 22.0)
+		&"weapon_flak_crown", &"weapon_nova_core":
+			return Vector2(44.0, 22.0)
 		&"weapon_orb":
-			return Vector2(32.0, 24.0)
+			return Vector2(38.0, 24.0)
 		_:
-			return Vector2(36.0, 20.0)
+			return Vector2(38.0, 21.0)
+
+
+static func _enemy_bounds(id: StringName) -> Vector2:
+	match id:
+		&"runner":
+			return Vector2(30.0, 30.0)
+		&"brute":
+			return Vector2(58.0, 44.0)
+		&"silencer":
+			return Vector2(42.0, 50.0)
+		&"bomber":
+			return Vector2(40.0, 36.0)
+		&"warden":
+			return Vector2(56.0, 46.0)
+		&"paradox":
+			return Vector2(88.0, 72.0)
+		_:
+			return Vector2(36.0, 30.0)
+
+
+static func _character_bounds(id: StringName) -> Vector2:
+	match id:
+		&"solo":
+			return Vector2(44.0, 56.0)
+		&"mirror":
+			return Vector2(48.0, 58.0)
+		&"conductor":
+			return Vector2(50.0, 56.0)
+		_:
+			return PLAYER_ART_SIZE
+
+
+static func _uses_back_art(facing: Vector2) -> bool:
+	return facing.y < -0.15
+
+
+static func _horizontal_flip(facing: Vector2) -> bool:
+	return facing.x < -0.05
+
+
+static func _warden_rotation(facing: Vector2) -> float:
+	if facing == Vector2.ZERO:
+		return 0.0
+	return facing.angle() - WARDEN_AUTHORED_FORWARD
+
+
+static func _echo_facing(actor: EchoActor) -> Vector2:
+	var next := actor.take.position_at(actor.t + EchoTake.SAMPLE_DT)
+	var direction := next - actor.pos
+	if direction == Vector2.ZERO:
+		var previous := actor.take.position_at(maxf(0.0, actor.t - EchoTake.SAMPLE_DT))
+		direction = actor.pos - previous
+	return direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 
 
 static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,

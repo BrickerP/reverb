@@ -98,7 +98,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	var def := Content.character(character_id)
 	if def != null:
 		def.apply(sim)
-	_view.bind(sim)
+	_view.bind(sim, character_id)
 	_view.visible = true
 	hud.bind(sim)
 	audio.bind(sim)

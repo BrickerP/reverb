@@ -67,7 +67,7 @@ func _card(w: WeaponDef, total_weight: float) -> PanelContainer:
 	card.add_child(box)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 6)
-	top.add_child(UiTheme.label("■", 14, w.color))
+	top.add_child(UiTheme.weapon_icon(w, Vector2(58.0, 40.0)))
 	var name_label := UiTheme.label(Loc.weapon_name(w.id), 16, UiTheme.INK)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_label)

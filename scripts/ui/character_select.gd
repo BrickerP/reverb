@@ -117,15 +117,32 @@ func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	card.pressed.connect(_on_card.bind(def.id))
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 22)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_bottom", 18)
 	card.add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 10)
+	box.add_theme_constant_override("separation", 6)
 	margin.add_child(box)
-	box.add_child(UiTheme.label(Loc.character_name(def.id), 30, def.color))
+	# Portrait and name share one header row so long localized descriptions retain
+	# enough vertical space for their status and unlock line inside the fixed card.
+	var header := HBoxContainer.new()
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_theme_constant_override("separation", 8)
+	var portrait := UiTheme.character_icon(def.id, Vector2(60.0, 64.0))
+	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	portrait.modulate = Color(1.0, 1.0, 1.0, 0.62 if locked else 1.0)
+	header.add_child(portrait)
+	var name_label := UiTheme.label(Loc.character_name(def.id), 24, def.color)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	header.add_child(name_label)
+	box.add_child(header)
 	var desc := UiTheme.label(Loc.character_desc(def.id), 15, UiTheme.DIM)
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL

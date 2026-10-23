@@ -1,0 +1,89 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-23",
+  "visible_alpha_min": 20,
+  "bounds_convention": "exclusive LTRB",
+  "assets": [
+    {
+      "id": "smg",
+      "file": "smg.png",
+      "source_file": "exec-0ff81802-89b2-4b70-a2bd-b167f472a352.png",
+      "sha256": "c9651d6136708bdff70890c90286ca54f4ccd8316a7129e0dfcf4af1623164b1",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [38, 219, 1506, 844]
+    },
+    {
+      "id": "rifle",
+      "file": "rifle.png",
+      "source_file": "exec-1e71ab80-69af-4358-9cca-ae413b6c86bd.png",
+      "sha256": "37f9095a1a8907a4f96c334525fbdc9f2321b46c50142c85b10132bf60d9b073",
+      "size": [1881, 836],
+      "mode": "RGBA",
+      "bounds_ltrb": [22, 176, 1860, 681]
+    },
+    {
+      "id": "flechette",
+      "file": "flechette.png",
+      "source_file": "exec-4ce1b200-aa3d-4e31-a8f8-9cd51c8bb6ac.png",
+      "sha256": "cb5e185a067567e1eeefe63d9ab2aaa4fd2ad0cb408b2b3416d48b80f6562cdd",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [178, 201, 1465, 866]
+    },
+    {
+      "id": "longbow",
+      "file": "longbow.png",
+      "source_file": "exec-ece92093-0d21-4b5a-baf7-c0d0e2ef56ae.png",
+      "sha256": "61e9188cefb5b55b0eaf71c2581a3fa33656fae7c683297d3d95fb2a96547393",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [559, 31, 1213, 995]
+    },
+    {
+      "id": "hex_bolt",
+      "file": "hex_bolt.png",
+      "source_file": "exec-5298ce9f-e58a-43f2-a58e-55d00af409f0.png",
+      "sha256": "febcbccb6029c6a9fa4a2e8d459494ff7c7984982fd5ba86ed5b5ef994de43b1",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [132, 220, 1453, 851]
+    },
+    {
+      "id": "twin_fangs",
+      "file": "twin_fangs.png",
+      "source_file": "exec-41a21e43-a399-41bc-b1d0-51d4943c4277.png",
+      "sha256": "4ea88eb90e64ea4eb10e45f7ee468388923811a8455b9baaa970eb9cda4ef323",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [119, 149, 1436, 925]
+    },
+    {
+      "id": "flak_crown",
+      "file": "flak_crown.png",
+      "source_file": "exec-cdd71377-ec6b-4623-a068-9f33c910758f.png",
+      "sha256": "4f52df6a0365dc39b8d2992069c29ab519a4c213e4c68e3b1c36213915ed910e",
+      "size": [1536, 1024],
+      "mode": "RGBA",
+      "bounds_ltrb": [16, 117, 1523, 858]
+    },
+    {
+      "id": "rail_spike",
+      "file": "rail_spike.png",
+      "source_file": "exec-b7cfe8e8-94f2-4df1-8733-9c2225f71356.png",
+      "sha256": "e6b8067c7d85efb634ebf1ce390658686df18494b9e6335464c19ec6a152c16a",
+      "size": [1942, 809],
+      "mode": "RGBA",
+      "bounds_ltrb": [27, 167, 1915, 649]
+    },
+    {
+      "id": "nova_core",
+      "file": "nova_core.png",
+      "source_file": "exec-e05a024e-536e-40ce-bd74-a810a32504d8.png",
+      "sha256": "25367730af8ce672bd99b514ccf5895a4ec631a6749a27b7ef538d6fa062c6c5",
+      "size": [1619, 971],
+      "mode": "RGBA",
+      "bounds_ltrb": [49, 125, 1586, 844]
+    }
+  ]
+}

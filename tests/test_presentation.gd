@@ -2,9 +2,7 @@ extends RefCounted
 
 
 func test_required_art_loads(c: Check) -> void:
-	for key: StringName in [
-		&"player", &"enemy_grunt", &"enemy_runner", &"weapon_pistol", &"weapon_shotgun", &"weapon_orb",
-	]:
+	for key: StringName in PresentationAssets.PATHS:
 		var texture := PresentationAssets.texture(key)
 		c.ok(texture != null, "presentation texture %s" % key)
 		var visible := PresentationAssets.region(key)
@@ -20,24 +18,101 @@ func test_required_art_loads(c: Check) -> void:
 					"source bounds scale to imported texture for %s" % key)
 			c.ok(Rect2(Vector2.ZERO, texture.get_size()).encloses(visible),
 					"scaled region stays inside imported texture for %s" % key)
-			c.near(visible.size.x / visible.size.y, source_region.size.x / source_region.size.y,
-					0.001, "scaled region preserves source aspect for %s" % key)
+			var normalized := Rect2(visible.position / texture.get_size(), visible.size / texture.get_size())
+			var expected := Rect2(source_region.position / source_size, source_region.size / source_size)
+			c.near(normalized.position.x, expected.position.x, 0.002,
+					"normalized source x stays stable for %s" % key)
+			c.near(normalized.position.y, expected.position.y, 0.002,
+					"normalized source y stays stable for %s" % key)
+			c.near(normalized.size.x, expected.size.x, 0.002,
+					"normalized source width stays stable for %s" % key)
+			c.near(normalized.size.y, expected.size.y, 0.002,
+					"normalized source height stays stable for %s" % key)
 
 
-func test_every_weapon_family_resolves_to_imported_art(c: Check) -> void:
-	var expected := {
-		&"sidearm": &"weapon_pistol",
-		&"marksman": &"weapon_pistol",
-		&"scatter": &"weapon_shotgun",
-		&"arcane": &"weapon_orb",
-	}
+func test_every_weapon_id_resolves_to_distinct_imported_art(c: Check) -> void:
+	c.eq(PresentationAssets.WEAPON_KEYS.size(), Content.weapons().size(),
+			"weapon catalog has no missing or extra IDs")
+	var keys: Array[StringName] = []
+	var paths: Array[String] = []
 	for weapon: WeaponDef in Content.weapons().values():
-		c.ok(expected.has(weapon.family), "%s has a presented family" % weapon.id)
-		if not expected.has(weapon.family):
-			continue
+		c.ok(PresentationAssets.WEAPON_KEYS.has(weapon.id), "%s has explicit weapon art" % weapon.id)
 		var key := PresentationAssets.weapon_key(weapon)
-		c.eq(key, expected[weapon.family], "%s uses its family art" % weapon.id)
-		c.ok(PresentationAssets.texture(key) != null, "%s family art imports" % weapon.id)
+		c.eq(key, StringName("weapon_%s" % weapon.id), "%s uses its ID art" % weapon.id)
+		c.ok(not keys.has(key), "%s weapon key is unique" % weapon.id)
+		keys.append(key)
+		var path := String(PresentationAssets.PATHS.get(key, ""))
+		c.ok(not path.is_empty() and not paths.has(path), "%s weapon file is unique" % weapon.id)
+		paths.append(path)
+		c.ok(PresentationAssets.texture(key) != null, "%s weapon art imports" % weapon.id)
+
+
+func test_every_item_id_resolves_to_distinct_imported_art(c: Check) -> void:
+	c.eq(PresentationAssets.ITEM_KEYS.size(), Content.items().size(),
+			"item catalog has no missing or extra IDs")
+	var keys: Array[StringName] = []
+	var paths: Array[String] = []
+	for item: ItemDef in Content.items().values():
+		c.ok(PresentationAssets.ITEM_KEYS.has(item.id), "%s has explicit item art" % item.id)
+		var key := PresentationAssets.item_key(item)
+		c.eq(key, StringName("item_%s" % item.id), "%s uses its ID art" % item.id)
+		c.ok(not keys.has(key), "%s item key is unique" % item.id)
+		keys.append(key)
+		var path := String(PresentationAssets.PATHS.get(key, ""))
+		c.ok(not path.is_empty() and not paths.has(path), "%s item file is unique" % item.id)
+		paths.append(path)
+		c.ok(PresentationAssets.texture(key) != null, "%s item art imports" % item.id)
+
+
+func test_every_enemy_id_resolves_to_distinct_imported_art(c: Check) -> void:
+	c.eq(PresentationAssets.ENEMY_KEYS.size(), Content.enemies().size(),
+			"enemy catalog has no missing or extra IDs")
+	var keys: Array[StringName] = []
+	var paths: Array[String] = []
+	for enemy: EnemyDef in Content.enemies():
+		c.ok(PresentationAssets.ENEMY_KEYS.has(enemy.id), "%s has explicit enemy art" % enemy.id)
+		var key := PresentationAssets.enemy_key(enemy)
+		c.eq(key, StringName("enemy_%s" % enemy.id), "%s uses its ID art" % enemy.id)
+		c.ok(not keys.has(key), "%s enemy key is unique" % enemy.id)
+		keys.append(key)
+		var path := String(PresentationAssets.PATHS.get(key, ""))
+		c.ok(not path.is_empty() and not paths.has(path), "%s enemy file is unique" % enemy.id)
+		paths.append(path)
+		c.ok(PresentationAssets.texture(key) != null, "%s enemy art imports" % enemy.id)
+
+
+func test_every_character_has_distinct_front_and_back_art(c: Check) -> void:
+	c.eq(PresentationAssets.CHARACTER_FRONT_KEYS.size(), Content.characters().size(),
+			"character front catalog has no missing or extra IDs")
+	c.eq(PresentationAssets.CHARACTER_BACK_KEYS.size(), Content.characters().size(),
+			"character back catalog has no missing or extra IDs")
+	var paths: Array[String] = []
+	for id: StringName in Content.characters():
+		for direction in 2:
+			var back := direction == 1
+			var expected := StringName("character_%s_%s" % [id, "back" if back else "front"])
+			var key := PresentationAssets.character_key(id, back)
+			c.eq(key, expected, "%s has explicit %s art" % [id, "back" if back else "front"])
+			var path := String(PresentationAssets.PATHS.get(key, ""))
+			c.ok(not path.is_empty() and not paths.has(path), "%s direction file is unique" % key)
+			paths.append(path)
+			c.ok(PresentationAssets.texture(key) != null, "%s character art imports" % key)
+
+
+func test_unknown_definitions_use_documented_safe_fallbacks(c: Check) -> void:
+	var weapon := WeaponDef.new()
+	weapon.id = &"future_weapon"
+	var item := ItemDef.new()
+	item.id = &"future_item"
+	var enemy := EnemyDef.new()
+	enemy.id = &"future_enemy"
+	c.eq(PresentationAssets.weapon_key(weapon), &"weapon_pistol", "unknown weapon fallback")
+	c.eq(PresentationAssets.item_key(item), &"item_iron_heart", "unknown item fallback")
+	c.eq(PresentationAssets.enemy_key(enemy), &"enemy_grunt", "unknown enemy fallback")
+	c.eq(PresentationAssets.character_key(&"future_character"), &"character_looper_front",
+			"unknown character front fallback")
+	c.eq(PresentationAssets.character_key(&"future_character", true), &"character_looper_back",
+			"unknown character back fallback")
 
 
 func test_source_metadata_stays_inside_original_images(c: Check) -> void:
