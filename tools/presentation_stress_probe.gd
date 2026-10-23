@@ -57,10 +57,17 @@ func _run() -> void:
 		if result.is_empty():
 			return
 		(_summary["cases"] as Array).append(result)
-	_write_summary()
 	_release_input()
 	_main.audio.stop_all()
-	await _wait_frames(8)
+	_main.show_select()
+	if not _require(_main.sim == null and _main._view.sim == null and _main.hud.sim == null,
+			"stress teardown releases the active simulation through the title-screen path"):
+		return
+	_main.queue_free()
+	_main = null
+	await _wait_frames(2)
+	_summary["teardown"] = {"simulation_released": true, "main_freed": true}
+	_write_summary()
 	print("presentation stress probe: %s" % JSON.stringify(_summary["cases"]))
 	print("presentation stress probe: OK")
 	quit()

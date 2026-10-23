@@ -429,5 +429,29 @@
       "provenance": "fixtures only; no human playtest claims"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-family-verification/"
+  },
+  "selective_elites": {
+    "mechanics_source": "1b45f321a70e34a9c64708fc105eb190c8fe20db",
+    "presentation_base": "39bc2c03dfe44c56386abe2bf1a4da5791ff9f6a",
+    "excluded": "Boss phase2 and subsequent sell/offer-lock; release metadata remains0.2.0",
+    "identity_coverage": "6regular enemy IDs x3elite modifiers =18; existing art explicitly reused; Boss excluded",
+    "interface_correction": "Only last_damage_source and PlayerHurtInfo.source for death explosions use actual EnemyDef.id; fixed damage/radius/BOMBER kind/effect unchanged",
+    "presentation": [
+      "Shared elite telegraph/aura color identity",
+      "Telegraph and art use scaled runtime radius",
+      "Shield and death circles consume per-instance overrides",
+      "Reduced mode retains one stable aura and warning; removes rotating second ring and pulse",
+      "Normal-enemy renderer avoids per-frame profile Dictionary allocation"
+    ],
+    "verification": {
+      "full_assertions": "5102 passed,0failed",
+      "focused_elite_assertions": 209,
+      "attribution_assertions": 33,
+      "native": "normal/reduced each18combos;9captures/mode;shield front/back events and audio once;volatile radius64 and BOMBER audio once;pause/rebind/reset",
+      "stress": "final ordinary run clean; p99 13.169/13.631/13.724ms; bounded feedback and12audio voices; single-machine frame-production sample",
+      "shutdown_followup": "initial exit resource warning; verbose rerun clean before change; explicit title-return/free teardown added to probe and final rerun clean; intermittent root cause unproven",
+      "provenance": "isolated fixture only; no manual-play feedback claim"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-elite-verification/"
   }
 }

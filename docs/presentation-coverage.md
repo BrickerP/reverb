@@ -284,3 +284,31 @@ four families through three-to-four-piece purchase and undo, including arcane
 40% → 48% → 40%. All 32 captures and geometry receipts are under
 `outputs/take-stack-family-verification/`. These are automated fixtures; they do
 not establish human satisfaction or balance. The Boss phase-2 hold remains active.
+
+## Selective elite integration
+
+Fixed elite source `1b45f321` is applied on presentation `39bc2c0`, without the held
+Boss ancestry or later shop features. The six regular enemy IDs each support all
+three modifiers (18 combinations), explicitly reusing the existing enemy art.
+Pending telegraphs and auras share identity colors and scaled radius; shield and
+death-warning geometry reads instance overrides. Reduced effects retain stable
+identity/rule cues and remove the extra rotating aura and pulse. Ordinary enemies
+do not allocate the new elite profile each frame.
+
+One presentation-interface correction is recorded: volatile non-bombers previously
+reported `bomber` as the death cause. The two attribution fields now use the actual
+enemy ID, while damage, radius, iframes and BOMBER effect/audio routing are unchanged.
+The 33 attribution assertions include both volatile non-bombers and normal bombers.
+
+Full tests pass 5102 assertions with zero failures. Native normal/reduced probes
+each cover 18 combinations with nine screenshots, reduced/front versus back hits,
+one corresponding audio cue per hit, one radius-64 volatile explosion and its
+existing audio route, plus pause/rebind/reset. Evidence is under
+`outputs/take-stack-elite-verification/`; these are isolated fixtures, not human play.
+
+Final stress exits cleanly with p99 frame-production samples 13.169/13.631/13.724 ms
+for 100 standard / 300 standard / 300 reduced enemies. The first run reported
+shutdown resources still in use; a verbose rerun was already clean. The probe now
+explicitly returns to character select, asserts Sim ownership is released, and
+frees Main before quitting. The final ordinary rerun is clean. The original warning
+and both reruns are retained; its intermittent root cause is not claimed resolved.
