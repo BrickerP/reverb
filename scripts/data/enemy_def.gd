@@ -16,3 +16,5 @@ extends Resource
 @export var silence_time: float = 0.0
 @export var death_radius: float = 0.0
 @export var death_damage: float = 0.0
+@export var shield_arc: float = 0.0
+@export var shield_reduction: float = 0.0

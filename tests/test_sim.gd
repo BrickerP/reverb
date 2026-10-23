@@ -352,6 +352,23 @@ func test_bomber_explodes_when_killed_near_player(c: Check) -> void:
 	c.ok(s.player.iframes > 0.0, "explosion grants iframes")
 
 
+func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
+	var s := _sim()
+	var e := EnemyState.new()
+	e.uid = 9200
+	e.def = Content.enemy(&"warden")
+	e.pos = s.player.pos + Vector2(100.0, 0.0)
+	e.max_hp = 100.0
+	e.hp = 100.0
+	e.radius = e.def.radius
+	s.enemies.append(e)
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.RIGHT)
+	c.near(e.hp, 92.0, 0.01, "front hit is reduced by 20%")
+	e.hp = 100.0
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT)
+	c.near(e.hp, 90.0, 0.01, "back hit takes full damage")
+
+
 func test_same_seed_same_run(c: Check) -> void:
 	var a := _sim(5)
 	var b := _sim(5)

@@ -144,6 +144,11 @@ static func enemies(ci: CanvasItem, sim: Sim) -> void:
 			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 140.0)
 			ci.draw_arc(e.pos, e.def.death_radius, 0.0, TAU, 32,
 					Color(col, 0.10 + 0.10 * pulse), 1.5)
+		if e.def.shield_arc > 0.0:
+			var front := (target - e.pos).angle()
+			var half := deg_to_rad(e.def.shield_arc * 0.5)
+			ci.draw_arc(e.pos, e.radius + 6.0, front - half, front + half, 24,
+					Color(col, 0.75), 3.0)
 
 
 static func echoes(ci: CanvasItem, sim: Sim) -> void:

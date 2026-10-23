@@ -215,11 +215,17 @@ func _boss_step(delta: float) -> void:
 			pending.append(ps)
 
 
-func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1) -> void:
-	e.hp -= amount
+func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
+		hit_dir: Vector2 = Vector2.ZERO) -> void:
+	var actual := amount
+	if e.def.shield_arc > 0.0 and hit_dir != Vector2.ZERO:
+		var front := (player.pos - e.pos).normalized()
+		if (-hit_dir.normalized()).dot(front) >= cos(deg_to_rad(e.def.shield_arc * 0.5)):
+			actual *= 1.0 - clampf(e.def.shield_reduction, 0.0, 1.0)
+	e.hp -= actual
 	e.flash = 0.09
 	e.knock += knock
-	enemy_hit.emit(e.pos, amount, crit, source)
+	enemy_hit.emit(e.pos, actual, crit, source)
 	if e.hp > 0.0 or e.dead:
 		return
 	e.dead = true

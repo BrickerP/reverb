@@ -217,6 +217,11 @@ static func _build_enemies() -> void:
 		"weight": 0.9, "drop": 2, "color": Color(1.0, 0.45, 0.2), "sides": 4,
 		"death_radius": 52.0, "death_damage": 6.0,
 	})
+	_enemy(&"warden", {
+		"hp": 28.0, "speed": 58.0, "damage": 4.0, "radius": 17.0, "cost": 3.0, "min_wave": 8,
+		"weight": 0.6, "drop": 3, "color": Color(0.55, 0.75, 1.0), "sides": 6,
+		"shield_arc": 90.0, "shield_reduction": 0.2,
+	})
 	_enemy(&"paradox", {
 		"hp": 5200.0, "speed": 55.0, "damage": 8.0, "radius": 30.0, "cost": 0.0, "min_wave": 20,
 		"weight": 0.0, "drop": 40, "color": Color(0.8, 0.5, 1.0), "sides": 8, "is_boss": true,
