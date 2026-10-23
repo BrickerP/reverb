@@ -12,6 +12,7 @@ var build_panel: BuildPanel
 
 var _title: Label
 var _materials: Label
+var _interest: Label
 var _warning: Label
 var _overlay: Control
 var _replacing: Offer
@@ -76,6 +77,7 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
+	_interest.text = Loc.t("shop.interest", [sim.last_interest]) if sim.last_interest > 0 else ""
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -106,9 +108,15 @@ func _build_header() -> Control:
 	var row := HBoxContainer.new()
 	_title = UiTheme.label("", 30)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_materials = UiTheme.label("", 26, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
 	row.add_child(_title)
-	row.add_child(_materials)
+	var right := VBoxContainer.new()
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.add_theme_constant_override("separation", 0)
+	_materials = UiTheme.label("", 26, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
+	_interest = UiTheme.label("", 13, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
+	right.add_child(_materials)
+	right.add_child(_interest)
+	row.add_child(right)
 	return row
 
 

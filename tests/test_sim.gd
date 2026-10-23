@@ -242,6 +242,27 @@ func test_enemy_stats_scale_with_wave(c: Check) -> void:
 	c.near(e.damage, e.def.damage * WaveDirector.damage_scale(10), 0.001, "damage scaled for wave 10")
 
 
+func test_wave_end_pays_interest(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.player.weapons.clear()
+	s.player.cooldowns.clear()
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.pickups.clear()
+	s.player.materials = 100
+	s.wave_duration = 0.01
+	s.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(s.phase, Sim.Phase.SHOP, "wave ends into shop")
+	c.eq(s.last_interest, 10, "ten percent interest")
+	c.eq(s.player.materials, 110, "interest is added")
+	s.player.materials = 1000
+	s.start_next_wave()
+	s.wave_duration = 0.01
+	s.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(s.last_interest, Sim.INTEREST_CAP, "interest is capped")
+
+
 func test_same_seed_same_run(c: Check) -> void:
 	var a := _sim(5)
 	var b := _sim(5)

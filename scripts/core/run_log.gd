@@ -69,6 +69,7 @@ func append(sim: Sim, character_id: StringName, seconds: float) -> void:
 		"items": items,
 		"echoes": sim.bank.takes.size(),
 		"merged": merged,
+		"interest": sim.last_interest,
 		"best_echo_wave": best_wave,
 		"best_echo_dps": int(round(best_dps)),
 	}

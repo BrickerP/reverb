@@ -27,6 +27,8 @@ const WAVE_END_HEAL := 0.3
 const COLLECT_RADIUS := 16.0
 const MAGNET_ACCEL := 1800.0
 const START_MATERIALS := 20
+const INTEREST_RATE := 0.10
+const INTEREST_CAP := 20
 const BOSS_SILENCE_TIME := 3.0
 const BOSS_SILENCE_EVERY := 8.0
 const BOSS_MINION_EVERY := 10.0
@@ -47,6 +49,7 @@ var echoes: Array[EchoActor] = []
 var boss: EnemyState
 var echo_silenced := 0.0
 var live_echo := false
+var last_interest := 0
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -68,6 +71,7 @@ func _init(seed_value: int = 1) -> void:
 
 
 func start_run() -> void:
+	last_interest = 0
 	start_wave(1)
 
 
@@ -340,6 +344,8 @@ func _end_wave() -> void:
 	for pk in pickups:
 		player.materials += pk.value
 	pickups.clear()
+	last_interest = mini(INTEREST_CAP, int(floor(float(player.materials) * INTEREST_RATE)))
+	player.materials += last_interest
 	enemies.clear()
 	projectiles.clear()
 	pending.clear()
