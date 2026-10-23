@@ -98,6 +98,30 @@ static func evolve_weapon(sim: Sim, index: int) -> bool:
 	return true
 
 
+static func sell_block_reason(sim: Sim, index: int) -> StringName:
+	if sim.phase != Sim.Phase.SHOP or index < 0 or index >= sim.player.weapons.size():
+		return &"invalid"
+	if sim.player.weapons.size() <= 1:
+		return &"last"
+	return &""
+
+
+# Liquidate one weapon without needing an offer. Refunds the same base resale plus
+# half of the upgrade investment as replacement, but leaves the slot empty.
+static func sell_weapon(sim: Sim, index: int) -> bool:
+	if sell_block_reason(sim, index) != &"":
+		return false
+	var w := sim.player.weapons[index]
+	var refund := resale_total(w, sim.player.level_at(index))
+	sim.player.materials += refund
+	sim.player.weapons.remove_at(index)
+	if index < sim.player.weapon_levels.size():
+		sim.player.weapon_levels.remove_at(index)
+	if index < sim.player.cooldowns.size():
+		sim.player.cooldowns.remove_at(index)
+	return true
+
+
 func can_undo() -> bool:
 	return not _undo_stack.is_empty()
 
@@ -145,6 +169,14 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 			if evolve_reason != &"":
 				return ShopResult.failure(action, evolve_reason, evolve_price, index)
 			return ShopResult.success(action, evolve_price, index)
+		ShopResult.SELL:
+			var sell_refund := 0
+			if index >= 0 and index < sim.player.weapons.size():
+				sell_refund = resale_total(sim.player.weapons[index], sim.player.level_at(index))
+			var sell_reason := sell_block_reason(sim, index)
+			if sell_reason != &"":
+				return ShopResult.failure(action, sell_reason, -sell_refund, index)
+			return ShopResult.success(action, -sell_refund, index)
 		ShopResult.REROLL:
 			if sim.phase != Sim.Phase.SHOP:
 				return ShopResult.failure(action, &"invalid")
@@ -178,6 +210,8 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 			ok = upgrade_weapon(sim, index)
 		ShopResult.EVOLVE:
 			ok = evolve_weapon(sim, index)
+		ShopResult.SELL:
+			ok = sell_weapon(sim, index)
 	if not ok:
 		return ShopResult.failure(action, &"invalid", quoted.cost, index,
 				offer.id() if offer != null else &"")
@@ -206,23 +240,45 @@ func undo(sim: Sim) -> ShopResult:
 
 
 func _emit_weapon_changes(sim: Sim, before: ShopState, after: ShopState, reason: StringName) -> void:
+	if absi(before.weapons.size() - after.weapons.size()) == 1:
+		var changed_index := _size_change_index(before.weapons, after.weapons)
+		if changed_index >= 0:
+			_emit_weapon_change(sim, before, after, reason, changed_index)
+			return
 	var count := maxi(before.weapons.size(), after.weapons.size())
 	for i in count:
-		var before_id: StringName = before.weapons[i] if i < before.weapons.size() else &""
-		var after_id: StringName = after.weapons[i] if i < after.weapons.size() else &""
-		var before_level: int = before.weapon_levels[i] if i < before.weapon_levels.size() else 0
-		var after_level: int = after.weapon_levels[i] if i < after.weapon_levels.size() else 0
-		if before_id == after_id and before_level == after_level:
-			continue
-		var info := WeaponChangeInfo.new()
-		info.index = i
-		info.before_id = before_id
-		info.after_id = after_id
-		info.before_level = before_level
-		info.after_level = after_level
-		info.reason = reason
-		info.ok = true
-		sim.weapon_changed.emit(info)
+		_emit_weapon_change(sim, before, after, reason, i)
+
+
+func _emit_weapon_change(sim: Sim, before: ShopState, after: ShopState, reason: StringName,
+		index: int) -> void:
+	var before_id: StringName = before.weapons[index] if index < before.weapons.size() else &""
+	var after_id: StringName = after.weapons[index] if index < after.weapons.size() else &""
+	var before_level: int = before.weapon_levels[index] if index < before.weapon_levels.size() else 0
+	var after_level: int = after.weapon_levels[index] if index < after.weapon_levels.size() else 0
+	if before_id == after_id and before_level == after_level:
+		return
+	var info := WeaponChangeInfo.new()
+	info.index = index
+	info.before_id = before_id
+	info.after_id = after_id
+	info.before_level = before_level
+	info.after_level = after_level
+	info.reason = reason
+	info.ok = true
+	sim.weapon_changed.emit(info)
+
+
+func _size_change_index(before: Array[StringName], after: Array[StringName]) -> int:
+	var smaller := before if before.size() < after.size() else after
+	var larger := after if before.size() < after.size() else before
+	var index := 0
+	while index < smaller.size() and smaller[index] == larger[index]:
+		index += 1
+	for tail in range(index, smaller.size()):
+		if smaller[tail] != larger[tail + 1]:
+			return -1
+	return index
 
 
 func _push_history(state: ShopState) -> void:

@@ -5,6 +5,7 @@ const BUY := &"buy"
 const REPLACE := &"replace"
 const UPGRADE := &"upgrade"
 const EVOLVE := &"evolve"
+const SELL := &"sell"
 const REROLL := &"reroll"
 const UNDO := &"undo"
 
