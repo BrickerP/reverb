@@ -61,6 +61,7 @@ func _ready() -> void:
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
+	build_panel.sell_requested.connect(_on_sell_weapon)
 	build_panel.detail_changed.connect(_on_weapon_detail)
 	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
@@ -292,6 +293,16 @@ func _on_evolve_weapon(index: int) -> void:
 		_flash_block(result.reason)
 
 
+func _on_sell_weapon(index: int) -> void:
+	var result := sim.shop.apply(ShopResult.SELL, sim, null, index)
+	if result.ok:
+		var next := mini(index, sim.player.weapons.size() - 1)
+		refresh()
+		build_panel.focus_upgrade(next)
+	else:
+		_flash_block(result.reason)
+
+
 # Blocked clicks point at the resource that is missing, instead of only reading "can't buy".
 func _flash_block(reason: StringName) -> void:
 	match reason:
@@ -301,6 +312,8 @@ func _flash_block(reason: StringName) -> void:
 			build_panel.flash_slots()
 		&"maxed":
 			build_panel.flash_items()
+		&"last":
+			build_panel.flash_slots()
 
 
 func _on_reroll() -> void:

@@ -4,6 +4,7 @@ extends PanelContainer
 signal replace_cancelled
 signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
+signal sell_requested(index: int)
 signal detail_changed(text: String)
 
 var weapons_label: Label
@@ -18,6 +19,7 @@ var _weapons_row: Control
 var _items_row: Control
 var _slot_buttons: Array[Button] = []
 var _upgrade_buttons: Array[Button] = []
+var _sell_buttons: Array[Button] = []
 var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
 var _card_levels: Array[int] = []
@@ -60,6 +62,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
+	_sell_buttons.clear()
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
@@ -116,6 +119,7 @@ func close_session() -> void:
 	_items_row = null
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
+	_sell_buttons.clear()
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
@@ -196,7 +200,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	card.accessibility_name = Loc.weapon_name(w.id)
 	card.accessibility_description = _detail_text_for(w, level)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
-	card.custom_minimum_size = Vector2(136.0, 86.0)
+	card.custom_minimum_size = Vector2(136.0, 106.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
@@ -246,6 +250,20 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
+	var sell := Button.new()
+	sell.custom_minimum_size = Vector2(0.0, 20.0)
+	sell.add_theme_font_size_override("font_size", 10)
+	sell.tooltip_text = Loc.t("shop.sell_hint")
+	sell.accessibility_description = Loc.t("shop.sell_hint")
+	if pl.weapons.size() <= 1:
+		sell.text = Loc.t("shop.sell_last")
+		sell.disabled = true
+	else:
+		sell.text = Loc.t("shop.sell", [Shop.resale_total(w, level)])
+		sell.pressed.connect(func() -> void: sell_requested.emit(index))
+	sell.accessibility_name = sell.text
+	box.add_child(sell)
+	_sell_buttons.append(sell)
 	_cards.append(card)
 	_card_weapons.append(w)
 	_card_levels.append(level)

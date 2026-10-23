@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -270,3 +270,34 @@ Presentation requirements:
   `def.death_radius`/`def.shield_arc` directly for elites.
 - The volatile death uses the existing bomber explosion event/audio path; no new event type.
 - No HUD label is required; color, double ring, shield fan and death circle carry the rule.
+
+## 12. Weapon selling
+
+`ShopResult.SELL` is an equipment action that liquidates one equipped weapon without an
+offer. It is available only in the shop and only when at least two weapons are equipped.
+
+Mechanism API:
+
+- `Shop.quote(ShopResult.SELL, sim, null, index)` → a result whose `cost` is the negative
+  refund, or a failure with reason `invalid`/`last`.
+- `Shop.apply(ShopResult.SELL, sim, null, index)` → removes the weapon and adds
+  `Shop.resale_total(w, level)` materials.
+- `Shop.sell_weapon(sim, index)` remains the direct compatibility method.
+- `ShopState` already captures materials, weapons, levels, cooldowns, items, offers and
+  rerolls; undo restores a sale exactly.
+- A sale emits one `weapon_changed` event for the removed slot with `after_id = ""` and
+  `reason = SELL`; undo emits the inverse event at the same insertion index. The
+  size-change helper avoids false events for shifted later slots.
+- Selling the last weapon is blocked with reason `last`; buy a replacement first if the
+  player wants to pivot away from their only weapon.
+- Selling uses the same refund formula as replacement; it does not create a new price or
+  RNG path.
+
+Presentation requirements:
+
+- BuildPanel shows a sell button per equipped weapon with the exact refund; the last
+  weapon's button is disabled and reads `shop.sell_last`.
+- The button must call `Shop.apply(ShopResult.SELL, ...)`, not mutate arrays locally.
+- After a successful sale, refresh the build panel and keep focus valid; the freed slot
+  shows the normal empty/drop target.
+- Undo must restore the weapon, its level, cooldown and materials, and rebuild all cards.
