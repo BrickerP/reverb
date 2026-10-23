@@ -315,5 +315,66 @@
       "observation": "Silencer is narrow and Longbow uses a light silhouette.",
       "verify": "Dense/edge standard and reduced captures reviewed PASS; no confirmed readability failure."
     }
-  ]
+  ],
+  "playtest_feedback_phase": {
+    "source_commit": "a4704647bf45df3faf71825309df9f23c7abeb2f",
+    "version": "0.2.0",
+    "integrated_metadata_commit": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "latest_deepseek_observed": "cba4dc9027594d8d2b3aa182a0270f5f2cc71e3c",
+    "latest_deepseek_runtime_equivalent_to": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "latest_deepseek_state": "clean; completed; git diff 4594fce..cba4dc9 empty; no new mechanics change",
+    "implementation": {
+      "run_log": "schema 2 with Crypto run_id, UTC timestamps, source and immutable build stamp; legacy schema remains readable",
+      "feedback_log": "schema 1 local-only validated ledger, one feedback row per run_id",
+      "ui": "localized post-run category, feeling, optional note, save/cancel/open-folder and duplicate/read-only states",
+      "report": "run/feedback join with provenance validation, source/build grouping and malformed/orphan/duplicate/mismatch accounting",
+      "network": "none; records are never uploaded or sent automatically"
+    },
+    "provenance": {
+      "sources": ["manual","fixture","bot","unknown"],
+      "verified_human_feedback_received": 0,
+      "rule": "fixture, bot, unknown and legacy records are never silently classified as human; manual marks intended ordinary play but is not identity authentication; current local records may be read under existing authorization and external sharing is voluntary"
+    },
+    "verification": {
+      "source_review": "APPROVE, 0 actionable issues",
+      "full_assertions": "4158 passed, 0 failed",
+      "python_report_tests": "10 passed",
+      "smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "native_feedback_ui": "English and Chinese passed, including Unicode note, Tab navigation, read-only duplicate state, reset and fixture provenance",
+      "exported_macos_feedback_roundtrip": "normal exported app driven through CUA completed a real run and saved schema-2 run plus matching schema-1 feedback; source fixture, build stamp a470464, no human claim",
+      "exact_head_ci": {
+        "run": 39998713766,
+        "url": "https://github.com/BrickerP/reverb/actions/runs/39998713766",
+        "jobs": 5,
+        "result": "success",
+        "native_exports": "Ubuntu and Windows exported builds launched headless for 60 frames"
+      },
+      "baseline_ci": {
+        "head": "09375a41762ae6ac44b3909f89159cadcdc66327",
+        "run": 39967093104,
+        "result": "success"
+      }
+    },
+    "exports": {
+      "platforms": 3,
+      "pck_sha256": "f6376bba8b0ec856bb1f8966230f606f6889764abb62a8adc0753f200d32e028",
+      "runtime_resources_each": 79,
+      "provenance_files_each": 18,
+      "forbidden_hits": 0,
+      "macos_isolated_startup": "passed; build stamp a470464; normal user data unchanged",
+      "previous_preview_preserved": true,
+      "release_actions": false
+    },
+    "evidence": [
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/phase-summary.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exact-head-ci.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/export-result.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exported-feedback-roundtrip.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exported-fixture-report.md",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/native-ci-a470464.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-guide.md",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-delivery.md"
+    ],
+    "status": "ready_for_actual_human_playtest; no verified human feedback received"
+  }
 }

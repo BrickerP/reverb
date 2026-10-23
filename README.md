@@ -62,6 +62,8 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 试玩反馈
 
+完整的玩家操作和开发者数据说明见 [docs/playtest-feedback.md](docs/playtest-feedback.md)。
+
 构建会把每局结果追加到本机的 `user://runs.jsonl`，不上传任何东西。文件位置：
 
 - macOS：`~/Library/Application Support/Godot/app_userdata/Take Stack/runs.jsonl`
@@ -70,15 +72,19 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 v0.1.14 起目录名从 `Reverb` 改为 `Take Stack`；首次启动会自动复制旧的 `reverb_save.json`、`settings.json`、`runs.jsonl`，不会覆盖新目录已有文件。
 
-把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页有 `Open log folder` 直接打开记录目录；显示本局种子，想复现别人的局，在选角页的 `Seed` 里填同一个数字即可。
+当前本机后续检查可按既有授权只读分析这些记录；其他设备上的试玩者可以自愿
+提供文件，或者只报角色、到达波数、死因、最爽和最烦的一刻。结算页可直接
+**打开文件夹**；显示本局种子，想复现别人的局，在选角页的 `Seed` 里填同一个数字即可。
 
 收到一个或多个 `runs.jsonl` 后：
 
 ```bash
-python3 tools/runs_report.py runs.jsonl --out report.md
+python3 tools/runs_report.py runs.jsonl --feedback feedback.jsonl --out report.md
 ```
 
-会按角色、死亡波数、武器胜率、最近几局生成 Markdown 报告；日志里的 `version` 会标出构建版本。
+会按角色、来源、构建、死亡波数、武器胜率和最近几局生成 Markdown 报告，并按
+`run_id` 合并合法反馈。旧记录与来源不明的数据会保持 `unknown`，不会被冒充为
+真人试玩。
 
 ## 从源码运行
 
@@ -93,7 +99,9 @@ make run-zh       # 中文
 
 也可以直接用 Godot 打开 `project.godot` 后按 F5。语言默认跟随系统（`zh*` 显示中文），可用环境变量 `REVERB_LANG=zh` 或 `REVERB_LANG=en` 覆盖。
 
-macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux 未实测。
+macOS 已做本机窗口与导出应用验证（Apple Silicon / OpenGL Compatibility）。
+Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 帧 headless
+启动；图形界面和人工操作仍待对应平台实机验证。
 
 ## 内容
 

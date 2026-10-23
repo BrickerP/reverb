@@ -187,6 +187,48 @@ changed. The latest integrated verification is therefore the headline result:
 21:45:35 +08:00. The audited packages and performance evidence remain tied to the
 byte-identical runtime source `d4a0e73`.
 
+## Post-G006 playtest feedback phase
+
+Fixed source `a4704647bf45df3faf71825309df9f23c7abeb2f` adds local,
+attributable post-run feedback without changing simulation. Run-log schema 2 assigns
+a Crypto run ID, UTC timestamps, source and immutable build stamp. Feedback-log
+schema 1 accepts one validated category/feeling/note record per run ID. The result
+screen form supports save, cancel, duplicate/read-only reopen and opening the local
+folder. No record is uploaded or sent automatically.
+
+`runs_report.py` joins run and feedback ledgers only when ID and provenance agree,
+groups by source/build, and reports malformed, orphan, duplicate and mismatched
+records. Sources are `manual`, `fixture`, `bot` and `unknown`; fixture, bot, unknown
+and legacy rows are never silently described as human evidence. At this checkpoint
+the number of verified human feedback records is **zero**.
+
+Verification passes: 4158 Godot assertions, smoke, English/Chinese UI, 10 Python
+report tests and native EN/ZH feedback probes including Unicode note input, Tab
+navigation, duplicate/read-only reopen, reset and fixture provenance. Exact-head CI
+[39998713766](https://github.com/BrickerP/reverb/actions/runs/39998713766) passes all
+five jobs, including native Ubuntu and Windows exported-build launches for 60
+headless frames. Baseline CI
+[39967093104](https://github.com/BrickerP/reverb/actions/runs/39967093104) also passes.
+
+Three immutable playtest packages share PCK SHA-256
+`f6376bba8b0ec856bb1f8966230f606f6889764abb62a8adc0753f200d32e028`;
+each loads 79 runtime resources plus 18 provenance files with zero forbidden hits.
+The macOS isolated startup passes with build stamp `a470464` and leaves normal user
+data unchanged. The previous `Take Stack Preview.app` and its archives remain
+untouched. This phase creates no tag, Release or main-branch move.
+
+The normal exported macOS Playtest app was also driven through CUA without an
+injected script. It completed a real run and saved a schema-2 run plus matching
+schema-1 feedback with the same run ID and build stamp `a470464`. That evidence is
+explicitly `fixture`, its note says it is automated, and it makes no human-feedback
+claim.
+
+Metadata commit `4594fce` is integrated for v0.2.0. The latest observed DeepSeek
+main `cba4dc9` is runtime-equivalent to that metadata checkpoint; no release action
+is attributed to the presentation lane. The next evidence required is actual human
+play: current local ledgers may be read by authorized follow-up checks, while other
+players may voluntarily provide theirs.
+
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as
 explicit incomplete rows until presentation coverage and verification land.

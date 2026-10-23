@@ -143,5 +143,25 @@ launch checks. Character movement uses authored front/back art, horizontal direc
 derivation and procedural motion; it is not a frame-by-frame walk/attack animation
 set. Future feel changes should follow observed play rather than adding unbounded
 polish tasks.
+
+## Local playtest feedback phase
+
+Source `a470464` adds a result-screen feedback form and two separate local JSONL
+ledgers. Run schema 2 provides unique run IDs, UTC timestamps, source and build
+commit; feedback schema 1 stores one validated category/feeling/note entry per run.
+The game never uploads these files. `runs_report.py` joins them by unique run ID and
+matching provenance, while keeping manual, fixture, bot, unknown and legacy records
+distinct.
+
+Full verification is 4158/0 plus smoke and English/Chinese UI; Python report tests
+are 10/10. Native feedback probes pass in both languages. Exact-head CI run
+[39998713766](https://github.com/BrickerP/reverb/actions/runs/39998713766) passes all
+five jobs, including 60-frame native exported launches on Ubuntu and Windows.
+Three new immutable playtest packages share one audited PCK and preserve the prior
+Preview build. No verified human feedback has been received yet.
+
+The normal exported macOS app also passes an actual CUA roundtrip: finish a run,
+open feedback, save locally, and verify matching schema-2/schema-1 rows with the
+compiled `a470464` stamp. The record is labelled `fixture` and is not human evidence.
 DeepSeek owns the rules and interfaces;
 Codex owns their visual/audio response and fixed-commit integration and release.
