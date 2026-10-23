@@ -124,7 +124,8 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 				continue
 			if p.hit_uids.has(e.uid):
 				continue
-			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source)
+			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source,
+					p.vel.normalized())
 			if p.explosion_radius > 0.0 and p.explosion_damage > 0.0:
 				_explode(sim, p, e)
 			if p.pierce_left > 0:
