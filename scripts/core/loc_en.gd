@@ -32,7 +32,7 @@ const TABLE := {
 	"shop.max_level": "MAX",
 	"shop.evolve": "Evolve %d",
 	"shop.evolve_need": "Need %d same",
-	"shop.interest": "Interest +%d",
+	"shop.economy": "Earned +%d · Interest +%d · Next +%d",
 	"shop.family": "Families (2 / 4 / 6)",
 	"shop.family_damage": "+10% damage",
 	"shop.family_speed": "+10% attack speed",

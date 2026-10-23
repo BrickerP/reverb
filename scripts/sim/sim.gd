@@ -50,6 +50,8 @@ var boss: EnemyState
 var echo_silenced := 0.0
 var live_echo := false
 var last_interest := 0
+var last_wave_earned := 0
+var wave_start_materials := 0
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -72,7 +74,13 @@ func _init(seed_value: int = 1) -> void:
 
 func start_run() -> void:
 	last_interest = 0
+	last_wave_earned = 0
+	wave_start_materials = player.materials
 	start_wave(1)
+
+
+static func interest_for(materials: int) -> int:
+	return mini(INTEREST_CAP, int(floor(float(maxi(0, materials)) * INTEREST_RATE)))
 
 
 func echo_capacity() -> int:
@@ -109,6 +117,9 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
+	wave_start_materials = player.materials
+	last_wave_earned = 0
+	last_interest = 0
 	var mult := 0.35 if n == WaveDirector.FINAL_WAVE else 1.0
 	_plan = WaveDirector.plan(n, run_seed, mult)
 	if n == WaveDirector.FINAL_WAVE:
@@ -344,7 +355,8 @@ func _end_wave() -> void:
 	for pk in pickups:
 		player.materials += pk.value
 	pickups.clear()
-	last_interest = mini(INTEREST_CAP, int(floor(float(player.materials) * INTEREST_RATE)))
+	last_wave_earned = maxi(0, player.materials - wave_start_materials)
+	last_interest = interest_for(player.materials)
 	player.materials += last_interest
 	enemies.clear()
 	projectiles.clear()

@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.24 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.25 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -117,13 +117,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 武器升级：Build 面板用材料升级已装备武器，等级影响伤害、DPS 与回响快照
 - 武器家族 combo：2 件 +10% 伤害、4 件 +10% 攻速、6 件再 +15% 伤害，Build 面板显示当前家族
 - 武器进化：满级 + 同家族 3 件 + 材料，在 Build 面板进化成同族强化形态
-- 材料利息：波末按未花材料 +10%（上限 20），商店顶部显示本波利息
+- 材料利息：波末按未花材料 +10%（上限 20），商店显示本波收入、利息和下次利息预览
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 2038 项）
+make test     # 无头测试（当前 2042 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

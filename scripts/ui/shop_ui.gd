@@ -77,7 +77,8 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
-	_interest.text = Loc.t("shop.interest", [sim.last_interest]) if sim.last_interest > 0 else ""
+	_interest.text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
+			Sim.interest_for(sim.player.materials)])
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -113,7 +114,7 @@ func _build_header() -> Control:
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_theme_constant_override("separation", 0)
 	_materials = UiTheme.label("", 26, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
-	_interest = UiTheme.label("", 13, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
+	_interest = UiTheme.label("", 12, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
 	right.add_child(_materials)
 	right.add_child(_interest)
 	row.add_child(right)

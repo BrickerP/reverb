@@ -32,7 +32,7 @@ const TABLE := {
 	"shop.max_level": "满级",
 	"shop.evolve": "进化 %d",
 	"shop.evolve_need": "需 %d 同族",
-	"shop.interest": "利息 +%d",
+	"shop.economy": "本波 +%d · 利息 +%d · 下次 +%d",
 	"shop.family": "家族（2 / 4 / 6）",
 	"shop.family_damage": "+10% 伤害",
 	"shop.family_speed": "+10% 攻速",

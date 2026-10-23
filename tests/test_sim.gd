@@ -251,9 +251,11 @@ func test_wave_end_pays_interest(c: Check) -> void:
 	s.projectiles.clear()
 	s.pickups.clear()
 	s.player.materials = 100
+	s.wave_start_materials = s.player.materials
 	s.wave_duration = 0.01
 	s.step(1.0 / 60.0, Vector2.ZERO)
 	c.eq(s.phase, Sim.Phase.SHOP, "wave ends into shop")
+	c.eq(s.last_wave_earned, 0, "no pickups this wave")
 	c.eq(s.last_interest, 10, "ten percent interest")
 	c.eq(s.player.materials, 110, "interest is added")
 	s.player.materials = 1000
@@ -261,6 +263,27 @@ func test_wave_end_pays_interest(c: Check) -> void:
 	s.wave_duration = 0.01
 	s.step(1.0 / 60.0, Vector2.ZERO)
 	c.eq(s.last_interest, Sim.INTEREST_CAP, "interest is capped")
+
+
+func test_wave_end_splits_earned_and_interest(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.player.weapons.clear()
+	s.player.cooldowns.clear()
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.pickups.clear()
+	s.player.materials = 100
+	s.wave_start_materials = 100
+	var pk := Pickup.new()
+	pk.pos = Vector2(900.0, 200.0)
+	pk.value = 7
+	s.pickups.append(pk)
+	s.wave_duration = 0.01
+	s.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(s.last_wave_earned, 7, "uncollected pickup counts as earnings")
+	c.eq(s.last_interest, 10, "interest is based on total materials")
+	c.eq(s.player.materials, 117, "earnings plus interest")
 
 
 func test_same_seed_same_run(c: Check) -> void:
