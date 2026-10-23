@@ -10,6 +10,7 @@ const SLOT_GAP := 38.0
 
 var sim: Sim
 var paused: bool = false
+var debug: bool = false
 
 var _hp_ghost := 1.0
 var _prev_cd: Array[float] = []
@@ -97,6 +98,8 @@ func _draw() -> void:
 	_draw_weapons()
 	_draw_controls()
 	_draw_onboarding()
+	if debug:
+		_draw_debug()
 
 
 func _draw_health() -> void:
@@ -270,6 +273,22 @@ func _draw_onboarding() -> void:
 		draw_line(c + dir * 4.0, c + dir * 9.0, Color(UiTheme.COIN, alpha), 2.0)
 	draw_circle(c, 3.0, Color(UiTheme.COIN, alpha))
 	_text(Loc.t("hud.auto_fire"), Vector2(x + 24.0, panel.position.y + 29.0), size, Color(UiTheme.INK, alpha))
+
+
+func _draw_debug() -> void:
+	var fps := Engine.get_frames_per_second()
+	var frame_ms := 1000.0 / maxf(1.0, float(fps))
+	var lines := PackedStringArray([
+		"FPS %d  ·  %.1f ms" % [fps, frame_ms],
+		"Wave %d  ·  seed %d" % [sim.wave, sim.run_seed],
+		"Enemies %d  ·  shots %d" % [sim.enemies.size(), sim.projectiles.size()],
+		"Echoes %d  ·  v%s" % [sim.echoes.size(), str(ProjectSettings.get_setting("application/config/version", ""))],
+	])
+	var panel := Rect2(16.0, 84.0, 336.0, 22.0 * float(lines.size()) + 16.0)
+	draw_rect(panel, Color(0.01, 0.02, 0.05, 0.84))
+	draw_rect(panel, Color(0.35, 0.55, 0.95, 0.45), false, 1.0)
+	for i in lines.size():
+		_text(lines[i], Vector2(28.0, 104.0 + float(i) * 22.0), 14, UiTheme.INK)
 
 
 func _keycap_width(label: String, size: int) -> float:

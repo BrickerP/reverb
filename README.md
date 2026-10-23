@@ -45,6 +45,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 | 对局记录（选角/结算界面） | H |
 | 退出到选角（暂停时） | Q |
 | 静音 | M |
+| 调试信息（FPS/敌人数/弹幕） | F3 |
 | 重开（仅结算界面） | R |
 | 重试本局种子（仅结算界面） | S |
 | 换角色（仅结算界面） | C |
@@ -52,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.17 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.18 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -110,12 +111,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 内置 Noto Sans CJK SC，Windows/Linux/Steam Deck 不依赖系统中文字体
 - 标准手柄 UI 导航：A 确认、B 取消、十字键移动焦点
 - 暂停菜单可直接继续、打开设置/历史、静音或退出本局
+- F3 调试叠层：FPS、帧耗时、敌人数、弹幕、回响、种子与版本
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1862 项）
+make test     # 无头测试（当前 1864 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

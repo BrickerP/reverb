@@ -466,6 +466,20 @@ func test_main_boots_into_character_select(c: Check) -> void:
 	main.free()
 
 
+func test_f3_toggles_debug_overlay(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	var event := InputEventAction.new()
+	event.action = &"debug"
+	event.pressed = true
+	main._unhandled_input(event)
+	c.ok(main.hud.debug, "F3 shows debug overlay")
+	main._unhandled_input(event)
+	c.ok(not main.hud.debug, "F3 hides debug overlay")
+	main.free()
+
+
 func test_pause_menu_exposes_controller_actions(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

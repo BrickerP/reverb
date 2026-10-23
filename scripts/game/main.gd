@@ -267,6 +267,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			settings_ui.close()
 			get_viewport().set_input_as_handled()
 		return
+	if event.is_action_pressed(&"debug"):
+		hud.debug = not hud.debug
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"settings"):
 		open_settings()
 		get_viewport().set_input_as_handled()

@@ -16,6 +16,7 @@ static func register() -> void:
 	_bind(&"history", [_key(KEY_H)])
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
+	_bind(&"debug", [_key(KEY_F3)])
 
 
 # Godot's built-in UI actions are keyboard-only by default. Steam Deck and a standard
