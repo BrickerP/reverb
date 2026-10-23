@@ -52,7 +52,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.15 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.16 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -108,12 +108,13 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 本地存档：最佳波数、通关次数、角色解锁
 - 20 波，波次预算与血量随波数增长
 - 内置 Noto Sans CJK SC，Windows/Linux/Steam Deck 不依赖系统中文字体
+- 标准手柄 UI 导航：A 确认、B 取消、十字键移动焦点
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1847 项）
+make test     # 无头测试（当前 1853 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
@@ -146,6 +147,7 @@ tools/          烟测、平衡、性能探针、音效生成
 - 难度和 Boss 只用 bot 验证过（静音者加入后 30 种子 balanced：复读机 15、独行者 22、镜像 16；防御流仍偏弱）。真人手感未调。
 - 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
 - Steam Deck / 低端机帧率未验证。本机 M3 窗口压力测试（720p、100 敌人、约 390 发弹幕）约 7ms/帧，200 敌人约 10ms；高弹量会自动降特效。
+- 手柄 UI 映射（A/B/十字键）已有测试，但未在 Steam Deck 实机验证。
 - 名称《回响》/ Take Stack 为工作名；Steam 已有多款 Reverb，英文名已更换；正式商标检索未做。
 
 ## 许可

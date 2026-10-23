@@ -3,6 +3,7 @@ extends RefCounted
 
 
 static func register() -> void:
+	_gamepad_ui()
 	_bind(&"move_left", [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0), _button(JOY_BUTTON_DPAD_LEFT)])
 	_bind(&"move_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0), _button(JOY_BUTTON_DPAD_RIGHT)])
 	_bind(&"move_up", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0), _button(JOY_BUTTON_DPAD_UP)])
@@ -15,6 +16,26 @@ static func register() -> void:
 	_bind(&"history", [_key(KEY_H)])
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
+
+
+# Godot's built-in UI actions are keyboard-only by default. Steam Deck and a standard
+# controller need A/B + d-pad to focus and activate the shop, select, settings and end screens.
+static func _gamepad_ui() -> void:
+	_add_event(&"ui_accept", _button(JOY_BUTTON_A))
+	_add_event(&"ui_cancel", _button(JOY_BUTTON_B))
+	_add_event(&"ui_up", _button(JOY_BUTTON_DPAD_UP))
+	_add_event(&"ui_down", _button(JOY_BUTTON_DPAD_DOWN))
+	_add_event(&"ui_left", _button(JOY_BUTTON_DPAD_LEFT))
+	_add_event(&"ui_right", _button(JOY_BUTTON_DPAD_RIGHT))
+
+
+static func _add_event(action: StringName, event: InputEvent) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action)
+	for current in InputMap.action_get_events(action):
+		if current.is_match(event):
+			return
+	InputMap.action_add_event(action, event)
 
 
 static func _bind(action: StringName, events: Array) -> void:
