@@ -20,8 +20,14 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 	var total_us := 0
 	var max_enemies := 0
 	var max_projectiles := 0
+	var total_earned := 0
+	var total_interest := 0
+	var max_materials := 0
 	while sim.phase == Sim.Phase.WAVE or sim.phase == Sim.Phase.SHOP:
 		if sim.phase == Sim.Phase.SHOP:
+			total_earned += sim.last_wave_earned
+			total_interest += sim.last_interest
+			max_materials = maxi(max_materials, sim.player.materials)
 			if sim.wave >= max_wave:
 				break
 			bot.shop(sim)
@@ -46,4 +52,8 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 		"worst_ms": float(worst_us) / 1000.0,
 		"max_enemies": max_enemies,
 		"max_projectiles": max_projectiles,
+		"earned": total_earned,
+		"interest": total_interest,
+		"max_materials": max_materials,
+		"materials": sim.player.materials,
 	}

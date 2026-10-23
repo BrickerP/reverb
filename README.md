@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.25 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.26 的 macOS / Windows / Linux 构建，不用装 Godot。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -115,9 +115,9 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 武器家族（副武器 / 散射 / 精准 / 奥术），商店与 Build 面板显示家族与 DPS
 - 角色身上显示已装备武器，按槽位环绕
 - 武器升级：Build 面板用材料升级已装备武器，等级影响伤害、DPS 与回响快照
-- 武器家族 combo：2 件 +10% 伤害、4 件 +10% 攻速、6 件再 +15% 伤害，Build 面板显示当前家族
+- 武器家族 combo：2 件 +3% 伤害、4 件 +3% 攻速、6 件再 +3% 伤害，Build 面板显示当前家族
 - 武器进化：满级 + 同家族 3 件 + 材料，在 Build 面板进化成同族强化形态
-- 材料利息：波末按未花材料 +10%（上限 20），商店显示本波收入、利息和下次利息预览
+- 材料利息：波末按未花材料 +2%（上限 5），商店显示本波收入、利息和下次利息预览
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
@@ -157,7 +157,7 @@ tools/          烟测、平衡、性能探针、音效生成
 - 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
 - Steam Deck / 低端机帧率未验证。本机 M3 窗口压力测试（720p、100 敌人、约 390 发弹幕）约 7ms/帧，200 敌人约 10ms；高弹量会自动降特效。
 - 手柄 UI 映射与暂停菜单尚未在 Steam Deck 实机验证。
-- 武器家族/进化/材料利息是首版规则，尚未跑 50 seed 平衡；bot 仍按原购买逻辑，不会主动升级、进化或吃利息存钱。
+- 武器家族/进化/材料利息是首版规则；v0.1.26 50 seed bot 结果：复读机 23/50、独行者 37/50、镜像 34/50。bot 不会主动升级/进化/存钱，真人未测。
 - 名称《回响》/ Take Stack 为工作名；Steam 已有多款 Reverb，英文名已更换；正式商标检索未做。
 
 ## 许可

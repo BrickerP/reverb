@@ -18,6 +18,11 @@ static func nearest_enemy(enemies: Array[EnemyState], from: Vector2, reach: floa
 	return best
 
 
+const FAMILY_DAMAGE_2 := 1.03
+const FAMILY_DAMAGE_6 := 1.03
+const FAMILY_COOLDOWN_4 := 0.97
+
+
 static func family_count(weapons: Array[WeaponDef], family: StringName) -> int:
 	var count := 0
 	for w in weapons:
@@ -26,19 +31,19 @@ static func family_count(weapons: Array[WeaponDef], family: StringName) -> int:
 	return count
 
 
-# 2 pieces: +10% damage. 4 pieces: +10% attack speed. 6 pieces: another +15% damage.
+# 2 pieces: +3% damage. 4 pieces: +3% attack speed. 6 pieces: another +3% damage.
 static func family_damage_mult(weapons: Array[WeaponDef], family: StringName) -> float:
 	var count := family_count(weapons, family)
 	var mult := 1.0
 	if count >= 2:
-		mult *= 1.10
+		mult *= FAMILY_DAMAGE_2
 	if count >= 6:
-		mult *= 1.15
+		mult *= FAMILY_DAMAGE_6
 	return mult
 
 
 static func family_cooldown_mult(weapons: Array[WeaponDef], family: StringName) -> float:
-	return 0.90 if family_count(weapons, family) >= 4 else 1.0
+	return FAMILY_COOLDOWN_4 if family_count(weapons, family) >= 4 else 1.0
 
 
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
