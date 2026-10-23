@@ -11,6 +11,8 @@ var knockback: float = 0.0
 var color: Color = Color.WHITE
 var crit: bool = false
 var source: int = -1
+var weapon_id: StringName
+var effect: StringName = &"hit"
 var explosion_radius: float = 0.0
 var explosion_damage: float = 0.0
 var homing_turn: float = 0.0

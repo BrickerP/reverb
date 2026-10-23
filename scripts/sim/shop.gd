@@ -1,13 +1,19 @@
 class_name Shop
 extends RefCounted
 
+signal shop_action_resolved(result: ShopResult)
+signal shop_history_changed(can_undo: bool)
+
 const OFFER_COUNT := 4
 const WEAPON_CHANCE := 0.4
 const RESALE_RATE := 0.5
 const EVOLVE_FAMILY_COUNT := 3
+const MAX_UNDO := 32
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
+
+var _undo_stack: Array[ShopState] = []
 
 
 static func price_for(base: int, wave: int) -> int:
@@ -78,11 +84,143 @@ static func evolve_weapon(sim: Sim, index: int) -> bool:
 	return true
 
 
+func can_undo() -> bool:
+	return not _undo_stack.is_empty()
+
+
+func clear_history() -> void:
+	if _undo_stack.is_empty():
+		return
+	_undo_stack.clear()
+	shop_history_changed.emit(false)
+
+
+func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -> ShopResult:
+	match action:
+		ShopResult.BUY:
+			if sim.phase != Sim.Phase.SHOP or offer == null or not offers.has(offer):
+				return ShopResult.failure(action, &"invalid")
+			var reason := block_reason(sim, offer)
+			if reason != &"":
+				return ShopResult.failure(action, reason, offer.price, -1, offer.id())
+			return ShopResult.success(action, offer.price, -1, offer.id())
+		ShopResult.REPLACE:
+			if sim.phase != Sim.Phase.SHOP or offer == null or not offer.is_weapon() or offer.sold:
+				return ShopResult.failure(action, &"invalid")
+			if not offers.has(offer) or index < 0 or index >= sim.player.weapons.size():
+				return ShopResult.failure(action, &"invalid", offer.price, index, offer.id())
+			var net := offer.price - resale_value(sim.player.weapons[index])
+			if sim.player.materials + resale_value(sim.player.weapons[index]) < offer.price:
+				return ShopResult.failure(action, &"poor", net, index, offer.id())
+			return ShopResult.success(action, net, index, offer.id())
+		ShopResult.UPGRADE:
+			var upgrade_price := 0
+			if index >= 0 and index < sim.player.weapons.size():
+				upgrade_price = upgrade_cost(sim.player.weapons[index], sim.player.level_at(index))
+			var upgrade_reason := upgrade_block_reason(sim, index)
+			if upgrade_reason != &"":
+				return ShopResult.failure(action, upgrade_reason, upgrade_price, index)
+			return ShopResult.success(action, upgrade_price, index)
+		ShopResult.EVOLVE:
+			var evolve_price := 0
+			if index >= 0 and index < sim.player.weapons.size():
+				evolve_price = evolution_cost(sim.player.weapons[index])
+			var evolve_reason := evolution_block_reason(sim, index)
+			if evolve_reason != &"":
+				return ShopResult.failure(action, evolve_reason, evolve_price, index)
+			return ShopResult.success(action, evolve_price, index)
+		ShopResult.REROLL:
+			if sim.phase != Sim.Phase.SHOP:
+				return ShopResult.failure(action, &"invalid")
+			var reroll_price := reroll_cost(sim.wave)
+			if sim.player.materials < reroll_price:
+				return ShopResult.failure(action, &"poor", reroll_price)
+			return ShopResult.success(action, reroll_price)
+		_:
+			return ShopResult.failure(action, &"invalid")
+
+
+func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -> ShopResult:
+	var quoted := quote(action, sim, offer, index)
+	if not quoted.ok:
+		return quoted
+	if action == ShopResult.REROLL:
+		if not reroll(sim):
+			return ShopResult.failure(action, &"invalid", quoted.cost)
+		var rerolled := ShopResult.success(action, quoted.cost)
+		shop_action_resolved.emit(rerolled)
+		return rerolled
+
+	var before := ShopState.capture(sim)
+	var ok := false
+	match action:
+		ShopResult.BUY:
+			ok = buy(sim, offer)
+		ShopResult.REPLACE:
+			ok = replace_weapon(sim, offer, index)
+		ShopResult.UPGRADE:
+			ok = upgrade_weapon(sim, index)
+		ShopResult.EVOLVE:
+			ok = evolve_weapon(sim, index)
+	if not ok:
+		return ShopResult.failure(action, &"invalid", quoted.cost, index,
+				offer.id() if offer != null else &"")
+	_push_history(before)
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(action, quoted.cost, index,
+			offer.id() if offer != null else &"", before, after)
+	_emit_weapon_changes(sim, before, after, action)
+	shop_action_resolved.emit(result)
+	shop_history_changed.emit(can_undo())
+	return result
+
+
+func undo(sim: Sim) -> ShopResult:
+	if _undo_stack.is_empty():
+		return ShopResult.failure(ShopResult.UNDO, &"empty")
+	var pre := ShopState.capture(sim)
+	var before: ShopState = _undo_stack.pop_back()
+	before.restore(sim)
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(ShopResult.UNDO, 0, -1, &"", pre, after)
+	_emit_weapon_changes(sim, pre, after, ShopResult.UNDO)
+	shop_action_resolved.emit(result)
+	shop_history_changed.emit(can_undo())
+	return result
+
+
+func _emit_weapon_changes(sim: Sim, before: ShopState, after: ShopState, reason: StringName) -> void:
+	var count := maxi(before.weapons.size(), after.weapons.size())
+	for i in count:
+		var before_id: StringName = before.weapons[i] if i < before.weapons.size() else &""
+		var after_id: StringName = after.weapons[i] if i < after.weapons.size() else &""
+		var before_level: int = before.weapon_levels[i] if i < before.weapon_levels.size() else 0
+		var after_level: int = after.weapon_levels[i] if i < after.weapon_levels.size() else 0
+		if before_id == after_id and before_level == after_level:
+			continue
+		var info := WeaponChangeInfo.new()
+		info.index = i
+		info.before_id = before_id
+		info.after_id = after_id
+		info.before_level = before_level
+		info.after_level = after_level
+		info.reason = reason
+		info.ok = true
+		sim.weapon_changed.emit(info)
+
+
+func _push_history(state: ShopState) -> void:
+	_undo_stack.append(state)
+	if _undo_stack.size() > MAX_UNDO:
+		_undo_stack.pop_front()
+
+
 func reroll_cost(wave: int) -> int:
 	return 2 + int(float(wave) * 0.5) + 2 * rerolls
 
 
 func roll(sim: Sim) -> void:
+	clear_history()
 	rerolls = 0
 	_fill(sim)
 
@@ -145,6 +283,7 @@ func reroll(sim: Sim) -> bool:
 	sim.player.materials -= cost
 	rerolls += 1
 	_fill(sim)
+	clear_history()
 	return true
 
 
