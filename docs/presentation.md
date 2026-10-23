@@ -5,8 +5,7 @@ runtime mechanics through `5a1e8c1`, and freezes runtime/export source at
 `d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`. A later contract/test-only mechanics
 handoff `075a2bd` is integrated at `dee0fd728569db0f28d5396f638e4586f8e2f869`;
 it changes interface/README text and tests, not runtime/export inputs. Version fields
-remain 0.1.36. Presentation adds no rules, prices or collisions, and this local
-delivery does not create a tag, Release or main-branch move.
+remain 0.2.0. Presentation adds no rules, prices or collisions; this release is packaged as v0.2.0.
 
 ## Assets and rendering
 

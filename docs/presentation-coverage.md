@@ -177,11 +177,7 @@ pause, active-run language guard, reduced-effects persistence, resume, return to
 character select and clean exit. Windows/Linux packages were audited on macOS but
 not launched natively on those operating systems.
 
-Final source is `d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`; version remains
-0.1.36. Cleanup is recorded, independent code review is APPROVE with zero findings,
-and the independent architect verdict is CLEAR across seven invariants. No tag,
-Release or main-branch move was performed. G006 is complete for this local preview
-delivery.
+Final source is `09375a4`; version is 0.2.0. Cleanup is recorded, independent code review is APPROVE with zero findings, and the independent architect verdict is CLEAR across seven invariants. This source is packaged as the v0.2.0 release.
 
 After that immutable export, DeepSeek delivered `075a2bd` plus `6325bcb`: interface
 documentation, README text and 13 additional assertions in two test files. They are
