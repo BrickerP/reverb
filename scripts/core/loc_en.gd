@@ -82,6 +82,8 @@ const TABLE := {
 	"select.solo_desc": "No echoes. +60% damage, +25 HP, faster, +5% crit.",
 	"select.mirror_name": "Mirror",
 	"select.mirror_desc": "Two echo slots that copy your current weapons and stats, +5 HP. Win a run to unlock.",
+	"select.conductor_name": "Conductor",
+	"select.conductor_desc": "Four echo slots at 22% power. Each active echo gives the team +4.5% damage and +2.5% attack speed.",
 	"select.live_echo": "Live loadout",
 	"select.locked_wins": "Win a run to unlock",
 	"select.echo_line": "%d slots  ·  %d%% power",

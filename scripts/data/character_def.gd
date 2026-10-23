@@ -8,6 +8,8 @@ extends Resource
 @export var unlock_wave: int = 0
 @export var unlock_wins: int = 0
 @export var live_echo: bool = false
+@export var synergy_damage_per_echo: float = 0.0
+@export var synergy_haste_per_echo: float = 0.0
 
 
 func apply(sim: Sim) -> void:
@@ -17,3 +19,5 @@ func apply(sim: Sim) -> void:
 		sim.player.stats.add(stat, float(mods[stat]))
 	sim.player.hp = sim.player.max_hp()
 	sim.live_echo = live_echo
+	sim.synergy_damage_per_echo = synergy_damage_per_echo
+	sim.synergy_haste_per_echo = synergy_haste_per_echo

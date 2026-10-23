@@ -48,7 +48,7 @@ static func family_cooldown_mult(weapons: Array[WeaponDef], family: StringName) 
 
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
 		levels: Array[int], cooldowns: Array[float], power_mult: float, delta: float, source: int,
-		tint: Color) -> void:
+		tint: Color, extra_damage: float = 1.0, extra_cooldown: float = 1.0) -> void:
 	for i in weapons.size():
 		cooldowns[i] -= delta
 		if cooldowns[i] > 0.0:
@@ -58,10 +58,10 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		if target == null:
 			cooldowns[i] = 0.0
 			continue
-		cooldowns[i] += w.cooldown * stats.cooldown_mult() * family_cooldown_mult(weapons, w.family)
+		cooldowns[i] += w.cooldown * stats.cooldown_mult() * family_cooldown_mult(weapons, w.family) * extra_cooldown
 		var level := levels[i] if i >= 0 and i < levels.size() else 0
-		fire(sim, origin, target.pos, w, level, family_damage_mult(weapons, w.family), stats,
-				power_mult, source, tint)
+		fire(sim, origin, target.pos, w, level, family_damage_mult(weapons, w.family) * extra_damage,
+				stats, power_mult, source, tint)
 
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,

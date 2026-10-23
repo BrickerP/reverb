@@ -101,6 +101,18 @@ func test_mirror_uses_the_current_build(c: Check) -> void:
 			"live echoes value the current weapon, not the snapshot")
 
 
+func test_conductor_scales_with_active_echoes(c: Check) -> void:
+	var s := Sim.new(1)
+	Content.character(&"conductor").apply(s)
+	c.eq(s.echo_capacity(), 4, "conductor has four slots")
+	c.near(s.echo_power(), 0.22, 0.001, "conductor echoes are weaker")
+	c.near(s.synergy_damage_mult(), 1.0, 0.001, "no echoes means no team bonus")
+	for i in 2:
+		s.echoes.append(EchoActor.new(EchoTake.new(), i))
+	c.near(s.synergy_damage_mult(), 1.09, 0.001, "each echo adds team damage")
+	c.near(s.synergy_cooldown_mult(), 1.0 / 1.05, 0.001, "each echo adds team haste")
+
+
 func test_solo_does_not_record_takes(c: Check) -> void:
 	var s := Sim.new(1)
 	Content.character(&"solo").apply(s)

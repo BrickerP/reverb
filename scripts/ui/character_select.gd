@@ -25,7 +25,7 @@ func _ready() -> void:
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(880.0, 0.0)
+	panel.custom_minimum_size = Vector2(1180.0, 0.0)
 	panel.add_theme_stylebox_override("panel", UiTheme.box(
 			Color(0.03, 0.04, 0.09, 0.98), Color(0.3, 0.5, 0.9, 0.6), 2, 10))
 	center.add_child(panel)
@@ -107,7 +107,7 @@ func chosen_seed() -> int:
 func _make_card(def: CharacterDef, meta: Meta) -> Button:
 	var locked := not meta.is_unlocked(def.id)
 	var card := Button.new()
-	card.custom_minimum_size = Vector2(250.0, 300.0)
+	card.custom_minimum_size = Vector2(245.0, 300.0)
 	card.disabled = locked
 	card.modulate.a = 0.5 if locked else 1.0
 	var normal := UiTheme.box(Color(0.05, 0.06, 0.12), def.color, 2, 8)

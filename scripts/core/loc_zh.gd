@@ -82,6 +82,8 @@ const TABLE := {
 	"select.solo_desc": "没有回响。伤害 +60%，生命 +25，移速/攻速提升，暴击 +5%。",
 	"select.mirror_name": "镜像",
 	"select.mirror_desc": "2 个回响槽，实时复制你当前的武器与属性，+5 生命。通关一次解锁。",
+	"select.conductor_name": "指挥",
+	"select.conductor_desc": "4 个回响槽、22% 威力；每个活跃回响使全队伤害 +4.5%、攻速 +2.5%。",
 	"select.live_echo": "实时装备",
 	"select.locked_wins": "通关一次解锁",
 	"select.echo_line": "%d 槽  ·  %d%% 威力",

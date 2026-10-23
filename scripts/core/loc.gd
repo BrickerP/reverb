@@ -48,6 +48,8 @@ static func character_name(id: StringName) -> String:
 			return t("select.solo_name")
 		&"mirror":
 			return t("select.mirror_name")
+		&"conductor":
+			return t("select.conductor_name")
 		_:
 			return String(id)
 
@@ -60,6 +62,8 @@ static func character_desc(id: StringName) -> String:
 			return t("select.solo_desc")
 		&"mirror":
 			return t("select.mirror_desc")
+		&"conductor":
+			return t("select.conductor_desc")
 		_:
 			return ""
 

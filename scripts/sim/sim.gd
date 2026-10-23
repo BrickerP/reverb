@@ -50,6 +50,8 @@ var echoes: Array[EchoActor] = []
 var boss: EnemyState
 var echo_silenced := 0.0
 var live_echo := false
+var synergy_damage_per_echo := 0.0
+var synergy_haste_per_echo := 0.0
 var last_interest := 0
 var last_wave_earned := 0
 var wave_start_materials := 0
@@ -98,13 +100,23 @@ func echo_power() -> float:
 	return maxf(0.0, player.stats.get_stat(Stats.ECHO_POWER))
 
 
+func synergy_damage_mult() -> float:
+	return 1.0 + synergy_damage_per_echo * float(echoes.size())
+
+
+func synergy_cooldown_mult() -> float:
+	return 1.0 / (1.0 + synergy_haste_per_echo * float(echoes.size()))
+
+
 func echo_dps(take: EchoTake) -> float:
+	var damage := synergy_damage_mult()
+	var cooldown := synergy_cooldown_mult()
 	if live_echo:
 		var total := 0.0
 		for i in player.weapons.size():
 			total += player.weapons[i].level_dps(player.level_at(i))
-		return total * player.stats.damage_mult() / player.stats.cooldown_mult() * echo_power()
-	return take.power() * echo_power()
+		return total * player.stats.damage_mult() / player.stats.cooldown_mult() * echo_power() * damage / cooldown
+	return take.power() * echo_power() * damage / cooldown
 
 
 func can_start_wave() -> bool:
@@ -168,16 +180,18 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_move_enemies(delta)
 	_boss_step(delta)
 	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.weapon_levels,
-			player.cooldowns, 1.0, delta, -1, Color.WHITE)
+			player.cooldowns, 1.0, delta, -1, Color.WHITE, synergy_damage_mult(), synergy_cooldown_mult())
 	if echo_silenced <= 0.0:
 		for actor in echoes:
 			if live_echo:
 				_fit_echo_cooldowns(actor)
 				Combat.step_weapons(self, actor.pos, player.stats, player.weapons, player.weapon_levels,
-						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
+						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
+						synergy_damage_mult(), synergy_cooldown_mult())
 			else:
 				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons, actor.take.levels,
-						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint())
+						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
+						synergy_damage_mult(), synergy_cooldown_mult())
 	Combat.step_projectiles(self, delta)
 	_update_pickups(delta)
 	_compact()

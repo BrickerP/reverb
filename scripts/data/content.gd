@@ -254,3 +254,11 @@ static func _build_characters() -> void:
 		"live_echo": true,
 		"unlock_wins": 1,
 	})
+	_character(&"conductor", {
+		"color": Color(0.55, 0.95, 0.85),
+		"overrides": {Stats.ECHO_SLOTS: 4.0, Stats.ECHO_POWER: 0.22},
+		"mods": {Stats.MAX_HP: 5.0},
+		"synergy_damage_per_echo": 0.045,
+		"synergy_haste_per_echo": 0.025,
+		"unlock_wave": 15,
+	})
