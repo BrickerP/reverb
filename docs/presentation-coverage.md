@@ -47,15 +47,19 @@ objects are rejected after undo/rebuild. The focused transaction suite passes 76
 assertions. The integrated G002 tree subsequently passed 2660 assertions with zero
 failures; smoke completed 5246 frames through wave 4 with three purchases.
 
-Rich `ShotInfo`, `DamageInfo`, `ExplosionInfo` and `WeaponChangeInfo` events exist
-at the mechanics cursor. View/audio still consume compatible legacy signals, so
-weapon-specific recoil, muzzle position, impact direction, explosion cause and
-equipment/undo feedback are not implemented. `PlayerHurtInfo` is also present at
-`5a1e8c1`; consuming it belongs to G004.
+G004 consumes `ShotInfo`, `DamageInfo`, `ExplosionInfo`, `WeaponChangeInfo` and
+`PlayerHurtInfo`. It adds per-weapon recoil/muzzle/tracer response, directional
+normal/critical/shield-block hits, cause-specific explosions and player hurt, and
+post-rebuild equipment apply/undo feedback. Feedback queues are bounded, expire,
+pause independently from simulation, support reduced effects and clear on lifecycle
+transitions.
 
-Audio exposes 14 events. Five have new documented presentation cues (click, buy,
-hit, echo, wave end); nine use the pre-existing fallback files. The 12-second movie
-proves a mixed audio track exists, not that every cue has passed a listening matrix.
+Audio now routes 35 cue names, including 12 explicit weapon profiles and 21 new
+CC0 WAVs. Seven common and five protected voices prevent routine combat density
+from stealing high-priority hurt, boss, result or transaction cues. Rich signals
+replace duplicate legacy binding; equipment apply plays once, with separate undo
+and reroll cues. Combat/ambient audio pauses while allowed UI transaction cues
+remain responsive.
 
 ## Evidence
 
@@ -78,6 +82,15 @@ Runtime evidence:
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-en.png`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-select-zh.png`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-content-verification/`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/summary.json`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-audio-tests.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-combat-tests.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-equipment-tests.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-lifecycle-tests.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-feedback.log`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback.mp4`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback-verification/`
+- `shots/feedback_summary.json` and seven `shots/feedback_*.png` captures
 - `shots/shop_drag_full.png`, `shop_drag_highlight.png`,
   `shop_drag_committed.png`, `shop_drag_undone.png`
 
@@ -88,9 +101,8 @@ version files are shared and require an announced integration boundary.
 
 ## Work order
 
-1. P0: bind rich combat/equipment/player-hurt events to precise view and audio feedback.
-2. P2: capture the remaining UI state/accessibility matrix and finish mix QA.
-3. G006: verify dense-combat and arena-boundary readability before final delivery.
+1. P2: capture the remaining UI state/accessibility matrix and finish mix QA.
+2. G006: verify dense-combat and arena-boundary readability before final delivery.
 
 G005 polish note: the drag preview's intended offset still appears close to its
 target in the actual gallery. Recheck its wrapper/theme sizing and target occlusion;
@@ -107,6 +119,17 @@ purchases) passed at 2026-10-23 19:15:17 +08:00.
 Three surface PNGs are prepared for G005 but lack runtime acceptance. G006 should
 exercise the narrow Silencer and light Longbow silhouette in dense combat and at
 arena boundaries; these are verification targets, not known failures.
+
+G004 production regression passes: resource import, English/Chinese UI, 3796
+assertions and smoke (5246 frames, wave 4, three purchases). The real-paced native
+probe observes 15 shots, 4 damage events, 2 explosions, 3 player hurts and 2 weapon
+changes. All seven 1280×720 captures are nonblank and actual-view checked. Audio
+position stays fixed after pause settles and advances after resume; cleanup clears
+old references, feedback queues and motion. Code review is APPROVE and architecture
+review CLEAR after the final null-guard confirmation. The shareable audio movie
+capture also passes at production commit `9e808ff`. The exported
+`take-stack-feedback.mp4` is 7.45 seconds, 1280×720 at 60 FPS with H.264 video and
+AAC audio; the verification directory contains seven PNGs, summary and logs.
 
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as

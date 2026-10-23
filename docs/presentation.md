@@ -40,9 +40,13 @@ walks back equipment actions within the current offer batch; successful reroll o
 wave start locks prior history. Echo discard/merge is intentionally outside undo.
 Undo rebuilds Offers, and stale exact-offer drag payloads are rejected.
 
-Five CC0-derived cues replace click, purchase, hit, echo and wave-end sounds.
-Other sounds retain their existing files. `audio/presentation/SOURCES.md` records
-the exact sources; `tools/build_presentation_audio.py` reproduces the WAVs.
+Audio routes 35 cue names. The five original presentation cues remain, and G004
+adds 21 CC0 WAVs: 12 weapon profiles, critical/shield hits, weapon/bomber blasts,
+contact/blast hurt, equipment apply/undo and reroll. Seven common and five protected
+voices preserve important feedback under combat density. Rich signals are bound
+once, combat/ambient pauses correctly, allowed UI transaction cues remain responsive,
+and lifecycle rebind/reset is strict. `audio/presentation/SOURCES.md` records exact
+sources; the two audio builders reproduce the presentation WAVs.
 
 ## Verification and preview
 
@@ -67,6 +71,16 @@ interaction regression pass. On final HEAD `2fa3735` with fixed mechanics
 `5a1e8c1`, resource import, English/Chinese UI, 3470 assertions and the 5246-frame
 smoke pass. Three surface PNGs are prepared for G005 but are not runtime-complete.
 
+G004 passes 3796 assertions, resource import, English/Chinese UI and smoke (5246
+frames, wave 4, three purchases). The real-paced native probe observes 15 shots,
+4 damage events, 2 explosions, 3 player hurts and 2 weapon changes; seven captures
+are nonblank and actual-view checked. Pause holds audio position after settling,
+resume advances, and cleanup clears old references, queues and motion. Reviewer
+status is APPROVE/CLEAR after null-guard reconfirmation. Production is fixed at
+`9e808ff`; the shareable `take-stack-feedback.mp4` is 7.45 seconds, 1280×720 at
+60 FPS with H.264 video and AAC audio. Its verification directory contains seven
+PNG captures, the feedback summary and logs.
+
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
   --write-movie /absolute/output/preview.avi \
@@ -76,15 +90,13 @@ godot --path . --fixed-fps 60 --disable-vsync \
 ## Next presentation adapters
 
 `INTERFACES.md` documents the integrated `ShotInfo`, `DamageInfo`, `ExplosionInfo`,
-`WeaponChangeInfo` and `PlayerHurtInfo` events. A subsequent pass can bind exact
-muzzle flashes, recoil, directional hurt and weapon-specific sounds to those
-events. This slice still uses legacy presentation signals, with mounted weapons
-aiming from current visible state.
+`WeaponChangeInfo` and `PlayerHurtInfo` events. G004 binds them to weapon-profile
+recoil/muzzle/tracer feedback, directional hits and hurt, cause-specific explosions,
+equipment apply/undo response and distinct audio without duplicate legacy playback.
 
 Direct-drop transactions and repeated undo now use the mechanics-owned
-`quote/apply/undo` API and history signals. The remaining adapter work is visual and
-audio: consume `WeaponChangeInfo` for equipment/undo feedback and the rich combat
-events for exact firing and impact responses. G005 should also recheck the drag
-preview wrapper/offset so it never crowds the active target; this is non-blocking
-for the verified transaction behavior. DeepSeek owns the rules and interfaces;
+`quote/apply/undo` API and history signals. G005 should recheck the drag preview
+wrapper/offset so it never crowds the active target and integrate the prepared
+surface art across remaining UI states; these are non-blocking for G002/G004.
+DeepSeek owns the rules and interfaces;
 Codex owns their visual/audio response and fixed-commit integration and release.
