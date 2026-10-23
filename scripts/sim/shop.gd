@@ -20,7 +20,7 @@ static func resale_value(w: WeaponDef) -> int:
 
 
 static func upgrade_cost(w: WeaponDef, level: int) -> int:
-	return maxi(1, int(round(float(w.price) * (0.6 + 0.35 * float(clampi(level, 0, WeaponDef.MAX_LEVEL))))))
+	return maxi(1, int(round(float(w.price) * (0.9 + 0.5 * float(clampi(level, 0, WeaponDef.MAX_LEVEL))))))
 
 
 static func upgrade_block_reason(sim: Sim, index: int) -> StringName:

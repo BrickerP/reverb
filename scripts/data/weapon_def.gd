@@ -18,7 +18,7 @@ extends Resource
 @export var color: Color = Color.WHITE
 
 const MAX_LEVEL := 3
-const DAMAGE_PER_LEVEL := 0.2
+const DAMAGE_PER_LEVEL := 0.15
 
 
 func dps() -> float:
