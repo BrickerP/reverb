@@ -29,7 +29,7 @@ func test_family_combo_thresholds(c: Check) -> void:
 	c.near(Combat.family_damage_mult(weapons, &"sidearm"), 1.03, 0.001, "two pieces add damage")
 	weapons.append(pistol)
 	weapons.append(pistol)
-	c.near(Combat.family_cooldown_mult(weapons, &"sidearm"), 0.97, 0.001, "four pieces add speed")
+	c.near(Combat.family_cooldown_mult(weapons, &"sidearm"), 0.94, 0.001, "four sidearms grant gunslinger haste")
 	weapons.append(pistol)
 	weapons.append(pistol)
 	c.near(Combat.family_damage_mult(weapons, &"sidearm"), 1.0609, 0.001, "six pieces add master damage")

@@ -20,7 +20,11 @@ static func nearest_enemy(enemies: Array[EnemyState], from: Vector2, reach: floa
 
 const FAMILY_DAMAGE_2 := 1.03
 const FAMILY_DAMAGE_6 := 1.03
-const FAMILY_COOLDOWN_4 := 0.97
+const FAMILY_MASTERY_SIDEARM_HASTE := 0.94
+const FAMILY_MASTERY_SCATTER_RANGE := 160.0
+const FAMILY_MASTERY_SCATTER_DAMAGE := 1.15
+const FAMILY_MASTERY_MARKSMAN_PIERCE := 1
+const FAMILY_MASTERY_ARCANE_ECHO := 0.08
 
 
 static func family_count(weapons: Array[WeaponDef], family: StringName) -> int:
@@ -43,7 +47,23 @@ static func family_damage_mult(weapons: Array[WeaponDef], family: StringName) ->
 
 
 static func family_cooldown_mult(weapons: Array[WeaponDef], family: StringName) -> float:
-	return FAMILY_COOLDOWN_4 if family_count(weapons, family) >= 4 else 1.0
+	if family_count(weapons, family) >= 4 and family == &"sidearm":
+		return FAMILY_MASTERY_SIDEARM_HASTE
+	return 1.0
+
+
+# Four pieces unlock a family identity instead of a generic speed bonus.
+static func family_mastery_damage(weapons: Array[WeaponDef], family: StringName,
+		distance: float) -> float:
+	if family == &"scatter" and family_count(weapons, family) >= 4 and distance <= FAMILY_MASTERY_SCATTER_RANGE:
+		return FAMILY_MASTERY_SCATTER_DAMAGE
+	return 1.0
+
+
+static func family_mastery_pierce(weapons: Array[WeaponDef], family: StringName) -> int:
+	if family == &"marksman" and family_count(weapons, family) >= 4:
+		return FAMILY_MASTERY_MARKSMAN_PIERCE
+	return 0
 
 
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
@@ -60,8 +80,11 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 			continue
 		cooldowns[i] += w.cooldown * stats.cooldown_mult() * family_cooldown_mult(weapons, w.family) * extra_cooldown
 		var level := levels[i] if i >= 0 and i < levels.size() else 0
-		fire(sim, origin, target.pos, w, level, family_damage_mult(weapons, w.family) * extra_damage,
-				stats, power_mult, source, tint)
+		var shot_damage := family_damage_mult(weapons, w.family) * extra_damage
+		shot_damage *= family_mastery_damage(weapons, w.family, origin.distance_to(target.pos))
+		fire(sim, origin, target.pos, w, level, shot_damage,
+				stats, power_mult, source, tint,
+				family_mastery_pierce(weapons, w.family))
 		sim.shot_sequence += 1
 		var info := ShotInfo.new()
 		info.source = source
@@ -76,7 +99,8 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
-		family_mult: float, stats: Stats, power_mult: float, source: int, tint: Color) -> void:
+		family_mult: float, stats: Stats, power_mult: float, source: int, tint: Color,
+		bonus_pierce: int = 0) -> void:
 	var base_dir := (target_pos - origin).normalized()
 	if base_dir == Vector2.ZERO:
 		base_dir = Vector2.RIGHT
@@ -98,7 +122,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		p.pos = origin + dir * 14.0
 		p.vel = dir * w.projectile_speed
 		p.radius = w.projectile_radius
-		p.pierce_left = w.pierce
+		p.pierce_left = w.pierce + bonus_pierce
 		p.knockback = w.knockback
 		p.explosion_radius = w.explosion_radius
 		p.explosion_damage = w.explosion_damage

@@ -103,7 +103,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	items_drop_target = _empty_target(&"items", Loc.t("shop.drop_item"))
 	_box.add_child(items_drop_target)
 	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
-	_box.add_child(_core_grid(pl))
+	_box.add_child(_core_grid(pl, sim))
 
 
 func close_session() -> void:
@@ -370,7 +370,18 @@ func _family_summary(pl: PlayerState) -> Control:
 		if count >= 2:
 			parts.append(Loc.t("shop.family_damage"))
 		if count >= 4:
-			parts.append(Loc.t("shop.family_speed"))
+			var mastery_key := ""
+			match family:
+				&"sidearm":
+					mastery_key = "shop.family_mastery_sidearm"
+				&"scatter":
+					mastery_key = "shop.family_mastery_scatter"
+				&"marksman":
+					mastery_key = "shop.family_mastery_marksman"
+				&"arcane":
+					mastery_key = "shop.family_mastery_arcane"
+			if not mastery_key.is_empty():
+				parts.append(Loc.t(mastery_key))
 		if count >= 6:
 			parts.append(Loc.t("shop.family_master"))
 		flow.add_child(UiTheme.label(" · ".join(parts), 12, UiTheme.COIN if count >= 2 else UiTheme.DIM))
@@ -393,7 +404,7 @@ func _item_chips(pl: PlayerState) -> Control:
 
 
 # The six numbers that describe this run's identity. The rest live on the cards.
-func _core_grid(pl: PlayerState) -> Control:
+func _core_grid(pl: PlayerState, sim: Sim) -> Control:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("v_separation", 4)
@@ -403,7 +414,7 @@ func _core_grid(pl: PlayerState) -> Control:
 	_add_stat(grid, Loc.stat_name(Stats.CRIT_CHANCE), Loc.stat_value(Stats.CRIT_CHANCE, pl.stats.get_stat(Stats.CRIT_CHANCE), false))
 	if int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))) > 0:
 		_add_stat(grid, Loc.t("hud.echo"), Loc.t("shop.echo_value", [int(round(pl.stats.get_stat(Stats.ECHO_SLOTS))),
-				int(round(pl.stats.get_stat(Stats.ECHO_POWER) * 100.0))]))
+				int(round(sim.echo_power() * 100.0))]))
 	_add_stat(grid, Loc.stat_name(Stats.HP_REGEN), Loc.stat_value(Stats.HP_REGEN, pl.stats.get_stat(Stats.HP_REGEN), false))
 	return grid
 
