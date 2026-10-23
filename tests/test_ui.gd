@@ -104,6 +104,24 @@ func test_shop_locks_one_offer_through_reroll(c: Check) -> void:
 	ui.free()
 
 
+func test_shop_contract_accept_button(c: Check) -> void:
+	var s := _shop_sim(1000)
+	var contract := AnomalyContract.new()
+	contract.kind = AnomalyContract.CLEAN
+	contract.deposit = 6
+	contract.reward = 18
+	s.shop.contract = contract
+	var ui := _open_shop(s)
+	c.ok(ui._contract_panel.visible, "contract row is visible")
+	c.eq(ui._contract_button.text, Loc.t("contract.accept"), "contract offers accept")
+	var before := s.player.materials
+	ui._contract_button.pressed.emit()
+	c.eq(s.player.materials, before - contract.deposit, "accepting pays the deposit once")
+	c.ok(s.active_contract == contract, "accepted contract becomes active")
+	c.ok(ui._contract_button.disabled, "accepted contract disables the button")
+	ui.free()
+
+
 func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 	var s := _shop_sim()
 	var ui := _open_shop(s)
