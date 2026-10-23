@@ -132,6 +132,7 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
+	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
 	last_interest = 0

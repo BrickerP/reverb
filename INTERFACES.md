@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M0 contract frozen; not wired to gameplay yet.**  
+Status: **M1 mechanism API implemented; UI not wired yet.**  
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
 
@@ -45,7 +45,19 @@ action.
 - `cost`, `index`, `offer_id`
 - optional `before_state`, `after_state` (`ShopState`)
 
-M1 will add a unified `quote/apply` bridge. Until then, the existing methods remain:
+M1 adds a unified shop bridge. The mechanism API is now:
+
+- `Shop.quote(action, sim, offer = null, index = -1)` → `ShopResult`
+- `Shop.apply(action, sim, offer = null, index = -1)` → `ShopResult`
+- `Shop.undo(sim)` → `ShopResult`
+- `Shop.can_undo()` / `Shop.clear_history()`
+
+Signals on `Sim.shop`:
+
+- `shop_action_resolved(result)`
+- `shop_history_changed(can_undo)`
+
+The old direct methods remain for compatibility:
 
 - `Shop.buy(sim, offer)`
 - `Shop.replace_weapon(sim, offer, index)`
@@ -53,9 +65,7 @@ M1 will add a unified `quote/apply` bridge. Until then, the existing methods rem
 - `Shop.evolve_weapon(sim, index)`
 - `Shop.reroll(sim)`
 
-Existing quote/validation functions (`block_reason`, `upgrade_cost`,
-`upgrade_block_reason`, `evolution_cost`, `evolution_block_reason`) stay the source of truth.
-UI reads them; it does not duplicate the formulas.
+New UI must use `quote/apply` for equipment actions so history is recorded. Direct methods are migration-only.
 
 ## 4. Presentation event types
 
@@ -78,22 +88,22 @@ Planned additions:
 The old signals remain valid for current view/audio. New presentation should prefer the rich
 events once emitted.
 
-## 5. Undo semantics (M1 target)
+## 5. Undo semantics (implemented)
 
 - Undo scope: **equipment operations only** for the first slice.
-- Buying, replacing, upgrading, and evolving push exact `ShopState` snapshots.
-- Undo restores the full state, not a recomputed refund.
-- `ShopState.restore` rebuilds `Offer` objects. UI must discard old offer references and re-read the restored list after undo; object identity is not preserved.
+- Buy, replace, upgrade, and evolve performed through `apply` push exact `ShopState` snapshots.
+- `undo` restores the full state from the snapshot, not a recomputed refund.
 - Failed operations do not lock history.
-- A successful reroll locks/clears prior history; the new offers start a new history.
+- A successful reroll clears prior history; the new offers start a new history.
 - A successfully started wave clears history.
 - Undo never rerolls or advances RNG.
+- `ShopState.restore` rebuilds `Offer` objects; UI must discard old offer references and re-read the restored list after undo.
 - Echo discard/merge undo is **out of scope** until explicitly specified.
 
 ## 6. Current known gaps
 
-- Shop operations still mutate directly and emit only `purchased` with no payload.
-- Undo transaction/history is not implemented.
+- Shop operations still mutate directly when UI uses the legacy methods; only `apply` records undo history.
+- Undo transaction/history is implemented in mechanism API, but the current Shop UI still calls legacy methods and has no undo control.
 - Combat events do not carry weapon/origin/direction/source-kind information.
 - Drag/drop is presentation-owned and is not part of the mechanism API yet.
 - UI currently recalculates display strings but reads costs/validation from Shop functions.
