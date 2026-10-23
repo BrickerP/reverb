@@ -247,3 +247,19 @@ The mechanics cursor remains `4594fce`; the newly checked DeepSeek `cba4dc9`
 has no tree difference from it. No default manual run or feedback ledger exists
 in the previous playtest's isolated user directory, so this fix derives from
 automated runtime observation and makes no claim about human player feedback.
+
+## Pending mechanics: Paradox twin timelines
+
+Candidate `bb09c95735e6270e095c5e344abecc299e527900` (observed merge `f3c4e91`)
+is held before integration. Its upstream CI passes and its existing boss suite
+passes 40 assertions in an isolated archive. A separate contract probe fails:
+nonlethal damage leaving 0.25 HP creates two bodies with total HP 1.0, contrary to
+the documented remaining-health preservation rule. The 10 HP control is preserved.
+This is a controlled boundary fixture, not observed human gameplay or a balance
+conclusion. Mechanism ownership remains with DeepSeek; no candidate code is merged.
+
+The accepted mechanics cursor remains `4594fce` and the playable build remains
+`42b0c6e`. The candidate reuses existing Paradox art, but its combined health/pips,
+phase/shard/enrage events, surviving-body effect origins, reduced-effects lifecycle
+and audio coverage are pending acceptance. Evidence and reproduction are in
+`outputs/take-stack-boss-phase2-review/` in the parent task directory.
