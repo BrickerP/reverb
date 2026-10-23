@@ -17,6 +17,8 @@ const DANGER_RADIUS := 230.0
 const WALL_RADIUS := 120.0
 
 var style: StringName
+var upgrades: int = 0
+var evolutions: int = 0
 
 
 func _init(style_value: StringName = &"balanced") -> void:
@@ -96,8 +98,52 @@ func shop(sim: Sim) -> void:
 			rerolled += 1
 		else:
 			break
+	_spend_on_weapons(sim)
 	while not sim.can_start_wave():
 		sim.discard_take(sim.bank.weakest())
+
+
+func _spend_on_weapons(sim: Sim) -> void:
+	var reserve := 0
+	match style:
+		&"defensive":
+			reserve = 10
+		&"balanced":
+			reserve = 3
+	# Evolve first: it is the biggest jump and resets the weapon to level 1.
+	for i in sim.player.weapons.size():
+		var w := sim.player.weapons[i]
+		if w.evolves_to == &"" or sim.shop.evolution_block_reason(sim, i) != &"":
+			continue
+		if sim.player.materials >= Shop.evolution_cost(w) + reserve:
+			if sim.shop.evolve_weapon(sim, i):
+				evolutions += 1
+	# Then spend spare materials on the best marginal DPS per material.
+	for _step in 20:
+		var best := -1
+		var best_ratio := 0.0
+		for i in sim.player.weapons.size():
+			if sim.shop.upgrade_block_reason(sim, i) != &"":
+				continue
+			var w := sim.player.weapons[i]
+			var level := sim.player.level_at(i)
+			var cost := Shop.upgrade_cost(w, level)
+			if sim.player.materials < cost + reserve:
+				continue
+			var now := OfferCard.weapon_dps(w, sim.player.stats, level,
+					Combat.family_damage_mult(sim.player.weapons, w.family),
+					Combat.family_cooldown_mult(sim.player.weapons, w.family))
+			var next := OfferCard.weapon_dps(w, sim.player.stats, level + 1,
+					Combat.family_damage_mult(sim.player.weapons, w.family),
+					Combat.family_cooldown_mult(sim.player.weapons, w.family))
+			var ratio := (next - now) / float(maxi(1, cost))
+			if ratio > best_ratio:
+				best = i
+				best_ratio = ratio
+		if best < 0:
+			break
+		if sim.shop.upgrade_weapon(sim, best):
+			upgrades += 1
 
 
 func _score(o: Offer, owned_weapons: int) -> float:

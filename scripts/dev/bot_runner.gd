@@ -56,4 +56,6 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 		"interest": total_interest,
 		"max_materials": max_materials,
 		"materials": sim.player.materials,
+		"upgrades": bot.upgrades,
+		"evolutions": bot.evolutions,
 	}
