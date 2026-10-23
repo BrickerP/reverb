@@ -88,9 +88,9 @@ func shop(sim: Sim) -> void:
 		var best: Offer = null
 		var best_score := -1.0
 		for o in sim.shop.offers:
-			if sim.shop.can_buy(sim, o) and _score(o, sim.player.weapons.size()) > best_score:
+			if sim.shop.can_buy(sim, o) and _score(o, sim) > best_score:
 				best = o
-				best_score = _score(o, sim.player.weapons.size())
+				best_score = _score(o, sim)
 		if best != null:
 			sim.shop.buy(sim, best)
 		elif rerolled < reroll_limit and sim.player.materials >= sim.shop.reroll_cost(sim.wave) + reserve:
@@ -119,6 +119,18 @@ func _spend_on_weapons(sim: Sim) -> void:
 			if sim.shop.evolve_weapon(sim, i):
 				evolutions += 1
 	# Then spend spare materials on the best marginal DPS per material.
+	if style == &"family":
+		var target := _family_target(sim)
+		while target >= 0 and sim.shop.upgrade_block_reason(sim, target) == &"":
+			var w := sim.player.weapons[target]
+			var level := sim.player.level_at(target)
+			var cost := Shop.upgrade_cost(w, level)
+			if sim.player.materials < cost + reserve:
+				break
+			if not sim.shop.upgrade_weapon(sim, target):
+				break
+			upgrades += 1
+		return
 	for _step in 20:
 		var best := -1
 		var best_ratio := 0.0
@@ -146,14 +158,51 @@ func _spend_on_weapons(sim: Sim) -> void:
 			upgrades += 1
 
 
-func _score(o: Offer, owned_weapons: int) -> float:
+func _score(o: Offer, sim: Sim) -> float:
+	var owned_weapons := sim.player.weapons.size()
 	if o.is_weapon():
+		var score := 0.0
 		match style:
 			&"defensive":
-				return (100.0 if owned_weapons < 6 else 40.0) + o.weapon.dps() * 0.8
+				score = (100.0 if owned_weapons < 6 else 40.0) + o.weapon.dps() * 0.8
 			&"aggressive":
-				return (150.0 if owned_weapons < 6 else 60.0) + o.weapon.dps() * 1.5
+				score = (150.0 if owned_weapons < 6 else 60.0) + o.weapon.dps() * 1.5
+			&"family":
+				score = (120.0 if owned_weapons < 4 else 45.0) + o.weapon.dps()
+				if o.weapon.family == _dominant_family(sim):
+					score += 80.0
 			_:
-				return (120.0 if owned_weapons < 4 else 45.0) + o.weapon.dps()
+				score = (120.0 if owned_weapons < 4 else 45.0) + o.weapon.dps()
+		return score
 	var rank: int = _priority().find(o.item.id)
 	return 100.0 - 5.0 * float(rank) if rank >= 0 else 10.0
+
+
+func _dominant_family(sim: Sim) -> StringName:
+	var counts: Dictionary = {}
+	var best: StringName = &""
+	var best_count := 0
+	for w in sim.player.weapons:
+		var n := int(counts.get(w.family, 0)) + 1
+		counts[w.family] = n
+		if n > best_count:
+			best = w.family
+			best_count = n
+	return best
+
+
+func _family_target(sim: Sim) -> int:
+	var family := _dominant_family(sim)
+	var best := -1
+	var best_level := -1
+	var best_dps := -1.0
+	for i in sim.player.weapons.size():
+		var w := sim.player.weapons[i]
+		if w.family != family:
+			continue
+		var level := sim.player.level_at(i)
+		if level > best_level or (level == best_level and w.dps() > best_dps):
+			best = i
+			best_level = level
+			best_dps = w.dps()
+	return best

@@ -400,6 +400,25 @@ func test_combat_events_carry_source_data(c: Check) -> void:
 	c.eq(hits[0].target_uid, enemy.uid, "damage carries target id")
 
 
+func test_player_hurt_event_carries_source(c: Check) -> void:
+	var s := _sim()
+	s.enemies.clear()
+	s.projectiles.clear()
+	s.player.hp = s.player.max_hp()
+	s.player.iframes = 0.0
+	var e := _spawn(s, s.player.pos + Vector2(5.0, 0.0), 100.0)
+	e.damage = 5.0
+	e.speed = 0.0
+	var infos: Array[PlayerHurtInfo] = []
+	s.player_hurt_info.connect(func(info: PlayerHurtInfo) -> void: infos.append(info))
+	s._move_enemies(DT)
+	c.eq(infos.size(), 1, "hurt info emitted")
+	c.eq(infos[0].source, &"grunt", "hurt source")
+	c.near(infos[0].amount, 5.0, 0.001, "hurt amount")
+	c.eq(infos[0].effect, &"contact", "hurt effect")
+	c.ok(infos[0].direction.x < 0.0, "hurt direction points away from enemy")
+
+
 func test_same_seed_same_run(c: Check) -> void:
 	var a := _sim(5)
 	var b := _sim(5)

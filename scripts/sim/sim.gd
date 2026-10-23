@@ -8,6 +8,7 @@ signal run_won
 signal enemy_killed(pos: Vector2, color: Color, source: int)
 signal enemy_hit(pos: Vector2, amount: float, crit: bool, source: int)
 signal player_hurt(amount: float)
+signal player_hurt_info(info: PlayerHurtInfo)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
 signal shot_fired(source: int)
@@ -295,6 +296,14 @@ func _bomber_explode(e: EnemyState) -> void:
 		player.iframes = IFRAME_TIME
 		last_damage_source = &"bomber"
 		player_hurt.emit(damage)
+		var hurt := PlayerHurtInfo.new()
+		hurt.source = &"bomber"
+		hurt.amount = damage
+		hurt.pos = player.pos
+		hurt.direction = (player.pos - e.pos).normalized()
+		hurt.effect = &"bomber_explosion"
+		hurt.lethal = player.hp <= 0.0
+		player_hurt_info.emit(hurt)
 
 
 func discard_take(take: EchoTake) -> void:
@@ -373,6 +382,14 @@ func _move_enemies(delta: float) -> void:
 			player.iframes = IFRAME_TIME
 			last_damage_source = e.def.id
 			player_hurt.emit(e.damage)
+			var hurt := PlayerHurtInfo.new()
+			hurt.source = e.def.id
+			hurt.amount = e.damage
+			hurt.pos = player.pos
+			hurt.direction = (player.pos - e.pos).normalized()
+			hurt.effect = &"contact"
+			hurt.lethal = player.hp <= 0.0
+			player_hurt_info.emit(hurt)
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
 				echoes_silenced.emit(e.def.silence_time)
