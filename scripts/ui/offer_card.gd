@@ -94,6 +94,8 @@ func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 	row.add_child(UiTheme.label(title, 22))
 	if o.is_weapon():
 		row.add_child(UiTheme.label("[%s]" % Loc.weapon_family(o.weapon.family), 12, UiTheme.DIM))
+		row.add_child(UiTheme.label("[%s]" % Loc.rarity_name(o.weapon.rarity), 12,
+				_rarity_color(o.weapon.rarity)))
 	if not o.is_weapon() and o.item.echo_item:
 		row.add_child(UiTheme.label("[%s]" % Loc.t("shop.tag_echo"), 14, UiTheme.ECHO))
 	var spacer := Control.new()
@@ -102,6 +104,18 @@ func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 	row.add_child(spacer)
 	row.add_child(_price_label(o, reason, selected))
 	return row
+
+
+func _rarity_color(rarity: StringName) -> Color:
+	match rarity:
+		&"uncommon":
+			return UiTheme.COIN
+		&"rare":
+			return UiTheme.ECHO
+		&"evolved":
+			return UiTheme.ACCENT
+		_:
+			return UiTheme.DIM
 
 
 func _dps_row(w: WeaponDef, sim: Sim) -> Control:

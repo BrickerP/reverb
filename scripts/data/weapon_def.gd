@@ -3,6 +3,8 @@ extends Resource
 
 @export var id: StringName
 @export var family: StringName = &"sidearm"
+@export var rarity: StringName = &"common"
+@export var drop_weight: float = 1.0
 @export var evolves_to: StringName
 @export var drops: bool = true
 @export var damage: float = 5.0

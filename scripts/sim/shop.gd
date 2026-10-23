@@ -174,13 +174,22 @@ func _random_offer(sim: Sim) -> Offer:
 	var weapons_open := sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS
 	if weapons_open and sim.rng.randf() < WEAPON_CHANCE:
 		var wdefs: Array[WeaponDef] = []
+		var total := 0.0
 		for w: WeaponDef in Content.weapons().values():
-			if w.drops:
+			if w.drops and w.drop_weight > 0.0:
 				wdefs.append(w)
-		var w: WeaponDef = wdefs[sim.rng.randi_range(0, wdefs.size() - 1)]
-		o.weapon = w
-		o.price = price_for(w.price, sim.wave)
-		return o
+				total += w.drop_weight
+		if not wdefs.is_empty() and total > 0.0:
+			var roll := sim.rng.randf() * total
+			var picked := wdefs[wdefs.size() - 1]
+			for w in wdefs:
+				roll -= w.drop_weight
+				if roll <= 0.0:
+					picked = w
+					break
+			o.weapon = picked
+			o.price = price_for(picked.price, sim.wave)
+			return o
 	var idefs := Content.items().values()
 	var it: ItemDef = idefs[sim.rng.randi_range(0, idefs.size() - 1)]
 	if it.echo_item and sim.echo_capacity() <= 0:

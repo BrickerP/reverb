@@ -96,7 +96,8 @@ func _play(sim: Sim) -> void:
 func _die(sim: Sim) -> void:
 	_drive(Vector2.ZERO)
 	if sim.phase == Sim.Phase.WAVE:
-		sim.player.hp = 0.0
+		sim.player.hp = -sim.player.max_hp()
+		sim.player.stats.values[Stats.HP_REGEN] = 0.0
 	else:
 		_stage = Stage.RESTART
 
