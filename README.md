@@ -53,7 +53,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.3.0 开发版（含悖论 Phase 2），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.3.1 开发版（含悖论 Phase 2 与家族专精），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -113,9 +113,10 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 - 暂停菜单可直接继续、打开设置/历史、静音或退出本局
 - F3 调试叠层：FPS、帧耗时、敌人数、弹幕、回响、种子与版本
 - 武器家族（副武器 / 散射 / 精准 / 奥术），商店与 Build 面板显示家族与 DPS
+- 武器家族专精：2 件 +3% 伤害；4 件解锁家族规则（副武器 +6% 攻速、散射 160 内 +15% 伤害、精准 +1 穿透、奥术 +8% 回响威力）；6 件再 +3% 伤害
 - 角色身上显示已装备武器，按槽位环绕
 - 武器升级：Build 面板用材料升级已装备武器，每级 +15% 伤害，影响 DPS 与回响快照
-- 武器家族 combo：2 件 +3% 伤害、4 件 +3% 攻速、6 件再 +3% 伤害，Build 面板显示当前家族
+- 武器家族 combo：2 件 +3% 伤害、4 件家族专精、6 件再 +3% 伤害，Build 面板显示当前家族与专精
 - 武器进化：满级 + 同家族 3 件 + 材料，在 Build 面板进化成同族强化形态
 - 材料利息：波末按未花材料 +2%（上限 5），商店显示本波收入、利息和下次利息预览
 - Build 面板悬浮/聚焦武器卡时显示等级、家族、伤害/射程/穿透和进化目标
@@ -134,7 +135,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 3972 项）
+make test     # 无头测试（当前 3994 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -208,3 +208,32 @@ Validation contract:
 - One death emits `boss_shard_defeated` and `boss_enraged`; the survivor has the documented
   speed/damage multiplier.
 - Both deaths emit `boss_defeated`; a lethal hit above 50% may skip phase 2 intentionally.
+
+## 10. Family mastery
+
+Four pieces of one family replace the old generic +3% attack speed with a family rule:
+
+| Family | Mastery | Mechanism |
+|---|---|---|
+| sidearm | Gunslinger | `Combat.family_cooldown_mult` returns `0.94` at 4+ pieces |
+| scatter | Point blank | `Combat.family_mastery_damage` returns `1.15` when the target is within 160 |
+| marksman | Overpenetration | `Combat.family_mastery_pierce` returns `+1` projectile pierce |
+| arcane | Resonance | `Sim.echo_power()` adds `0.08` while 4+ arcane weapons are equipped |
+
+Rules:
+
+- The 2-piece `+3% damage` and 6-piece `+3% damage` effects are unchanged.
+- Four pieces no longer grant a generic attack-speed bonus to scatter/marksman/arcane.
+- Sidearm haste is included in `OfferCard.weapon_dps`; scatter range, marksman pierce and
+  arcane echo power are situational or echo-side, so the UI must explain them in the family
+  summary instead of promising them as flat DPS.
+- `Sim.echo_power()` is the display source for the arcane bonus; do not recompute it in UI.
+- No new weapon IDs, art, drops or RNG streams were added for this slice.
+
+Presentation requirements:
+
+- `BuildPanel` family summary must show the active 4-piece mastery text for each family.
+- `hud`/shop core echo power should use `sim.echo_power()`, not the raw stat, so the arcane
+  mastery is visible.
+- Weapon detail may show base DPS; do not imply scatter/marksman/arcane mastery is already
+  included in single-target DPS.
