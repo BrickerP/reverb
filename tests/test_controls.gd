@@ -16,3 +16,4 @@ func test_gamepad_ui_uses_standard_buttons(c: Check) -> void:
 	c.ok(_has_button(&"ui_down", JOY_BUTTON_DPAD_DOWN), "d-pad down")
 	c.ok(_has_button(&"ui_left", JOY_BUTTON_DPAD_LEFT), "d-pad left")
 	c.ok(_has_button(&"ui_right", JOY_BUTTON_DPAD_RIGHT), "d-pad right")
+	c.ok(_has_button(&"debug", JOY_BUTTON_BACK), "View toggles debug")
