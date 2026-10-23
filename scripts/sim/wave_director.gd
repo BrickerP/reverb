@@ -2,6 +2,8 @@ class_name WaveDirector
 extends RefCounted
 
 const FINAL_WAVE := 20
+const ELITE_START_WAVE := 10
+const ELITE_KINDS := [&"overclocked", &"bulwark", &"volatile"]
 const MIN_SPAWN_DISTANCE := 240.0
 const EDGE_INSET := 24.0
 
@@ -50,6 +52,12 @@ static func plan(wave: int, run_seed: int, budget_mult: float = 1.0) -> Array[Sp
 		e.def = picked[i]
 		e.time = 0.5 + span * (float(i) + rng.randf()) / float(picked.size())
 		events.append(e)
+	# One visible elite per wave from wave 10. It upgrades an existing budget slot;
+	# it never adds spawn cost or consumes an extra RNG stream for the rest of the plan.
+	if wave >= ELITE_START_WAVE and wave < FINAL_WAVE and not events.is_empty():
+		var elite_index := rng.randi_range(0, events.size() - 1)
+		var kind_index := rng.randi_range(0, ELITE_KINDS.size() - 1)
+		events[elite_index].elite_kind = ELITE_KINDS[kind_index]
 	return events
 
 

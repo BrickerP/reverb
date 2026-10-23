@@ -48,6 +48,17 @@ const BOSS_PHASE2_SPLIT_SHARE := 0.5
 const BOSS_PHASE2_SHARD_SPEED := 0.86
 const BOSS_ENRAGE_SPEED := 1.30
 const BOSS_ENRAGE_DAMAGE := 1.20
+const ELITE_HP_MULT := 1.7
+const ELITE_SPEED_MULT := 1.08
+const ELITE_DAMAGE_MULT := 1.15
+const ELITE_RADIUS_MULT := 1.12
+const ELITE_DROP_MULT := 2
+const ELITE_OVERCLOCK_SPEED := 1.30
+const ELITE_OVERCLOCK_DAMAGE := 1.10
+const ELITE_BULWARK_ARC := 120.0
+const ELITE_BULWARK_REDUCTION := 0.25
+const ELITE_VOLATILE_RADIUS := 64.0
+const ELITE_VOLATILE_DAMAGE := 6.0
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -305,10 +316,11 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit") -> void:
 	var actual := amount
 	var reduced := false
-	if e.def.shield_arc > 0.0 and hit_dir != Vector2.ZERO:
+	var shield_arc := e.shield_arc_value()
+	if shield_arc > 0.0 and hit_dir != Vector2.ZERO:
 		var front := (player.pos - e.pos).normalized()
-		if (-hit_dir.normalized()).dot(front) >= cos(deg_to_rad(e.def.shield_arc * 0.5)):
-			actual *= 1.0 - clampf(e.def.shield_reduction, 0.0, 1.0)
+		if (-hit_dir.normalized()).dot(front) >= cos(deg_to_rad(shield_arc * 0.5)):
+			actual *= 1.0 - clampf(e.shield_reduction_value(), 0.0, 1.0)
 			reduced = true
 	e.hp -= actual
 	e.flash = 0.09
@@ -333,12 +345,12 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	kills += 1
 	var pk := Pickup.new()
 	pk.pos = e.pos
-	pk.value = e.def.drop
+	pk.value = e.def.drop * e.drop_mult
 	pickups.append(pk)
 	enemy_killed.emit(e.pos, e.def.color, source)
 	if boss_shards.has(e):
 		_handle_boss_shard_death(e)
-	if e.def.death_radius > 0.0:
+	if e.death_radius_value() > 0.0:
 		_bomber_explode(e)
 
 
@@ -402,8 +414,8 @@ func _enrage_boss() -> void:
 
 
 func _bomber_explode(e: EnemyState) -> void:
-	var radius := e.def.death_radius
-	var damage := e.def.death_damage * WaveDirector.damage_scale(wave)
+	var radius := e.death_radius_value()
+	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave)
 	explosion.emit(e.pos, radius, e.def.color)
 	var info := ExplosionInfo.new()
 	info.kind = ExplosionInfo.BOMBER
@@ -454,6 +466,7 @@ func _spawn_enemies(delta: float) -> void:
 	while _plan_idx < _plan.size() and _plan[_plan_idx].time <= wave_time:
 		var ps := PendingSpawn.new()
 		ps.def = _plan[_plan_idx].def
+		ps.elite_kind = _plan[_plan_idx].elite_kind
 		ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 		ps.delay = SPAWN_TELEGRAPH
 		pending.append(ps)
@@ -468,6 +481,27 @@ func _spawn_enemies(delta: float) -> void:
 	pending = keep
 
 
+func _apply_elite(e: EnemyState, kind: StringName) -> void:
+	e.elite = true
+	e.elite_kind = kind
+	e.max_hp *= ELITE_HP_MULT
+	e.hp = e.max_hp
+	e.speed *= ELITE_SPEED_MULT
+	e.damage *= ELITE_DAMAGE_MULT
+	e.radius *= ELITE_RADIUS_MULT
+	e.drop_mult = ELITE_DROP_MULT
+	match kind:
+		&"overclocked":
+			e.speed *= ELITE_OVERCLOCK_SPEED
+			e.damage *= ELITE_OVERCLOCK_DAMAGE
+		&"bulwark":
+			e.shield_arc_override = ELITE_BULWARK_ARC
+			e.shield_reduction_override = ELITE_BULWARK_REDUCTION
+		&"volatile":
+			e.death_radius_override = ELITE_VOLATILE_RADIUS
+			e.death_damage_override = ELITE_VOLATILE_DAMAGE
+
+
 func _materialize(ps: PendingSpawn) -> void:
 	var e := EnemyState.new()
 	e.uid = _next_uid
@@ -480,6 +514,8 @@ func _materialize(ps: PendingSpawn) -> void:
 	e.speed = ps.def.speed * WaveDirector.speed_scale(wave)
 	e.damage = ps.def.damage * WaveDirector.damage_scale(wave)
 	e.radius = ps.def.radius
+	if ps.elite_kind != &"":
+		_apply_elite(e, ps.elite_kind)
 	if ps.def.is_boss:
 		var pad := e.radius + 16.0
 		e.pos = e.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))

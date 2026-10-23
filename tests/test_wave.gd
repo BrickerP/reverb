@@ -7,7 +7,7 @@ func test_plan_is_deterministic(c: Check) -> void:
 	c.eq(a.size(), b.size(), "same size")
 	var same := true
 	for i in a.size():
-		if a[i].def.id != b[i].def.id or not is_equal_approx(a[i].time, b[i].time):
+		if a[i].def.id != b[i].def.id or not is_equal_approx(a[i].time, b[i].time) or a[i].elite_kind != b[i].elite_kind:
 			same = false
 	c.ok(same, "same seed and wave give an identical plan")
 	var other := WaveDirector.plan(7, 43)
@@ -44,6 +44,21 @@ func test_enemy_types_unlock_by_wave(c: Check) -> void:
 			if e.def.id == &"brute":
 				brutes += 1
 	c.ok(brutes > 0, "brutes appear in later waves")
+
+
+func test_elites_start_at_wave_ten_and_never_replace_the_boss(c: Check) -> void:
+	for wave in range(1, 10):
+		for e in WaveDirector.plan(wave, 5):
+			c.eq(e.elite_kind, &"", "wave %d has no elite" % wave)
+	for wave in range(10, WaveDirector.FINAL_WAVE):
+		var elites := 0
+		for e in WaveDirector.plan(wave, 5):
+			if e.elite_kind != &"":
+				elites += 1
+				c.ok(e.elite_kind in WaveDirector.ELITE_KINDS, "wave %d elite kind is known" % wave)
+		c.eq(elites, 1, "wave %d has exactly one elite" % wave)
+	for e in WaveDirector.plan(WaveDirector.FINAL_WAVE, 5):
+		c.eq(e.elite_kind, &"", "the boss wave has no regular elite")
 
 
 func test_scaling_curves(c: Check) -> void:

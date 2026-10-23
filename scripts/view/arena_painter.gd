@@ -49,7 +49,8 @@ static func arena_floor_texture() -> Texture2D:
 static func pending(ci: CanvasItem, sim: Sim) -> void:
 	for ps in sim.pending:
 		var t := 1.0 - clampf(ps.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
-		var col := Color(ps.def.color, 0.25 + 0.6 * t)
+		var base_color := _elite_color(ps.elite_kind) if ps.elite_kind != &"" else ps.def.color
+		var col := Color(base_color, 0.25 + 0.6 * t)
 		ci.draw_arc(ps.pos, ps.def.radius + 2.0 + 14.0 * (1.0 - t), 0.0, TAU, 20, col, 2.0)
 		ci.draw_circle(ps.pos, 2.5, col)
 
@@ -154,7 +155,9 @@ static func pickups(ci: CanvasItem, sim: Sim) -> void:
 static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	var target := sim.player.pos
 	for e in sim.enemies:
-		var col := Color.WHITE if e.flash > 0.0 else e.def.color
+		var col := _elite_color(e.elite_kind) if e.elite else e.def.color
+		if e.flash > 0.0:
+			col = Color.WHITE
 		var key := PresentationAssets.enemy_key(e.def)
 		var stride := sin(sim.wave_time * (7.5 if e.def.id == &"runner" else 4.5)
 				+ e.pos.x * 0.021 + e.pos.y * 0.013) * (REDUCED_MOTION_SCALE if reduced else 1.0)
@@ -164,7 +167,7 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 		var radius_scale := e.radius / maxf(1.0, e.def.radius)
 		var art_size := _enemy_bounds(e.def.id) * radius_scale
 		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
-		var art_tint := Color.WHITE if e.flash > 0.0 else e.def.color.lerp(Color.WHITE, 0.58)
+		var art_tint := Color.WHITE if e.flash > 0.0 else col.lerp(Color.WHITE, 0.58)
 		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + stride * minf(1.8, e.radius * 0.08))
 		var rotation := _warden_rotation(facing) if e.def.id == &"warden" else 0.0
 		var flip := facing.x > 0.0 and e.def.id != &"warden"
@@ -184,6 +187,13 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 						Color(0.65, 0.8, 1.0, 0.55), 2.0)
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
+		if e.elite:
+			var elite_pulse := 0.5 + 0.5 * sin(sim.wave_time * 4.5 + e.pos.x * 0.03)
+			var aura := _elite_color(e.elite_kind)
+			ci.draw_arc(e.pos, e.radius + 8.0, 0.0, TAU, 28,
+					Color(aura, 0.35 + 0.25 * elite_pulse), 2.0)
+			ci.draw_arc(e.pos, e.radius + 14.0, -sim.wave_time * 1.2,
+					-sim.wave_time * 1.2 + TAU * 0.55, 24, Color(aura, 0.5), 1.5)
 		if e.radius >= 15.0 and e.hp < e.max_hp:
 			var fitted := _fitted_art_size(key, art_size)
 			var art_top := e.pos.y - fitted.y * 0.5 if e.def.id == &"warden" else foot.y - fitted.y
@@ -191,13 +201,14 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
 			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
-		if e.def.death_radius > 0.0:
+		if e.death_radius_value() > 0.0:
 			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 7.0)
-			ci.draw_arc(e.pos, e.def.death_radius, 0.0, TAU, 32,
+			ci.draw_arc(e.pos, e.death_radius_value(), 0.0, TAU, 32,
 					Color(col, 0.10 + 0.10 * pulse), 1.5)
-		if e.def.shield_arc > 0.0:
+		var shield_arc := e.shield_arc_value()
+		if shield_arc > 0.0:
 			var front := (target - e.pos).angle()
-			var half := deg_to_rad(e.def.shield_arc * 0.5)
+			var half := deg_to_rad(shield_arc * 0.5)
 			ci.draw_arc(e.pos, e.radius + 6.0, front - half, front + half, 24,
 					Color(col, 0.75), 3.0)
 	if sim.boss_phase >= 2:
@@ -537,6 +548,18 @@ static func _weapon_size(key: StringName) -> Vector2:
 			return Vector2(38.0, 24.0)
 		_:
 			return Vector2(38.0, 21.0)
+
+
+static func _elite_color(kind: StringName) -> Color:
+	match kind:
+		&"overclocked":
+			return Color(0.35, 0.9, 1.0)
+		&"bulwark":
+			return Color(0.55, 0.7, 1.0)
+		&"volatile":
+			return Color(1.0, 0.55, 0.25)
+		_:
+			return Color(0.8, 0.5, 1.0)
 
 
 static func _enemy_bounds(id: StringName) -> Vector2:

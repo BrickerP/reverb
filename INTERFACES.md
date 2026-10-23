@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -237,3 +237,36 @@ Presentation requirements:
   mastery is visible.
 - Weapon detail may show base DPS; do not imply scatter/marksman/arcane mastery is already
   included in single-target DPS.
+
+## 11. Echo-touched elites
+
+From wave 10 to 19, `WaveDirector.plan` upgrades exactly one existing spawn into an elite.
+It does not add spawn cost, a new enemy ID or new art; it is a deterministic modifier on an
+existing body.
+
+Data flow:
+
+- `SpawnEvent.elite_kind` → `PendingSpawn.elite_kind` → `EnemyState.elite/elite_kind`.
+- `Sim` applies the elite stat package and modifier in `_apply_elite`.
+- `EnemyState` exposes `shield_arc_value()`, `shield_reduction_value()`,
+  `death_radius_value()` and `death_damage_value()`. These fall back to `def` and allow
+  runtime elite overrides without mutating shared `EnemyDef` resources.
+- `drop_mult` multiplies the pickup value; elites use ×2.
+
+Rules:
+
+- Base elite: HP ×1.7, speed ×1.08, damage ×1.15, radius ×1.12, drop ×2.
+- `overclocked`: additional speed ×1.3 and damage ×1.1.
+- `bulwark`: shield arc 120°, reduction 0.25.
+- `volatile`: death radius 64, death damage 6.
+- The final wave has no regular elite; the boss is never marked elite.
+- Elite selection is deterministic for a seed/wave; it does not add a new reward roll.
+
+Presentation requirements:
+
+- Draw an elite aura in the family-independent color map: overclocked cyan, bulwark blue,
+  volatile orange. Pending spawn telegraphs must use the same color.
+- Use `EnemyState.death_*_value()` and `shield_*_value()` in the arena painter; do not read
+  `def.death_radius`/`def.shield_arc` directly for elites.
+- The volatile death uses the existing bomber explosion event/audio path; no new event type.
+- No HUD label is required; color, double ring, shield fan and death circle carry the rule.
