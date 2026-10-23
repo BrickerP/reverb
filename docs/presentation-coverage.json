@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "snapshot": {
-    "presentation_commit": "9e808ff6f10cbf6627f6d18e527b5b3a95e1f552",
-    "presentation_state": "G004 production committed and native-feedback verified",
+    "presentation_commit": "24f4fd475f3e5f0267e14417ad0ec7e9b3f35bf7",
+    "presentation_state": "G005 complete; G006 cleanup and release verification active",
     "mechanics_commit": "5a1e8c1c3fbbb64ac2228ef8fa28fd892cc98522",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
@@ -29,6 +29,9 @@
       "scripts/ui/**",
       "scripts/game/audio.gd",
       "audio/presentation/SOURCES.md",
+      "assets/presentation/surfaces/SOURCES.md",
+      "assets/presentation/surfaces/manifest.json",
+      "assets/presentation/app_icon/",
       "tools/build_feedback_audio.py",
       "tools/feedback_probe.gd",
       "assets/presentation/SOURCES.md",
@@ -74,6 +77,14 @@
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-feedback-movie.log",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback.mp4",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback-verification/",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-ui-targeted.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-world.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-drag.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-en.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-zh.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-letterbox.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-scaled.log",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-ui-verification/",
       "shots/feedback_summary.json",
       "shots/feedback_shot.png",
       "shots/feedback_blocked.png",
@@ -128,17 +139,17 @@
     {"id":"conductor","starting_weapon":"pistol","art":"independent_art","assets":{"front":"character_conductor_front","back":"character_conductor_back"},"direction_coverage":"front/back authored; left/right horizontal flip","runtime":"gallery_and_selection_verified","priority":"done"}
   ],
   "ui_surfaces": [
-    {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","portraits","locked","unlocked","seed","focus"],"runtime":"strict EN/ZH four-card geometry verified","priority":"done"},
-    {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon icons/cooldowns","controls","debug"],"runtime":"combat/echo screenshots and content gallery","priority":"P1"},
-    {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked","quoted cost/refund","undo enabled/locked"],"runtime":"EN/ZH native interaction probes and presentation screenshots","priority":"P1"},
-    {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","empty-slot buy target","occupied-slot replace target","item target","upgrade","evolve","replace","scroll"],"runtime":"native drag probes, focused partial replacement, full-loadout screenshot and bounds check","priority":"P1"},
-    {"id":"echo_panel","source":"scripts/ui/echo_panel.gd","states":["arrival","overflow","discard","merge","selected"],"runtime":"echo/shop screenshots; merge source only","priority":"P1"},
+    {"id":"character_select","source":"scripts/ui/character_select.gd","states":["four cards","portraits","locked","unlocked","seed","focus cycle","active accessible names"],"runtime":"strict native EN/ZH ten-state geometry passed","priority":"done"},
+    {"id":"combat_hud","source":"scripts/view/hud.gd","states":["health","echoes","wave/boss","materials","weapon icons/cooldowns","controls","debug","persisted reduced effects","surface skin"],"runtime":"world/reduced tests and native bilingual UI passed","priority":"done"},
+    {"id":"shop_offers","source":"scripts/ui/shop_ui.gd","states":["affordable","poor","sold","full","reroll","start blocked","quoted cost/refund","undo enabled/locked","merged badge flow","surface skin","active accessible names"],"runtime":"native nine-counter regression, strict EN/ZH and fresh dense-shop visual passed","priority":"done"},
+    {"id":"build_panel","source":"scripts/ui/build_panel.gd","states":["1-6 weapons","empty-slot buy target","occupied-slot replace target","item target","upgrade","evolve","replace","scroll","draggable wrapper","focus cycle"],"runtime":"native drag, accessibility and strict bilingual UI passed","priority":"done"},
+    {"id":"echo_panel","source":"scripts/ui/echo_panel.gd","states":["arrival","overflow","discard","merge","merge cancel","merged HFlow badge","selected","reduced motion"],"runtime":"merge/cancel, HFlow badge and strict bilingual UI passed","priority":"done"},
     {"id":"direct_drop_undo","source":"scripts/ui/shop_ui.gd","states":["weapon empty-slot BUY","weapon occupied partial-loadout REPLACE","item BUY","cancel no change","quoted cost/refund hint","focused partial replacement","upgrade","four undos","reroll lock","wave lock","stale exact-offer rejection"],"runtime":"verified in native EN/ZH probes; stale/transaction boundaries covered by 76 targeted assertions","priority":"done"},
-    {"id":"pause","source":"scripts/ui/pause_ui.gd","states":["resume","settings","history","quit"],"runtime":"source/tests only","priority":"P2"},
-    {"id":"settings","source":"scripts/ui/settings_ui.gd","states":["volume","shake","fullscreen","language"],"runtime":"source/tests only","priority":"P2"},
-    {"id":"history","source":"scripts/ui/history_ui.gd","states":["empty","runs","detail"],"runtime":"source/tests only","priority":"P2"},
-    {"id":"codex","source":"scripts/ui/codex_ui.gd","states":["all weapons","details","evolutions"],"runtime":"source/tests only","priority":"P1"},
-    {"id":"end","source":"scripts/ui/end_ui.gd","states":["loss","win","best echo","no echo","unlock","death cause"],"runtime":"source/tests only","priority":"P2"}
+    {"id":"pause","source":"scripts/ui/pause_ui.gd","states":["resume","settings","history","mute","quit","modal focus cycle"],"runtime":"strict native EN/ZH ten-state geometry passed","priority":"done"},
+    {"id":"settings","source":"scripts/ui/settings_ui.gd","states":["volume","shake","reduced effects persisted","fullscreen","language enabled at title","language guarded in active run","modal focus cycle"],"runtime":"strict bilingual, 960x540 scaled and 1280x800 letterbox passed","priority":"done"},
+    {"id":"history","source":"scripts/ui/history_ui.gd","states":["empty","eight-row cap","replay","detail","modal focus cycle"],"runtime":"strict native EN/ZH ten-state geometry passed","priority":"done"},
+    {"id":"codex","source":"scripts/ui/codex_ui.gd","states":["all weapons","details","evolutions","spacing","modal focus cycle"],"runtime":"strict native EN/ZH passed after spacing fix","priority":"done"},
+    {"id":"end","source":"scripts/ui/end_ui.gd","states":["loss","win","best echo","no echo","unlock","death cause","reduced preview","modal focus cycle"],"runtime":"strict native EN/ZH ten-state geometry passed","priority":"done"}
   ],
   "event_feedback": [
     {"id":"shot_fired_info","mechanics":"available","visual":"weapon-profile recoil, muzzle/tracer and mounted response","audio":"12 explicit weapon profiles","priority":"done"},
@@ -174,9 +185,9 @@
     "independent_art": {"weapons":12,"items":11,"enemies":7,"characters":4},
     "incomplete_identity": {"weapons":0,"items":0,"enemies":0,"characters":0},
     "next_order": [
-      "P2 remaining UI-state actual-window and accessibility matrix",
-      "G005 polish: recheck drag-preview theme wrapping, intended offset and target occlusion",
-      "G006 dense-combat and arena-boundary readability verification"
+      "G006 complete stress rerun and dense/boundary readability verification",
+      "G006 audit release exports, resource completeness and cleanup",
+      "G006 final post-cleanup review and delivery"
     ],
     "g002_verification": {
       "assertions": "2660 passed, 0 failed",
@@ -188,6 +199,8 @@
       "new_pngs": 32,
       "catalog_keys": 39,
       "catalog_alias": "player is a documented alias of character_looper_front",
+      "post_g006_cleanup_catalog_keys": 38,
+      "post_g006_cleanup_note": "unused player alias and duplicate metadata removed; the canonical Looper front still points to the same PNG",
       "gallery": "4 pages plus summary passed with stable content IDs and linear mipmaps",
       "character_direction_cases": 16,
       "selection": "strict English and Chinese four-card geometry passed",
@@ -214,22 +227,46 @@
       "godot_movie_capture": "passed; 447 frames at 60 FPS (7.45 seconds) with audio track",
       "shareable_audio_movie": "take-stack-feedback.mp4; 7.45 seconds, 1280x720, 60 FPS, H.264/AAC"
     },
+    "g005_verification": {
+      "source_commit": "24f4fd475f3e5f0267e14417ad0ec7e9b3f35bf7",
+      "original_pngs": 42,
+      "visual_assets": "38 identity PNGs plus 3 surfaces and 1 application icon",
+      "implemented": ["persisted reduced-effects mode","all modal focus cycles","active-run language guard","merge cancel and merged badge flow","active accessible UI names","nonblocking draggable preview wrapper","surface skins"],
+      "native_bilingual": "strict English and Chinese ten-state geometry passed after final dense-panel paint crop",
+      "scaled": "960x540 English passed",
+      "letterbox": "1280x800 Chinese passed",
+      "assertions": "3927 passed, 0 failed",
+      "smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "native_shop_regression": "nine operation counters passed",
+      "outputs": "20 bilingual PNGs plus JSON and logs refreshed",
+      "review": "code reviewer APPROVE, architect CLEAR and visual review PASS",
+      "status": "complete"
+    },
+    "g006_progress": {
+      "catalog_cleanup": "38 canonical keys; 42 PNGs unchanged",
+      "post_cleanup_assertions": "3915 passed, 0 failed",
+      "post_cleanup_smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "post_cleanup_ui": "English and Chinese passed at 2026-10-23T21:12:03+08:00",
+      "stress": "final rerun in progress",
+      "exports": "pending",
+      "status": "in_progress"
+    },
     "coverage_limit": "Complete static identity and front/back-derived direction coverage; full walk/attack frame animation and rich-event VFX/audio remain outside G003."
   },
   "polish_followups": [
     {
       "goal": "G005",
       "id": "drag_preview_position",
-      "status": "non_blocking",
-      "observation": "The intended preview offset still renders close to the target in the actual gallery.",
-      "verify": "Inspect wrapper/theme sizing and confirm the preview never obscures the active drop target."
+      "status": "complete",
+      "observation": "Nonblocking offset wrapper passes final bilingual actual-window validation.",
+      "verify": "Complete."
     },
     {
       "goal": "G005",
       "id": "surface_assets",
-      "status": "prepared_not_runtime_complete",
-      "observation": "Three surface PNGs are prepared but do not yet have runtime acceptance evidence.",
-      "verify": "Integrate and inspect each target surface in the actual UI."
+      "status": "complete",
+      "observation": "Arena floor, panel skin and recording cartridge pass final bilingual native geometry and visual review.",
+      "verify": "Complete."
     },
     {
       "goal": "G006",

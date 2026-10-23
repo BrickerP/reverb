@@ -32,10 +32,13 @@ shield and visual front follow gameplay facing.
 
 ## UI and event state
 
-Actual-window evidence exists for the four-character selection, combat HUD,
-echoes, the shop in English and Chinese, full six-weapon scrolling, replacement
-and purchase. Pause, settings, history, codex, merge and end-state flows have source
-and automated tests but no accepted current-window matrix yet.
+G005 completes the UI-state matrix: character selection, combat HUD,
+shop/build/echo merge, pause, settings, history, codex and loss/win results. All
+modal focus cycles, active accessible names, persisted reduced effects, active-run
+language guard, merge cancellation, draggable preview wrapper and three surface
+skins are present. Strict English and Chinese native geometry passes across all ten
+states after the final Codex spacing, merged-badge HFlow and dense-panel paint-crop
+fixes. The 960×540 English scaled and 1280×800 Chinese letterbox probes also pass.
 
 The approved transaction experience is implemented through mechanics-owned
 `quote/apply/undo`. Native EN/ZH interaction probes cover weapon drop into an empty
@@ -90,6 +93,7 @@ Runtime evidence:
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g004-feedback.log`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback.mp4`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback-verification/`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-ui-verification/`
 - `shots/feedback_summary.json` and seven `shots/feedback_*.png` captures
 - `shots/shop_drag_full.png`, `shop_drag_highlight.png`,
   `shop_drag_committed.png`, `shop_drag_undone.png`
@@ -101,8 +105,9 @@ version files are shared and require an announced integration boundary.
 
 ## Work order
 
-1. P2: capture the remaining UI state/accessibility matrix and finish mix QA.
-2. G006: verify dense-combat and arena-boundary readability before final delivery.
+1. Finish the G006 stress rerun and dense/boundary readability verification.
+2. Audit three-platform exports, resource completeness and cleanup.
+3. Run the final post-cleanup review and prepare delivery.
 
 G005 polish note: the drag preview's intended offset still appears close to its
 target in the actual gallery. Recheck its wrapper/theme sizing and target occlusion;
@@ -116,9 +121,11 @@ probe also pass. On final HEAD `2fa3735` with fixed mechanics `5a1e8c1`, resourc
 import, English/Chinese UI, 3470 assertions and smoke (5246 frames, wave 4, three
 purchases) passed at 2026-10-23 19:15:17 +08:00.
 
-Three surface PNGs are prepared for G005 but lack runtime acceptance. G006 should
-exercise the narrow Silencer and light Longbow silhouette in dense combat and at
-arena boundaries; these are verification targets, not known failures.
+The arena floor, panel skin and recording cartridge are integrated. A fourth new
+original provides the application icon, bringing the original PNG total to 42.
+Final bilingual geometry, scaled and letterbox probes pass. G006 is now exercising
+the narrow Silencer and light Longbow silhouette in dense combat and at arena
+boundaries; these remain verification targets, not known failures.
 
 G004 production regression passes: resource import, English/Chinese UI, 3796
 assertions and smoke (5246 frames, wave 4, three purchases). The real-paced native
@@ -130,6 +137,20 @@ review CLEAR after the final null-guard confirmation. The shareable audio movie
 capture also passes at production commit `9e808ff`. The exported
 `take-stack-feedback.mp4` is 7.45 seconds, 1280×720 at 60 FPS with H.264 video and
 AAC audio; the verification directory contains seven PNGs, summary and logs.
+
+G005 is fixed at `24f4fd4`: 3927 assertions and smoke pass, strict native EN/ZH
+ten-state geometry passes, and the 960×540 EN scaled and 1280×800 ZH letterbox
+probes pass. The final dense-shop paint crop removes a duplicated inner panel body
+without changing layout or source PNGs; refreshed EN/ZH captures pass. The stable
+output folder contains 20 PNGs plus JSON and logs. Code review is APPROVE,
+architecture review CLEAR and visual review PASS.
+
+G006 cleanup removes the unused `player` alias and duplicate metadata, leaving 38
+canonical catalog keys while retaining the same 42 PNGs. This does not rewrite the
+historical G003 evidence that originally verified 39 keys with one documented alias.
+After cleanup, 3915 assertions, smoke and EN/ZH UI pass at 2026-10-23 21:12 +08:00.
+The final stress rerun and release-export audit are still in progress; G006 is not
+complete.
 
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as

@@ -14,8 +14,9 @@ The 38 runtime PNGs and their hashes/prompts are documented by
 `assets/presentation/SOURCES.md` and the character, enemy, item and weapon
 manifests. Offline-measured visible regions are stored as source-pixel rectangles
 in the catalog, then scaled to the imported texture size. Godot imports at 512 px
-with mipmaps; rendering uses linear mipmap filtering. The catalog has 39 keys only
-because `player` is a documented alias of Looper front.
+with mipmaps; rendering uses linear mipmap filtering. G003 verified 39 keys because
+`player` was a documented alias of Looper front; G006 cleanup removes that unused
+alias, leaving 38 canonical keys with the same PNG bytes.
 
 Every weapon, item and enemy Content ID has explicit art. Each character has an
 authored front and back; horizontal mirroring supplies left/right. This is complete
@@ -69,7 +70,7 @@ G003 adds four runtime gallery pages covering 12 weapons, 11 items, 7 enemies an
 actual-size visual review, Warden facing, strict EN/ZH card geometry and the G002
 interaction regression pass. On final HEAD `2fa3735` with fixed mechanics
 `5a1e8c1`, resource import, English/Chinese UI, 3470 assertions and the 5246-frame
-smoke pass. Three surface PNGs are prepared for G005 but are not runtime-complete.
+smoke pass.
 
 G004 passes 3796 assertions, resource import, English/Chinese UI and smoke (5246
 frames, wave 4, three purchases). The real-paced native probe observes 15 shots,
@@ -80,6 +81,27 @@ status is APPROVE/CLEAR after null-guard reconfirmation. Production is fixed at
 `9e808ff`; the shareable `take-stack-feedback.mp4` is 7.45 seconds, 1280×720 at
 60 FPS with H.264 video and AAC audio. Its verification directory contains seven
 PNG captures, the feedback summary and logs.
+
+G005 integrates arena-floor, panel-skin and recording-cartridge surfaces plus an
+application icon, bringing the original PNG total to 42. Reduced effects persist
+and propagate to world/shop/result presentation. Every modal has a closed focus
+cycle and restores underlay focus; language changes are guarded during active runs.
+Echo merge can be cancelled, merged badges use bounded HFlow layout, controls have
+active accessible names, and drag previews use a nonblocking offset wrapper.
+
+G005 is fixed at `24f4fd4`. Strict English and Chinese native geometry passes across
+all ten states after Codex spacing, merged-badge HFlow and dense-panel paint-crop
+fixes. The 960×540 English scaled and 1280×800 Chinese letterbox probes pass. The
+final dense crop removes a duplicated inner panel body without changing layout or
+source PNGs. Full verification is 3927 assertions plus smoke; the stable output
+folder contains 20 bilingual PNGs, summaries and logs. Code review is APPROVE,
+architecture review CLEAR and visual review PASS.
+
+G006 cleanup removes the unused `player` alias and duplicate metadata. The final
+catalog has 38 canonical keys and the same 42 PNGs; the earlier G003 39-key result
+remains valid historical evidence for its one documented alias. Post-cleanup, 3915
+assertions, smoke and English/Chinese UI pass. Stress and release-export audits are
+still running, so G006 is not complete.
 
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
@@ -95,8 +117,8 @@ recoil/muzzle/tracer feedback, directional hits and hurt, cause-specific explosi
 equipment apply/undo response and distinct audio without duplicate legacy playback.
 
 Direct-drop transactions and repeated undo now use the mechanics-owned
-`quote/apply/undo` API and history signals. G005 should recheck the drag preview
-wrapper/offset so it never crowds the active target and integrate the prepared
-surface art across remaining UI states; these are non-blocking for G002/G004.
+`quote/apply/undo` API and history signals. G005 completes the drag wrapper, surface
+art, reduced mode, focus and language/merge accessibility states with final
+bilingual, scaled, letterbox and visual acceptance.
 DeepSeek owns the rules and interfaces;
 Codex owns their visual/audio response and fixed-commit integration and release.
