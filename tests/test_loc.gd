@@ -37,6 +37,11 @@ func _is_content_key(key: String) -> bool:
 			return Content.weapons().has(id)
 		"rarity":
 			return id in [&"common", &"uncommon", &"rare", &"evolved"]
+		"enemy":
+			for e: EnemyDef in Content.enemies():
+				if e.id == id:
+					return true
+			return false
 		"item":
 			return Content.items().has(id)
 		"stat":
@@ -68,6 +73,8 @@ func test_every_content_id_has_a_name(c: Check) -> void:
 		keys.append("stat." + String(id))
 	for rarity in ["common", "uncommon", "rare", "evolved"]:
 		keys.append("rarity." + rarity)
+	for e: EnemyDef in Content.enemies():
+		keys.append("enemy." + String(e.id))
 	for key in keys:
 		c.ok(LocEn.TABLE.has(key) and LocZh.TABLE.has(key), "named in both languages: " + key)
 

@@ -71,6 +71,7 @@ func append(sim: Sim, character_id: StringName, seconds: float) -> void:
 		"merged": merged,
 		"earned": sim.last_wave_earned,
 		"interest": sim.last_interest,
+		"death_cause": String(sim.last_damage_source),
 		"best_echo_wave": best_wave,
 		"best_echo_dps": int(round(best_dps)),
 	}

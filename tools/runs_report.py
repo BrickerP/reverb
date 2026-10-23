@@ -72,6 +72,9 @@ def main():
     lines.append(f"Runs: **{len(runs)}** · wins **{wins}** · win rate **{pct(wins, len(runs)):.1f}%**")
     versions = Counter(str(r.get("version") or "?") for r in runs)
     lines.append("Versions: " + " · ".join(f"{v}: {n}" for v, n in versions.most_common()))
+    causes = Counter(str(r.get("death_cause") or "?") for r in runs if not r["won"])
+    if causes:
+        lines.append("Deaths: " + " · ".join(f"{c}: {n}" for c, n in causes.most_common()))
     lines.append("")
 
     by_char = defaultdict(list)

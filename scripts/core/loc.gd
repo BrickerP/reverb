@@ -32,6 +32,10 @@ static func rarity_name(id: StringName) -> String:
 	return t("rarity." + String(id))
 
 
+static func enemy_name(id: StringName) -> String:
+	return t("enemy." + String(id))
+
+
 static func item_name(id: StringName) -> String:
 	return t("item." + String(id))
 

@@ -53,6 +53,7 @@ var live_echo := false
 var last_interest := 0
 var last_wave_earned := 0
 var wave_start_materials := 0
+var last_damage_source: StringName = &""
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -77,6 +78,7 @@ func start_run() -> void:
 	last_interest = 0
 	last_wave_earned = 0
 	wave_start_materials = player.materials
+	last_damage_source = &""
 	start_wave(1)
 
 
@@ -250,6 +252,7 @@ func _bomber_explode(e: EnemyState) -> void:
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
+		last_damage_source = &"bomber"
 		player_hurt.emit(damage)
 
 
@@ -327,6 +330,7 @@ func _move_enemies(delta: float) -> void:
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
 			player.hp -= e.damage
 			player.iframes = IFRAME_TIME
+			last_damage_source = e.def.id
 			player_hurt.emit(e.damage)
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time

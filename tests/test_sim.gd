@@ -350,6 +350,7 @@ func test_bomber_explodes_when_killed_near_player(c: Check) -> void:
 	s.damage_enemy(e, 99.0, Vector2.ZERO, false, -1)
 	c.ok(s.player.hp < before, "death explosion damages the player")
 	c.ok(s.player.iframes > 0.0, "explosion grants iframes")
+	c.eq(s.last_damage_source, &"bomber", "explosion records its source")
 
 
 func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
