@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "snapshot": {
-    "presentation_commit": "24f4fd475f3e5f0267e14417ad0ec7e9b3f35bf7",
-    "presentation_state": "G005 complete; G006 cleanup and release verification active",
+    "presentation_commit": "d4a0e73784e775d996b2a27f0a5de6c9befa4aaa",
+    "presentation_state": "G001-G006 complete; local preview/export artifacts verified",
     "mechanics_commit": "5a1e8c1c3fbbb64ac2228ef8fa28fd892cc98522",
     "content_source": "scripts/data/content.gd",
     "catalog_source": "scripts/view/presentation_assets.gd",
@@ -85,6 +85,14 @@
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-letterbox.log",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/work/presentation-verification/g005-states-scaled.log",
       "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-ui-verification/",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-final-verification/",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/result.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/delivery-manifest.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-macOS-d4a0e73.zip",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Windows-d4a0e73.zip",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Linux-d4a0e73.zip",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/Take Stack Preview.app",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/试玩表现版.command",
       "shots/feedback_summary.json",
       "shots/feedback_shot.png",
       "shots/feedback_blocked.png",
@@ -185,9 +193,9 @@
     "independent_art": {"weapons":12,"items":11,"enemies":7,"characters":4},
     "incomplete_identity": {"weapons":0,"items":0,"enemies":0,"characters":0},
     "next_order": [
-      "G006 complete stress rerun and dense/boundary readability verification",
-      "G006 audit release exports, resource completeness and cleanup",
-      "G006 final post-cleanup review and delivery"
+      "Human play sessions and balance iteration with DeepSeek",
+      "Native Windows and Linux launch verification",
+      "Targeted feel iteration from observed player feedback"
     ],
     "g002_verification": {
       "assertions": "2660 passed, 0 failed",
@@ -246,10 +254,31 @@
       "catalog_cleanup": "38 canonical keys; 42 PNGs unchanged",
       "post_cleanup_assertions": "3915 passed, 0 failed",
       "post_cleanup_smoke": "OK; 5246 frames, max wave 4, 3 purchases",
-      "post_cleanup_ui": "English and Chinese passed at 2026-10-23T21:12:03+08:00",
-      "stress": "final rerun in progress",
-      "exports": "pending",
-      "status": "in_progress"
+      "post_cleanup_ui": "English and Chinese passed at 2026-10-23T21:34:16+08:00 on fixed HEAD d4a0e73",
+      "stress": {
+        "fixture": "100 and 300 enemy cases; dense cases include all 7 enemies, player 6 weapons and 4 echoes",
+        "source_head": "d4a0e73784e775d996b2a27f0a5de6c9befa4aaa",
+        "100_standard_ms": {"avg":5.589486,"p99":10.386,"max":14.972},
+        "300_standard_ms": {"avg":6.7612,"p99":10.813,"max":13.64},
+        "300_reduced_ms": {"avg":6.915542,"p99":12.516,"max":14.49},
+        "dense_peak_projectiles": 47,
+        "caps": "12 audio voices, 260 sparks and bounded feedback queues",
+        "visual": "4 stress PNGs reviewed PASS"
+      },
+      "exports": {
+        "platforms": 3,
+        "runtime_resources_each": 79,
+        "provenance_files_each": 18,
+        "forbidden_hits": 0,
+        "pck_sha256": "cfc5ba3466ea34478494d636e2ee20dfa2da9a8bda15490113edec74835dcbf2",
+        "macos_smoke_frames": 30,
+        "macos_user_data": "isolated runtime verified; normal directory unchanged",
+        "windows_linux": "built and package-audited on macOS; native launch not run"
+      },
+      "exported_macos_ui": "live Chinese app flow passed: start, movement, pause, settings language guard, reduced toggle persistence, resume, quit to character select, clean exit 0",
+      "review": "cleanup recorded; code review APPROVE with 0 findings; architecture CLEAR across 7 invariants",
+      "release": "local preview only; version remains 0.1.36; no tag, release or main move",
+      "status": "complete"
     },
     "coverage_limit": "Complete static identity and front/back-derived direction coverage; full walk/attack frame animation and rich-event VFX/audio remain outside G003."
   },
@@ -271,9 +300,9 @@
     {
       "goal": "G006",
       "id": "dense_boundary_readability",
-      "status": "verification_pending",
+      "status": "complete",
       "observation": "Silencer is narrow and Longbow uses a light silhouette.",
-      "verify": "Check dense combat and arena-boundary readability; these are verification targets, not known failures."
+      "verify": "Dense/edge standard and reduced captures reviewed PASS; no confirmed readability failure."
     }
   ]
 }

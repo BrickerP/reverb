@@ -1,11 +1,11 @@
 # Presentation slice
 
-The presentation commit `650ac4e` starts from `d3d62b3` (v0.1.36, including
-Conductor) and changes presentation only. The branch now integrates fixed mechanics
-through `c2e184e`, including shop transactions, upgrade trade-in refunds and rich
-combat events. G002 presentation commit `2a44c2d` is integrated at `4b481d3`.
-Uncommitted work in the separate mechanics checkout is excluded. Version fields
-remain unchanged. Presentation adds no rules, prices or collisions.
+The presentation line starts at `d3d62b3` (v0.1.36, including Conductor), integrates
+fixed mechanics through `5a1e8c1`, and ends at immutable source
+`d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`. Uncommitted work in the separate
+mechanics checkout is excluded. Version fields remain 0.1.36. Presentation adds no
+rules, prices or collisions, and this local delivery does not create a tag, Release
+or main-branch move.
 
 ## Assets and rendering
 
@@ -100,8 +100,20 @@ architecture review CLEAR and visual review PASS.
 G006 cleanup removes the unused `player` alias and duplicate metadata. The final
 catalog has 38 canonical keys and the same 42 PNGs; the earlier G003 39-key result
 remains valid historical evidence for its one documented alias. Post-cleanup, 3915
-assertions, smoke and English/Chinese UI pass. Stress and release-export audits are
-still running, so G006 is not complete.
+assertions, smoke and English/Chinese UI pass. The fixed-HEAD 300-enemy standard
+stress case runs at 6.761 ms average, 10.813 ms p99 and 13.640 ms max; reduced
+effects runs at 6.916/12.516/14.490 ms. The fixture contains all seven enemies, six weapons and
+four echoes, while feedback remains within 12 audio voices and 260 sparks.
+This measures frame-production headroom on Apple M3 with Godot 4.7.2 OpenGL
+Compatibility, fixed 60 FPS and vsync disabled; it is not a cross-hardware FPS
+guarantee. Reduced effects is a readability/lower-motion mode, not a performance
+claim.
+
+macOS, Windows and Linux packages all load 79 runtime resources and 18 provenance
+files with no forbidden content and identical PCK hashes. macOS passes isolated
+headless smoke and a live Chinese app flow without modifying normal user data.
+Windows/Linux packages are compiled and audited but not natively launched. Final
+code review is APPROVE with zero findings and architecture review is CLEAR.
 
 ```sh
 godot --path . --fixed-fps 60 --disable-vsync \
@@ -109,7 +121,7 @@ godot --path . --fixed-fps 60 --disable-vsync \
   --script res://tools/presentation_preview.gd
 ```
 
-## Next presentation adapters
+## Next stage
 
 `INTERFACES.md` documents the integrated `ShotInfo`, `DamageInfo`, `ExplosionInfo`,
 `WeaponChangeInfo` and `PlayerHurtInfo` events. G004 binds them to weapon-profile
@@ -120,5 +132,12 @@ Direct-drop transactions and repeated undo now use the mechanics-owned
 `quote/apply/undo` API and history signals. G005 completes the drag wrapper, surface
 art, reduced mode, focus and language/merge accessibility states with final
 bilingual, scaled, letterbox and visual acceptance.
+
+The remaining work is evidence from people and target platforms: human feel/balance
+sessions, DeepSeek balance iteration from those runs, and native Windows/Linux
+launch checks. Character movement uses authored front/back art, horizontal direction
+derivation and procedural motion; it is not a frame-by-frame walk/attack animation
+set. Future feel changes should follow observed play rather than adding unbounded
+polish tasks.
 DeepSeek owns the rules and interfaces;
 Codex owns their visual/audio response and fixed-commit integration and release.

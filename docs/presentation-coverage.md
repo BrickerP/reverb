@@ -1,7 +1,7 @@
 # Take Stack presentation coverage
 
-Snapshot: presentation `2fa3735` (G003 source `a5d7cea`), fixed mechanics cursor
-`5a1e8c1`. G002 production commit: `2a44c2d`. Source of
+Final snapshot: presentation `d4a0e73` (G003 source `a5d7cea`, G004 `9e808ff`,
+G005 `24f4fd4`), fixed mechanics cursor `5a1e8c1`. Source of
 content truth: `scripts/data/content.gd`; `scripts/data/character_def.gd` applies
 the configured starting weapon. A family/body fallback is marked **prototype
 reuse**, never complete art coverage.
@@ -94,6 +94,13 @@ Runtime evidence:
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback.mp4`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-feedback-verification/`
 - `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-ui-verification/`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-final-verification/`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-export-verification/`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-macOS-d4a0e73.zip`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Windows-d4a0e73.zip`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/TakeStack-Linux-d4a0e73.zip`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/Take Stack Preview.app`
+- `/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/试玩表现版.command`
 - `shots/feedback_summary.json` and seven `shots/feedback_*.png` captures
 - `shots/shop_drag_full.png`, `shop_drag_highlight.png`,
   `shop_drag_committed.png`, `shop_drag_undone.png`
@@ -105,9 +112,9 @@ version files are shared and require an announced integration boundary.
 
 ## Work order
 
-1. Finish the G006 stress rerun and dense/boundary readability verification.
-2. Audit three-platform exports, resource completeness and cleanup.
-3. Run the final post-cleanup review and prepare delivery.
+1. Run human play sessions and feed balance findings to DeepSeek.
+2. Launch the Windows and Linux builds natively on their target platforms.
+3. Iterate feel only from observed player feedback and new committed mechanics.
 
 G005 polish note: the drag preview's intended offset still appears close to its
 target in the actual gallery. Recheck its wrapper/theme sizing and target occlusion;
@@ -148,9 +155,32 @@ architecture review CLEAR and visual review PASS.
 G006 cleanup removes the unused `player` alias and duplicate metadata, leaving 38
 canonical catalog keys while retaining the same 42 PNGs. This does not rewrite the
 historical G003 evidence that originally verified 39 keys with one documented alias.
-After cleanup, 3915 assertions, smoke and EN/ZH UI pass at 2026-10-23 21:12 +08:00.
-The final stress rerun and release-export audit are still in progress; G006 is not
-complete.
+After cleanup, 3915 assertions, smoke and EN/ZH UI pass at fixed HEAD `d4a0e73`
+at 2026-10-23 21:34 +08:00.
+The fixed 300-enemy stress fixture contains all seven enemy types, six player
+weapons and four echoes. Standard 300-enemy frame production is 6.761 ms average,
+10.813 ms p99 and 13.640 ms max; reduced effects is 6.916/12.516/14.490 ms.
+Four dense/edge captures pass visual review, with bounded 12 audio voices and 260
+sparks.
+These are Apple M3, Godot 4.7.2 OpenGL Compatibility measurements with fixed 60
+FPS and vsync disabled: frame-production headroom on that machine, not a universal
+or cross-hardware FPS guarantee. Reduced effects exists for readability and lower
+motion; the timing comparison does not claim that mode is inherently faster.
+
+All three delivered PCKs share SHA-256
+`cfc5ba3466ea34478494d636e2ee20dfa2da9a8bda15490113edec74835dcbf2`.
+Each mounts and loads 79 runtime resources plus 18 provenance files with zero
+forbidden hits. macOS runs 30 isolated headless frames and leaves normal user data
+unchanged. The exported app also passes a live Chinese flow: start, movement,
+pause, active-run language guard, reduced-effects persistence, resume, return to
+character select and clean exit. Windows/Linux packages were audited on macOS but
+not launched natively on those operating systems.
+
+Final source is `d4a0e73784e775d996b2a27f0a5de6c9befa4aaa`; version remains
+0.1.36. Cleanup is recorded, independent code review is APPROVE with zero findings,
+and the independent architect verdict is CLEAR across seven invariants. No tag,
+Release or main-branch move was performed. G006 is complete for this local preview
+delivery.
 
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as
