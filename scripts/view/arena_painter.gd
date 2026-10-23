@@ -235,6 +235,17 @@ static func player(ci: CanvasItem, sim: Sim) -> void:
 	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
 	ci.draw_circle(pl.pos, r, Color(PLAYER, alpha))
 	ci.draw_circle(pl.pos, r * 0.45, Color(0.02, 0.05, 0.1, alpha))
+	var count := pl.weapons.size()
+	for i in count:
+		var w := pl.weapons[i]
+		var dir := Vector2.from_angle(-PI * 0.5 + TAU * float(i) / float(count))
+		var base := pl.pos + dir * (r + 3.0)
+		var tip := base + dir * 10.0
+		var back := Color(0.01, 0.02, 0.05, 0.85 * alpha)
+		ci.draw_line(base, tip, back, 7.0)
+		ci.draw_line(base, tip, Color(w.color, alpha), 3.0)
+		ci.draw_circle(base, 3.8, back)
+		ci.draw_circle(base, 2.4, Color(w.color, alpha))
 	ci.draw_line(pl.pos + pl.facing * r, pl.pos + pl.facing * (r + 7.0), Color(1, 1, 1, alpha), 3.0)
 
 

@@ -10,6 +10,7 @@ func test_weapons_are_sane(c: Check) -> void:
 		c.ok(w.damage > 0.0 and w.cooldown > 0.0 and w.reach > 0.0, "%s: positive combat numbers" % id)
 		c.ok(w.projectile_speed > 0.0 and w.projectile_radius > 0.0, "%s: positive projectile numbers" % id)
 		c.ok(w.pellets >= 1 and w.pierce >= 0 and w.price > 0, "%s: pellets, pierce, price" % id)
+		c.ok(not str(w.family).is_empty(), "%s: weapon family" % id)
 		c.ok(w.dps() > 5.0 and w.dps() < 40.0, "%s: dps in a sane band (%s)" % [id, w.dps()])
 
 

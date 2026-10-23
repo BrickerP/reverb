@@ -24,6 +24,10 @@ static func weapon_name(id: StringName) -> String:
 	return t("weapon." + String(id))
 
 
+static func weapon_family(id: StringName) -> String:
+	return t("weapon.family." + String(id))
+
+
 static func item_name(id: StringName) -> String:
 	return t("item." + String(id))
 

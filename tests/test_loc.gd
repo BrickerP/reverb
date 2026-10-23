@@ -28,6 +28,12 @@ func _is_content_key(key: String) -> bool:
 	var id := StringName(parts[1])
 	match parts[0]:
 		"weapon":
+			if parts[1].begins_with("family."):
+				var family := StringName(parts[1].trim_prefix("family."))
+				for w: WeaponDef in Content.weapons().values():
+					if w.family == family:
+						return true
+				return false
 			return Content.weapons().has(id)
 		"item":
 			return Content.items().has(id)
@@ -53,6 +59,7 @@ func test_every_content_id_has_a_name(c: Check) -> void:
 	var keys: Array[String] = []
 	for id: StringName in Content.weapons():
 		keys.append("weapon." + String(id))
+		keys.append("weapon.family." + String(Content.weapon(id).family))
 	for id: StringName in Content.items():
 		keys.append("item." + String(id))
 	for id in Stats.ORDER:

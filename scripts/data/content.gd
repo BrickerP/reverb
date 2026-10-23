@@ -91,25 +91,30 @@ static func _character(id: StringName, props: Dictionary) -> void:
 
 static func _build_weapons() -> void:
 	_weapon(&"pistol", {
+		"family": &"sidearm",
 		"damage": 7.0, "cooldown": 0.5, "reach": 300.0, "projectile_speed": 720.0,
 		"knockback": 80.0, "price": 14, "color": Color(0.45, 0.95, 1.0),
 	})
 	_weapon(&"smg", {
+		"family": &"sidearm",
 		"damage": 3.2, "cooldown": 0.16, "reach": 240.0, "projectile_speed": 780.0,
 		"projectile_radius": 3.5, "spread_deg": 8.0, "knockback": 25.0, "price": 24,
 		"color": Color(0.55, 1.0, 0.6),
 	})
 	_weapon(&"shotgun", {
+		"family": &"scatter",
 		"damage": 3.5, "cooldown": 1.0, "reach": 200.0, "projectile_speed": 650.0,
 		"projectile_radius": 3.5, "pellets": 5, "spread_deg": 30.0, "knockback": 70.0,
 		"price": 30, "color": Color(1.0, 0.7, 0.3),
 	})
 	_weapon(&"rifle", {
+		"family": &"marksman",
 		"damage": 16.0, "cooldown": 1.05, "reach": 420.0, "projectile_speed": 1000.0,
 		"projectile_radius": 4.0, "pierce": 2, "knockback": 120.0, "price": 34,
 		"color": Color(1.0, 0.45, 0.6),
 	})
 	_weapon(&"orb", {
+		"family": &"arcane",
 		"damage": 9.0, "cooldown": 1.3, "reach": 270.0, "projectile_speed": 240.0,
 		"projectile_radius": 11.0, "pierce": 99, "knockback": 20.0, "price": 38,
 		"color": Color(0.75, 0.55, 1.0),

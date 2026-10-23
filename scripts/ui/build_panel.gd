@@ -93,16 +93,53 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 
 
 func _weapon_chips(pl: PlayerState) -> Control:
-	var flow := _flow()
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
 	var counts: Dictionary = {}
 	var first: Array[WeaponDef] = []
 	for w in pl.weapons:
 		if not counts.has(w.id):
 			first.append(w)
 		counts[w.id] = int(counts.get(w.id, 0)) + 1
+	if first.is_empty():
+		grid.add_child(UiTheme.label(Loc.t("shop.none"), 15, UiTheme.DIM))
+		return grid
 	for w in first:
-		flow.add_child(UiTheme.label("■ " + _counted(Loc.weapon_name(w.id), counts[w.id]), 16, w.color))
-	return flow
+		grid.add_child(_weapon_card(w, counts[w.id], pl))
+	return grid
+
+
+func _weapon_card(w: WeaponDef, count: int, pl: PlayerState) -> Control:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(142.0, 54.0)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var style := UiTheme.box(Color(0.035, 0.045, 0.10), Color(w.color, 0.55), 1, 6)
+	style.content_margin_left = 7.0
+	style.content_margin_right = 7.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 5.0
+	card.add_theme_stylebox_override("panel", style)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	card.add_child(box)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 4)
+	top.add_child(UiTheme.label("■", 13, w.color))
+	var name_label := UiTheme.label(_counted(Loc.weapon_name(w.id), count), 13, UiTheme.INK)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(name_label)
+	box.add_child(top)
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 4)
+	bottom.add_child(UiTheme.label(Loc.weapon_family(w.family), 11, UiTheme.DIM))
+	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats))), 11, UiTheme.COIN)
+	dps.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	bottom.add_child(dps)
+	box.add_child(bottom)
+	return card
 
 
 func _item_chips(pl: PlayerState) -> Control:

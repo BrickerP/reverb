@@ -2,6 +2,7 @@ class_name WeaponDef
 extends Resource
 
 @export var id: StringName
+@export var family: StringName = &"sidearm"
 @export var damage: float = 5.0
 @export var cooldown: float = 0.6
 @export var reach: float = 360.0

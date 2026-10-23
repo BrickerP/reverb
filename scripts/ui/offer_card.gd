@@ -76,6 +76,8 @@ func _title_row(o: Offer, reason: StringName, selected: bool) -> Control:
 	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
 	row.add_child(UiTheme.label("■", 18, color))
 	row.add_child(UiTheme.label(title, 22))
+	if o.is_weapon():
+		row.add_child(UiTheme.label("[%s]" % Loc.weapon_family(o.weapon.family), 12, UiTheme.DIM))
 	if not o.is_weapon() and o.item.echo_item:
 		row.add_child(UiTheme.label("[%s]" % Loc.t("shop.tag_echo"), 14, UiTheme.ECHO))
 	var spacer := Control.new()
