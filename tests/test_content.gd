@@ -11,6 +11,13 @@ func test_weapons_are_sane(c: Check) -> void:
 		c.ok(w.projectile_speed > 0.0 and w.projectile_radius > 0.0, "%s: positive projectile numbers" % id)
 		c.ok(w.pellets >= 1 and w.pierce >= 0 and w.price > 0, "%s: pellets, pierce, price" % id)
 		c.ok(not str(w.family).is_empty(), "%s: weapon family" % id)
+		if w.evolves_to != &"":
+			var evolved := Content.weapon(w.evolves_to)
+			c.ok(evolved != null, "%s: evolution target exists" % id)
+			if evolved != null:
+				c.eq(evolved.family, w.family, "%s: evolution keeps family" % id)
+				c.ok(not evolved.drops, "%s: evolved form is not a drop" % id)
+				c.eq(evolved.evolves_to, &"", "%s: evolution is one step" % id)
 		c.ok(w.dps() > 5.0 and w.dps() < 40.0, "%s: dps in a sane band (%s)" % [id, w.dps()])
 
 

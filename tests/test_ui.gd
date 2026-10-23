@@ -34,6 +34,21 @@ func _open_shop(s: Sim) -> ShopUi:
 	return ui
 
 
+func test_build_panel_can_evolve_a_maxed_weapon(c: Check) -> void:
+	var s := _shop_sim(1000)
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	for i in 3:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	s.player.materials = Shop.evolution_cost(s.player.weapons[0])
+	var ui := _open_shop(s)
+	ui.build_panel._upgrade_buttons[0].pressed.emit()
+	c.eq(s.player.weapons[0].id, &"twin_fangs", "build panel evolves the weapon")
+	c.eq(s.player.materials, 0, "build panel spends the evolution cost")
+	ui.free()
+
+
 func test_build_panel_can_upgrade_an_equipped_weapon(c: Check) -> void:
 	var s := _shop_sim(1000)
 	s.player.weapons.clear()

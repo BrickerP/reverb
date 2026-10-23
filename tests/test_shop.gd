@@ -54,6 +54,34 @@ func test_weapon_upgrade_spends_materials_and_caps(c: Check) -> void:
 	c.ok(not s.shop.upgrade_weapon(s, 0), "max level refuses further upgrades")
 
 
+func test_weapon_evolution_requires_level_and_family(c: Check) -> void:
+	var s := _shop_sim()
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	for i in 3:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	var cost := Shop.evolution_cost(s.player.weapons[0])
+	s.player.materials = cost
+	c.eq(Shop.evolution_block_reason(s, 0), &"", "max level + three sidearms qualifies")
+	c.ok(s.shop.evolve_weapon(s, 0), "evolution succeeds")
+	c.eq(s.player.weapons[0].id, &"twin_fangs", "weapon becomes the evolved form")
+	c.eq(s.player.level_at(0), 0, "evolved weapon starts at level 1")
+	c.eq(s.player.materials, 0, "evolution spends materials")
+
+
+func test_weapon_evolution_rejects_low_family_count(c: Check) -> void:
+	var s := _shop_sim()
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	for i in 2:
+		s.player.add_weapon(Content.weapon(&"pistol"))
+	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	s.player.materials = 1000
+	c.eq(Shop.evolution_block_reason(s, 0), &"family", "two sidearms are not enough")
+	c.ok(not s.shop.evolve_weapon(s, 0), "low family count refuses evolution")
+
+
 func test_roll_is_unique_and_priced_by_wave(c: Check) -> void:
 	var s := _shop_sim()
 	s.wave = 5

@@ -4,6 +4,7 @@ extends RefCounted
 const OFFER_COUNT := 4
 const WEAPON_CHANCE := 0.4
 const RESALE_RATE := 0.5
+const EVOLVE_FAMILY_COUNT := 3
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
@@ -39,6 +40,40 @@ static func upgrade_weapon(sim: Sim, index: int) -> bool:
 	sim.player.materials -= cost
 	if not sim.player.upgrade_weapon(index):
 		return false
+	sim.purchased.emit()
+	return true
+
+
+static func evolution_cost(w: WeaponDef) -> int:
+	return maxi(10, int(round(float(w.price) * 1.5)))
+
+
+static func evolution_block_reason(sim: Sim, index: int) -> StringName:
+	if sim.phase != Sim.Phase.SHOP or index < 0 or index >= sim.player.weapons.size():
+		return &"invalid"
+	var w := sim.player.weapons[index]
+	if w.evolves_to == &"":
+		return &"none"
+	if sim.player.level_at(index) < WeaponDef.MAX_LEVEL:
+		return &"level"
+	if Combat.family_count(sim.player.weapons, w.family) < EVOLVE_FAMILY_COUNT:
+		return &"family"
+	if sim.player.materials < evolution_cost(w):
+		return &"poor"
+	return &""
+
+
+static func evolve_weapon(sim: Sim, index: int) -> bool:
+	if evolution_block_reason(sim, index) != &"":
+		return false
+	var old := sim.player.weapons[index]
+	var evolved := Content.weapon(old.evolves_to)
+	if evolved == null:
+		return false
+	sim.player.materials -= evolution_cost(old)
+	sim.player.weapons[index] = evolved
+	sim.player.weapon_levels[index] = 0
+	sim.player.cooldowns[index] = 0.0
 	sim.purchased.emit()
 	return true
 
@@ -138,7 +173,10 @@ func _random_offer(sim: Sim) -> Offer:
 	var o := Offer.new()
 	var weapons_open := sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS
 	if weapons_open and sim.rng.randf() < WEAPON_CHANCE:
-		var wdefs := Content.weapons().values()
+		var wdefs: Array[WeaponDef] = []
+		for w: WeaponDef in Content.weapons().values():
+			if w.drops:
+				wdefs.append(w)
 		var w: WeaponDef = wdefs[sim.rng.randi_range(0, wdefs.size() - 1)]
 		o.weapon = w
 		o.price = price_for(w.price, sim.wave)

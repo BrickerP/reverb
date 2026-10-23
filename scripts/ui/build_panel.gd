@@ -3,6 +3,7 @@ extends PanelContainer
 
 signal replace_cancelled
 signal upgrade_requested(index: int)
+signal evolve_requested(index: int)
 
 var weapons_label: Label
 var items_label: Label
@@ -152,8 +153,17 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	upgrade.custom_minimum_size = Vector2(0.0, 20.0)
 	upgrade.add_theme_font_size_override("font_size", 10)
 	if level >= WeaponDef.MAX_LEVEL:
-		upgrade.text = Loc.t("shop.max_level")
-		upgrade.disabled = true
+		if w.evolves_to != &"":
+			var family_count := Combat.family_count(pl.weapons, w.family)
+			if family_count < Shop.EVOLVE_FAMILY_COUNT:
+				upgrade.text = Loc.t("shop.evolve_need", [Shop.EVOLVE_FAMILY_COUNT])
+				upgrade.disabled = true
+			else:
+				upgrade.text = Loc.t("shop.evolve", [Shop.evolution_cost(w)])
+				upgrade.pressed.connect(func() -> void: evolve_requested.emit(index))
+		else:
+			upgrade.text = Loc.t("shop.max_level")
+			upgrade.disabled = true
 	else:
 		upgrade.text = Loc.t("shop.upgrade", [Shop.upgrade_cost(w, level)])
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))

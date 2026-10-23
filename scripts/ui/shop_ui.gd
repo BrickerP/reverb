@@ -44,6 +44,7 @@ func _ready() -> void:
 	build_panel = BuildPanel.new()
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
+	build_panel.evolve_requested.connect(_on_evolve_weapon)
 	columns.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
@@ -189,6 +190,14 @@ func _on_replace_slot(index: int) -> void:
 
 func _on_upgrade_weapon(index: int) -> void:
 	if sim.shop.upgrade_weapon(sim, index):
+		refresh()
+		build_panel.focus_upgrade(index)
+	else:
+		UiTheme.flash(_materials)
+
+
+func _on_evolve_weapon(index: int) -> void:
+	if sim.shop.evolve_weapon(sim, index):
 		refresh()
 		build_panel.focus_upgrade(index)
 	else:
