@@ -35,8 +35,6 @@ const CHARACTER_BACK_KEYS := {
 }
 
 const PATHS := {
-	# Temporary alias used by the first presentation renderer.
-	&"player": "res://assets/presentation/player.png",
 	&"character_looper_front": "res://assets/presentation/player.png",
 	&"character_looper_back": "res://assets/presentation/characters/looper_back.png",
 	&"character_solo_front": "res://assets/presentation/characters/solo_front.png",
@@ -80,7 +78,6 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
-	&"player": {"size": Vector2(1254, 1254), "region": Rect2(379, 247, 525, 816)},
 	&"character_looper_front": {"size": Vector2(1254, 1254), "region": Rect2(379, 247, 525, 816)},
 	&"character_looper_back": {"size": Vector2(1254, 1254), "region": Rect2(386, 233, 517, 832)},
 	&"character_solo_front": {"size": Vector2(1254, 1254), "region": Rect2(395, 169, 538, 972)},
