@@ -246,8 +246,11 @@ def macos_smoke(
 ) -> dict[str, Any]:
     normal_user_dir = Path.home() / "Library/Application Support/Godot/app_userdata/Take Stack"
     isolated_user_dir = Path.home() / "Library/Application Support" / custom_name
-    if isolated_user_dir.exists():
-        raise RuntimeError(f"isolated export user directory already exists: {isolated_user_dir}")
+    isolated_log = isolated_user_dir / "export-audit.log"
+    if isolated_log.exists():
+        raise RuntimeError(f"isolated export smoke log already exists: {isolated_log}")
+    if isolated_user_dir.resolve() not in isolated_log.resolve().parents:
+        raise RuntimeError("isolated export smoke log escaped its exact custom user directory")
     normal_before = tree_fingerprint(normal_user_dir)
     environment = os.environ.copy()
     environment.update({
@@ -264,7 +267,6 @@ def macos_smoke(
         environment=environment,
     )
     normal_after = tree_fingerprint(normal_user_dir)
-    isolated_log = isolated_user_dir / "export-audit.log"
     if not isolated_log.is_file():
         raise RuntimeError(
             "exported macOS app did not resolve user:// to the injected isolated directory"
