@@ -466,6 +466,29 @@ func test_main_boots_into_character_select(c: Check) -> void:
 	main.free()
 
 
+func test_pause_menu_exposes_controller_actions(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	main.toggle_pause()
+	c.ok(main.pause_ui.visible, "pause menu is shown")
+	c.ok(main.pause_ui.resume_button.has_focus(), "resume has focus")
+	main.pause_ui.settings_button.pressed.emit()
+	c.ok(main.settings_ui.visible, "settings opens from pause")
+	c.ok(not main.pause_ui.visible, "pause menu yields to settings")
+	main.settings_ui.close()
+	c.ok(main.pause_ui.visible, "pause menu returns after settings")
+	main.pause_ui.history_button.pressed.emit()
+	c.ok(main.history_ui.visible, "history opens from pause")
+	c.ok(not main.pause_ui.visible, "pause menu yields to history")
+	main.history_ui.close()
+	c.ok(main.pause_ui.visible, "pause menu returns after history")
+	main.pause_ui.resume_button.pressed.emit()
+	c.ok(not main.paused, "resume unpauses")
+	c.ok(not main.pause_ui.visible, "pause menu hides on resume")
+	main.free()
+
+
 func test_pause_can_quit_to_select(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

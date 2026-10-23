@@ -2,7 +2,6 @@ class_name Hud
 extends Control
 
 const WIDTH := 1280.0
-const HEIGHT := 720.0
 const BAR_H := 72.0
 const SLOT_Y := 688.0
 const SLOT_W := 30.0
@@ -98,8 +97,6 @@ func _draw() -> void:
 	_draw_weapons()
 	_draw_controls()
 	_draw_onboarding()
-	if paused:
-		_draw_pause()
 
 
 func _draw_health() -> void:
@@ -273,38 +270,6 @@ func _draw_onboarding() -> void:
 		draw_line(c + dir * 4.0, c + dir * 9.0, Color(UiTheme.COIN, alpha), 2.0)
 	draw_circle(c, 3.0, Color(UiTheme.COIN, alpha))
 	_text(Loc.t("hud.auto_fire"), Vector2(x + 24.0, panel.position.y + 29.0), size, Color(UiTheme.INK, alpha))
-
-
-func _draw_pause() -> void:
-	draw_rect(Rect2(0.0, 0.0, WIDTH, HEIGHT), Color(0.0, 0.0, 0.0, 0.6))
-	var panel := Rect2(340.0, 190.0, 600.0, 440.0)
-	draw_rect(panel, Color(0.02, 0.03, 0.08, 0.97))
-	draw_rect(panel, Color(0.35, 0.55, 0.95, 0.55), false, 2.0)
-	_text(Loc.t("hud.paused_title"), Vector2(panel.position.x + 40.0, panel.position.y + 54.0), 32, UiTheme.INK)
-	var size := 16
-	var row_y := panel.position.y + 100.0
-	_keycap("WASD", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.move"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 44.0
-	_keycap("P / Esc / Start", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.pause"), Vector2(panel.position.x + 190.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 44.0
-	_keycap("R", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.help_restart"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 44.0
-	_keycap("Q", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.quit"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 44.0
-	_keycap("O", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.settings"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 44.0
-	_keycap("M", Vector2(panel.position.x + 40.0, row_y), size)
-	_text(Loc.t("hud.mute"), Vector2(panel.position.x + 140.0, row_y + 15.0), size, UiTheme.DIM)
-	row_y += 52.0
-	draw_line(Vector2(panel.position.x + 40.0, row_y), Vector2(panel.end.x - 40.0, row_y), Color(1, 1, 1, 0.12), 1.0)
-	row_y += 30.0
-	_text(Loc.t("hud.echo"), Vector2(panel.position.x + 40.0, row_y), 18, UiTheme.ECHO)
-	_text(Loc.t("hud.help_echo"), Vector2(panel.position.x + 120.0, row_y), 15, UiTheme.DIM)
 
 
 func _keycap_width(label: String, size: int) -> float:

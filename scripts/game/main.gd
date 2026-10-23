@@ -8,6 +8,7 @@ var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
 var character_select: CharacterSelectUi
+var pause_ui: PauseUi
 var settings_ui: SettingsUi
 var history_ui: HistoryUi
 var settings: Settings
@@ -47,12 +48,14 @@ func _ready() -> void:
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
 	character_select = CharacterSelectUi.new()
+	pause_ui = PauseUi.new()
 	settings_ui = SettingsUi.new()
 	history_ui = HistoryUi.new()
 	_add_layer(1, hud, theme)
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
 	_add_layer(4, character_select, theme)
+	_add_layer(4, pause_ui, theme)
 	_add_layer(5, settings_ui, theme)
 	_add_layer(6, history_ui, theme)
 	shop_ui.start_requested.connect(_on_start_requested)
@@ -64,12 +67,18 @@ func _ready() -> void:
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
 	character_select.daily_requested.connect(start_daily)
+	pause_ui.resume_requested.connect(func() -> void: _set_paused(false))
+	pause_ui.settings_requested.connect(open_settings)
+	pause_ui.history_requested.connect(open_history)
+	pause_ui.mute_requested.connect(func() -> void: audio.toggle_mute())
+	pause_ui.quit_requested.connect(show_select)
 	history_ui.replay_requested.connect(_on_history_replay)
 	settings_ui.volume_changed.connect(_on_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
 	settings_ui.language_changed.connect(_on_language_changed)
 	settings_ui.closed.connect(_on_settings_closed)
+	history_ui.closed.connect(_on_history_closed)
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
 	var log_path := OS.get_environment("REVERB_RUN_LOG")
@@ -139,12 +148,16 @@ func open_settings() -> void:
 	_settings_restore_pause = paused
 	if sim != null and sim.phase == Sim.Phase.WAVE and not paused:
 		_set_paused(true)
+	if pause_ui != null:
+		pause_ui.close()
 	settings_ui.open(settings)
 
 
 func open_history() -> void:
 	if history_ui.visible or settings_ui.visible or run_log == null:
 		return
+	if pause_ui != null:
+		pause_ui.close()
 	history_ui.open(run_log)
 
 
@@ -154,9 +167,17 @@ func _on_history_replay(seed_value: int, char_id: StringName) -> void:
 
 
 func _on_settings_closed() -> void:
-	if not _settings_restore_pause and sim != null and sim.phase == Sim.Phase.WAVE:
+	if _settings_restore_pause:
+		if pause_ui != null:
+			pause_ui.open()
+	elif sim != null and sim.phase == Sim.Phase.WAVE:
 		_set_paused(false)
 	_settings_restore_pause = false
+
+
+func _on_history_closed() -> void:
+	if paused and sim != null and sim.phase == Sim.Phase.WAVE and pause_ui != null:
+		pause_ui.open()
 
 
 func _on_volume_changed(value: float) -> void:
@@ -339,3 +360,9 @@ func _show_end() -> void:
 func _set_paused(on: bool) -> void:
 	paused = on
 	hud.paused = on
+	if pause_ui == null:
+		return
+	if on:
+		pause_ui.open()
+	else:
+		pause_ui.close()
