@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-> 工作名：Reverb / 回响。英文名必须更换：Steam 已有至少两款 `Reverb`（2514890 多人潜行 FPS、5085070 四轨音游），另有 HP Reverb 硬件与 Reverb Communications。以下为占位文案，发布前需要更名并做正式商标检索。
+> 工作名：Take Stack / 回响。v0.1.14 起项目名、窗口名和导出包名已切换到 Take Stack；Reverb 因 Steam 冲突弃用。正式商标检索尚未完成，商店上架前仍需确认。以下为占位文案。
 
 ## 短描述
 
@@ -88,7 +88,7 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 
 ## Press kit 清单
 
-- 标题：`回响 / Reverb (working title)`
+- 标题：`回响 / Take Stack (working title)`
 - 一句话、长描述：本文件
 - 截图：`docs/wave.png`、`docs/shop.png`、`docs/reveal.png`、`docs/boss.png`、`docs/end.png`、`docs/select.png`、`docs/shop_merge.png`
 - 构建：<https://github.com/BrickerP/reverb/releases>
@@ -97,7 +97,7 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 
 ## 发布前必须解决
 
-1. **英文更名**：Steam 已有至少两款 `Reverb`（2514890、5085070），必须换名。候选检索：`Take Stack` 未发现同名 Steam 游戏，推荐工作名；`Ghost Take` 未发现同名游戏但偏恐怖；`Take Twenty` 未发现同名游戏但绑定 20 波；`Last Take` 已有独立游戏概念；`Overdub` 与 `Paratopic: Overdub` 冲突；`Dead Take` 已被 Steam 3352690 占用。正式商标检索前不能定名。工作名定为 `Take Stack`，完整更名清单见 [NAMING.md](NAMING.md)。
+1. **英文更名（已完成，待商标）**：v0.1.14 起项目/构建名是 `Take Stack`，旧 `Reverb` 用户目录会自动迁移。`Take Stack` 检索未发现同名 Steam 游戏；`Ghost Take`、`Take Twenty` 备选，`Last Take` 已有独立游戏概念，`Overdub` 与 `Paratopic: Overdub` 冲突，`Dead Take` 已被 Steam 3352690 占用。正式商标检索前不能作为最终上架名。
 2. **辨识度**：GRIMLOOP（4709620）已做“每 30 秒过去幽灵重放走位和攻击”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
 3. **真人数据**：难度、防御流、8–14 波墙都还没有真人验证。
 4. **音频**：目前是程序合成占位，需要至少一轮混音与音乐设计。

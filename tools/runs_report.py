@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize Reverb runs.jsonl files into a Markdown report.
+"""Summarize Take Stack runs.jsonl files into a Markdown report.
 
 Usage:
     python3 tools/runs_report.py path/to/runs.jsonl [more.jsonl ...]
@@ -67,7 +67,7 @@ def main():
         print("No valid runs.", file=sys.stderr)
         return 1
 
-    lines = ["# Reverb run report", ""]
+    lines = ["# Take Stack run report", ""]
     wins = sum(1 for r in runs if r["won"])
     lines.append(f"Runs: **{len(runs)}** · wins **{wins}** · win rate **{pct(wins, len(runs)):.1f}%**")
     versions = Counter(str(r.get("version") or "?") for r in runs)

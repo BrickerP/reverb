@@ -29,6 +29,7 @@ var _daily_run := false
 
 
 func _ready() -> void:
+	UserData.migrate_legacy()
 	Controls.register()
 	var sp := OS.get_environment("REVERB_SETTINGS")
 	settings = Settings.new(sp if sp != "" else Settings.DEFAULT_PATH)

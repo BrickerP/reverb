@@ -1,4 +1,4 @@
-# 回响 / Reverb
+# 回响 / Take Stack
 
 ![Test](https://github.com/BrickerP/reverb/actions/workflows/test.yml/badge.svg)
 
@@ -52,20 +52,22 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.13 的 macOS / Windows / Linux 构建，不用装 Godot。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.1.14 的 macOS / Windows / Linux 构建，不用装 Godot。
 
-- **macOS**：`Reverb-macos.zip` → 解压 → 右键 `Reverb.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine Reverb.app`。
-- **Windows**：`Reverb-windows.zip` → 解压 → 运行 `Reverb.exe`。SmartScreen 选“更多信息 → 仍要运行”。
-- **Linux**：`Reverb-linux.zip` → 解压 → `chmod +x Reverb.x86_64` → 运行。
+- **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
+- **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
+- **Linux**：`TakeStack-linux.zip` → 解压 → `chmod +x TakeStack.x86_64` → 运行。
 - **校验**：同页 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt`（macOS 用 `shasum -a 256 -c`）。
 
 ## 试玩反馈
 
 构建会把每局结果追加到本机的 `user://runs.jsonl`，不上传任何东西。文件位置：
 
-- macOS：`~/Library/Application Support/Godot/app_userdata/Reverb/runs.jsonl`
-- Windows：`%APPDATA%\Godot\app_userdata\Reverb\runs.jsonl`
-- Linux：`~/.local/share/godot/app_userdata/Reverb/runs.jsonl`
+- macOS：`~/Library/Application Support/Godot/app_userdata/Take Stack/runs.jsonl`
+- Windows：`%APPDATA%\Godot\app_userdata\Take Stack\runs.jsonl`
+- Linux：`~/.local/share/godot/app_userdata/Take Stack/runs.jsonl`
+
+v0.1.14 起目录名从 `Reverb` 改为 `Take Stack`；首次启动会自动复制旧的 `reverb_save.json`、`settings.json`、`runs.jsonl`，不会覆盖新目录已有文件。
 
 把文件发我，或者只报：角色、到达波数、死因、最爽和最烦的一刻。结算页有 `Open log folder` 直接打开记录目录；显示本局种子，想复现别人的局，在选角页的 `Seed` 里填同一个数字即可。
 
@@ -110,7 +112,7 @@ macOS 已验证（Apple Silicon / OpenGL Compatibility）。Windows 和 Linux �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 1840 项）
+make test     # 无头测试（当前 1846 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke
 make perf     # 模拟步耗时与压力测试
@@ -143,7 +145,7 @@ tools/          烟测、平衡、性能探针、音效生成
 - 难度和 Boss 只用 bot 验证过（静音者加入后 30 种子 balanced：复读机 15、独行者 22、镜像 16；防御流仍偏弱）。真人手感未调。
 - 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
 - Steam Deck / 低端机帧率未验证。本机 M3 窗口压力测试（720p、100 敌人、约 390 发弹幕）约 7ms/帧，200 敌人约 10ms；高弹量会自动降特效。
-- 名称《回响》/ Reverb 为暂定；Steam 已有至少两款 Reverb，英文名必须更换，正式商标检索未做。
+- 名称《回响》/ Take Stack 为工作名；Steam 已有多款 Reverb，英文名已更换；正式商标检索未做。
 
 ## 许可
 
