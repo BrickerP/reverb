@@ -177,6 +177,12 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.open_log_requested.connect(func() -> void: logs[0] += 1)
 	ui.open_log_button.pressed.emit()
 	c.eq(logs[0], 1, "open log folder requested")
+	var feedback := [0]
+	ui.feedback_requested.connect(func() -> void: feedback[0] += 1)
+	c.ok(ui.feedback_button.disabled, "feedback waits for a saved run")
+	ui.set_feedback_available(true)
+	ui.feedback_button.pressed.emit()
+	c.eq(feedback[0], 1, "saved run feedback requested")
 	s.phase = Sim.Phase.WON
 	ui.show_result(s)
 	c.ok(ui.visible, "also shown on a win")
