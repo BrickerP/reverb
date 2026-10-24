@@ -390,3 +390,33 @@ Verification on the merged tree is headless only: import is clean, 5481 assertio
 smoke passes and the 10 Python report tests pass. The native EN/ZH x normal/reduced
 probes recorded above were not rerun after the merge. The playtest-feedback stack came
 in as local-only code; no verified human feedback exists and none is claimed.
+
+## Trunk integration of offer lock
+
+On 2026-10-25 the offer-lock work (`8403188`) was merged with the mechanics trunk on
+branch `integration/offer-lock-sync`, replacing the selective re-application recorded
+above. The branch merged main twice: `c755946` (ten textual conflicts resolved by hand)
+and `a355dc0` (endless mode, no conflicts).
+
+Conflict policy: the trunk wins mechanics (offer-lock simulation, contracts, rifts, echo
+collapse, endless); this lane wins view, UI strings and event payloads. Kept from this
+lane: the held offer keeps its original clamped slot after refresh (the trunk's
+INTERFACES section 13 already requires it), keyboard focus returns to the refreshed
+Lock/Unlock button, nested Lock/Unlock cannot buy or start an equipment drag,
+`shop.full_reason`, the richer `shop.lock_hint` and the lock accessibility text, plus the
+lock probe and its tests. Kept from the trunk: `accept_contract`, the per-roll contract
+draw and every `contract.*` string. RNG draws, the offer multiset, price and refresh
+cost are unchanged.
+
+Verification on the merged tree: import is clean, 5601 assertions pass (trunk alone:
+5528), smoke passes with the same frame count as the trunk, the 10 Python report tests
+pass, and the native lock probe passes in EN and ZH with normal and reduced effects.
+These are fixtures only; no human playtest feedback exists or is claimed.
+
+Open issue, present on the trunk and not caused by this integration: at 1280x720 a
+visible contract strip pushes the shop footer past the bottom edge. In a headless layout
+probe (seed 7, wave 10, four offers, hunt contract) the footer ends at 700 px without a
+strip and at 738 px (EN, strip 53 px) or 732 px (ZH, strip 47 px) with one, so 18 px or
+12 px fall off-screen. The strip label wraps to two lines at 400 px and the warning label
+is always laid out. The fix belongs to this lane and is not part of the offer-lock
+integration.

@@ -539,5 +539,39 @@
       "native": "not rerun after merge"
     },
     "provenance": "no human playtest feedback claimed"
+  },
+  "trunk_integration_offer_lock": {
+    "date": "2026-10-25",
+    "branch": "integration/offer-lock-sync",
+    "presentation_tip": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
+    "trunk": "a355dc0216fc3ee22fee2515e98c3e694a576ae8",
+    "supersedes": "selective_offer_lock",
+    "merge_history": "main merged twice: c755946 (10 textual conflicts resolved by hand), then a355dc0 (endless mode, no conflicts)",
+    "conflict_policy": "trunk wins mechanics (offer lock simulation, contracts, rifts, echo collapse, endless); presentation lane wins view, UI strings and event payloads",
+    "kept_from_presentation": [
+      "Held offer keeps its original clamped slot after refresh (trunk INTERFACES section 13 already requires it)",
+      "Keyboard focus returns to the refreshed Lock/Unlock button",
+      "Nested Lock/Unlock action cannot buy or start an equipment drag",
+      "shop.full_reason state text, richer shop.lock_hint wording and lock accessibility description",
+      "tools/offer_lock_probe.gd plus position and presentation tests"
+    ],
+    "kept_from_trunk": "accept_contract, the per-roll contract draw and every contract.* string",
+    "unchanged": "RNG draws, offer multiset, price and refresh cost",
+    "known_issue": {
+      "status": "open; present on trunk a355dc0 and not introduced by this integration",
+      "what": "At 1280x720 a visible contract strip pushes the shop footer past the bottom edge",
+      "measured": "headless layout probe, seed 7, wave 10, four offers, hunt contract: footer bottom 700 without a strip; with a strip 738 in EN (strip 53 px, 18 px off-screen) and 732 in ZH (strip 47 px, 12 px off-screen); identical on trunk and on this branch",
+      "cause": "the left column grows by the strip height plus 8 px separation; the strip label wraps to two lines at 400 px width and the warning label is always laid out, so the column outgrows the 576 px available",
+      "owner": "presentation lane; not fixed here so the integration stays scoped to offer lock"
+    },
+    "verification": {
+      "scope": "headless plus native windowed lock probe",
+      "full_assertions": "5601 passed, 0 failed (trunk a355dc0 alone: 5528)",
+      "smoke": "OK (frames=5246, wave 4, 3 purchases; same as trunk)",
+      "python_report_tests": "10 passed",
+      "native": "tools/offer_lock_probe.gd EN/ZH x normal/reduced all OK on the merged tree",
+      "static": "no conflict markers; JSON parses; 252 en and 252 zh keys with identical sets and no duplicates; no duplicate function names"
+    },
+    "provenance": "isolated fixtures only; no human playtest feedback claimed"
   }
 }
