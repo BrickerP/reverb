@@ -636,6 +636,8 @@ static func _elite_color(kind: StringName) -> Color:
 			return Color(0.55, 0.7, 1.0)
 		&"volatile":
 			return Color(1.0, 0.55, 0.25)
+		&"splitter":
+			return Color(0.55, 1.0, 0.45)
 		_:
 			return Color(0.8, 0.5, 1.0)
 
