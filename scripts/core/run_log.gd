@@ -16,6 +16,22 @@ func folder_path() -> String:
 	return ProjectSettings.globalize_path(path.get_base_dir())
 
 
+func remove_last() -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var text := FileAccess.get_file_as_string(path)
+	var lines := text.split("\n", false)
+	if lines.is_empty():
+		return false
+	lines.remove_at(lines.size() - 1)
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	for line in lines:
+		file.store_line(line)
+	return true
+
+
 func new_context(source: String = "unknown") -> Dictionary:
 	return {
 		"run_id": _new_run_id(),
@@ -95,6 +111,7 @@ func append(sim: Sim, character_id: StringName, seconds: float, context: Diction
 		"character": String(character_id),
 		"wave": sim.wave,
 		"won": sim.phase == Sim.Phase.WON,
+		"endless": sim.endless,
 		"kills": sim.kills,
 		"seconds": snappedf(seconds, 0.1),
 		"weapons": weapons,

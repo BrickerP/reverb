@@ -177,6 +177,17 @@ func _draw_echo_chips() -> void:
 
 
 func _draw_wave() -> void:
+	if sim.endless:
+		_text(Loc.t("hud.endless", [sim.wave]), Vector2(440.0, 34.0), 28, Color(0.8, 0.65, 1.0),
+				HORIZONTAL_ALIGNMENT_CENTER, 400.0)
+		var endless_left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
+		var endless_bar := Rect2(520.0, 44.0, 240.0, 6.0)
+		draw_rect(endless_bar, Color(1, 1, 1, 0.12))
+		var endless_ratio := clampf(sim.wave_time / maxf(0.01, sim.wave_duration), 0.0, 1.0)
+		draw_rect(Rect2(endless_bar.position, Vector2(endless_bar.size.x * endless_ratio, endless_bar.size.y)),
+				Color(0.8, 0.65, 1.0))
+		_text("%d" % endless_left, Vector2(768.0, 54.0), 16, UiTheme.DIM)
+		return
 	var boss_wave := sim.wave == WaveDirector.FINAL_WAVE
 	if boss_wave:
 		var phase2 := sim.boss_phase >= 2

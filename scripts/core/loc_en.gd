@@ -3,6 +3,7 @@ extends RefCounted
 
 const TABLE := {
 	"hud.wave": "Wave %d / %d",
+	"hud.endless": "ENDLESS  ·  WAVE %d",
 	"hud.boss": "PARADOX",
 	"hud.boss_phase2": "PARADOX // TWO TIMELINES",
 	"hud.boss_down": "PARADOX DEFEATED",
@@ -95,6 +96,9 @@ const TABLE := {
 	"shop.dps_add": "DPS %d  ·  +%d",
 	"shop.keys": "Drag into your build to install  ·  click or Enter / A also works",
 	"end.win": "You made it through all %d waves",
+	"end.endless_continue": "Continue · Endless",
+	"end.endless_lose": "Endless run fell on wave %d",
+	"end.endless_run": "Endless wave %d  ·  Kills %d",
 	"end.lose": "You fell on wave %d",
 	"end.run": "Wave %d / %d  ·  Kills %d",
 	"end.death_cause": "Killed by %s",
