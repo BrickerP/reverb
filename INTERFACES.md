@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -453,10 +453,15 @@ Mechanism API:
 - `Sim.begin_endless() -> bool` only from `Phase.WON`, not already endless. It sets
   `endless = true`, keeps the run seed/build/bank, sets `wave = FINAL_WAVE`, clears boss
   shards/rifts, switches to `Phase.SHOP`, and rolls a fresh shop.
-- `start_wave(n)` treats `n == FINAL_WAVE` as the boss wave only when `not endless`; endless
-  wave 21+ has no Paradox spawn and uses the normal wave plan.
-- `step` only checks the boss-dead win condition on wave 20 when not endless; endless waves
-  end by the 60s timer and return to the shop.
+- `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
+  `n > 20` where `n % 5 == 0` (25, 30, 35…).
+- `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
+  endless wave 21+ otherwise has no boss. Endless boss waves use a 0.55 trash-budget
+  multiplier, normal final uses 0.35.
+- `step` requires the boss to die on every boss wave; normal endless waves end by the 60s
+  timer. An endless boss does not auto-end at 60s.
+- Endless boss HP scales by `1 + 0.20 × (n - 20)` before ascension; damage keeps the normal
+  wave damage scaling. The phase-2 split and all boss signals are unchanged.
 - Wave planning/budget/hp/damage continue from `WaveDirector`; endless waves also keep
   one elite per wave, rifts on the 8s/16s cadence, and continuation contracts (clear target
   caps at 40). Normal waves 1–20 are unchanged.
@@ -471,7 +476,8 @@ Presentation requirements:
 - End screen shows `Continue · Endless` only on a normal win; hidden on losses and endless
   deaths.
 - HUD endless branch shows `hud.endless` with the current wave and the 60s timer; it hides
-  the 20-wave progress pips.
+  the 20-wave progress pips. Endless boss waves show `hud.endless_boss` plus the existing
+  boss health bar and phase-2 pips, still without the 20-wave pips.
 - On endless death, end title/stats use `end.endless_lose` / `end.endless_run`; Play again,
   Change character, retry seed and log folder remain available.
 - Main must call `ArenaView.clear_victory()` before opening the endless shop so the victory

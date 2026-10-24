@@ -4,6 +4,7 @@ extends RefCounted
 const TABLE := {
 	"hud.wave": "Wave %d / %d",
 	"hud.endless": "ENDLESS  ·  WAVE %d",
+	"hud.endless_boss": "ENDLESS %d  ·  PARADOX",
 	"hud.boss": "PARADOX",
 	"hud.boss_phase2": "PARADOX // TWO TIMELINES",
 	"hud.boss_down": "PARADOX DEFEATED",

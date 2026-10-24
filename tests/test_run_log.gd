@@ -44,7 +44,7 @@ func test_append_writes_one_json_line(c: Check) -> void:
 	c.eq(lines, 2, "two runs")
 	c.eq(int(first.get("seed", 0)), 7, "seed")
 	c.eq(str(first.get("character", "")), "looper", "character")
-	c.eq(str(first.get("version", "")), "0.9.3", "build version")
+	c.eq(str(first.get("version", "")), "0.9.4", "build version")
 	c.eq(int(first.get("wave", 0)), 5, "wave")
 	c.eq(bool(first.get("won", true)), false, "loss")
 	c.eq(int(first.get("kills", 0)), 42, "kills")

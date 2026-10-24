@@ -177,7 +177,8 @@ func _draw_echo_chips() -> void:
 
 
 func _draw_wave() -> void:
-	if sim.endless:
+	var boss_wave := sim.is_boss_wave()
+	if sim.endless and not boss_wave:
 		_text(Loc.t("hud.endless", [sim.wave]), Vector2(440.0, 34.0), 28, Color(0.8, 0.65, 1.0),
 				HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 		var endless_left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
@@ -188,7 +189,6 @@ func _draw_wave() -> void:
 				Color(0.8, 0.65, 1.0))
 		_text("%d" % endless_left, Vector2(768.0, 54.0), 16, UiTheme.DIM)
 		return
-	var boss_wave := sim.wave == WaveDirector.FINAL_WAVE
 	if boss_wave:
 		var phase2 := sim.boss_phase >= 2
 		var defeated := sim.boss != null and sim.boss_alive_count() == 0
@@ -197,6 +197,8 @@ func _draw_wave() -> void:
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 		else:
 			var title := Loc.t("hud.boss_phase2") if phase2 else Loc.t("hud.boss")
+			if sim.endless:
+				title = Loc.t("hud.endless_boss", [sim.wave]) + ("  //  II" if phase2 else "")
 			var title_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.9, 0.8, 1.0)
 			_text(title, Vector2(440.0, 34.0), 26, title_color,
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)
@@ -230,6 +232,8 @@ func _draw_wave() -> void:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), col)
 		_text("%d" % left, Vector2(768.0, 54.0), 16, UiTheme.WARN if urgent else UiTheme.DIM)
 	# One pip per wave: the run's position at a glance.
+	if sim.endless:
+		return
 	var count := WaveDirector.FINAL_WAVE
 	var pip_w := 8.0
 	var gap := 2.0
