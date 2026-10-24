@@ -189,6 +189,8 @@ const TABLE := {
 	"daily.echo_surge": "回响涌动 · 回响威力 +15%",
 	"daily.riftfall": "裂隙坠落 · 第 8 波开始",
 	"daily.twin_hunt": "双猎 · 每波两个精英",
+	"daily.fortune": "日进斗金 · 材料掉落 +50%",
+	"daily.riftstorm": "裂隙风暴 · 第 8 波开始，每 8 秒一次",
 	"boon.title": "无尽恩惠",
 	"boon.subtitle": "进入下一间商店前，选择一项永久强化。",
 	"boon.damage_name": "锋刃",

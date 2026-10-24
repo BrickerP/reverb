@@ -189,6 +189,8 @@ const TABLE := {
 	"daily.echo_surge": "Echo Surge · +15% echo power",
 	"daily.riftfall": "Riftfall · rifts from wave 8",
 	"daily.twin_hunt": "Twin Hunt · two elites per wave",
+	"daily.fortune": "Fortune · +50% material drops",
+	"daily.riftstorm": "Riftstorm · rifts from wave 8 every 8s",
 	"boon.title": "Endless Boon",
 	"boon.subtitle": "Choose one permanent upgrade before the next shop.",
 	"boon.damage_name": "Edge",
