@@ -59,7 +59,9 @@ func weapon_ready(index: int) -> float:
 	if sim == null or index < 0 or index >= sim.player.weapons.size():
 		return 0.0
 	var w := sim.player.weapons[index]
-	var duration := maxf(0.01, w.cooldown * sim.player.stats.cooldown_mult())
+	var duration := maxf(0.01, w.cooldown * sim.player.stats.cooldown_mult()
+			* Combat.family_cooldown_mult(sim.player.weapons, w.family)
+			* sim.synergy_cooldown_mult())
 	return clampf(1.0 - sim.player.cooldowns[index] / duration, 0.0, 1.0)
 
 
@@ -138,7 +140,7 @@ func _draw_health() -> void:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 110.0)
 		border = Color(1.0, 0.25, 0.35, 0.5 + 0.5 * pulse)
 	draw_rect(bar, border, false, 2.0)
-	_text("%s  %d / %d" % [Loc.t("hud.hp"), ceili(pl.hp), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
+	_text("%s  %d / %d" % [Loc.t("hud.hp"), maxi(0, ceili(pl.hp)), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
 
 
 func _draw_echo_chips() -> void:

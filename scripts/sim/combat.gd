@@ -35,7 +35,7 @@ static func family_count(weapons: Array[WeaponDef], family: StringName) -> int:
 	return count
 
 
-# 2 pieces: +3% damage. 4 pieces: +3% attack speed. 6 pieces: another +3% damage.
+# 2 pieces: +3% damage. 4 pieces: family mastery. 6 pieces: another +3% damage.
 static func family_damage_mult(weapons: Array[WeaponDef], family: StringName) -> float:
 	var count := family_count(weapons, family)
 	var mult := 1.0

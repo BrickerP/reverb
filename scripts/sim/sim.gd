@@ -447,10 +447,10 @@ func _bomber_explode(e: EnemyState) -> void:
 		wave_damage_taken = true
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
-		last_damage_source = &"bomber"
+		last_damage_source = e.def.id
 		player_hurt.emit(damage)
 		var hurt := PlayerHurtInfo.new()
-		hurt.source = &"bomber"
+		hurt.source = e.def.id
 		hurt.amount = damage
 		hurt.pos = player.pos
 		hurt.direction = (player.pos - e.pos).normalized()

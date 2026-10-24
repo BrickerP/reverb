@@ -249,11 +249,13 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1) -
 	if not ok:
 		return ShopResult.failure(action, &"invalid", quoted.cost, index,
 				offer.id() if offer != null else &"")
-	_push_history(before)
 	var after := ShopState.capture(sim)
+	if before.weapons.size() != after.weapons.size():
+		before.weapon_change_index = index if action == ShopResult.SELL else before.weapons.size()
+	_push_history(before)
 	var result := ShopResult.success(action, quoted.cost, index,
 			offer.id() if offer != null else &"", before, after)
-	_emit_weapon_changes(sim, before, after, action)
+	_emit_weapon_changes(sim, before, after, action, before.weapon_change_index)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
@@ -267,18 +269,18 @@ func undo(sim: Sim) -> ShopResult:
 	before.restore(sim)
 	var after := ShopState.capture(sim)
 	var result := ShopResult.success(ShopResult.UNDO, 0, -1, &"", pre, after)
-	_emit_weapon_changes(sim, pre, after, ShopResult.UNDO)
+	_emit_weapon_changes(sim, pre, after, ShopResult.UNDO, before.weapon_change_index)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
 
 
-func _emit_weapon_changes(sim: Sim, before: ShopState, after: ShopState, reason: StringName) -> void:
-	if absi(before.weapons.size() - after.weapons.size()) == 1:
-		var changed_index := _size_change_index(before.weapons, after.weapons)
-		if changed_index >= 0:
-			_emit_weapon_change(sim, before, after, reason, changed_index)
-			return
+func _emit_weapon_changes(sim: Sim, before: ShopState, after: ShopState, reason: StringName,
+		changed_index: int = -1) -> void:
+	if absi(before.weapons.size() - after.weapons.size()) == 1 and changed_index >= 0 \
+			and changed_index < maxi(before.weapons.size(), after.weapons.size()):
+		_emit_size_change(sim, before, after, reason, changed_index)
+		return
 	var count := maxi(before.weapons.size(), after.weapons.size())
 	for i in count:
 		_emit_weapon_change(sim, before, after, reason, i)
@@ -303,16 +305,20 @@ func _emit_weapon_change(sim: Sim, before: ShopState, after: ShopState, reason: 
 	sim.weapon_changed.emit(info)
 
 
-func _size_change_index(before: Array[StringName], after: Array[StringName]) -> int:
-	var smaller := before if before.size() < after.size() else after
-	var larger := after if before.size() < after.size() else before
-	var index := 0
-	while index < smaller.size() and smaller[index] == larger[index]:
-		index += 1
-	for tail in range(index, smaller.size()):
-		if smaller[tail] != larger[tail + 1]:
-			return -1
-	return index
+func _emit_size_change(sim: Sim, before: ShopState, after: ShopState, reason: StringName,
+		index: int) -> void:
+	var inserting := after.weapons.size() > before.weapons.size()
+	var occupied := after if inserting else before
+	var level := occupied.weapon_levels[index] if index < occupied.weapon_levels.size() else 0
+	var info := WeaponChangeInfo.new()
+	info.index = index
+	info.before_id = &"" if inserting else occupied.weapons[index]
+	info.after_id = occupied.weapons[index] if inserting else &""
+	info.before_level = 0 if inserting else level
+	info.after_level = level if inserting else 0
+	info.reason = reason
+	info.ok = true
+	sim.weapon_changed.emit(info)
 
 
 func _push_history(state: ShopState) -> void:
