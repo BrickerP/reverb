@@ -160,6 +160,34 @@ func accept_contract(sim: Sim) -> bool:
 	return true
 
 
+func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
+	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
+		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
+	var before := ShopState.capture(sim)
+	if not sim.bank.discard(take):
+		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
+	_push_history(before)
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(ShopResult.ECHO_DISCARD, 0, -1, &"", before, after)
+	shop_action_resolved.emit(result)
+	shop_history_changed.emit(can_undo())
+	return result
+
+
+func merge_echoes(sim: Sim, a: EchoTake, b: EchoTake) -> ShopResult:
+	if sim.phase != Sim.Phase.SHOP or a == null or b == null or a == b:
+		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	var before := ShopState.capture(sim)
+	if sim.bank.merge(a, b) == null:
+		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	_push_history(before)
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(ShopResult.ECHO_MERGE, 0, -1, &"", before, after)
+	shop_action_resolved.emit(result)
+	shop_history_changed.emit(can_undo())
+	return result
+
+
 func clear_history() -> void:
 	if _undo_stack.is_empty():
 		return

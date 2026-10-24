@@ -559,6 +559,7 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 func test_shop_merges_two_takes(c: Check) -> void:
 	var s := _shop_sim(50, 3)
 	var ui := _open_shop(s)
+	var before_count := s.bank.takes.size()
 	c.ok(ui.echo_panel.merge_button != null, "merge is offered with multiple takes")
 	ui.echo_panel.merge_button.pressed.emit()
 	c.ok(ui.echo_panel.is_merging(), "merge mode starts")
@@ -573,6 +574,13 @@ func test_shop_merges_two_takes(c: Check) -> void:
 			merged += 1
 	c.eq(merged, 1, "one merged take")
 	c.ok(not ui.start_button.disabled, "the overflow is resolved")
+	ui.undo_button.pressed.emit()
+	c.eq(s.bank.takes.size(), before_count, "undo restores the source takes")
+	var still_merged := 0
+	for take: EchoTake in s.bank.takes:
+		if take.merged:
+			still_merged += 1
+	c.eq(still_merged, 0, "undo removes the merged marker")
 	ui.free()
 
 

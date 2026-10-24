@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, M21 endless boons, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, M21 endless boons, M22 echo organization undo, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -95,7 +95,11 @@ events; current view/audio can migrate independently.
 - A successfully started wave clears history.
 - Undo never rerolls or advances RNG.
 - `ShopState.restore` rebuilds `Offer` objects; UI must discard old offer references and re-read the restored list after undo.
-- Echo discard/merge undo is **out of scope** until explicitly specified.
+- `ShopState` now also captures the complete `EchoBank` (samples, weapons, levels, stats, wave,
+  age, tint, merged, tint counter). Undo rebuilds equivalent `EchoTake` objects; discard UI
+  references must be refreshed.
+- Echo discard/merge are now undoable through the same history (`Shop.discard_echo`,
+  `Shop.merge_echoes`, actions `echo_discard`/`echo_merge`).
 
 ## 6. Current known gaps
 
@@ -627,3 +631,31 @@ Presentation requirements:
 - Choosing applies via `Sim.choose_boon` and then opens the already-rolled shop.
 - The modal pauses simulation; Hide/quit flows close it without applying.
 - No new art is required; reuse UiTheme panels/buttons.
+
+## 23. Echo organization undo
+
+Echo discard and overdub merge are shop transactions and share the existing equipment Undo
+history. Reroll/start-wave lock boundaries are unchanged.
+
+Mechanism API:
+
+- `Shop.discard_echo(sim, take) -> ShopResult` and
+  `Shop.merge_echoes(sim, a, b) -> ShopResult`; actions
+  `ShopResult.ECHO_DISCARD` / `ShopResult.ECHO_MERGE`.
+- Both capture a full `ShopState`, mutate the bank, push history, emit
+  `shop_action_resolved` / `shop_history_changed`.
+- `ShopState` now captures/restores every EchoTake: samples, weapon IDs, levels, stats, wave,
+  age, tint index, merged flag and bank tint counter.
+- Undo rebuilds new EchoTake objects. Any UI/tool holding old take references must re-read
+  the bank after undo.
+- Direct `Sim.discard_take` / `Sim.merge_takes` remain compatibility methods but do not
+  create history.
+- Boons, contracts, rerolls and wave starts are outside this undo history.
+
+Presentation requirements:
+
+- EchoPanel discard/merge actions must call the Shop transaction methods, not mutate the
+  bank directly.
+- After an echo undo, rebuild EchoPanel rows and selection state; stale take references are
+  invalid.
+- Undo button already reflects `Shop.can_undo()`; no separate echo undo control.

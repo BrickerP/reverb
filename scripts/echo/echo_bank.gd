@@ -15,6 +15,14 @@ func add(take: EchoTake) -> void:
 	takes.append(take)
 
 
+func set_tint_counter(value: int) -> void:
+	_tint_counter = maxi(0, value)
+
+
+func tint_counter() -> int:
+	return _tint_counter
+
+
 # Overdub: two takes become one echo that walks both recorded routes and keeps both loadouts.
 func merge(a: EchoTake, b: EchoTake) -> EchoTake:
 	if a == null or b == null or a == b:

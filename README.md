@@ -59,7 +59,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.8 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、无尽升级期、无尽 Boss、物品套装、苦行等级、生存护盾、每日异象与无尽恩惠），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.9 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、无尽升级期、无尽 Boss、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -146,6 +146,7 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 - 悖论 Phase 2「双线」：半血分裂成两个时间碎片，保留总剩余血量；击杀一个后另一个加速并增伤，击杀全部才通关
 - 换装返还升级投入的 50%，转型不会全损
 - 武器卖出：Build 面板直接卖出任意非最后一把武器，返还基础价 + 50% 升级投入；卖出可撤销，空出的槽位可继续购买
+- 回响整理撤销：商店里丢弃/叠录也进入同一条 Undo 历史；恢复路线、武器与等级、属性、寿命、tint 与 bank 顺序，刷新/开波后锁定
 - 报价锁定：每张报价有独立的 Lock 按钮（不会触发购买或装备拖拽）；一次只保留 1 个，刷新和下一商店都保留原位置与价格，直到购买、解锁或被新的锁定替换；装备撤销会恢复该操作前的保留状态
 - 异常合约：第 3–19 波每间商店 1 个，可选“不受伤害 / 击杀 N 个敌人 / 击杀精英”；先付押金，成功按合约奖励，失败没收押金
 - 时间裂隙：第 12–19 波，每 16 秒在玩家附近预警一个 80 半径的裂隙；1.5 秒后激活 3 秒，圈内每 0.75 秒受伤，不提供接触无敌
@@ -159,7 +160,7 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 6129 项）
+make test     # 无头测试（当前 6156 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

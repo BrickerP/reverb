@@ -687,7 +687,9 @@ func _disconnect_shop() -> void:
 
 
 func _on_discard(take: EchoTake) -> void:
-	sim.discard_take(take)
+	var result := sim.shop.discard_echo(sim, take)
+	if not result.ok:
+		return
 	refresh()
 	if sim.can_start_wave():
 		start_button.grab_focus()
@@ -696,10 +698,10 @@ func _on_discard(take: EchoTake) -> void:
 
 
 func _on_merge(a: EchoTake, b: EchoTake) -> void:
-	var merged := sim.merge_takes(a, b)
-	refresh()
-	if merged == null:
+	var result := sim.shop.merge_echoes(sim, a, b)
+	if not result.ok:
 		return
+	refresh()
 	if sim.can_start_wave():
 		start_button.grab_focus()
 	else:
