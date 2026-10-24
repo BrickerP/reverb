@@ -332,6 +332,27 @@ the same checks with real-time max-fps 60 and added wait-position diagnostics pa
 Its original timeout is retained and not described as a diagnosed game defect.
 Evidence: `outputs/take-stack-sell-verification/` in the parent task directory.
 
+## Selective offer-lock integration
+
+Fixed lock source `699ee83` is applied on presentation `ba92fb2`, preserving the
+sale-event index annotation and excluding Boss/later-system ancestry and release
+metadata. The held offer now stays at its original clamped slot after reroll and
+the next shop, with the same object and price. Generation, duplicate prevention,
+RNG consumption and refresh cost remain unchanged; this repairs six failing
+nonzero-position checks from the fixed candidate.
+
+Independent Lock/Unlock controls suppress purchase and equipment drag, retain
+keyboard focus after refresh, and show a compact full-slot reason with detailed
+accessible text. The free hold produces no material or purchase feedback. The hint
+explains that equipment undo restores the hold snapshot at that transaction.
+
+All 5358 assertions, resource import and smoke pass. Native EN/ZH x normal/reduced
+runs pass physical click, drag-away and keyboard guards, stable object/index/price,
+sold/stale and full/poor/maxed states, sale/undo interoperability, history boundaries
+and cleanup, with 16 screenshots. Independent review is APPROVE with zero issues.
+Evidence is in `outputs/take-stack-lock-verification/`; fixtures do not establish
+human satisfaction or balance. No new image or audio resource is needed.
+
 ## Trunk integration
 
 On 2026-10-25 this lane was merged into the mechanics trunk on branch
@@ -369,3 +390,39 @@ Verification on the merged tree is headless only: import is clean, 5481 assertio
 smoke passes and the 10 Python report tests pass. The native EN/ZH x normal/reduced
 probes recorded above were not rerun after the merge. The playtest-feedback stack came
 in as local-only code; no verified human feedback exists and none is claimed.
+
+## Trunk integration of offer lock
+
+On 2026-10-25 the offer-lock work (`8403188`) was merged with the mechanics trunk on
+branch `integration/offer-lock-sync`, replacing the selective re-application recorded
+above. The branch merged main four times: `c755946` (ten textual conflicts resolved by
+hand), `a355dc0` (endless mode, no conflicts), `c7cdd85` (endless escalation, one
+conflict in the README test-count line) and `d674c35` (item sets, Ascension, endless Boss
+and Ascension identities, again only the README test-count line).
+
+Conflict policy: the trunk wins mechanics (offer-lock simulation, contracts, rifts, echo
+collapse, endless); this lane wins view, UI strings and event payloads. Kept from this
+lane: the held offer keeps its original clamped slot after refresh (the trunk's
+INTERFACES section 13 already requires it), keyboard focus returns to the refreshed
+Lock/Unlock button, nested Lock/Unlock cannot buy or start an equipment drag,
+`shop.full_reason`, the richer `shop.lock_hint` and the lock accessibility text, plus the
+lock probe and its tests. Kept from the trunk: `accept_contract`, the per-roll contract
+draw and every `contract.*` string. RNG draws, the offer multiset, price and refresh
+cost are unchanged.
+
+Verification on the merged tree: import is clean, 5988 assertions pass (pristine trunk
+`d674c35` alone: 5915, so the integration adds 73 lock assertions), smoke prints the
+same line as the trunk, the 10 Python report tests pass, and the native lock probe passes
+in EN and ZH with normal and reduced effects. These are fixtures only; no human playtest
+feedback exists or is claimed.
+
+Open issue, present on the pristine trunk and not caused by this integration: at 1280x720
+a visible contract strip pushes the shop footer (key hints and weapon detail line) past
+the bottom edge. In a headless layout probe (seed 7, wave 10, four offers, hunt contract)
+the footer ends at 700 px without a strip and at 738 px (EN, strip 53 px) or 732 px (ZH,
+strip 47 px) with one, so 18 px or 12 px fall off-screen; the numbers are identical on
+trunk `d674c35` and on this branch. On the trunk, 170 of 190 normal shops (10 seeds) and
+110 of 110 endless shops carry a contract, so the clipped footer is the usual shop
+state. The strip label wraps to two lines at 400 px in EN and the warning label below the
+buttons is always laid out, even when empty. The fix belongs to this lane and is not part
+of the offer-lock integration.

@@ -401,6 +401,7 @@ func reroll(sim: Sim) -> bool:
 
 
 func _fill(sim: Sim, keep: Offer = null) -> void:
+	var keep_index := offers.find(keep) if keep != null else -1
 	offers.clear()
 	if keep != null:
 		keep.sold = false
@@ -412,6 +413,9 @@ func _fill(sim: Sim, keep: Offer = null) -> void:
 		var o := _random_offer(sim)
 		if o != null and not _has(o.id()):
 			offers.append(o)
+	if keep != null and keep_index > 0:
+		offers.remove_at(0)
+		offers.insert(mini(keep_index, offers.size()), keep)
 
 
 func _has(id: StringName) -> bool:

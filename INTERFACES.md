@@ -344,6 +344,11 @@ Presentation requirements:
   the price.
 - Locking is free and must not show a material transaction animation.
 
+Presentation-order correction: `_fill` retains the held offer during generation for
+duplicate prevention, then restores its previous clamped slot. The held object,
+price, generated offer set, RNG consumption and refresh cost are unchanged.
+The local sale-event index annotation remains separate from lock snapshot state.
+
 ## 14. Anomaly contracts
 
 From wave 3 to 19, each shop may offer one optional contract. It is a risk/reward shop
