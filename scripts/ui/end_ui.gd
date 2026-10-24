@@ -5,13 +5,16 @@ signal restart_requested
 signal character_requested
 signal seed_retry_requested(seed_value: int)
 signal open_log_requested
+signal feedback_requested
 
 var restart_button: Button
 var character_button: Button
 var retry_button: Button
 var open_log_button: Button
+var feedback_button: Button
 var best_take: EchoTake
 var reduced_effects := false
+var feedback_available := false
 
 var _title: Label
 var _stats: Label
@@ -63,6 +66,11 @@ func _ready() -> void:
 	open_log_button.custom_minimum_size = Vector2(170.0, 28.0)
 	open_log_button.pressed.connect(func() -> void: open_log_requested.emit())
 	seed_row.add_child(open_log_button)
+	feedback_button = Button.new()
+	feedback_button.custom_minimum_size = Vector2(150.0, 28.0)
+	feedback_button.disabled = true
+	feedback_button.pressed.connect(func() -> void: feedback_requested.emit())
+	seed_row.add_child(feedback_button)
 	box.add_child(seed_row)
 	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_unlock)
@@ -120,8 +128,9 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	character_button.text = Loc.t("end.change")
 	retry_button.text = Loc.t("end.retry_seed")
 	open_log_button.text = Loc.t("end.open_log")
+	feedback_button.text = Loc.t("end.feedback")
 	visible = true
-	UiFocus.cycle([retry_button, open_log_button, restart_button, character_button])
+	_rebuild_focus_cycle()
 	focus_default()
 
 
@@ -131,9 +140,24 @@ func set_reduced_effects(on: bool) -> void:
 		_best_preview.finish_immediately()
 
 
+func set_feedback_available(available: bool) -> void:
+	feedback_available = available
+	if feedback_button == null:
+		return
+	feedback_button.disabled = not available
+	feedback_button.tooltip_text = "" if available else Loc.t("feedback.unavailable")
+	feedback_button.accessibility_description = feedback_button.tooltip_text
+	if visible:
+		_rebuild_focus_cycle()
+
+
 func focus_default() -> void:
 	if restart_button != null:
 		restart_button.grab_focus()
+
+
+func _rebuild_focus_cycle() -> void:
+	UiFocus.cycle([retry_button, open_log_button, feedback_button, restart_button, character_button])
 
 
 func _on_retry_seed() -> void:

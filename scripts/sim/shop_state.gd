@@ -14,6 +14,9 @@ var offers: Array[Dictionary] = []
 var rerolls: int = 0
 var phase: int = 0
 var wave: int = 0
+# Presentation-event annotation for the action following this snapshot. It is not
+# simulation state and is intentionally excluded from restore() and to_dict().
+var weapon_change_index: int = -1
 
 
 static func capture(sim: Sim) -> ShopState:

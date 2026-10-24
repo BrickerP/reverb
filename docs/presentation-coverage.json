@@ -315,5 +315,204 @@
       "observation": "Silencer is narrow and Longbow uses a light silhouette.",
       "verify": "Dense/edge standard and reduced captures reviewed PASS; no confirmed readability failure."
     }
-  ]
+  ],
+  "playtest_feedback_phase": {
+    "source_commit": "a4704647bf45df3faf71825309df9f23c7abeb2f",
+    "version": "0.2.0",
+    "integrated_metadata_commit": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "latest_deepseek_observed": "cba4dc9027594d8d2b3aa182a0270f5f2cc71e3c",
+    "latest_deepseek_runtime_equivalent_to": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "latest_deepseek_state": "clean; completed; git diff 4594fce..cba4dc9 empty; no new mechanics change",
+    "implementation": {
+      "run_log": "schema 2 with Crypto run_id, UTC timestamps, source and immutable build stamp; legacy schema remains readable",
+      "feedback_log": "schema 1 local-only validated ledger, one feedback row per run_id",
+      "ui": "localized post-run category, feeling, optional note, save/cancel/open-folder and duplicate/read-only states",
+      "report": "run/feedback join with provenance validation, source/build grouping and malformed/orphan/duplicate/mismatch accounting",
+      "network": "none; records are never uploaded or sent automatically"
+    },
+    "provenance": {
+      "sources": ["manual","fixture","bot","unknown"],
+      "verified_human_feedback_received": 0,
+      "rule": "fixture, bot, unknown and legacy records are never silently classified as human; manual marks intended ordinary play but is not identity authentication; current local records may be read under existing authorization and external sharing is voluntary"
+    },
+    "verification": {
+      "source_review": "APPROVE, 0 actionable issues",
+      "full_assertions": "4158 passed, 0 failed",
+      "python_report_tests": "10 passed",
+      "smoke": "OK; 5246 frames, max wave 4, 3 purchases",
+      "native_feedback_ui": "English and Chinese passed, including Unicode note, Tab navigation, read-only duplicate state, reset and fixture provenance",
+      "exported_macos_feedback_roundtrip": "normal exported app driven through CUA completed a real run and saved schema-2 run plus matching schema-1 feedback; source fixture, build stamp a470464, no human claim",
+      "exact_head_ci": {
+        "run": 39998713766,
+        "url": "https://github.com/BrickerP/reverb/actions/runs/39998713766",
+        "jobs": 5,
+        "result": "success",
+        "native_exports": "Ubuntu and Windows exported builds launched headless for 60 frames"
+      },
+      "baseline_ci": {
+        "head": "09375a41762ae6ac44b3909f89159cadcdc66327",
+        "run": 39967093104,
+        "result": "success"
+      }
+    },
+    "exports": {
+      "platforms": 3,
+      "pck_sha256": "f6376bba8b0ec856bb1f8966230f606f6889764abb62a8adc0753f200d32e028",
+      "runtime_resources_each": 79,
+      "provenance_files_each": 18,
+      "forbidden_hits": 0,
+      "macos_isolated_startup": "passed; build stamp a470464; normal user data unchanged",
+      "previous_preview_preserved": true,
+      "release_actions": false
+    },
+    "evidence": [
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/phase-summary.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exact-head-ci.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/export-result.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exported-feedback-roundtrip.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/exported-fixture-report.md",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-verification/native-ci-a470464.json",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-guide.md",
+      "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-playtest-delivery.md"
+    ],
+    "status": "ready_for_actual_human_playtest; no verified human feedback received",
+    "hud_followup": {
+      "trigger": "exported macOS fixture showed negative health text after lethal damage",
+      "change": "displayed HP floors at zero; simulation HP and positive rounding unchanged",
+      "native_verification": "10 EN/ZH draw-call cases passed; screenshots checked; raw simulation HP unchanged",
+      "unit_assertions": "4158 passed, 0 failed",
+      "mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
+      "deepseek_observed": "cba4dc9027594d8d2b3aa182a0270f5f2cc71e3c; no tree difference",
+      "manual_input": "default runs.jsonl and feedback.jsonl absent in previous isolated playtest directory",
+      "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-hud-fix-verification/"
+    }
+  },
+  "pending_mechanics": {
+    "candidate_commit": "bb09c95735e6270e095c5e344abecc299e527900",
+    "observed_merge": "f3c4e914d86e8b2784f5ac6c97a17ef1a97794fd",
+    "feature": "Paradox phase 2 twin timelines",
+    "status": "held_before_integration: remaining-health preservation contract fails at fractional nonlethal boundary",
+    "superseded_by": "trunk_integration",
+    "accepted_mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "playable_source_unchanged": "42b0c6e29d4b8ed02694986b0b2de3d7405ce567",
+    "verification": {
+      "upstream_ci": "40011580839 success",
+      "isolated_existing_boss_suite": "40 passed, 0 failed",
+      "isolated_contract_probe": "10 HP preserved; 0.25 HP raised to 1.0 after split; exit 1 without engine errors",
+      "provenance": "controlled fixture, not a human playtest or balance claim"
+    },
+    "presentation_not_yet_verified": [
+      "Combined boss health and living-body pips in English and Chinese",
+      "Phase transition, shard spawn/death and survivor enrage event feedback",
+      "Surviving-body silence origin and final-body victory origin",
+      "Reduced effects, pause, rebind and restart lifecycle for new events",
+      "Audio coverage for split and enrage"
+    ],
+    "art": "candidate reuses the existing Paradox content ID and art; no new asset ID",
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-boss-phase2-review/"
+  },
+  "selective_family_mastery": {
+    "mechanics_source": "78145876f55c851b30b6fc923bdc464a50f209f1",
+    "accepted_base": "4594fce592ac0d79e0c933b35af0bb742465c660",
+    "excluded_ancestry": "bb09c95735e6270e095c5e344abecc299e527900 remains held",
+    "release_metadata": "0.2.0 retained for private presentation build; immutable build stamp identifies composition",
+    "content_ids": "unchanged; no new art/audio resources required",
+    "presentation": [
+      "Four distinct mastery descriptions in EN/ZH",
+      "Arcane core echo power reads Sim.echo_power and updates on undo",
+      "HUD cooldown includes authoritative family and synergy factors",
+      "Wrapped family summaries prevent long English copy from pushing shop offscreen"
+    ],
+    "verification": {
+      "assertions": "4208 passed, 0 failed",
+      "smoke": "5246 frames; wave4;3purchases;OK",
+      "native_matrix": "EN/ZH x normal/reduced;4families each;focusedbuy+undo;wholepage geometry;32screenshots",
+      "provenance": "fixtures only; no human playtest claims"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-family-verification/"
+  },
+  "selective_elites": {
+    "mechanics_source": "1b45f321a70e34a9c64708fc105eb190c8fe20db",
+    "presentation_base": "39bc2c03dfe44c56386abe2bf1a4da5791ff9f6a",
+    "excluded": "Boss phase2 and subsequent sell/offer-lock; release metadata remains0.2.0",
+    "identity_coverage": "6regular enemy IDs x3elite modifiers =18; existing art explicitly reused; Boss excluded",
+    "interface_correction": "Only last_damage_source and PlayerHurtInfo.source for death explosions use actual EnemyDef.id; fixed damage/radius/BOMBER kind/effect unchanged",
+    "presentation": [
+      "Shared elite telegraph/aura color identity",
+      "Telegraph and art use scaled runtime radius",
+      "Shield and death circles consume per-instance overrides",
+      "Reduced mode retains one stable aura and warning; removes rotating second ring and pulse",
+      "Normal-enemy renderer avoids per-frame profile Dictionary allocation"
+    ],
+    "verification": {
+      "full_assertions": "5102 passed,0failed",
+      "focused_elite_assertions": 209,
+      "attribution_assertions": 33,
+      "native": "normal/reduced each18combos;9captures/mode;shield front/back events and audio once;volatile radius64 and BOMBER audio once;pause/rebind/reset",
+      "stress": "final ordinary run clean; p99 13.169/13.631/13.724ms; bounded feedback and12audio voices; single-machine frame-production sample",
+      "shutdown_followup": "initial exit resource warning; verbose rerun clean before change; explicit title-return/free teardown added to probe and final rerun clean; intermittent root cause unproven",
+      "provenance": "isolated fixture only; no manual-play feedback claim"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-elite-verification/"
+  },
+  "selective_weapon_sale": {
+    "mechanics_source": "ea00b0a425f953f55aa61f3131ec6fd5f205d582",
+    "presentation_base": "047a7170c658e186aee5fe8defda89b47fbdfc26",
+    "excluded": "Boss phase2, offer lock, anomaly contracts, temporal rifts and upstream version metadata",
+    "rules": "Fixed source sell/refund/quote/last-weapon methods unchanged; price/state rules remain mechanics-owned",
+    "interface_correction": "ShopState stores non-restored/non-serialized operation-index annotation; one exact removed-to-empty/insertion-from-empty event for middle/duplicate slots; history limit32 unchanged",
+    "presentation": [
+      "Quote-driven refund and accessible disabled-last reason",
+      "Removal mount/refund feedback and reinsertion target from event contract",
+      "Safe Undo focus fallback when next upgrade disabled",
+      "Existing sale/undo audio exactly once",
+      "Family summary and effective echo power restore across consecutive undo"
+    ],
+    "verification": {
+      "before_event_regression": "32passed16failed",
+      "after_event_regression": "78passed0failed",
+      "focused_sale_assertions": 107,
+      "full_assertions": "5235passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced;4screenshots each; exact2sale2undo restore; lastweapon;reroll/start boundaries",
+      "timeout_followup": "Initial ZH reduced fixed-fps deadline before screenshots; diagnostics and real-time max-fps60 retry passed; no assertions relaxed; cause unproven",
+      "provenance": "isolated fixture only; no human playtest evidence"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-sell-verification/"
+  },
+  "trunk_integration": {
+    "date": "2026-10-25",
+    "branch": "integration/presentation-sync",
+    "presentation_tip": "ba92fb21cfb7035743dc9761d584dc8a9986a824",
+    "mechanics_fix": "73717b12d9893182a41486bde637c9b43ef6eac3",
+    "trunk": "3487a2b1c844326ddf26e70bf053f00827b406e6",
+    "boss_phase2_blocker": "cleared in 73717b1: remaining health is preserved exactly, including the 0.25 HP boundary",
+    "boss_phase2_presentation": "unverified",
+    "presentation_not_yet_verified": [
+      "Combined boss health and living-body pips in English and Chinese",
+      "Phase transition, shard spawn/death and survivor enrage event feedback",
+      "Surviving-body silence origin and final-body victory origin",
+      "Reduced effects, pause, rebind and restart lifecycle for new events",
+      "Audio coverage for split and enrage"
+    ],
+    "temporal_rifts": {
+      "status": "incomplete",
+      "present": "mechanics-side ArenaPainter.rifts drawing and enemy.rift end-screen label",
+      "missing": "audio and event feedback (rift_spawned/rift_activated/rift_ended have no listeners outside tests); native and reduced-effects capture"
+    },
+    "echo_collapse": {
+      "status": "incomplete",
+      "present": "Space/RB input binding, hud.collapse hint, echo_collapse effect on the existing explosion event",
+      "missing": "listener for echo_collapsed; verified rendering and audio of the echo-tinted burst, reduced-effects and rebinding behavior; native capture"
+    },
+    "conflict_policy": "trunk wins mechanics numbers and contracts; presentation lane wins event payloads and view wiring; duplicate _on_sell_weapon resolved to the Undo-focus fallback variant",
+    "verification": {
+      "scope": "headless only",
+      "full_assertions": "5481 passed, 0 failed",
+      "smoke": "OK",
+      "python_report_tests": "10 passed",
+      "native": "not rerun after merge"
+    },
+    "provenance": "no human playtest feedback claimed"
+  }
 }

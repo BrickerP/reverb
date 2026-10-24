@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  REVERB_RUN_SOURCE: fixture
+
 jobs:
   test:
     strategy:
@@ -33,15 +36,26 @@ jobs:
 
       - name: Import project
         shell: bash
-        run: '"${{ matrix.godot_bin }}" --headless --path . --import'
+        env:
+          GODOT: ${{ matrix.godot_bin }}
+        run: ./tools/checked.sh --headless --path . --import
 
       - name: Unit tests
         shell: bash
-        run: '"${{ matrix.godot_bin }}" --headless --path . --script res://tests/run_tests.gd'
+        env:
+          GODOT: ${{ matrix.godot_bin }}
+        run: ./tools/checked.sh --headless --path . --script res://tests/run_tests.gd
 
       - name: Smoke test
         shell: bash
-        run: '"${{ matrix.godot_bin }}" --headless --path . --fixed-fps 60 --script res://tools/smoke.gd'
+        env:
+          GODOT: ${{ matrix.godot_bin }}
+        run: ./tools/checked.sh --headless --path . --fixed-fps 60 --script res://tools/smoke.gd
+
+      - name: Python report tests
+        if: runner.os == 'Linux'
+        shell: bash
+        run: python3 -m unittest tests/test_runs_report.py
 
   export-linux:
     needs: test
@@ -76,7 +90,9 @@ jobs:
 
       - name: Import project
         shell: bash
-        run: '/tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path . --import'
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+        run: ./tools/checked.sh --headless --path . --import
 
       - name: Export Linux build
         shell: bash
@@ -86,9 +102,11 @@ jobs:
 
       - name: Run exported build
         shell: bash
+        env:
+          GODOT: ./build/TakeStack.x86_64
         run: |
           chmod +x build/TakeStack.x86_64
-          timeout 60 ./build/TakeStack.x86_64 --headless --quit-after 60
+          timeout 60 ./tools/checked.sh --headless --quit-after 60
 
   export-windows:
     needs: export-linux
@@ -124,7 +142,9 @@ jobs:
 
       - name: Import project
         shell: bash
-        run: '/tmp/godot/Godot_v4.7.2-stable_win64.exe --headless --path . --import'
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_win64.exe
+        run: ./tools/checked.sh --headless --path . --import
 
       - name: Export Windows build
         shell: bash
@@ -134,6 +154,8 @@ jobs:
 
       - name: Run exported build
         shell: bash
-        run: timeout 60 ./build/TakeStack.exe --headless --quit-after 60
+        env:
+          GODOT: ./build/TakeStack.exe
+        run: timeout 60 ./tools/checked.sh --headless --quit-after 60
 
 

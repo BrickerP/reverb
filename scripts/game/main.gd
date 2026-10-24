@@ -7,6 +7,7 @@ var sim: Sim
 var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
+var feedback_ui: FeedbackUi
 var character_select: CharacterSelectUi
 var pause_ui: PauseUi
 var settings_ui: SettingsUi
@@ -15,6 +16,7 @@ var codex_ui: CodexUi
 var settings: Settings
 var meta: Meta
 var run_log: RunLog
+var feedback_log: FeedbackLog
 var audio: GameAudio
 var paused: bool = false
 var character_id: StringName = &"looper"
@@ -28,6 +30,8 @@ var _unlock_text := ""
 var _run_started_msec := 0
 var _settings_restore_pause := false
 var _daily_run := false
+var _run_context: Dictionary = {}
+var _latest_saved_run: Dictionary = {}
 
 
 func _ready() -> void:
@@ -48,6 +52,7 @@ func _ready() -> void:
 	hud = Hud.new()
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
+	feedback_ui = FeedbackUi.new()
 	character_select = CharacterSelectUi.new()
 	pause_ui = PauseUi.new()
 	settings_ui = SettingsUi.new()
@@ -56,6 +61,7 @@ func _ready() -> void:
 	_add_layer(1, hud, theme)
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
+	_add_layer(8, feedback_ui, theme)
 	_add_layer(4, character_select, theme)
 	_add_layer(4, pause_ui, theme)
 	_add_layer(5, settings_ui, theme)
@@ -66,6 +72,10 @@ func _ready() -> void:
 	end_ui.character_requested.connect(show_select)
 	end_ui.seed_retry_requested.connect(_retry_seed)
 	end_ui.open_log_requested.connect(_open_log_folder)
+	end_ui.feedback_requested.connect(open_feedback)
+	feedback_ui.submit_requested.connect(_on_feedback_submit)
+	feedback_ui.open_log_requested.connect(_open_log_folder)
+	feedback_ui.closed.connect(_on_feedback_closed)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
@@ -88,13 +98,21 @@ func _ready() -> void:
 	_apply_reduced_effects()
 	var save := OS.get_environment("REVERB_SAVE")
 	meta = Meta.new(save if save != "" else Meta.DEFAULT_PATH)
-	var log_path := OS.get_environment("REVERB_RUN_LOG")
-	run_log = RunLog.new(log_path if log_path != "" else RunLog.DEFAULT_PATH)
+	var log_path: String = OS.get_environment("REVERB_RUN_LOG")
+	var actual_log_path: String = log_path if log_path != "" else RunLog.DEFAULT_PATH
+	run_log = RunLog.new(actual_log_path)
+	var feedback_path: String = OS.get_environment("REVERB_FEEDBACK_LOG")
+	if feedback_path == "":
+		feedback_path = actual_log_path.get_base_dir().path_join(
+				FeedbackLog.DEFAULT_PATH.get_file())
+	feedback_log = FeedbackLog.new(feedback_path)
 	show_select()
 
 
 func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	_detach_presentation_session()
+	feedback_ui.reset()
+	_latest_saved_run.clear()
 	if char_id != &"":
 		character_id = char_id
 	_daily_run = false
@@ -114,6 +132,9 @@ func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 	_shop_delay = 0.0
 	_end_delay = 0.0
 	_recorded = false
+	var source: String = OS.get_environment("REVERB_RUN_SOURCE")
+	_run_context = run_log.new_context(source if source != "" else "unknown") if run_log != null else {}
+	end_ui.set_feedback_available(false)
 	_unlock_text = ""
 	_run_started_msec = Time.get_ticks_msec()
 	sim.start_run()
@@ -148,6 +169,28 @@ func _open_log_folder() -> void:
 	if run_log == null or DisplayServer.get_name() == "headless":
 		return
 	OS.shell_open(run_log.folder_path())
+
+
+func open_feedback() -> void:
+	if feedback_ui == null or feedback_ui.visible:
+		return
+	var run_id: String = str(_latest_saved_run.get("run_id", ""))
+	var available: bool = not _latest_saved_run.is_empty() and feedback_log != null
+	var duplicate: bool = available and feedback_log.has_feedback(run_id)
+	feedback_ui.open_for_run(run_id, available, duplicate)
+
+
+func _on_feedback_submit(category: StringName, rating: StringName, note: String) -> void:
+	if feedback_log == null or _latest_saved_run.is_empty():
+		feedback_ui.set_submission_result({"ok": false, "reason": "invalid_run", "record": {}})
+		return
+	var result: Dictionary = feedback_log.submit(_latest_saved_run, category, rating, note)
+	feedback_ui.set_submission_result(result)
+
+
+func _on_feedback_closed() -> void:
+	if end_ui != null and end_ui.visible:
+		end_ui.focus_default()
 
 
 func open_settings() -> void:
@@ -266,6 +309,10 @@ func show_select() -> void:
 	_set_paused(false)
 	_shop_delay = 0.0
 	_end_delay = 0.0
+	feedback_ui.reset()
+	_run_context.clear()
+	_latest_saved_run.clear()
+	end_ui.set_feedback_available(false)
 	codex_ui.close()
 	hud.visible = false
 	shop_ui.visible = false
@@ -295,7 +342,8 @@ func toggle_pause() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible:
+	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible \
+			or feedback_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -310,6 +358,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if feedback_ui.visible:
+		if event.is_action_pressed(&"ui_cancel"):
+			feedback_ui.close()
+			get_viewport().set_input_as_handled()
+		return
 	if codex_ui.visible:
 		if event.is_action_pressed(&"ui_cancel"):
 			codex_ui.close()
@@ -399,7 +452,10 @@ func _record_run() -> void:
 		meta.record_daily(sim, sim.run_seed)
 	if run_log != null:
 		var seconds := float(Time.get_ticks_msec() - _run_started_msec) / 1000.0
-		run_log.append(sim, character_id, seconds)
+		var saved: Dictionary = run_log.append(sim, character_id, seconds, _run_context)
+		if not saved.is_empty():
+			_latest_saved_run = saved
+	end_ui.set_feedback_available(not _latest_saved_run.is_empty())
 	if newly.is_empty():
 		return
 	var names := PackedStringArray()

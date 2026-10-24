@@ -215,7 +215,7 @@ Four pieces of one family replace the old generic +3% attack speed with a family
 
 | Family | Mastery | Mechanism |
 |---|---|---|
-| sidearm | Gunslinger | `Combat.family_cooldown_mult` returns `0.94` at 4+ pieces |
+| sidearm | Gunslinger | `Combat.family_cooldown_mult` returns `0.94` at 4+ pieces (6% shorter firing interval) |
 | scatter | Point blank | `Combat.family_mastery_damage` returns `1.15` when the target is within 160 |
 | marksman | Overpenetration | `Combat.family_mastery_pierce` returns `+1` projectile pierce |
 | arcane | Resonance | `Sim.echo_power()` adds `0.08` while 4+ arcane weapons are equipped |
@@ -271,6 +271,11 @@ Presentation requirements:
 - The volatile death uses the existing bomber explosion event/audio path; no new event type.
 - No HUD label is required; color, double ring, shield fan and death circle carry the rule.
 
+Presentation integration correction: death explosions keep `ExplosionInfo.BOMBER` and
+`bomber_explosion` for existing effects/audio, while `last_damage_source` and
+`PlayerHurtInfo.source` identify the actual `EnemyDef.id`. This corrects result/log
+attribution for volatile non-bombers without changing damage or gameplay rules.
+
 ## 12. Weapon selling
 
 `ShopResult.SELL` is an equipment action that liquidates one equipped weapon without an
@@ -301,6 +306,12 @@ Presentation requirements:
 - After a successful sale, refresh the build panel and keep focus valid; the freed slot
   shows the normal empty/drop target.
 - Undo must restore the weapon, its level, cooldown and materials, and rebuild all cards.
+
+Presentation integration correction: removal/insertion events retain the acted-on slot
+through `ShopState.weapon_change_index`, which is event metadata only and is neither
+restored nor serialized as simulation state. Size changes emit an explicit empty
+side, so middle-slot and duplicate-ID sales never masquerade as shifted replacements.
+Refunds, sale eligibility, state restoration and history limits remain unchanged.
 
 ## 13. Offer locking
 

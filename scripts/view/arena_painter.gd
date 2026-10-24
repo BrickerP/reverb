@@ -48,11 +48,24 @@ static func arena_floor_texture() -> Texture2D:
 
 static func pending(ci: CanvasItem, sim: Sim) -> void:
 	for ps in sim.pending:
-		var t := 1.0 - clampf(ps.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
-		var base_color := _elite_color(ps.elite_kind) if ps.elite_kind != &"" else ps.def.color
-		var col := Color(base_color, 0.25 + 0.6 * t)
-		ci.draw_arc(ps.pos, ps.def.radius + 2.0 + 14.0 * (1.0 - t), 0.0, TAU, 20, col, 2.0)
+		var profile := pending_spawn_profile(ps)
+		var base_color: Color = profile["color"]
+		var col := Color(base_color, float(profile["alpha"]))
+		ci.draw_arc(ps.pos, float(profile["radius"]), 0.0, TAU, 20, col, 2.0)
 		ci.draw_circle(ps.pos, 2.5, col)
+
+
+static func pending_spawn_profile(spawn: PendingSpawn) -> Dictionary:
+	var progress := 1.0 - clampf(spawn.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
+	var color := _elite_color(spawn.elite_kind) if spawn.elite_kind != &"" else spawn.def.color
+	var body_radius := spawn.def.radius * (Sim.ELITE_RADIUS_MULT if spawn.elite_kind != &"" else 1.0)
+	return {
+		"elite_kind": spawn.elite_kind,
+		"color": color,
+		"alpha": 0.25 + 0.6 * progress,
+		"body_radius": body_radius,
+		"radius": body_radius + 2.0 + 14.0 * (1.0 - progress),
+	}
 
 
 # Wave-end beat: the just-recorded route collapses into the player.
@@ -189,8 +202,7 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 		var facing := (target - e.pos).normalized()
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
-		var radius_scale := e.radius / maxf(1.0, e.def.radius)
-		var art_size := _enemy_bounds(e.def.id) * radius_scale
+		var art_size := _enemy_bounds(e.def.id) * e.radius / maxf(1.0, e.def.radius)
 		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
 		var art_tint := Color.WHITE if e.flash > 0.0 else col.lerp(Color.WHITE, 0.58)
 		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + stride * minf(1.8, e.radius * 0.08))
@@ -213,12 +225,14 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		if e.elite:
-			var elite_pulse := 0.5 + 0.5 * sin(sim.wave_time * 4.5 + e.pos.x * 0.03)
-			var aura := _elite_color(e.elite_kind)
-			ci.draw_arc(e.pos, e.radius + 8.0, 0.0, TAU, 28,
-					Color(aura, 0.35 + 0.25 * elite_pulse), 2.0)
-			ci.draw_arc(e.pos, e.radius + 14.0, -sim.wave_time * 1.2,
-					-sim.wave_time * 1.2 + TAU * 0.55, 24, Color(aura, 0.5), 1.5)
+			var rules := enemy_rule_profile(e, target, sim.wave_time, reduced)
+			var aura: Color = rules["aura_color"]
+			ci.draw_arc(e.pos, float(rules["aura_radius"]), 0.0, TAU,
+					int(rules["aura_segments"]), Color(aura, float(rules["aura_alpha"])), 2.0)
+			if bool(rules["aura_secondary"]):
+				ci.draw_arc(e.pos, float(rules["secondary_radius"]),
+						float(rules["secondary_start"]), float(rules["secondary_end"]), 24,
+						Color(aura, 0.5), 1.5)
 		if e.radius >= 15.0 and e.hp < e.max_hp:
 			var fitted := _fitted_art_size(key, art_size)
 			var art_top := e.pos.y - fitted.y * 0.5 if e.def.id == &"warden" else foot.y - fitted.y
@@ -226,10 +240,11 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0, 3.0)), Color(0, 0, 0, 0.6))
 			var ratio := clampf(e.hp / e.max_hp, 0.0, 1.0)
 			ci.draw_rect(Rect2(top, Vector2(e.radius * 2.0 * ratio, 3.0)), col)
-		if e.death_radius_value() > 0.0:
-			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 7.0)
-			ci.draw_arc(e.pos, e.death_radius_value(), 0.0, TAU, 32,
-					Color(col, 0.10 + 0.10 * pulse), 1.5)
+		var death_radius := e.death_radius_value()
+		if death_radius > 0.0:
+			var death_pulse := 0.5 if reduced else 0.5 + 0.5 * sin(sim.wave_time * 7.0)
+			ci.draw_arc(e.pos, death_radius, 0.0, TAU, 24 if reduced else 32,
+					Color(col, 0.10 + 0.10 * death_pulse), 1.5)
 		var shield_arc := e.shield_arc_value()
 		if shield_arc > 0.0:
 			var front := (target - e.pos).angle()
@@ -250,6 +265,44 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_line(a.pos, mid, link, 2.0)
 			ci.draw_line(mid, b.pos, link, 2.0)
 			ci.draw_circle(mid, 4.0 + pulse * 2.0, Color(0.75, 0.6, 1.0, 0.5))
+
+
+static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: float,
+		reduced: bool = false) -> Dictionary:
+	var body_color := _elite_color(enemy.elite_kind) if enemy.elite else enemy.def.color
+	if enemy.flash > 0.0:
+		body_color = Color.WHITE
+	var facing := (target - enemy.pos).normalized()
+	if facing == Vector2.ZERO:
+		facing = Vector2.RIGHT
+	var shield_arc := enemy.shield_arc_value()
+	var shield_half := deg_to_rad(shield_arc * 0.5)
+	var shield_center := facing.angle()
+	var elite_pulse := 0.5 if reduced else 0.5 + 0.5 * sin(
+			wave_time * 4.5 + enemy.pos.x * 0.03)
+	var death_pulse := 0.5 if reduced else 0.5 + 0.5 * sin(wave_time * 7.0)
+	var secondary_start := -wave_time * 1.2
+	return {
+		"elite_kind": enemy.elite_kind,
+		"body_color": body_color,
+		"aura_color": _elite_color(enemy.elite_kind),
+		"art_size": _enemy_bounds(enemy.def.id) * enemy.radius / maxf(1.0, enemy.def.radius),
+		"aura_radius": enemy.radius + 8.0,
+		"aura_alpha": 0.35 + 0.25 * elite_pulse,
+		"aura_segments": 20 if reduced else 28,
+		"aura_secondary": enemy.elite and not reduced,
+		"secondary_radius": enemy.radius + 14.0,
+		"secondary_start": secondary_start,
+		"secondary_end": secondary_start + TAU * 0.55,
+		"death_radius": enemy.death_radius_value(),
+		"death_alpha": 0.10 + 0.10 * death_pulse,
+		"death_segments": 24 if reduced else 32,
+		"shield_arc": shield_arc,
+		"shield_radius": enemy.radius + 6.0,
+		"shield_center": shield_center,
+		"shield_start": shield_center - shield_half,
+		"shield_end": shield_center + shield_half,
+	}
 
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",

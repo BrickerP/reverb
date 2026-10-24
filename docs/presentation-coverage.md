@@ -187,6 +187,185 @@ changed. The latest integrated verification is therefore the headline result:
 21:45:35 +08:00. The audited packages and performance evidence remain tied to the
 byte-identical runtime source `d4a0e73`.
 
+## Post-G006 playtest feedback phase
+
+Fixed source `a4704647bf45df3faf71825309df9f23c7abeb2f` adds local,
+attributable post-run feedback without changing simulation. Run-log schema 2 assigns
+a Crypto run ID, UTC timestamps, source and immutable build stamp. Feedback-log
+schema 1 accepts one validated category/feeling/note record per run ID. The result
+screen form supports save, cancel, duplicate/read-only reopen and opening the local
+folder. No record is uploaded or sent automatically.
+
+`runs_report.py` joins run and feedback ledgers only when ID and provenance agree,
+groups by source/build, and reports malformed, orphan, duplicate and mismatched
+records. Sources are `manual`, `fixture`, `bot` and `unknown`; fixture, bot, unknown
+and legacy rows are never silently described as human evidence. At this checkpoint
+the number of verified human feedback records is **zero**.
+
+Verification passes: 4158 Godot assertions, smoke, English/Chinese UI, 10 Python
+report tests and native EN/ZH feedback probes including Unicode note input, Tab
+navigation, duplicate/read-only reopen, reset and fixture provenance. Exact-head CI
+[39998713766](https://github.com/BrickerP/reverb/actions/runs/39998713766) passes all
+five jobs, including native Ubuntu and Windows exported-build launches for 60
+headless frames. Baseline CI
+[39967093104](https://github.com/BrickerP/reverb/actions/runs/39967093104) also passes.
+
+Three immutable playtest packages share PCK SHA-256
+`f6376bba8b0ec856bb1f8966230f606f6889764abb62a8adc0753f200d32e028`;
+each loads 79 runtime resources plus 18 provenance files with zero forbidden hits.
+The macOS isolated startup passes with build stamp `a470464` and leaves normal user
+data unchanged. The previous `Take Stack Preview.app` and its archives remain
+untouched. This phase creates no tag, Release or main-branch move.
+
+The normal exported macOS Playtest app was also driven through CUA without an
+injected script. It completed a real run and saved a schema-2 run plus matching
+schema-1 feedback with the same run ID and build stamp `a470464`. That evidence is
+explicitly `fixture`, its note says it is automated, and it makes no human-feedback
+claim.
+
+Metadata commit `4594fce` is integrated for v0.2.0. The latest observed DeepSeek
+main `cba4dc9` is runtime-equivalent to that metadata checkpoint; no release action
+is attributed to the presentation lane. The next evidence required is actual human
+play: current local ledgers may be read by authorized follow-up checks, while other
+players may voluntarily provide theirs.
+
 Completion requires updating both this document and the JSON ledger with a fixed
 mechanics cursor and concrete runtime evidence. New content IDs must appear as
 explicit incomplete rows until presentation coverage and verification land.
+
+## Playtest follow-up: lethal-hit health text
+
+The exported macOS playtest exposed a negative health label after lethal damage.
+The HUD now floors only the displayed number at zero. Simulation health and
+positive fractional-health rounding remain unchanged. A native EN/ZH probe
+observes the actual health draw call for raw HP -1.4, 0, 0.2, 34.2 and 35; all ten
+cases pass, with simulation HP unchanged and screenshots checked. The full suite
+passes 4158 assertions with zero failures. Evidence is in
+`outputs/take-stack-hud-fix-verification/` in the parent task directory.
+
+The mechanics cursor remains `4594fce`; the newly checked DeepSeek `cba4dc9`
+has no tree difference from it. No default manual run or feedback ledger exists
+in the previous playtest's isolated user directory, so this fix derives from
+automated runtime observation and makes no claim about human player feedback.
+
+## Pending mechanics: Paradox twin timelines
+
+Candidate `bb09c95735e6270e095c5e344abecc299e527900` (observed merge `f3c4e91`)
+is held before integration. Its upstream CI passes and its existing boss suite
+passes 40 assertions in an isolated archive. A separate contract probe fails:
+nonlethal damage leaving 0.25 HP creates two bodies with total HP 1.0, contrary to
+the documented remaining-health preservation rule. The 10 HP control is preserved.
+This is a controlled boundary fixture, not observed human gameplay or a balance
+conclusion. Mechanism ownership remains with DeepSeek; no candidate code is merged.
+
+The accepted mechanics cursor remains `4594fce` and the playable build remains
+`42b0c6e`. The candidate reuses existing Paradox art, but its combined health/pips,
+phase/shard/enrage events, surviving-body effect origins, reduced-effects lifecycle
+and audio coverage are pending acceptance. Evidence and reproduction are in
+`outputs/take-stack-boss-phase2-review/` in the parent task directory.
+
+## Selective family mastery integration
+
+The independent family patch from `78145876` is applied on base `4594fce` without
+the held Boss ancestry. The private preview retains version 0.2.0; its immutable
+build commit identifies the composition rather than claiming the upstream release.
+No new content ID, bitmap or sound is required for these four family rules.
+
+The build panel explains the four distinct masteries, reads effective arcane echo
+power from Sim, and updates after purchase/undo. HUD readiness now includes the
+actual family and synergy cooldown multipliers. A native screenshot exposed long
+English descriptions widening the entire shop; wrapped summary rows fix this,
+and the probe now checks the whole shop, columns, header and actions, as well as
+all wrapped text lines.
+
+Full tests pass 4208 assertions with zero failures. Smoke reaches wave 4 with
+three purchases across 5246 frames. EN/ZH and normal/reduced modes each pass all
+four families through three-to-four-piece purchase and undo, including arcane
+40% → 48% → 40%. All 32 captures and geometry receipts are under
+`outputs/take-stack-family-verification/`. These are automated fixtures; they do
+not establish human satisfaction or balance. The Boss phase-2 hold remains active.
+
+## Selective elite integration
+
+Fixed elite source `1b45f321` is applied on presentation `39bc2c0`, without the held
+Boss ancestry or later shop features. The six regular enemy IDs each support all
+three modifiers (18 combinations), explicitly reusing the existing enemy art.
+Pending telegraphs and auras share identity colors and scaled radius; shield and
+death-warning geometry reads instance overrides. Reduced effects retain stable
+identity/rule cues and remove the extra rotating aura and pulse. Ordinary enemies
+do not allocate the new elite profile each frame.
+
+One presentation-interface correction is recorded: volatile non-bombers previously
+reported `bomber` as the death cause. The two attribution fields now use the actual
+enemy ID, while damage, radius, iframes and BOMBER effect/audio routing are unchanged.
+The 33 attribution assertions include both volatile non-bombers and normal bombers.
+
+Full tests pass 5102 assertions with zero failures. Native normal/reduced probes
+each cover 18 combinations with nine screenshots, reduced/front versus back hits,
+one corresponding audio cue per hit, one radius-64 volatile explosion and its
+existing audio route, plus pause/rebind/reset. Evidence is under
+`outputs/take-stack-elite-verification/`; these are isolated fixtures, not human play.
+
+Final stress exits cleanly with p99 frame-production samples 13.169/13.631/13.724 ms
+for 100 standard / 300 standard / 300 reduced enemies. The first run reported
+shutdown resources still in use; a verbose rerun was already clean. The probe now
+explicitly returns to character select, asserts Sim ownership is released, and
+frees Main before quitting. The final ordinary rerun is clean. The original warning
+and both reruns are retained; its intermittent root cause is not claimed resolved.
+
+## Selective weapon-sale integration
+
+Fixed sale source `ea00b0a` is applied on presentation `047a717`; later shop features,
+held Boss ancestry and upstream version metadata remain excluded. Sell, eligibility,
+refund and quote methods match the fixed source. One event-interface repair preserves
+the actual operation index in undo history and emits explicit removal/insertion
+payloads. This prevents shifted and same-ID weapons being reported as replacements;
+the history annotation never becomes restored or serialized gameplay state.
+
+Quote-driven sell controls explain the last-weapon guard. Removal/refund and undo
+reinsertion use the authoritative event/result, play existing audio once, preserve
+family wrapping, and fall back to Undo focus if the neighboring upgrade is disabled.
+All 5235 assertions and smoke pass. EN/ZH x normal/reduced native runs cover exact
+two-sale/two-undo restoration, last-weapon protection and refresh/start history locks,
+with 16 screenshots. The initial ZH reduced fixed-fps run timed out before capture;
+the same checks with real-time max-fps 60 and added wait-position diagnostics passed.
+Its original timeout is retained and not described as a diagnosed game defect.
+Evidence: `outputs/take-stack-sell-verification/` in the parent task directory.
+
+## Trunk integration
+
+On 2026-10-25 this lane was merged into the mechanics trunk on branch
+`integration/presentation-sync`, so both lanes now share one history. Inputs are
+presentation `ba92fb2`, mechanics fix `73717b1` and trunk `3487a2b` (v0.8.0, which
+includes temporal rifts and echo collapse).
+
+Boss phase-2 blocker: the fractional-health defect recorded above is fixed on the
+mechanics side in `73717b1`. The twin-timeline split now preserves exact remaining
+health, including the 0.25 HP boundary that previously rose to 1.0 HP. The earlier hold
+no longer blocks integration. That does not mean the phase-2 presentation is accepted:
+combined health and living-body pips, split/shard/enrage event feedback, surviving-body
+silence and victory origins, reduced-effects/pause/rebind/restart lifecycle and
+split/enrage audio remain unverified.
+
+Conflict policy: the trunk wins mechanics numbers and contracts (phase 2, offer lock,
+anomaly contracts, rifts). This lane wins event payloads and view wiring: explicit
+`weapon_change_index` for sell and undo, quote-driven sell controls, the elite rule
+profile and the reduced-motion death pulse. Both lanes had added a `_on_sell_weapon`
+handler; the variant with the Undo-focus fallback is kept.
+
+Temporal rifts (trunk `b97a8be`) arrive with the mechanics lane's own minimal drawing
+(`ArenaPainter.rifts`) and the `enemy.rift` end-screen label. Nothing outside tests
+listens to `rift_spawned`, `rift_activated` or `rift_ended`, so rifts have no audio or
+event feedback, and no native or reduced-effects capture exists for them. The row stays
+incomplete until presentation coverage and verification land.
+
+Echo collapse (trunk `f3f967f`) arrives with a Space/RB input binding, the `hud.collapse`
+hint and the `echo_collapse` effect on the existing explosion event. Nothing listens to
+`echo_collapsed`. Whether the echo-tinted burst renders and sounds correctly through the
+existing explosion path, including reduced effects and rebinding, is unverified, and no
+native capture exists. This row also stays incomplete.
+
+Verification on the merged tree is headless only: import is clean, 5481 assertions pass,
+smoke passes and the 10 Python report tests pass. The native EN/ZH x normal/reduced
+probes recorded above were not rerun after the merge. The playtest-feedback stack came
+in as local-only code; no verified human feedback exists and none is claimed.

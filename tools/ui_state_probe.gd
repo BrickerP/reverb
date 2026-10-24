@@ -360,13 +360,14 @@ func _end_states() -> bool:
 	sim.wave = 4
 	sim.kills = 17
 	sim.last_damage_source = &"bomber"
+	_main.end_ui.set_feedback_available(true)
 	_main.end_ui.show_result(sim)
 	if not _require(_main.end_ui.visible and _main.end_ui.restart_button.has_focus()
 			and _main.end_ui.best_take == null and _main.end_ui._no_echo.visible
 			and not _main.end_ui._best_row.visible,
 			"loss without echoes shows explicit empty state"):
 		return false
-	if not (await _assert_focus_cycle(_main.end_ui, 4, _main.end_ui.restart_button,
+	if not (await _assert_focus_cycle(_main.end_ui, 5, _main.end_ui.restart_button,
 			_main.end_ui.retry_button, _main.end_ui.character_button, true, "end_loss")):
 		return false
 	if not (await _capture("end_loss", _main.end_ui)):
@@ -387,7 +388,7 @@ func _end_states() -> bool:
 			and _main.end_ui.restart_button.has_focus(),
 			"win shows best echo, unlock and restart focus"):
 		return false
-	if not (await _assert_focus_cycle(_main.end_ui, 4, _main.end_ui.restart_button,
+	if not (await _assert_focus_cycle(_main.end_ui, 5, _main.end_ui.restart_button,
 			_main.end_ui.retry_button, _main.end_ui.character_button, true, "end_win")):
 		return false
 	if not (await _capture("end_win", _main.end_ui)):
