@@ -314,7 +314,17 @@ func _on_lock_offer(o: Offer) -> void:
 		return
 	var index := maxi(0, sim.shop.offers.find(o))
 	refresh()
-	_focus_card(index)
+	_focus_offer_lock(index)
+
+
+func _focus_offer_lock(index: int) -> bool:
+	if index < 0 or index >= offers_box.get_child_count():
+		return false
+	var card := offers_box.get_child(index) as OfferCard
+	if card == null or card.lock_button == null or card.lock_button.disabled:
+		return false
+	card.lock_button.grab_focus()
+	return true
 
 
 func is_replacing() -> bool:

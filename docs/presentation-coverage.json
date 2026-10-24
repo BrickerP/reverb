@@ -480,6 +480,31 @@
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-sell-verification/"
   },
+  "selective_offer_lock": {
+    "mechanics_source": "699ee83ee82b4a51844c5234fa8db452b83441fa",
+    "presentation_base": "ba92fb21cfb7035743dc9761d584dc8a9986a824",
+    "excluded": "Boss/contract/rift/collapse ancestry and upstream version metadata",
+    "order_correction": "Keep same locked object at original clamped slot after unchangedgeneration; duplicate prevention,price,pool,RNG,cost preserved",
+    "presentation": [
+      "Independent Lock/Unlock action; no purchase or drag from nestedcontrols",
+      "Refreshed nestedbutton keeps keyboardfocus",
+      "Singlefree hold moves/unlocks; compact FULL and detailed tooltip/accessibility",
+      "Plain-language equipment-undo snapshot behavior in hint",
+      "Sale event-index annotation preserved separately from locked snapshotflag"
+    ],
+    "verification": {
+      "position_before": "27pass6fail",
+      "position_after": "55pass0fail",
+      "focused": 90,
+      "full": "5358passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced;16screenshots;physicalmouse/keyboard/drag guards;heldindex/object/price;stale/sold/full/poor/maxed;saleundo;history;cleanup",
+      "review": "APPROVE0issues",
+      "provenance": "isolated fixture only"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-lock-verification/",
+    "superseded_by": "trunk_integration_offer_lock"
+  },
   "trunk_integration": {
     "date": "2026-10-25",
     "branch": "integration/presentation-sync",
@@ -514,5 +539,40 @@
       "native": "not rerun after merge"
     },
     "provenance": "no human playtest feedback claimed"
+  },
+  "trunk_integration_offer_lock": {
+    "date": "2026-10-25",
+    "branch": "integration/offer-lock-sync",
+    "presentation_tip": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
+    "trunk": "d674c35afa70337d478ed69edafb670af97346b0",
+    "supersedes": "selective_offer_lock",
+    "merge_history": "main merged four times: c755946 (10 textual conflicts resolved by hand), a355dc0 (endless mode, no conflicts), c7cdd85 (endless escalation; one conflict, the README test-count line), d674c35 (item sets, Ascension, endless Boss, Ascension identities; one conflict, the README test-count line)",
+    "conflict_policy": "trunk wins mechanics (offer lock simulation, contracts, rifts, echo collapse, endless); presentation lane wins view, UI strings and event payloads",
+    "kept_from_presentation": [
+      "Held offer keeps its original clamped slot after refresh (trunk INTERFACES section 13 already requires it)",
+      "Keyboard focus returns to the refreshed Lock/Unlock button",
+      "Nested Lock/Unlock action cannot buy or start an equipment drag",
+      "shop.full_reason state text, richer shop.lock_hint wording and lock accessibility description",
+      "tools/offer_lock_probe.gd plus position and presentation tests"
+    ],
+    "kept_from_trunk": "accept_contract, the per-roll contract draw and every contract.* string",
+    "unchanged": "RNG draws, offer multiset, price and refresh cost",
+    "known_issue": {
+      "status": "open; present on pristine trunk d674c35 (and earlier on c7cdd85 and a355dc0) and not introduced by this integration",
+      "what": "At 1280x720 a visible contract strip pushes the shop footer (key hints and weapon detail line) past the bottom edge",
+      "measured": "headless layout probe, seed 7, wave 10, four offers, hunt contract: footer bottom 700 without a strip; with a strip 738 in EN (strip 53 px, 18 px off-screen) and 732 in ZH (strip 47 px, 12 px off-screen); identical on pristine trunk d674c35 and on this branch",
+      "frequency": "pristine trunk d674c35, 10 seeds: 170 of 190 normal shops (rolled after waves 1-19; every shop after waves 2-18) and 110 of 110 endless shops (after waves 20-30) carry a contract, so the clipped footer is the usual shop state",
+      "cause": "the left column grows by the strip height plus 8 px separation; in EN the strip label wraps to two lines at 400 px width, and the warning label below the buttons is always laid out even when empty",
+      "owner": "presentation lane; not fixed here so the integration stays scoped to offer lock"
+    },
+    "verification": {
+      "scope": "headless plus native windowed lock probe",
+      "full_assertions": "5988 passed, 0 failed (pristine trunk d674c35 alone: 5915, so the integration adds 73 lock assertions)",
+      "smoke": "OK (frames=5246, wave 4, 3 purchases, 3330 echo frames; identical line on pristine trunk d674c35)",
+      "python_report_tests": "10 passed",
+      "native": "tools/offer_lock_probe.gd EN/ZH x normal/reduced all OK on the merged tree",
+      "static": "no conflict markers; JSON parses; 263 en and 263 zh keys with identical sets and no duplicates; no duplicate function names"
+    },
+    "provenance": "isolated fixtures only; no human playtest feedback claimed"
   }
 }
