@@ -167,6 +167,13 @@ func play_victory_beat(s: Sim) -> void:
 	queue_redraw()
 
 
+func clear_victory() -> void:
+	_victory = false
+	_victory_time = 0.0
+	_victory_origin = Vector2.ZERO
+	queue_redraw()
+
+
 func _process(delta: float) -> void:
 	if _paused or sim == null:
 		return

@@ -5,9 +5,11 @@ signal restart_requested
 signal character_requested
 signal seed_retry_requested(seed_value: int)
 signal open_log_requested
+signal endless_requested
 
 var restart_button: Button
 var character_button: Button
+var endless_button: Button
 var retry_button: Button
 var open_log_button: Button
 var best_take: EchoTake
@@ -81,6 +83,13 @@ func _ready() -> void:
 	box.add_child(_best_row)
 	_no_echo = UiTheme.label(Loc.t("end.no_echo"), 16, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_no_echo)
+	var endless_row := HBoxContainer.new()
+	endless_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	endless_button = Button.new()
+	endless_button.custom_minimum_size = Vector2(460.0, 52.0)
+	endless_button.pressed.connect(func() -> void: endless_requested.emit())
+	endless_row.add_child(endless_button)
+	box.add_child(endless_row)
 	restart_button = Button.new()
 	restart_button.custom_minimum_size = Vector2(220.0, 56.0)
 	restart_button.pressed.connect(_on_restart)
@@ -97,9 +106,13 @@ func _ready() -> void:
 
 func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	var won := sim.phase == Sim.Phase.WON
-	_title.text = Loc.t("end.win", [WaveDirector.FINAL_WAVE]) if won else Loc.t("end.lose", [sim.wave])
+	if sim.endless:
+		_title.text = Loc.t("end.endless_lose", [sim.wave])
+		_stats.text = Loc.t("end.endless_run", [sim.wave, sim.kills])
+	else:
+		_title.text = Loc.t("end.win", [WaveDirector.FINAL_WAVE]) if won else Loc.t("end.lose", [sim.wave])
+		_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
 	_title.add_theme_color_override("font_color", UiTheme.COIN if won else UiTheme.WARN)
-	_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
 	if not won and sim.last_damage_source != &"":
 		var cause := Loc.t("enemy.rift") if sim.last_damage_source == &"rift" else Loc.enemy_name(sim.last_damage_source)
 		_stats.text += "  ·  " + Loc.t("end.death_cause", [cause])
@@ -118,10 +131,12 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 		_best_preview.setup(best_take, not reduced_effects)
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
+	endless_button.text = Loc.t("end.endless_continue")
+	endless_button.visible = won and not sim.endless
 	retry_button.text = Loc.t("end.retry_seed")
 	open_log_button.text = Loc.t("end.open_log")
 	visible = true
-	UiFocus.cycle([retry_button, open_log_button, restart_button, character_button])
+	UiFocus.cycle([retry_button, open_log_button, endless_button, restart_button, character_button])
 	focus_default()
 
 

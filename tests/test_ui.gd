@@ -241,6 +241,42 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.free()
 
 
+func test_end_screen_offers_endless_after_a_win(c: Check) -> void:
+	var s := _shop_sim()
+	s.phase = Sim.Phase.WON
+	var ui := EndUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.show_result(s)
+	c.ok(ui.endless_button.visible, "endless button appears on a win")
+	var requested := [0]
+	ui.endless_requested.connect(func() -> void: requested[0] += 1)
+	ui.endless_button.pressed.emit()
+	c.eq(requested[0], 1, "endless request is emitted once")
+	s.endless = true
+	s.phase = Sim.Phase.LOST
+	s.wave = WaveDirector.FINAL_WAVE + 3
+	ui.show_result(s)
+	c.ok(not ui.endless_button.visible, "endless button is hidden on an endless death")
+	c.eq(ui._title.text, Loc.t("end.endless_lose", [s.wave]), "endless death has its own title")
+	ui.free()
+
+
+func test_main_continues_into_endless(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	var s: Sim = main.sim
+	s.phase = Sim.Phase.WON
+	main._phase = Sim.Phase.WON
+	main.end_ui.show_result(s)
+	main.end_ui.endless_button.pressed.emit()
+	c.ok(s.endless, "main starts endless mode")
+	c.eq(s.phase, Sim.Phase.SHOP, "main opens the endless shop")
+	c.ok(not main.end_ui.visible, "main hides the end screen")
+	main.free()
+
+
 func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
 	var s := _shop_sim()
 	s.bank.takes.clear()

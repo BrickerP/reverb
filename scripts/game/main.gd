@@ -66,6 +66,7 @@ func _ready() -> void:
 	end_ui.character_requested.connect(show_select)
 	end_ui.seed_retry_requested.connect(_retry_seed)
 	end_ui.open_log_requested.connect(_open_log_folder)
+	end_ui.endless_requested.connect(_on_endless_requested)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
@@ -394,6 +395,11 @@ func _record_run() -> void:
 	if _recorded or sim == null or meta == null:
 		return
 	_recorded = true
+	if sim.endless:
+		if run_log != null:
+			var endless_seconds := float(Time.get_ticks_msec() - _run_started_msec) / 1000.0
+			run_log.append(sim, character_id, endless_seconds)
+		return
 	var newly := meta.record_run(sim)
 	if _daily_run and sim.run_seed == today_seed():
 		meta.record_daily(sim, sim.run_seed)
@@ -420,6 +426,17 @@ func _show_end() -> void:
 	_end_delay = 0.0
 	if sim != null and not end_ui.visible:
 		end_ui.show_result(sim, _unlock_text)
+
+
+func _on_endless_requested() -> void:
+	if sim == null or not sim.begin_endless():
+		return
+	end_ui.visible = false
+	if _recorded and run_log != null:
+		run_log.remove_last()
+	_recorded = false
+	_view.clear_victory()
+	_sync_phase()
 
 
 func _set_paused(on: bool) -> void:
