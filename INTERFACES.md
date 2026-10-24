@@ -613,14 +613,17 @@ shop. Normal wave 20, non-boss endless waves and all normal runs never create bo
 
 Mechanism API:
 
-- `Boon.ALL`: damage, haste, vitality, echo, shield, fortune.
-- `Boon.roll(rng, 3)` samples three distinct IDs.
+- `Boon.ALL`: damage, haste, vitality, echo, shield, fortune, precision, slipstream,
+  magnet, eternity.
+- `Boon.roll(rng, 3)` samples three distinct IDs from the full pool.
 - `Sim.pending_boons: Array[StringName]` is set by `_end_wave` only when `endless` and
   `is_boss_wave()`; `Shop.roll` has already produced the shop.
 - `Sim.choose_boon(index)` applies one and clears the pending array; failed indices leave
   the offer intact. Effects are immediate and permanent for the run:
   - damage +10%; haste +10%; vitality +15 max/current HP; echo +10%; shield +5 cap/current;
-    fortune +30 materials.
+    fortune +30 materials; precision +5% crit; slipstream +20 move speed; magnet +30 pickup
+    range; eternity +1 echo lifespan. Echo lifespan is read from `Stats.ECHO_LIFESPAN`
+    immediately; no boon changes echo capacity or the Soloist's zero-slot identity.
 - Boons are not equipment undo transactions and are not recorded by ShopState.
 - `Sim.pending_boons` is not serialized; there is no mid-run save.
 
