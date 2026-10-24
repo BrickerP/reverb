@@ -9,6 +9,27 @@ static var _items: Dictionary = {}
 static var _enemies: Array[EnemyDef] = []
 static var _characters: Dictionary = {}
 
+const ITEM_SETS := {
+	&"echo": {
+		"name": "set.echo",
+		"members": [&"spare_deck", &"long_play", &"loud_speaker"],
+		"required": 3,
+		"mods": {&"echo_power": 0.02},
+	},
+	&"gunsmith": {
+		"name": "set.gunsmith",
+		"members": [&"sharp_edge", &"quick_trigger", &"long_barrel", &"lucky_coin"],
+		"required": 3,
+		"mods": {&"damage_pct": 0.02, &"attack_speed_pct": 0.02},
+	},
+	&"field": {
+		"name": "set.field",
+		"members": [&"iron_heart", &"regen_patch", &"sneakers", &"magnet"],
+		"required": 3,
+		"mods": {&"max_hp": 3.0, &"hp_regen": 0.10},
+	},
+}
+
 
 static func weapons() -> Dictionary:
 	if _weapons.is_empty():
@@ -20,6 +41,10 @@ static func items() -> Dictionary:
 	if _items.is_empty():
 		_build_items()
 	return _items
+
+
+static func item_sets() -> Dictionary:
+	return ITEM_SETS
 
 
 static func enemies() -> Array[EnemyDef]:
