@@ -85,6 +85,7 @@ var wave_kills: int = 0
 var wave_elite_kills: int = 0
 var wave_damage_taken: bool = false
 var active_contract: AnomalyContract
+var pending_boons: Array[StringName] = []
 var last_contract_done: bool = false
 var last_contract_success: bool = false
 var last_contract_reward: int = 0
@@ -546,6 +547,15 @@ func can_collapse_echo() -> bool:
 	return phase == Phase.WAVE and not collapse_used and not echoes.is_empty()
 
 
+func choose_boon(index: int) -> bool:
+	if pending_boons.is_empty() or index < 0 or index >= pending_boons.size():
+		return false
+	if not Boon.apply(self, pending_boons[index]):
+		return false
+	pending_boons.clear()
+	return true
+
+
 # Sacrifice the oldest active echo: a one-per-wave burst at its last position plus
 # a small heal. This is deliberately permanent and removes the take from the bank.
 func collapse_oldest_echo() -> bool:
@@ -836,3 +846,5 @@ func _end_wave() -> void:
 	else:
 		phase = Phase.SHOP
 		shop.roll(self)
+		if endless and is_boss_wave():
+			pending_boons = Boon.roll(rng)

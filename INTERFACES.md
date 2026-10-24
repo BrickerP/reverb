@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, M21 endless boons, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -601,3 +601,29 @@ Presentation requirements:
 - Do not add a second Daily card or a run-selection screen.
 - The anomaly uses existing visuals; no new icons or audio are required.
 - A daily retry must use the same anomaly as the original date seed.
+
+## 22. Endless boons
+
+After each endless boss kill, the player chooses one permanent run upgrade before the next
+shop. Normal wave 20, non-boss endless waves and all normal runs never create boons.
+
+Mechanism API:
+
+- `Boon.ALL`: damage, haste, vitality, echo, shield, fortune.
+- `Boon.roll(rng, 3)` samples three distinct IDs.
+- `Sim.pending_boons: Array[StringName]` is set by `_end_wave` only when `endless` and
+  `is_boss_wave()`; `Shop.roll` has already produced the shop.
+- `Sim.choose_boon(index)` applies one and clears the pending array; failed indices leave
+  the offer intact. Effects are immediate and permanent for the run:
+  - damage +10%; haste +10%; vitality +15 max/current HP; echo +10%; shield +5 cap/current;
+    fortune +30 materials.
+- Boons are not equipment undo transactions and are not recorded by ShopState.
+- `Sim.pending_boons` is not serialized; there is no mid-run save.
+
+Presentation requirements:
+
+- Main shows the `BoonUi` modal and does not open the shop while `pending_boons` is non-empty.
+- BoonUi shows exactly three buttons with localized name/description; no cancel is allowed.
+- Choosing applies via `Sim.choose_boon` and then opens the already-rolled shop.
+- The modal pauses simulation; Hide/quit flows close it without applying.
+- No new art is required; reuse UiTheme panels/buttons.

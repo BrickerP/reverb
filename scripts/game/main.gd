@@ -8,6 +8,7 @@ var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
 var feedback_ui: FeedbackUi
+var boon_ui: BoonUi
 var character_select: CharacterSelectUi
 var pause_ui: PauseUi
 var settings_ui: SettingsUi
@@ -53,6 +54,7 @@ func _ready() -> void:
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
 	feedback_ui = FeedbackUi.new()
+	boon_ui = BoonUi.new()
 	character_select = CharacterSelectUi.new()
 	pause_ui = PauseUi.new()
 	settings_ui = SettingsUi.new()
@@ -62,6 +64,7 @@ func _ready() -> void:
 	_add_layer(2, shop_ui, theme)
 	_add_layer(3, end_ui, theme)
 	_add_layer(8, feedback_ui, theme)
+	_add_layer(9, boon_ui, theme)
 	_add_layer(4, character_select, theme)
 	_add_layer(4, pause_ui, theme)
 	_add_layer(5, settings_ui, theme)
@@ -77,6 +80,7 @@ func _ready() -> void:
 	feedback_ui.submit_requested.connect(_on_feedback_submit)
 	feedback_ui.open_log_requested.connect(_open_log_folder)
 	feedback_ui.closed.connect(_on_feedback_closed)
+	boon_ui.chosen.connect(_on_boon_chosen)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
@@ -114,6 +118,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 		daily_modifier: StringName = &"") -> void:
 	_detach_presentation_session()
 	feedback_ui.reset()
+	boon_ui.close()
 	_latest_saved_run.clear()
 	if char_id != &"":
 		character_id = char_id
@@ -321,6 +326,7 @@ func show_select() -> void:
 	_shop_delay = 0.0
 	_end_delay = 0.0
 	feedback_ui.reset()
+	boon_ui.close()
 	_run_context.clear()
 	_latest_saved_run.clear()
 	end_ui.set_feedback_available(false)
@@ -354,7 +360,7 @@ func toggle_pause() -> void:
 
 func _physics_process(delta: float) -> void:
 	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible \
-			or feedback_ui.visible:
+			or feedback_ui.visible or boon_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -369,6 +375,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if boon_ui.visible:
+		return
 	if feedback_ui.visible:
 		if event.is_action_pressed(&"ui_cancel"):
 			feedback_ui.close()
@@ -440,8 +448,12 @@ func _sync_phase() -> void:
 		Sim.Phase.SHOP:
 			# Hold on the arena for a beat: the wave is being recorded, then the shop opens.
 			hud.visible = true
-			_shop_delay = RECORD_BEAT
-			_view.play_record_beat(sim)
+			if sim.pending_boons.size() > 0:
+				_shop_delay = 0.0
+				_show_boon()
+			else:
+				_shop_delay = RECORD_BEAT
+				_view.play_record_beat(sim)
 		Sim.Phase.LOST:
 			hud.visible = true
 			_record_run()
@@ -489,6 +501,20 @@ func _open_shop() -> void:
 	_shop_delay = 0.0
 	hud.visible = false
 	shop_ui.open(sim)
+
+
+func _show_boon() -> void:
+	shop_ui.visible = false
+	hud.visible = true
+	boon_ui.open(sim.pending_boons)
+
+
+func _on_boon_chosen(index: int) -> void:
+	if sim == null or not sim.choose_boon(index):
+		return
+	boon_ui.close()
+	_shop_delay = 0.0
+	_open_shop()
 
 
 func _show_end() -> void:
