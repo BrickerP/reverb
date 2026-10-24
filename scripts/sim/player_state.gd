@@ -5,6 +5,7 @@ const RADIUS := 12.0
 
 var pos: Vector2 = Vector2.ZERO
 var hp: float = 1.0
+var shield: float = 0.0
 var stats: Stats = Stats.new()
 var weapons: Array[WeaponDef] = []
 var weapon_levels: Array[int] = []
@@ -18,6 +19,10 @@ var facing: Vector2 = Vector2.RIGHT
 
 func max_hp() -> float:
 	return stats.get_stat(Stats.MAX_HP)
+
+
+func max_shield() -> float:
+	return maxf(0.0, stats.get_stat(Stats.SHIELD))
 
 
 func add_weapon(w: WeaponDef) -> void:

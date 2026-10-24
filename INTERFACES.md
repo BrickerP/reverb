@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -493,7 +493,7 @@ Mechanism data:
 - `Content.ITEM_SETS` and `Content.item_sets()` define:
   - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`.
   - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`, `attack_speed_pct +0.02`.
-  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `max_hp +3`, `hp_regen +0.10`.
+  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `shield +8`, refilled each wave.
 - `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
 - `PlayerState.set_bonus_applied` records which sets have paid out, so adding a fourth member
   cannot apply the same bonus twice. Max-HP set bonuses also add current HP.
@@ -542,3 +542,31 @@ Presentation requirements:
 - Do not offer in-run ascension changes; retry/restart uses the saved Meta selection.
 - Daily challenge always starts at 0.
 - The end screen need not add a new line for ascension; RunLog remains the evidence source.
+
+## 20. Survival shield
+
+The Field Kit's 3-piece bonus is a per-wave shield pool. It is not a global defense
+stat and is not sold as an item.
+
+Mechanism API:
+
+- `Stats.SHIELD` (flat, default 0) is the shield cap; only the Field Kit adds it.
+- `PlayerState.shield` is the current pool; `PlayerState.max_shield()` reads the stat.
+- `Sim.start_wave()` sets `player.shield = player.max_shield()` after positioning.
+- All player damage should call `Sim._hurt_player(amount, source, effect, pos, direction,
+  grant_iframes = true)`:
+  - shield absorbs first; HP receives `amount - absorbed`;
+  - `PlayerHurtInfo.amount` is HP damage, `PlayerHurtInfo.absorbed` is shield damage;
+  - contact/bomber hits grant the normal contact iframes; rift hits call with
+    `grant_iframes = false` so standing in a rift does not shield the player from enemies.
+- Shield does not persist through the shop; the next wave refills from the stat.
+- `ShopState` still captures stats and set flags, so undo restores the shield cap; the
+  current pool is not a shop transaction.
+
+Presentation requirements:
+
+- HUD draws a thin cyan bar below the HP bar whenever `max_shield() > 0`, filling by
+  `shield / max_shield()`; keep the empty track visible when depleted.
+- Do not add a new health-like numeric label; the bar is the shield readout.
+- Shield absorption should not change enemy visuals, drops or boss logic.
+- Reduced-motion settings do not need special shield animation.

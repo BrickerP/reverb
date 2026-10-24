@@ -292,6 +292,7 @@ func start_wave(n: int) -> void:
 	pickups.clear()
 	pending.clear()
 	player.pos = ARENA.get_center()
+	player.shield = player.max_shield()
 	player.iframes = 0.0
 	for i in player.cooldowns.size():
 		player.cooldowns[i] = 0.0
@@ -497,19 +498,35 @@ func _bomber_explode(e: EnemyState) -> void:
 	if player.iframes > 0.0:
 		return
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
-		wave_damage_taken = true
-		player.hp -= damage
+		_hurt_player(damage, e.def.id, &"bomber_explosion", player.pos,
+				(player.pos - e.pos).normalized())
+
+
+# All player damage goes through this shield-aware path. The shield absorbs the
+# incoming amount first; `PlayerHurtInfo.amount` remains the HP damage actually dealt.
+func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Vector2,
+		direction: Vector2, grant_iframes: bool = true) -> void:
+	if amount <= 0.0:
+		return
+	var absorbed := minf(player.shield, amount)
+	player.shield -= absorbed
+	var dealt := amount - absorbed
+	if dealt > 0.0:
+		player.hp -= dealt
+	if grant_iframes:
 		player.iframes = IFRAME_TIME
-		last_damage_source = e.def.id
-		player_hurt.emit(damage)
-		var hurt := PlayerHurtInfo.new()
-		hurt.source = e.def.id
-		hurt.amount = damage
-		hurt.pos = player.pos
-		hurt.direction = (player.pos - e.pos).normalized()
-		hurt.effect = &"bomber_explosion"
-		hurt.lethal = player.hp <= 0.0
-		player_hurt_info.emit(hurt)
+	wave_damage_taken = true
+	last_damage_source = source
+	player_hurt.emit(dealt)
+	var hurt := PlayerHurtInfo.new()
+	hurt.source = source
+	hurt.amount = dealt
+	hurt.absorbed = absorbed
+	hurt.pos = pos
+	hurt.direction = direction
+	hurt.effect = effect
+	hurt.lethal = player.hp <= 0.0
+	player_hurt_info.emit(hurt)
 
 
 func discard_take(take: EchoTake) -> void:
@@ -658,19 +675,8 @@ func _move_enemies(delta: float) -> void:
 		grid.insert(e)
 		var touch := e.radius + PlayerState.RADIUS
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
-			wave_damage_taken = true
-			player.hp -= e.damage
-			player.iframes = IFRAME_TIME
-			last_damage_source = e.def.id
-			player_hurt.emit(e.damage)
-			var hurt := PlayerHurtInfo.new()
-			hurt.source = e.def.id
-			hurt.amount = e.damage
-			hurt.pos = player.pos
-			hurt.direction = (player.pos - e.pos).normalized()
-			hurt.effect = &"contact"
-			hurt.lethal = player.hp <= 0.0
-			player_hurt_info.emit(hurt)
+			_hurt_player(e.damage, e.def.id, &"contact", player.pos,
+					(player.pos - e.pos).normalized())
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
 				echoes_silenced.emit(e.def.silence_time)
@@ -744,18 +750,7 @@ func _damage_rift(r: TemporalRift) -> void:
 	if player.pos.distance_to(r.pos) > r.radius + PlayerState.RADIUS:
 		return
 	var damage := RIFT_DAMAGE_BASE + RIFT_DAMAGE_PER_WAVE * float(wave)
-	wave_damage_taken = true
-	player.hp -= damage
-	last_damage_source = &"rift"
-	player_hurt.emit(damage)
-	var hurt := PlayerHurtInfo.new()
-	hurt.source = &"rift"
-	hurt.amount = damage
-	hurt.pos = player.pos
-	hurt.direction = Vector2.ZERO
-	hurt.effect = &"rift"
-	hurt.lethal = player.hp <= 0.0
-	player_hurt_info.emit(hurt)
+	_hurt_player(damage, &"rift", &"rift", player.pos, Vector2.ZERO, false)
 
 
 func _update_pickups(delta: float) -> void:
