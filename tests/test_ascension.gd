@@ -18,10 +18,14 @@ func _grunt(s: Sim) -> EnemyState:
 
 func test_ascension_scales_enemies(c: Check) -> void:
 	var normal := _grunt(_sim(0))
-	var hard := _grunt(_sim(2))
-	c.near(hard.max_hp, normal.max_hp * 1.20, 0.001, "ascension adds 10% HP per level")
-	c.near(hard.speed, normal.speed * 1.10, 0.001, "ascension adds 5% speed per level")
-	c.near(hard.damage, normal.damage * 1.20, 0.001, "ascension adds 10% damage per level")
+	var hard := _grunt(_sim(1))
+	var later := _grunt(_sim(2))
+	c.near(hard.max_hp, normal.max_hp * 1.10, 0.001, "A1 adds 10% HP")
+	c.near(hard.speed, normal.speed * 1.05, 0.001, "A1 adds 5% speed")
+	c.near(hard.damage, normal.damage * 1.10, 0.001, "A1 adds 10% damage")
+	c.near(later.max_hp, hard.max_hp, 0.001, "A2 does not add another stat layer")
+	c.near(later.damage, hard.damage, 0.001, "A2 keeps the A1 damage scale")
+	c.near(later.speed, hard.speed, 0.001, "A2 keeps the A1 speed scale")
 
 
 func test_ascension_scales_the_boss(c: Check) -> void:
@@ -37,8 +41,8 @@ func test_ascension_scales_the_boss(c: Check) -> void:
 	ps2.def = Content.enemy(&"paradox")
 	ps2.pos = hard.player.pos + Vector2(200.0, 0.0)
 	hard._materialize(ps2)
-	c.near(hard.boss.max_hp, normal.boss.max_hp * 1.30, 0.001, "boss HP scales with ascension")
-	c.near(hard.boss.damage, normal.boss.damage * 1.30, 0.001, "boss damage scales with ascension")
+	c.near(hard.boss.max_hp, normal.boss.max_hp * 1.10, 0.001, "boss HP uses the A1 scale")
+	c.near(hard.boss.damage, normal.boss.damage * 1.10, 0.001, "boss damage uses the A1 scale")
 
 
 func test_ascension_two_opens_rifts_early(c: Check) -> void:

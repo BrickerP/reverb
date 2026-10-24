@@ -661,10 +661,11 @@ func _materialize(ps: PendingSpawn) -> void:
 	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
 	if ps.def.is_boss and endless and wave > WaveDirector.FINAL_WAVE:
 		hp_scale = 1.0 + 0.20 * float(wave - WaveDirector.FINAL_WAVE)
-	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * float(ascension))
+	var ascension_level := 1.0 if ascension >= 1 else 0.0
+	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * ascension_level)
 	e.hp = e.max_hp
-	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * float(ascension))
-	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
+	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * ascension_level)
+	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * ascension_level)
 	e.radius = ps.def.radius
 	if ps.elite_kind != &"":
 		_apply_elite(e, ps.elite_kind)

@@ -173,7 +173,7 @@ const TABLE := {
 	"select.seed_hint": "optional",
 	"select.ascension": "Ascension %d",
 	"select.ascension_locked": "Ascension · win to unlock",
-	"select.ascension_hint": "Per level: +10% enemy HP/damage, +5% speed. L2 rifts from wave 10; L3 two elites. Win runs to unlock up to 3.",
+	"select.ascension_hint": "A1: +10% enemy HP/damage, +5% speed. A2: rifts from wave 10. A3: two elites. Win runs to unlock up to 3.",
 	"select.settings": "Settings",
 	"select.history": "History",
 	"select.codex": "Arsenal",

@@ -529,25 +529,25 @@ Mechanism/API:
   `min(3, wins)` and `Meta.set_ascension(value)` clamps and saves.
 - `Sim.ascension` defaults 0. Main sets it before `sim.start_run()` from Meta, or forces 0
   for the daily challenge.
-- Enemy scaling at materialization:
-  - HP × `(1 + 0.10 * ascension)`;
-  - damage × `(1 + 0.10 * ascension)`;
-  - speed × `(1 + 0.05 * ascension)`.
-  Bosses and elites use the same multipliers; wave scaling is applied first.
+- Enemy scaling at materialization (A1 and above; A2/A3 do not add another stat layer):
+  - HP × `1.10`;
+  - damage × `1.10`;
+  - speed × `1.05`.
+  Bosses and elites use the same multipliers; wave scaling is applied first. A0 is unchanged.
 - Level rules also change:
   - A2+: `Sim.ascension_rift_wave()` is 10 (vs 12) and
     `Sim.ascension_rift_interval()` is 14s (vs 16s).
   - A3: `Sim.ascension_elite_count()` is 2; `WaveDirector.plan` accepts an `elite_count`
     argument and marks that many distinct events.
 - `RunLog` records `ascension`.
-- No change to wave planning, shop prices, drops, echo power or item sets.
+- A0 keeps wave planning, shop prices, drops, echo power and item sets unchanged.
 - Normal `ascension = 0` keeps all existing stats/balance unchanged.
 
 Presentation requirements:
 
 - Character select shows an `Ascension N` button beside Seed. It is disabled when
   `max_ascension() == 0`; clicking cycles 0..max and persists immediately.
-- Tooltip explains the per-level HP/damage/speed increases and that wins unlock levels.
+- Tooltip explains A1's HP/damage/speed increase, A2 rifts, A3 two elites, and that wins unlock levels.
 - Do not offer in-run ascension changes; retry/restart uses the saved Meta selection.
 - Daily challenge always starts at 0.
 - The end screen need not add a new line for ascension; RunLog remains the evidence source.
