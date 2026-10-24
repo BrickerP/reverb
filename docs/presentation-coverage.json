@@ -391,13 +391,18 @@
     "candidate_commit": "bb09c95735e6270e095c5e344abecc299e527900",
     "observed_merge": "f3c4e914d86e8b2784f5ac6c97a17ef1a97794fd",
     "feature": "Paradox phase 2 twin timelines",
-    "status": "held_before_integration: remaining-health preservation contract fails at fractional nonlethal boundary",
+    "status": "source_health_fix_verified; presentation integration remains pending",
+    "fixed_source": "73717b12d9893182a41486bde637c9b43ef6eac3",
     "accepted_mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
-    "playable_source_unchanged": "42b0c6e29d4b8ed02694986b0b2de3d7405ce567",
+    "original_hold_playable_source": "42b0c6e29d4b8ed02694986b0b2de3d7405ce567",
+    "current_playable_source": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
     "verification": {
       "upstream_ci": "40011580839 success",
-      "isolated_existing_boss_suite": "40 passed, 0 failed",
-      "isolated_contract_probe": "10 HP preserved; 0.25 HP raised to 1.0 after split; exit 1 without engine errors",
+      "original_isolated_existing_boss_suite": "40 passed, 0 failed",
+      "original_isolated_contract_probe": "10 HP preserved; 0.25 HP raised to 1.0 after split; exit 1 without engine errors",
+      "fixed_isolated_boss_suite": "bb09c95 plus73717b1:46passed,0failed",
+      "fixed_boundary_probe": "10HP and0.25HP preserved exactly; exit0; noengine errors",
+      "fix_evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-boss-fix-verification/",
       "provenance": "controlled fixture, not a human playtest or balance claim"
     },
     "presentation_not_yet_verified": [
@@ -502,5 +507,20 @@
       "provenance": "isolated fixture only"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-lock-verification/"
+  },
+  "pending_anomaly_contracts": {
+    "candidate": "1d0eedad198aa859f9de1ee1afc066fbc46ef3db",
+    "status": "held before integration: deposit refunded by prior equipmentundo while acceptedcontract remainsactive",
+    "baseline_tests": "77passed",
+    "reproduction": {
+      "buy_accept_undo": "100instead of94,contractactive",
+      "sell_accept_undo": "100instead of94,contractactive",
+      "accept_buy_undo": "94,controlpasses"
+    },
+    "review": "HOLD,high economy/state issue",
+    "mechanics_edits": false,
+    "decision": "Mechanics owner must define deposit/history semantics; clear-history-on-accept adds a boundary beyond agreed reroll/start and is not approved here",
+    "current_playable": "8403188",
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-contract-review/"
   }
 }

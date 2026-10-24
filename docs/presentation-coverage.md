@@ -352,3 +352,23 @@ sold/stale and full/poor/maxed states, sale/undo interoperability, history bound
 and cleanup, with 16 screenshots. Independent review is APPROVE with zero issues.
 Evidence is in `outputs/take-stack-lock-verification/`; fixtures do not establish
 human satisfaction or balance. No new image or audio resource is needed.
+
+## Contract accounting hold and Boss health repair
+
+An isolated archive of contract candidate `1d0eeda` passes its 77 existing assertions
+but fails the equipment-before-contract ordering probe: both buy → accept → undo
+and sell → accept → undo restore 100 materials instead of 94 while the 6-deposit
+contract remains accepted and active. Accept → buy → undo correctly returns 94.
+Independent review marks this a high-severity economy/state issue. No contract code
+or accounting/history rule is changed in this presentation branch. An additional
+acceptance-time history barrier would require explicit design alignment with the
+currently agreed reroll/start boundaries; it is not silently adopted.
+
+Upstream repair `73717b1` resolves the previously held Boss fractional-health issue.
+The isolated composition `bb09c95` + `73717b1` passes 46 Boss assertions and the exact
+original 10/0.25 HP boundary probe. Independent review approves the source fix.
+The next presentation batch is therefore the repaired twin-timeline Boss, including
+combined HUD health, split/survivor/last-body events, audio, reduced effects and lifecycle.
+Source repair is not yet a playable presentation integration. Current playable code
+remains `8403188`. Evidence: `outputs/take-stack-contract-review/` and
+`outputs/take-stack-boss-fix-verification/` in the parent task directory.
