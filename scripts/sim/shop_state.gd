@@ -10,6 +10,7 @@ var weapons: Array[StringName] = []
 var weapon_levels: Array[int] = []
 var cooldowns: Array[float] = []
 var items: Dictionary = {}
+var set_bonus_applied: Dictionary = {}
 var offers: Array[Dictionary] = []
 var rerolls: int = 0
 var phase: int = 0
@@ -29,6 +30,7 @@ static func capture(sim: Sim) -> ShopState:
 	state.weapon_levels = sim.player.weapon_levels.duplicate()
 	state.cooldowns = sim.player.cooldowns.duplicate()
 	state.items = sim.player.items.duplicate()
+	state.set_bonus_applied = sim.player.set_bonus_applied.duplicate()
 	for o in sim.shop.offers:
 		state.offers.append({
 			"kind": "weapon" if o.is_weapon() else "item",
@@ -55,6 +57,7 @@ func restore(sim: Sim) -> void:
 		if w != null:
 			sim.player.weapons.append(w)
 	sim.player.items = items.duplicate()
+	sim.player.set_bonus_applied = set_bonus_applied.duplicate()
 	sim.shop.offers.clear()
 	for entry: Dictionary in offers:
 		var o := Offer.new()
@@ -85,6 +88,7 @@ func to_dict() -> Dictionary:
 		"weapons": weapon_ids,
 		"weapon_levels": weapon_levels.duplicate(),
 		"items": items.duplicate(),
+		"set_bonus_applied": set_bonus_applied.duplicate(),
 		"offers": offer_rows,
 		"rerolls": rerolls,
 		"phase": phase,

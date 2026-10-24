@@ -10,6 +10,7 @@ var weapons: Array[WeaponDef] = []
 var weapon_levels: Array[int] = []
 var cooldowns: Array[float] = []
 var items: Dictionary = {}
+var set_bonus_applied: Dictionary = {}
 var materials: int = 0
 var iframes: float = 0.0
 var facing: Vector2 = Vector2.RIGHT
@@ -56,3 +57,23 @@ func add_item(it: ItemDef) -> void:
 		stats.add(stat, float(it.mods[stat]))
 	if it.mods.has(Stats.MAX_HP):
 		hp += float(it.mods[Stats.MAX_HP])
+	_apply_item_sets()
+
+
+func _apply_item_sets() -> void:
+	for set_id: StringName in Content.item_sets():
+		if bool(set_bonus_applied.get(set_id, false)):
+			continue
+		var data: Dictionary = Content.item_sets()[set_id]
+		var count := 0
+		for member: StringName in data.get("members", []):
+			count += item_count(member)
+		if count < int(data.get("required", 3)):
+			continue
+		var mods: Dictionary = data.get("mods", {})
+		for stat: StringName in mods:
+			var value := float(mods[stat])
+			stats.add(stat, value)
+			if stat == Stats.MAX_HP:
+				hp += value
+		set_bonus_applied[set_id] = true

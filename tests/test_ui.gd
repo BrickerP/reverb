@@ -283,6 +283,31 @@ func test_main_continues_into_endless(c: Check) -> void:
 	main.free()
 
 
+func test_character_select_cycles_unlocked_ascension(c: Check) -> void:
+	var path := "user://test_ascension_meta.json"
+	var abs := ProjectSettings.globalize_path(path)
+	if FileAccess.file_exists(abs):
+		DirAccess.remove_absolute(abs)
+	var meta := Meta.new(path)
+	meta.wins = 2
+	meta.set_ascension(0)
+	var ui := CharacterSelectUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.refresh(meta)
+	c.eq(ui._ascension_button.text, Loc.t("select.ascension", [0]), "ascension starts at zero")
+	c.ok(not ui._ascension_button.disabled, "two wins unlock ascension levels")
+	ui._ascension_button.pressed.emit()
+	c.eq(meta.ascension, 1, "the button cycles to level 1")
+	ui._ascension_button.pressed.emit()
+	c.eq(meta.ascension, 2, "the button cycles to level 2")
+	ui._ascension_button.pressed.emit()
+	c.eq(meta.ascension, 0, "the button wraps back to zero")
+	ui.free()
+	if FileAccess.file_exists(abs):
+		DirAccess.remove_absolute(abs)
+
+
 func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
 	var s := _shop_sim()
 	s.bank.takes.clear()

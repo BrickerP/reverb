@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -458,10 +458,15 @@ Mechanism API:
 - `Sim.begin_endless() -> bool` only from `Phase.WON`, not already endless. It sets
   `endless = true`, keeps the run seed/build/bank, sets `wave = FINAL_WAVE`, clears boss
   shards/rifts, switches to `Phase.SHOP`, and rolls a fresh shop.
-- `start_wave(n)` treats `n == FINAL_WAVE` as the boss wave only when `not endless`; endless
-  wave 21+ has no Paradox spawn and uses the normal wave plan.
-- `step` only checks the boss-dead win condition on wave 20 when not endless; endless waves
-  end by the 60s timer and return to the shop.
+- `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
+  `n > 20` where `n % 5 == 0` (25, 30, 35…).
+- `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
+  endless wave 21+ otherwise has no boss. Endless boss waves use a 0.55 trash-budget
+  multiplier, normal final uses 0.35.
+- `step` requires the boss to die on every boss wave; normal endless waves end by the 60s
+  timer. An endless boss does not auto-end at 60s.
+- Endless boss HP scales by `1 + 0.20 × (n - 20)` before ascension; damage keeps the normal
+  wave damage scaling. The phase-2 split and all boss signals are unchanged.
 - Wave planning/budget/hp/damage continue from `WaveDirector`; endless waves also keep
   one elite per wave, rifts on the 8s/16s cadence, and continuation contracts (clear target
   caps at 40). Normal waves 1–20 are unchanged.
@@ -476,9 +481,69 @@ Presentation requirements:
 - End screen shows `Continue · Endless` only on a normal win; hidden on losses and endless
   deaths.
 - HUD endless branch shows `hud.endless` with the current wave and the 60s timer; it hides
-  the 20-wave progress pips.
+  the 20-wave progress pips. Endless boss waves show `hud.endless_boss` plus the existing
+  boss health bar and phase-2 pips, still without the 20-wave pips.
 - On endless death, end title/stats use `end.endless_lose` / `end.endless_run`; Play again,
   Change character, retry seed and log folder remain available.
 - Main must call `ArenaView.clear_victory()` before opening the endless shop so the victory
   overlay does not persist into the next wave.
 - Endless never emits `run_won` a second time.
+
+## 18. Item sets
+
+Three small completion rewards use the existing 11 items; no new art, drops or item IDs.
+
+Mechanism data:
+
+- `Content.ITEM_SETS` and `Content.item_sets()` define:
+  - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`.
+  - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`, `attack_speed_pct +0.02`.
+  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `max_hp +3`, `hp_regen +0.10`.
+- `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
+- `PlayerState.set_bonus_applied` records which sets have paid out, so adding a fourth member
+  cannot apply the same bonus twice. Max-HP set bonuses also add current HP.
+- `ShopState` captures/restores `items`, `stats` and `set_bonus_applied`; undo after the
+  third item removes both the item and the set contribution.
+
+Presentation requirements:
+
+- BuildPanel shows only sets already started, as `Name n/required`; when complete it
+  appends the localized bonus text.
+- Item cards keep their existing individual descriptions. The current offer DPS preview
+  does not simulate completing a set; do not claim it does.
+- Set bonuses are small numeric completion rewards, not hidden affinity or drop bias.
+- No new icons, audio or item IDs; use the existing item icons.
+
+## 19. Ascension
+
+Optional difficulty levels 0–3 are selected on the character select screen and apply for
+the whole run, including endless.
+
+Mechanism/API:
+
+- `Meta.ascension` is the saved selected level; `Meta.max_ascension()` returns
+  `min(3, wins)` and `Meta.set_ascension(value)` clamps and saves.
+- `Sim.ascension` defaults 0. Main sets it before `sim.start_run()` from Meta, or forces 0
+  for the daily challenge.
+- Enemy scaling at materialization:
+  - HP × `(1 + 0.10 * ascension)`;
+  - damage × `(1 + 0.10 * ascension)`;
+  - speed × `(1 + 0.05 * ascension)`.
+  Bosses and elites use the same multipliers; wave scaling is applied first.
+- Level rules also change:
+  - A2+: `Sim.ascension_rift_wave()` is 10 (vs 12) and
+    `Sim.ascension_rift_interval()` is 14s (vs 16s).
+  - A3: `Sim.ascension_elite_count()` is 2; `WaveDirector.plan` accepts an `elite_count`
+    argument and marks that many distinct events.
+- `RunLog` records `ascension`.
+- No change to wave planning, shop prices, drops, echo power or item sets.
+- Normal `ascension = 0` keeps all existing stats/balance unchanged.
+
+Presentation requirements:
+
+- Character select shows an `Ascension N` button beside Seed. It is disabled when
+  `max_ascension() == 0`; clicking cycles 0..max and persists immediately.
+- Tooltip explains the per-level HP/damage/speed increases and that wins unlock levels.
+- Do not offer in-run ascension changes; retry/restart uses the saved Meta selection.
+- Daily challenge always starts at 0.
+- The end screen need not add a new line for ascension; RunLog remains the evidence source.

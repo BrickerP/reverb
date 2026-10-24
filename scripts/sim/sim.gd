@@ -74,6 +74,7 @@ var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
 var hazard_rng := RandomNumberGenerator.new()
 var endless: bool = false
+var ascension: int = 0
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
@@ -215,6 +216,25 @@ func can_start_wave() -> bool:
 	return phase == Phase.SHOP and bank.overflow(echo_capacity()) == 0
 
 
+# Normal final wave, or every fifth endless wave, schedules Paradox.
+func is_boss_wave(n: int = wave) -> bool:
+	if not endless:
+		return n == WaveDirector.FINAL_WAVE
+	return n > WaveDirector.FINAL_WAVE and n % 5 == 0
+
+
+func ascension_elite_count() -> int:
+	return 2 if ascension >= 3 else 1
+
+
+func ascension_rift_wave() -> int:
+	return 10 if ascension >= 2 else RIFT_START_WAVE
+
+
+func ascension_rift_interval() -> float:
+	return 14.0 if ascension >= 2 else RIFT_INTERVAL
+
+
 func start_next_wave() -> void:
 	if phase == Phase.SHOP:
 		start_wave(wave + 1)
@@ -244,14 +264,14 @@ func start_wave(n: int) -> void:
 	last_contract_reward = 0
 	collapse_used = false
 	rifts.clear()
-	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and (n < WaveDirector.FINAL_WAVE or endless) else 0.0
+	_rift_cd = RIFT_FIRST_DELAY if n >= ascension_rift_wave() and (n < WaveDirector.FINAL_WAVE or endless) else 0.0
 	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
 	last_interest = 0
-	var boss_wave := n == WaveDirector.FINAL_WAVE and not endless
-	var mult := 0.35 if boss_wave else 1.0
-	_plan = WaveDirector.plan(n, run_seed, mult, endless)
+	var boss_wave := is_boss_wave(n)
+	var mult := 0.35 if boss_wave and not endless else (0.55 if boss_wave else 1.0)
+	_plan = WaveDirector.plan(n, run_seed, mult, endless, ascension_elite_count())
 	if boss_wave:
 		var boss_event := SpawnEvent.new()
 		boss_event.def = Content.enemy(&"paradox")
@@ -318,7 +338,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	if player.hp <= 0.0:
 		phase = Phase.LOST
 		run_lost.emit()
-	elif wave == WaveDirector.FINAL_WAVE and not endless:
+	elif is_boss_wave():
 		if boss != null and boss_alive_count() == 0:
 			_end_wave()
 	elif wave_time >= wave_duration:
@@ -465,7 +485,7 @@ func _enrage_boss() -> void:
 
 func _bomber_explode(e: EnemyState) -> void:
 	var radius := e.death_radius_value()
-	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave)
+	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
 	explosion.emit(e.pos, radius, e.def.color)
 	var info := ExplosionInfo.new()
 	info.kind = ExplosionInfo.BOMBER
@@ -603,10 +623,12 @@ func _materialize(ps: PendingSpawn) -> void:
 	e.def = ps.def
 	e.pos = ps.pos
 	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
-	e.max_hp = ps.def.hp * hp_scale
+	if ps.def.is_boss and endless and wave > WaveDirector.FINAL_WAVE:
+		hp_scale = 1.0 + 0.20 * float(wave - WaveDirector.FINAL_WAVE)
+	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * float(ascension))
 	e.hp = e.max_hp
-	e.speed = ps.def.speed * WaveDirector.speed_scale(wave)
-	e.damage = ps.def.damage * WaveDirector.damage_scale(wave)
+	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * float(ascension))
+	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
 	e.radius = ps.def.radius
 	if ps.elite_kind != &"":
 		_apply_elite(e, ps.elite_kind)
@@ -699,11 +721,11 @@ func _step_rifts(delta: float) -> void:
 		if r.telegraph > 0.0 or r.active > 0.0:
 			kept.append(r)
 	rifts = kept
-	if wave >= RIFT_START_WAVE and (wave < WaveDirector.FINAL_WAVE or endless):
+	if wave >= ascension_rift_wave() and (wave < WaveDirector.FINAL_WAVE or endless):
 		_rift_cd -= delta
 		if _rift_cd <= 0.0:
 			_spawn_rift()
-			_rift_cd = RIFT_INTERVAL
+			_rift_cd = ascension_rift_interval()
 
 
 func _spawn_rift() -> void:
