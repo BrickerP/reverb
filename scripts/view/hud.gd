@@ -182,6 +182,14 @@ func _draw_echo_chips() -> void:
 		draw_rect(Rect2(112.0, 64.0, width * ratio, 3.0), UiTheme.WARN)
 
 
+func wave_title() -> String:
+	if sim == null or not sim.endless or not sim.is_boss_wave():
+		return ""
+	if sim.boss_rush:
+		return Loc.t("hud.boss_rush_boss", [sim.wave])
+	return Loc.t("hud.endless_boss", [sim.wave])
+
+
 func _draw_wave() -> void:
 	var boss_wave := sim.is_boss_wave()
 	if sim.endless and not boss_wave:
@@ -204,7 +212,7 @@ func _draw_wave() -> void:
 		else:
 			var title := Loc.t("hud.boss_phase2") if phase2 else Loc.t("hud.boss")
 			if sim.endless:
-				title = Loc.t("hud.endless_boss", [sim.wave]) + ("  //  II" if phase2 else "")
+				title = wave_title() + ("  //  II" if phase2 else "")
 			var title_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.9, 0.8, 1.0)
 			_text(title, Vector2(440.0, 34.0), 26, title_color,
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)

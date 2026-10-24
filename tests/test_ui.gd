@@ -402,6 +402,22 @@ func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
 	ui.free()
 
 
+func test_hud_labels_boss_rush_separately_from_endless(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.phase = Sim.Phase.WON
+	c.ok(s.begin_boss_rush(), "enter boss rush")
+	s.start_next_wave()
+	var h := Hud.new()
+	h.bind(s)
+	c.eq(h.wave_title(), Loc.t("hud.boss_rush_boss", [s.wave]),
+			"boss rush gets its own HUD title")
+	s.boss_rush = false
+	c.eq(h.wave_title(), Loc.t("hud.endless_boss", [s.wave]),
+			"endless keeps the endless title")
+	h.free()
+
+
 func test_hud_weapon_slots_show_cooldown_readiness(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()
