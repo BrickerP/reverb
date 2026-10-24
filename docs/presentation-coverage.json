@@ -582,14 +582,14 @@
     "presentation": [
       "Warning vs active proceduralfloor state belowactors",
       "Reduced stablefill/boundary without rotating/pulsingdetail",
-      "Existing echo/silence/hurt_blast resources reused for warning/activation/damage",
+      "Protected silence resource with distinct pitches for warning/activation; hurt_blast for damage",
       "Localized rift deathcause and savedrun provenance",
       "Pause,rebind,expiry,multiarray andwave/boss exclusions"
     ],
     "verification": {
-      "focused": 72,
+      "focused": 74,
       "attribution": "14pass4fail before;18pass0fail after",
-      "full": "5522passed0failed",
+      "full": "5524passed0failed",
       "smoke": "5246frames,wave4,3purchases,OK",
       "native": "EN/ZH x normal/reduced,16screenshots,exact spawn1/activate1/hurt1/end1",
       "review": "APPROVE0issues",

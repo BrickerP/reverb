@@ -71,7 +71,7 @@ func _timeline_case() -> bool:
 	_prepare_wave(sim, 12)
 	var signals := {"spawn": 0, "activate": 0, "end": 0, "hurt": 0}
 	var hurts: Array[PlayerHurtInfo] = []
-	var spawn_audio: int = int(_main.audio.play_count(&"echo"))
+	var spawn_audio: int = int(_main.audio.play_count(&"silence"))
 	var activation_audio: int = int(_main.audio.play_count(&"silence"))
 	var blast_audio: int = int(_main.audio.play_count(&"hurt_blast"))
 	var legacy_hurt_audio: int = int(_main.audio.play_count(&"hurt"))
@@ -83,7 +83,7 @@ func _timeline_case() -> bool:
 	_step(sim, Sim.RIFT_FIRST_DELAY + 0.01)
 	if not _require(sim.rifts.size() == 1 and sim.rifts[0].is_warning()
 			and int(signals["spawn"]) == 1
-			and int(_main.audio.play_count(&"echo")) == spawn_audio + 1,
+			and int(_main.audio.play_count(&"silence")) == spawn_audio + 1,
 			"actual eight-second schedule spawns one warning rift and cue"): return false
 	var rift: TemporalRift = sim.rifts[0]
 	if not _require(_rift_inside_floor(rift), "rift radius remains within arena floor bounds"): return false
@@ -96,7 +96,7 @@ func _timeline_case() -> bool:
 	_step(sim, 0.31)
 	if not _require(rift.is_active() and int(signals["activate"]) == 1,
 			"warning activates once after 1.5 seconds"): return false
-	if not _require(int(_main.audio.play_count(&"silence")) == activation_audio + 1,
+	if not _require(int(_main.audio.play_count(&"silence")) == activation_audio + 2,
 			"activation routes one existing silence cue"): return false
 	if not (await _capture("active")): return false
 

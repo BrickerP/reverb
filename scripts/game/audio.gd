@@ -536,7 +536,7 @@ func _on_silence(_duration: float) -> void:
 
 
 func _on_rift_warning(_rift: TemporalRift) -> void:
-	play(&"echo", -4.0, 0.70)
+	play(&"silence", -6.0, 0.70)
 
 
 func _on_rift_activated(_rift: TemporalRift) -> void:

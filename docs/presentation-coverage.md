@@ -410,11 +410,11 @@ postmortem hits cannot replace the end-screen/run-log death source. Four failing
 metadata checks become 18 passing checks without changing damage totals.
 
 Warnings/active states use procedural floor geometry below actors, with stable
-essential geometry in reduced mode. Existing echo/silence/environmental-hurt sounds
-are reused with distinct routing; no new bitmap or audio resource is required.
+essential geometry in reduced mode. Existing protected silence/environmental-hurt sounds
+are reused with distinct pitches/routing; no new bitmap or audio resource is required.
 EN/ZH x normal/reduced native runs pass scheduling, warning safety, inside/outside
 damage, expiry, provenance/localization, pause/rebind/cleanup and manual multi-rift
-compaction, with 16 screenshots. Full tests pass 5522 assertions; smoke and import pass.
+compaction, with 16 screenshots. Full tests pass 5524 assertions; smoke and import pass.
 Independent review is APPROVE with zero remaining issues.
 
 General stress remains bounded and exits cleanly. An adjacent immutable `225d5b3`
