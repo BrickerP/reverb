@@ -75,3 +75,28 @@ func test_wins_and_corrupt_file(c: Check) -> void:
 	var loaded := Meta.new(PATH)
 	c.eq(loaded.wins, 1, "win persists")
 	_cleanup()
+
+
+func test_ascension_unlocks_with_wins_and_persists(c: Check) -> void:
+	_cleanup()
+	var meta := Meta.new(PATH)
+	c.eq(meta.max_ascension(), 0, "a fresh profile has no ascension")
+	meta.set_ascension(2)
+	c.eq(meta.ascension, 0, "ascension is clamped to the unlocked maximum")
+	var s := Sim.new(1)
+	s.start_run()
+	s.phase = Sim.Phase.WON
+	s.wave = 20
+	meta.record_run(s)
+	c.eq(meta.max_ascension(), 1, "one win unlocks level 1")
+	meta.set_ascension(1)
+	c.eq(meta.ascension, 1, "level 1 can be selected")
+	var loaded := Meta.new(PATH)
+	c.eq(loaded.ascension, 1, "ascension persists")
+	meta.record_run(s)
+	meta.set_ascension(3)
+	c.eq(meta.ascension, 2, "three wins unlock two levels, not three")
+	meta.record_run(s)
+	meta.set_ascension(3)
+	c.eq(meta.ascension, 3, "three wins unlock level 3")
+	_cleanup()

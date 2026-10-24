@@ -74,6 +74,7 @@ var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
 var hazard_rng := RandomNumberGenerator.new()
 var endless: bool = false
+var ascension: int = 0
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
@@ -465,7 +466,7 @@ func _enrage_boss() -> void:
 
 func _bomber_explode(e: EnemyState) -> void:
 	var radius := e.death_radius_value()
-	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave)
+	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
 	explosion.emit(e.pos, radius, e.def.color)
 	var info := ExplosionInfo.new()
 	info.kind = ExplosionInfo.BOMBER
@@ -603,10 +604,10 @@ func _materialize(ps: PendingSpawn) -> void:
 	e.def = ps.def
 	e.pos = ps.pos
 	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
-	e.max_hp = ps.def.hp * hp_scale
+	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * float(ascension))
 	e.hp = e.max_hp
-	e.speed = ps.def.speed * WaveDirector.speed_scale(wave)
-	e.damage = ps.def.damage * WaveDirector.damage_scale(wave)
+	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * float(ascension))
+	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
 	e.radius = ps.def.radius
 	if ps.elite_kind != &"":
 		_apply_elite(e, ps.elite_kind)
