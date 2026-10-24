@@ -18,6 +18,11 @@ func test_boon_roll_has_three_distinct_choices(c: Check) -> void:
 		c.ok(id in Boon.ALL, "known boon id")
 		unique[id] = true
 	c.eq(unique.size(), 3, "boon choices are distinct")
+	for id in Boon.ALL:
+		c.ok(not Loc.t(Boon.title_key(id)).begins_with("boon."),
+				"%s has a localized title" % id)
+		c.ok(not Loc.t(Boon.desc_key(id)).begins_with("boon."),
+				"%s has a localized description" % id)
 
 
 func test_endless_boss_offers_and_applies_a_boon(c: Check) -> void:
@@ -50,6 +55,15 @@ func test_boon_choice_rejects_bad_index(c: Check) -> void:
 	c.eq(s.pending_boons.size(), 3, "failed choices keep the offer")
 
 
+func test_boons_never_change_echo_capacity(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.stats.values[Stats.ECHO_SLOTS] = 0.0
+	for id in Boon.ALL:
+		c.ok(Boon.apply(s, id), "%s applies on a zero-slot character" % id)
+	c.eq(s.echo_capacity(), 0, "no boon breaks the Soloist's zero-slot identity")
+
+
 func test_each_boon_applies(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()
@@ -74,3 +88,16 @@ func test_each_boon_applies(c: Check) -> void:
 	var materials := s.player.materials
 	c.ok(Boon.apply(s, Boon.FORTUNE), "fortune boon applies")
 	c.eq(s.player.materials, materials + 30, "materials increase")
+	var crit := s.player.stats.get_stat(Stats.CRIT_CHANCE)
+	c.ok(Boon.apply(s, Boon.PRECISION), "precision boon applies")
+	c.near(s.player.stats.get_stat(Stats.CRIT_CHANCE), crit + 0.05, 0.001, "crit increases")
+	var move := s.player.stats.get_stat(Stats.MOVE_SPEED)
+	c.ok(Boon.apply(s, Boon.SLIPSTREAM), "slipstream boon applies")
+	c.near(s.player.stats.get_stat(Stats.MOVE_SPEED), move + 20.0, 0.001, "move speed increases")
+	var pickup := s.player.stats.get_stat(Stats.PICKUP_RANGE)
+	c.ok(Boon.apply(s, Boon.MAGNET), "magnet boon applies")
+	c.near(s.player.stats.get_stat(Stats.PICKUP_RANGE), pickup + 30.0, 0.001,
+			"pickup range increases")
+	var lifespan := s.echo_lifespan()
+	c.ok(Boon.apply(s, Boon.ETERNITY), "eternity boon applies")
+	c.eq(s.echo_lifespan(), lifespan + 1, "echo lifespan increases")

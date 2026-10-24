@@ -7,7 +7,14 @@ const VITALITY := &"vitality"
 const ECHO := &"echo"
 const SHIELD := &"shield"
 const FORTUNE := &"fortune"
-const ALL: Array[StringName] = [DAMAGE, HASTE, VITALITY, ECHO, SHIELD, FORTUNE]
+const PRECISION := &"precision"
+const SLIPSTREAM := &"slipstream"
+const MAGNET := &"magnet"
+const ETERNITY := &"eternity"
+const ALL: Array[StringName] = [
+	DAMAGE, HASTE, VITALITY, ECHO, SHIELD, FORTUNE,
+	PRECISION, SLIPSTREAM, MAGNET, ETERNITY,
+]
 
 
 static func roll(rng: RandomNumberGenerator, count: int = 3) -> Array[StringName]:
@@ -32,6 +39,14 @@ static func title_key(id: StringName) -> String:
 			return "boon.shield_name"
 		FORTUNE:
 			return "boon.fortune_name"
+		PRECISION:
+			return "boon.precision_name"
+		SLIPSTREAM:
+			return "boon.slipstream_name"
+		MAGNET:
+			return "boon.magnet_name"
+		ETERNITY:
+			return "boon.eternity_name"
 		_:
 			return "boon.damage_name"
 
@@ -50,6 +65,14 @@ static func desc_key(id: StringName) -> String:
 			return "boon.shield_desc"
 		FORTUNE:
 			return "boon.fortune_desc"
+		PRECISION:
+			return "boon.precision_desc"
+		SLIPSTREAM:
+			return "boon.slipstream_desc"
+		MAGNET:
+			return "boon.magnet_desc"
+		ETERNITY:
+			return "boon.eternity_desc"
 		_:
 			return "boon.damage_desc"
 
@@ -70,6 +93,14 @@ static func apply(sim: Sim, id: StringName) -> bool:
 			sim.player.shield += 5.0
 		FORTUNE:
 			sim.player.materials += 30
+		PRECISION:
+			sim.player.stats.add(Stats.CRIT_CHANCE, 0.05)
+		SLIPSTREAM:
+			sim.player.stats.add(Stats.MOVE_SPEED, 20.0)
+		MAGNET:
+			sim.player.stats.add(Stats.PICKUP_RANGE, 30.0)
+		ETERNITY:
+			sim.player.stats.add(Stats.ECHO_LIFESPAN, 1.0)
 		_:
 			return false
 	return true
