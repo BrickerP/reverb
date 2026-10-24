@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -477,3 +477,28 @@ Presentation requirements:
 - Main must call `ArenaView.clear_victory()` before opening the endless shop so the victory
   overlay does not persist into the next wave.
 - Endless never emits `run_won` a second time.
+
+## 18. Item sets
+
+Three small completion rewards use the existing 11 items; no new art, drops or item IDs.
+
+Mechanism data:
+
+- `Content.ITEM_SETS` and `Content.item_sets()` define:
+  - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`.
+  - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`, `attack_speed_pct +0.02`.
+  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `max_hp +3`, `hp_regen +0.10`.
+- `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
+- `PlayerState.set_bonus_applied` records which sets have paid out, so adding a fourth member
+  cannot apply the same bonus twice. Max-HP set bonuses also add current HP.
+- `ShopState` captures/restores `items`, `stats` and `set_bonus_applied`; undo after the
+  third item removes both the item and the set contribution.
+
+Presentation requirements:
+
+- BuildPanel shows only sets already started, as `Name n/required`; when complete it
+  appends the localized bonus text.
+- Item cards keep their existing individual descriptions. The current offer DPS preview
+  does not simulate completing a set; do not claim it does.
+- Set bonuses are small numeric completion rewards, not hidden affinity or drop bias.
+- No new icons, audio or item IDs; use the existing item icons.

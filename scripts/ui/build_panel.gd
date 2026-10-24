@@ -105,6 +105,10 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_box.add_child(_items_row)
 	items_drop_target = _empty_target(&"items", Loc.t("shop.drop_item"))
 	_box.add_child(items_drop_target)
+	var set_summary := _set_summary(pl)
+	if set_summary != null:
+		_box.add_child(UiTheme.label(Loc.t("shop.sets"), 14, UiTheme.DIM))
+		_box.add_child(set_summary)
 	_box.add_child(UiTheme.label(Loc.t("shop.core"), 16, UiTheme.DIM))
 	_box.add_child(_core_grid(pl, sim))
 
@@ -432,6 +436,39 @@ func _item_chips(pl: PlayerState) -> Control:
 		chip.add_child(UiTheme.item_icon(it, Vector2(26.0, 26.0)))
 		chip.add_child(UiTheme.label(_counted(Loc.item_name(id), pl.items[id]), 14, it.color))
 		flow.add_child(chip)
+	return flow
+
+
+func _set_summary(pl: PlayerState) -> Control:
+	var entries: Array[String] = []
+	for set_id: StringName in Content.item_sets():
+		var data: Dictionary = Content.item_sets()[set_id]
+		var count := 0
+		for member: StringName in data.get("members", []):
+			count += pl.item_count(member)
+		if count <= 0:
+			continue
+		var required := int(data.get("required", 3))
+		var text := "%s %d/%d" % [Loc.t(str(data.get("name", ""))), mini(count, required), required]
+		if count >= required:
+			var bonus_key := ""
+			match set_id:
+				&"echo":
+					bonus_key = "set.echo_bonus"
+				&"gunsmith":
+					bonus_key = "set.gunsmith_bonus"
+				&"field":
+					bonus_key = "set.field_bonus"
+			if not bonus_key.is_empty():
+				text += " · " + Loc.t(bonus_key)
+		entries.append(text)
+	if entries.is_empty():
+		return null
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 10)
+	flow.add_theme_constant_override("v_separation", 2)
+	for text in entries:
+		flow.add_child(UiTheme.label(text, 11, UiTheme.ECHO if text.contains("·") else UiTheme.DIM))
 	return flow
 
 
