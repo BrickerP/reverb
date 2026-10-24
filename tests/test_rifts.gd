@@ -48,6 +48,13 @@ func test_rifts_start_at_wave_twelve(c: Check) -> void:
 	_run(final, 20.0)
 	c.eq(final.rifts.size(), 0, "the boss wave has no rifts")
 
+	var endless := _sim()
+	endless.endless = true
+	endless.start_wave(WaveDirector.FINAL_WAVE + 1)
+	_clear_spawns(endless)
+	_run(endless, 8.2)
+	c.eq(endless.rifts.size(), 1, "endless waves bring the rift back")
+
 
 func test_rift_warns_then_damages_only_inside(c: Check) -> void:
 	var s := _sim()

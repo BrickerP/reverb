@@ -23,6 +23,10 @@ func test_contract_generation_window(c: Check) -> void:
 	rng.seed = 11
 	c.ok(AnomalyContract.make(2, rng) == null, "no contract before wave 3")
 	c.ok(AnomalyContract.make(WaveDirector.FINAL_WAVE, rng) == null, "no contract on the boss wave")
+	var endless_contract := AnomalyContract.make(WaveDirector.FINAL_WAVE + 1, rng, true)
+	c.ok(endless_contract != null, "endless waves keep contracts")
+	c.ok(AnomalyContract.make(WaveDirector.FINAL_WAVE + 1, rng, false) == null,
+			"non-endless wave 21 has no contract")
 	var c10 := AnomalyContract.make(10, rng)
 	c.ok(c10 != null and c10.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR, AnomalyContract.HUNT],
 			"wave 10 can offer all contract kinds")

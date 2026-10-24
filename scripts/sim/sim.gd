@@ -244,14 +244,14 @@ func start_wave(n: int) -> void:
 	last_contract_reward = 0
 	collapse_used = false
 	rifts.clear()
-	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and n < WaveDirector.FINAL_WAVE else 0.0
+	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and (n < WaveDirector.FINAL_WAVE or endless) else 0.0
 	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
 	last_interest = 0
 	var boss_wave := n == WaveDirector.FINAL_WAVE and not endless
 	var mult := 0.35 if boss_wave else 1.0
-	_plan = WaveDirector.plan(n, run_seed, mult)
+	_plan = WaveDirector.plan(n, run_seed, mult, endless)
 	if boss_wave:
 		var boss_event := SpawnEvent.new()
 		boss_event.def = Content.enemy(&"paradox")
@@ -699,7 +699,7 @@ func _step_rifts(delta: float) -> void:
 		if r.telegraph > 0.0 or r.active > 0.0:
 			kept.append(r)
 	rifts = kept
-	if wave >= RIFT_START_WAVE and wave < WaveDirector.FINAL_WAVE:
+	if wave >= RIFT_START_WAVE and (wave < WaveDirector.FINAL_WAVE or endless):
 		_rift_cd -= delta
 		if _rift_cd <= 0.0:
 			_spawn_rift()

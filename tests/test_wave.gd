@@ -59,6 +59,13 @@ func test_elites_start_at_wave_ten_and_never_replace_the_boss(c: Check) -> void:
 		c.eq(elites, 1, "wave %d has exactly one elite" % wave)
 	for e in WaveDirector.plan(WaveDirector.FINAL_WAVE, 5):
 		c.eq(e.elite_kind, &"", "the boss wave has no regular elite")
+	var endless_elites := 0
+	for e in WaveDirector.plan(WaveDirector.FINAL_WAVE + 1, 5, 1.0, true):
+		if e.elite_kind != &"":
+			endless_elites += 1
+	c.eq(endless_elites, 1, "endless waves bring the elite back")
+	for e in WaveDirector.plan(WaveDirector.FINAL_WAVE + 1, 5):
+		c.eq(e.elite_kind, &"", "non-endless wave 21 has no elite")
 
 
 func test_scaling_curves(c: Check) -> void:

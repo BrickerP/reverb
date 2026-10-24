@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -457,8 +457,11 @@ Mechanism API:
   wave 21+ has no Paradox spawn and uses the normal wave plan.
 - `step` only checks the boss-dead win condition on wave 20 when not endless; endless waves
   end by the 60s timer and return to the shop.
-- Wave planning/budget/hp/damage continue from `WaveDirector`; enemies still cap at the
-  existing speed curve. Elite/rift/contract generation currently stops after wave 19.
+- Wave planning/budget/hp/damage continue from `WaveDirector`; endless waves also keep
+  one elite per wave, rifts on the 8s/16s cadence, and continuation contracts (clear target
+  caps at 40). Normal waves 1–20 are unchanged.
+- `AnomalyContract.make(wave, rng, endless = false)` only allows wave 20+ when `endless`;
+  `Shop.roll` passes `sim.endless`.
 - `RunLog.append` includes `endless: bool`. Main removes the just-written wave-20 win line
   when continuing, then writes one final endless death line with the endless wave; Meta
   still records the wave-20 win/unlocks once.
