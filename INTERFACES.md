@@ -587,13 +587,16 @@ runs stay empty and unchanged.
 
 Mechanism API:
 
-- `DailyAnomaly.ALL`: `echo_surge`, `riftfall`, `twin_hunt`.
+- `DailyAnomaly.ALL`: `echo_surge`, `riftfall`, `twin_hunt`, `fortune`, `riftstorm`.
 - `DailyAnomaly.for_seed(date_seed)` deterministically picks one.
 - `Sim.daily_modifier: StringName` defaults empty and is set by Main before `start_run`.
 - Effects:
   - `echo_surge`: `Sim.echo_power()` adds 0.15.
   - `riftfall`: `ascension_rift_wave()` = 8 and `ascension_rift_interval()` = 14.
   - `twin_hunt`: `ascension_elite_count()` = 2.
+  - `fortune`: `Sim.material_drop_multiplier()` = 1.5; pickup value is rounded and floored
+    at 1.
+  - `riftstorm`: `ascension_rift_wave()` = 8 and `ascension_rift_interval()` = 8.
 - Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
 - `RunLog` records `daily_modifier`.
 - Normal/Ascension/Endless runs pass an empty modifier.

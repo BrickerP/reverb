@@ -155,6 +155,10 @@ func echo_lifespan() -> int:
 	return maxi(1, int(round(player.stats.get_stat(Stats.ECHO_LIFESPAN))))
 
 
+func material_drop_multiplier() -> float:
+	return DailyAnomaly.FORTUNE_DROP_MULT if daily_modifier == DailyAnomaly.FORTUNE else 1.0
+
+
 func echo_power() -> float:
 	var power := player.stats.get_stat(Stats.ECHO_POWER)
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
@@ -234,12 +238,14 @@ func ascension_elite_count() -> int:
 
 
 func ascension_rift_wave() -> int:
-	if daily_modifier == DailyAnomaly.RIFTFALL:
+	if daily_modifier == DailyAnomaly.RIFTFALL or daily_modifier == DailyAnomaly.RIFTSTORM:
 		return DailyAnomaly.RIFT_WAVE
 	return 10 if ascension >= 2 else RIFT_START_WAVE
 
 
 func ascension_rift_interval() -> float:
+	if daily_modifier == DailyAnomaly.RIFTSTORM:
+		return DailyAnomaly.RIFTSTORM_INTERVAL
 	if daily_modifier == DailyAnomaly.RIFTFALL:
 		return DailyAnomaly.RIFT_INTERVAL
 	return 14.0 if ascension >= 2 else RIFT_INTERVAL
@@ -426,7 +432,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		wave_elite_kills += 1
 	var pk := Pickup.new()
 	pk.pos = e.pos
-	pk.value = e.def.drop * e.drop_mult
+	pk.value = maxi(1, int(round(float(e.def.drop * e.drop_mult) * material_drop_multiplier())))
 	pickups.append(pk)
 	enemy_killed.emit(e.pos, e.def.color, source)
 	if boss_shards.has(e):

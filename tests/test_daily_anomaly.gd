@@ -30,6 +30,36 @@ func test_daily_anomalies_apply_to_the_sim(c: Check) -> void:
 	hunt.start_run()
 	c.eq(hunt.ascension_elite_count(), 2, "twin hunt plans two elites")
 
+	var fortune := Sim.new(7)
+	fortune.daily_modifier = DailyAnomaly.FORTUNE
+	fortune.start_run()
+	c.near(fortune.material_drop_multiplier(), DailyAnomaly.FORTUNE_DROP_MULT, 0.001,
+			"fortune increases material drops")
+
+	var storm := Sim.new(7)
+	storm.daily_modifier = DailyAnomaly.RIFTSTORM
+	storm.start_run()
+	c.eq(storm.ascension_rift_wave(), DailyAnomaly.RIFT_WAVE,
+			"riftstorm starts at the early wave")
+	c.eq(storm.ascension_rift_interval(), DailyAnomaly.RIFTSTORM_INTERVAL,
+			"riftstorm uses the fast interval")
+
+	var normal := Sim.new(7)
+	normal.start_run()
+	var normal_grunt := _grunt(normal)
+	normal.damage_enemy(normal_grunt, 99999.0, Vector2.ZERO, false)
+	c.eq(normal.pickups[0].value, normal_grunt.def.drop,
+			"normal kills use the base drop")
+
+	var lucky := Sim.new(7)
+	lucky.daily_modifier = DailyAnomaly.FORTUNE
+	lucky.start_run()
+	var lucky_grunt := _grunt(lucky)
+	lucky.damage_enemy(lucky_grunt, 99999.0, Vector2.ZERO, false)
+	c.eq(lucky.pickups[0].value,
+			int(round(float(lucky_grunt.def.drop) * DailyAnomaly.FORTUNE_DROP_MULT)),
+			"fortune rounds the multiplied drop")
+
 
 func test_daily_main_passes_the_date_anomaly(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
@@ -40,6 +70,14 @@ func test_daily_main_passes_the_date_anomaly(c: Check) -> void:
 	c.eq(main.sim.ascension, 0, "daily stays at ascension zero")
 	c.ok(main._daily_run, "daily flag is set")
 	main.free()
+
+
+func _grunt(s: Sim) -> EnemyState:
+	var ps := PendingSpawn.new()
+	ps.def = Content.enemy(&"grunt")
+	ps.pos = s.player.pos + Vector2(100.0, 0.0)
+	s._materialize(ps)
+	return s.enemies[s.enemies.size() - 1]
 
 
 func _root() -> Window:
