@@ -1,0 +1,66 @@
+extends RefCounted
+
+
+func _boss_sim() -> Sim:
+	var sim := Sim.new(1924)
+	sim.start_run()
+	sim.start_wave(WaveDirector.FINAL_WAVE)
+	sim.pending.clear()
+	sim._plan.clear()
+	var pending := PendingSpawn.new()
+	pending.def = Content.enemy(&"paradox")
+	pending.pos = Vector2(400.0, 240.0)
+	sim._materialize(pending)
+	return sim
+
+
+func test_real_boss_transition_enrage_and_victory_have_single_audio_routes(c: Check) -> void:
+	var audio := GameAudio.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(audio)
+	var sim := _boss_sim()
+	audio.bind(sim)
+	audio.bind(sim)
+	var boss_count := audio.play_count(&"boss")
+	var silence_count := audio.play_count(&"silence")
+	var win_count := audio.play_count(&"win")
+	sim.damage_enemy(sim.boss, sim.boss.hp * 0.51, Vector2.ZERO, false)
+	c.eq(audio.play_count(&"boss"), boss_count + 1, "split has one phase cue despite rebind")
+	c.eq(audio.play_count(&"silence"), silence_count + 1, "transition silence retains one existing cue")
+	c.eq(sim.boss_alive_count(), 2, "both bodies exist")
+	sim.damage_enemy(sim.boss, sim.boss.hp + 1.0, Vector2.ZERO, false)
+	c.eq(audio.play_count(&"boss"), boss_count + 2, "first death announces survivor enrage once")
+	c.eq(audio.play_count(&"win"), win_count, "first body death never plays victory")
+	var survivor: EnemyState = sim.boss_shards[1]
+	sim.damage_enemy(survivor, survivor.hp + 1.0, Vector2.ZERO, false)
+	c.eq(audio.play_count(&"boss"), boss_count + 2, "last death has no second enrage cue")
+	sim.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(audio.play_count(&"win"), win_count + 1, "all bodies dead plays one victory cue")
+	sim.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(audio.play_count(&"win"), win_count + 1, "finished phase cannot repeat victory")
+	audio.bind(null)
+	sim.boss_phase_changed.emit(2)
+	sim.boss_enraged.emit(survivor)
+	c.eq(audio.play_count(&"boss"), boss_count + 2, "unbind removes both new boss routes")
+	audio.free()
+
+
+func test_pause_and_direct_lethal_hit_do_not_create_split_audio(c: Check) -> void:
+	var audio := GameAudio.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(audio)
+	var old := _boss_sim()
+	audio.bind(old)
+	var before := audio.play_count(&"boss")
+	audio.set_paused(true)
+	old.boss_phase_changed.emit(2)
+	old.boss_enraged.emit(old.boss)
+	c.eq(audio.play_count(&"boss"), before, "paused boss cues stay suppressed")
+	audio.set_paused(false)
+	var sim := _boss_sim()
+	audio.bind(sim)
+	old.boss_phase_changed.emit(2)
+	c.eq(audio.play_count(&"boss"), before, "old simulation is disconnected on rebind")
+	sim.damage_enemy(sim.boss, sim.boss.hp + 1.0, Vector2.ZERO, false)
+	c.eq(audio.play_count(&"boss"), before, "direct lethal hit skips split/enrage cues")
+	sim.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(audio.play_count(&"win"), 1, "direct lethal path still plays victory")
+	audio.free()

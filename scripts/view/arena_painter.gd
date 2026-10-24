@@ -167,6 +167,9 @@ static func pickups(ci: CanvasItem, sim: Sim) -> void:
 
 static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	var target := sim.player.pos
+	var boss_rules: Dictionary = {}
+	if sim.boss_phase >= 2 and not sim.boss_shards.is_empty():
+		boss_rules = boss_phase_profile(sim, reduced)
 	for e in sim.enemies:
 		var col := _elite_color(e.elite_kind) if e.elite else e.def.color
 		if e.flash > 0.0:
@@ -194,6 +197,14 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
 			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
 			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
+			if sim.boss_phase >= 2 and sim.boss_shards.has(e) and not reduced:
+				ci.draw_arc(e.pos, e.radius + 19.0, -spin * 1.4, -spin * 1.4 + TAU * 0.6, 32,
+						Color(0.65, 0.8, 1.0, 0.55), 2.0)
+			if bool(boss_rules.get("survivor_visible", false)) \
+					and boss_rules.get("survivor") == e:
+				ci.draw_arc(e.pos, float(boss_rules["survivor_radius"]), 0.0, TAU,
+						24 if reduced else 32,
+						Color(1.0, 0.35, 0.55, float(boss_rules["survivor_alpha"])), 2.5)
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		if e.elite:
@@ -223,6 +234,41 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			var half := deg_to_rad(shield_arc * 0.5)
 			ci.draw_arc(e.pos, e.radius + 6.0, front - half, front + half, 24,
 					Color(col, 0.75), 3.0)
+	if bool(boss_rules.get("link_visible", false)):
+		var start: Vector2 = boss_rules["link_start"]
+		var end: Vector2 = boss_rules["link_end"]
+		var mid: Vector2 = boss_rules["link_mid"]
+		var link := Color(0.65, 0.8, 1.0, float(boss_rules["link_alpha"]))
+		ci.draw_line(start, mid, link, 2.0)
+		ci.draw_line(mid, end, link, 2.0)
+		if float(boss_rules["link_node_radius"]) > 0.0:
+			ci.draw_circle(mid, float(boss_rules["link_node_radius"]),
+					Color(0.75, 0.6, 1.0, 0.5))
+
+
+static func boss_phase_profile(sim: Sim, reduced: bool = false) -> Dictionary:
+	var alive: Array[EnemyState] = []
+	for body: EnemyState in sim.boss_shards:
+		if not body.dead:
+			alive.append(body)
+	var pulse := 0.5 if reduced else 0.5 + 0.5 * sin(sim.wave_time * 5.0)
+	var start := alive[0].pos if alive.size() == 2 else Vector2.ZERO
+	var end := alive[1].pos if alive.size() == 2 else Vector2.ZERO
+	var survivor: EnemyState = alive[0] if alive.size() == 1 else null
+	return {
+		"alive_count": alive.size(),
+		"link_visible": alive.size() == 2,
+		"link_start": start,
+		"link_end": end,
+		"link_mid": (start + end) * 0.5,
+		"link_alpha": 0.18 + 0.16 * pulse,
+		"link_node_radius": 0.0 if reduced else 4.0 + pulse * 2.0,
+		"detail_rotates": not reduced,
+		"survivor_visible": survivor != null,
+		"survivor": survivor,
+		"survivor_radius": survivor.radius + 22.0 if survivor != null else 0.0,
+		"survivor_alpha": 0.55 if reduced else 0.45 + 0.25 * pulse,
+	}
 
 
 static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: float,

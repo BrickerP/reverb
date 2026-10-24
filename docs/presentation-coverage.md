@@ -372,3 +372,26 @@ combined HUD health, split/survivor/last-body events, audio, reduced effects and
 Source repair is not yet a playable presentation integration. Current playable code
 remains `8403188`. Evidence: `outputs/take-stack-contract-review/` and
 `outputs/take-stack-boss-fix-verification/` in the parent task directory.
+
+## Repaired twin-timeline Boss presentation
+
+The repaired `bb09c95` + `73717b1` mechanics are now selectively composed with the
+accepted `8403188` runtime. Family echo power, elite instance overrides/death attribution,
+sale events and held-offer behavior remain intact. Contract/rift/collapse/endless ancestry
+and release metadata are excluded. Both bodies use the existing explicit Paradox art.
+
+The combined health bar and body-identity pips remain correct when the original body
+dies first. Silence follows the living body; the final beat follows the last defeated
+body. Existing audio assets provide one spawn/phase/enrage cue with pitch variation,
+the existing silence cue and one run-won victory cue. Reduced effects keep a stable
+link and survivor/silence tells while suppressing new decorative motion and sparks.
+Bind/unbind clears death/victory origins; the English phase-2 title uses 22px within
+the 400px HUD region.
+
+All 5444 assertions, smoke and import pass. EN/ZH x normal/reduced native runs provide
+24 screenshots and exact spawn/split/death/enrage/silence/win receipts, including the
+direct-lethal skip path and lifecycle checks. Independent review is APPROVE. Stress
+completed within feedback/audio bounds with clean exit. Its first sample included
+243.716/123.481ms frame outliers; an unchanged-code follow-up did not reproduce those
+outliers (p99 13.173/14.556/14.829ms). Both samples are retained; they do not establish
+universal frame pacing. Evidence: `outputs/take-stack-boss-verification/`.

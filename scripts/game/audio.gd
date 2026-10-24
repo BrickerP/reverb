@@ -234,6 +234,8 @@ func bind(sim: Sim) -> void:
 	sim.run_lost.connect(_on_lost)
 	sim.run_won.connect(_on_won)
 	sim.boss_spawned.connect(_on_boss)
+	sim.boss_phase_changed.connect(_on_boss_phase)
+	sim.boss_enraged.connect(_on_boss_enraged)
 	sim.echoes_silenced.connect(_on_silence)
 	_bound_shop.shop_action_resolved.connect(_on_shop_action)
 
@@ -253,6 +255,8 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.run_lost, _on_lost)
 		_disconnect_signal(_bound.run_won, _on_won)
 		_disconnect_signal(_bound.boss_spawned, _on_boss)
+		_disconnect_signal(_bound.boss_phase_changed, _on_boss_phase)
+		_disconnect_signal(_bound.boss_enraged, _on_boss_enraged)
 		_disconnect_signal(_bound.echoes_silenced, _on_silence)
 	if _bound_shop != null:
 		_disconnect_signal(_bound_shop.shop_action_resolved, _on_shop_action)
@@ -512,6 +516,15 @@ func _on_won() -> void:
 
 func _on_boss(_enemy: EnemyState) -> void:
 	play(&"boss")
+
+
+func _on_boss_phase(phase: int) -> void:
+	if phase == 2:
+		play(&"boss", -2.0, 0.82)
+
+
+func _on_boss_enraged(_enemy: EnemyState) -> void:
+	play(&"boss", -1.0, 1.25)
 
 
 func _on_silence(_duration: float) -> void:

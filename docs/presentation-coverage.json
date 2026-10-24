@@ -391,11 +391,11 @@
     "candidate_commit": "bb09c95735e6270e095c5e344abecc299e527900",
     "observed_merge": "f3c4e914d86e8b2784f5ac6c97a17ef1a97794fd",
     "feature": "Paradox phase 2 twin timelines",
-    "status": "source_health_fix_verified; presentation integration remains pending",
+    "status": "repaired source integrated; native presentation verification complete",
     "fixed_source": "73717b12d9893182a41486bde637c9b43ef6eac3",
     "accepted_mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
     "original_hold_playable_source": "42b0c6e29d4b8ed02694986b0b2de3d7405ce567",
-    "current_playable_source": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
+    "playable_source_at_fix_verification": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
     "verification": {
       "upstream_ci": "40011580839 success",
       "original_isolated_existing_boss_suite": "40 passed, 0 failed",
@@ -522,5 +522,55 @@
     "decision": "Mechanics owner must define deposit/history semantics; clear-history-on-accept adds a boundary beyond agreed reroll/start and is not approved here",
     "current_playable": "8403188",
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-contract-review/"
+  },
+  "boss_timeline_presentation": {
+    "mechanics_sources": [
+      "bb09c95735e6270e095c5e344abecc299e527900",
+      "73717b12d9893182a41486bde637c9b43ef6eac3"
+    ],
+    "accepted_base": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
+    "excluded": "contracts/rifts/collapse/endless and upstreamversionmetadata",
+    "mechanism_preservation": "Exact fixedBoss methods combined with acceptedfamily/elite overrides and realdeath attribution",
+    "presentation": [
+      "Combinedhealth andbodyidentity pips; originalfirst death staysactive",
+      "Livingbody silence and lastdefeatedbody victoryorigin",
+      "Oneexistingboss cue forspawn/phase/enrage withphase pitchvariation; existing silence and runwon victoryroute",
+      "Reducedstablelink/survivortell; no new decorative transition sparks/rotation/pulse/shake",
+      "Pause/rebind/unbind clears session state; ENphase2title22px fits400region"
+    ],
+    "verification": {
+      "focused": 83,
+      "full": "5444passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced;6screenshots each;spawn1/phase1/shard1/deaths2/enrage1/silence2/win1;directlethal skipsphase2; lifecyclepasses",
+      "stress_initial": {
+        "p99_ms": [
+          14.884,
+          16.389,
+          16.61
+        ],
+        "max_ms": [
+          243.716,
+          123.481,
+          21.799
+        ]
+      },
+      "stress_followup_unchanged_code": {
+        "p99_ms": [
+          13.173,
+          14.556,
+          14.829
+        ],
+        "max_ms": [
+          15.436,
+          17.469,
+          16.717
+        ]
+      },
+      "stress_limit": "Both bounded/cleanexit; initial timingoutliers not reproduced; one-machine uncapped frameproduction, not guaranteedFPS",
+      "review": "APPROVE0issues",
+      "provenance": "isolated fixture only"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-boss-verification/"
   }
 }

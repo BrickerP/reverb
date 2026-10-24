@@ -20,6 +20,10 @@ signal material_collected(amount: int)
 signal purchased
 signal explosion(pos: Vector2, radius: float, color: Color)
 signal boss_spawned(enemy: EnemyState)
+signal boss_phase_changed(phase: int)
+signal boss_shard_spawned(enemy: EnemyState)
+signal boss_shard_defeated(enemy: EnemyState, remaining: int)
+signal boss_enraged(enemy: EnemyState)
 signal boss_defeated
 signal echoes_silenced(duration: float)
 
@@ -38,6 +42,12 @@ const INTEREST_CAP := 5
 const BOSS_SILENCE_TIME := 3.0
 const BOSS_SILENCE_EVERY := 8.0
 const BOSS_MINION_EVERY := 10.0
+const BOSS_PHASE2_HP_RATIO := 0.5
+const BOSS_PHASE2_SILENCE := 2.0
+const BOSS_PHASE2_SPLIT_SHARE := 0.5
+const BOSS_PHASE2_SHARD_SPEED := 0.86
+const BOSS_ENRAGE_SPEED := 1.30
+const BOSS_ENRAGE_DAMAGE := 1.20
 const ELITE_HP_MULT := 1.7
 const ELITE_SPEED_MULT := 1.08
 const ELITE_DAMAGE_MULT := 1.15
@@ -64,6 +74,9 @@ var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
 var boss: EnemyState
+var boss_phase: int = 1
+var boss_shards: Array[EnemyState] = []
+var boss_original_max_hp: float = 0.0
 var echo_silenced := 0.0
 var live_echo := false
 var synergy_damage_per_echo := 0.0
@@ -83,6 +96,7 @@ var _plan_idx: int = 0
 var _next_uid: int = 1
 var _boss_silence_cd := 0.0
 var _boss_minion_cd := 0.0
+var _boss_enraged := false
 
 
 func _init(seed_value: int = 1) -> void:
@@ -119,6 +133,39 @@ func echo_power() -> float:
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
 		power += Combat.FAMILY_MASTERY_ARCANE_ECHO
 	return maxf(0.0, power)
+
+
+# Boss UI reads these instead of assuming a single EnemyState. Phase 1 has one
+# shard; phase 2 keeps the same remaining health but splits it across two bodies.
+func boss_total_count() -> int:
+	return boss_shards.size()
+
+
+func boss_alive_count() -> int:
+	var alive := 0
+	for e in boss_shards:
+		if not e.dead:
+			alive += 1
+	return alive
+
+
+func boss_health_ratio() -> float:
+	if boss == null or boss_original_max_hp <= 0.0:
+		return 0.0
+	var total := 0.0
+	for e in boss_shards:
+		if not e.dead:
+			total += maxf(0.0, e.hp)
+	return clampf(total / boss_original_max_hp, 0.0, 1.0)
+
+
+func boss_origin() -> Vector2:
+	for e in boss_shards:
+		if not e.dead:
+			return e.pos
+	if boss != null:
+		return boss.pos
+	return ARENA.get_center()
 
 
 func synergy_damage_mult() -> float:
@@ -167,6 +214,10 @@ func start_wave(n: int) -> void:
 		_plan.sort_custom(func(a: SpawnEvent, b: SpawnEvent) -> bool: return a.time < b.time)
 	_plan_idx = 0
 	boss = null
+	boss_phase = 1
+	boss_shards.clear()
+	boss_original_max_hp = 0.0
+	_boss_enraged = false
 	echo_silenced = 0.0
 	_boss_silence_cd = 0.0
 	_boss_minion_cd = 0.0
@@ -221,7 +272,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 		phase = Phase.LOST
 		run_lost.emit()
 	elif wave == WaveDirector.FINAL_WAVE:
-		if boss != null and boss.dead:
+		if boss != null and boss_alive_count() == 0:
 			_end_wave()
 	elif wave_time >= wave_duration:
 		_end_wave()
@@ -235,7 +286,8 @@ func _fit_echo_cooldowns(actor: EchoActor) -> void:
 
 
 func _boss_step(delta: float) -> void:
-	if boss == null or boss.dead:
+	var controller := _alive_boss()
+	if controller == null:
 		return
 	_boss_silence_cd -= delta
 	if _boss_silence_cd <= 0.0:
@@ -251,6 +303,13 @@ func _boss_step(delta: float) -> void:
 			ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 			ps.delay = SPAWN_TELEGRAPH
 			pending.append(ps)
+
+
+func _alive_boss() -> EnemyState:
+	for e in boss_shards:
+		if not e.dead:
+			return e
+	return null
 
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
@@ -278,6 +337,8 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.hit_dir = hit_dir
 	info.effect = effect
 	damage_event.emit(info)
+	if e == boss and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * BOSS_PHASE2_HP_RATIO:
+		_begin_boss_phase2()
 	if e.hp > 0.0 or e.dead:
 		return
 	e.dead = true
@@ -287,10 +348,69 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	pk.value = e.def.drop * e.drop_mult
 	pickups.append(pk)
 	enemy_killed.emit(e.pos, e.def.color, source)
-	if e == boss:
-		boss_defeated.emit()
+	if boss_shards.has(e):
+		_handle_boss_shard_death(e)
 	if e.death_radius_value() > 0.0:
 		_bomber_explode(e)
+
+
+func _begin_boss_phase2() -> void:
+	if boss == null or boss_phase != 1:
+		return
+	boss_phase = 2
+	var remaining := boss.hp
+	var shard_hp := remaining * BOSS_PHASE2_SPLIT_SHARE
+	boss.hp = shard_hp
+	boss.max_hp = shard_hp
+	boss.flash = 0.18
+	var shard := EnemyState.new()
+	shard.uid = _next_uid
+	_next_uid += 1
+	shard.def = boss.def
+	shard.max_hp = shard_hp
+	shard.hp = shard_hp
+	shard.speed = boss.speed * BOSS_PHASE2_SHARD_SPEED
+	shard.damage = boss.damage
+	shard.radius = boss.radius
+	shard.flash = 0.18
+	var center := ARENA.get_center()
+	shard.pos = center * 2.0 - boss.pos
+	var pad := shard.radius + 16.0
+	shard.pos = shard.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	if shard.pos.distance_to(player.pos) < 140.0:
+		var away := (shard.pos - player.pos).normalized()
+		if away == Vector2.ZERO:
+			away = Vector2.RIGHT
+		shard.pos = (player.pos + away * 180.0).clamp(
+				ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	boss_shards.append(shard)
+	enemies.append(shard)
+	echo_silenced = maxf(echo_silenced, BOSS_PHASE2_SILENCE)
+	echoes_silenced.emit(echo_silenced)
+	boss_phase_changed.emit(2)
+	boss_shard_spawned.emit(shard)
+
+
+func _handle_boss_shard_death(e: EnemyState) -> void:
+	var remaining := boss_alive_count()
+	boss_shard_defeated.emit(e, remaining)
+	if remaining <= 0:
+		boss_defeated.emit()
+	elif remaining == 1:
+		_enrage_boss()
+
+
+func _enrage_boss() -> void:
+	if _boss_enraged:
+		return
+	var survivor := _alive_boss()
+	if survivor == null:
+		return
+	_boss_enraged = true
+	survivor.speed *= BOSS_ENRAGE_SPEED
+	survivor.damage *= BOSS_ENRAGE_DAMAGE
+	survivor.flash = 0.25
+	boss_enraged.emit(survivor)
 
 
 func _bomber_explode(e: EnemyState) -> void:
@@ -402,6 +522,11 @@ func _materialize(ps: PendingSpawn) -> void:
 	enemies.append(e)
 	if ps.def.is_boss:
 		boss = e
+		boss_phase = 1
+		boss_original_max_hp = e.max_hp
+		boss_shards.clear()
+		boss_shards.append(e)
+		_boss_enraged = false
 		_boss_silence_cd = 5.0
 		_boss_minion_cd = 8.0
 		boss_spawned.emit(e)
@@ -432,6 +557,28 @@ func _move_enemies(delta: float) -> void:
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
 				echoes_silenced.emit(e.def.silence_time)
+	_separate_boss_shards()
+
+
+func _separate_boss_shards() -> void:
+	if boss_phase != 2 or boss_shards.size() < 2:
+		return
+	var alive: Array[EnemyState] = []
+	for e in boss_shards:
+		if not e.dead:
+			alive.append(e)
+	if alive.size() < 2:
+		return
+	var a := alive[0]
+	var b := alive[1]
+	var offset := a.pos - b.pos
+	var min_distance := (a.radius + b.radius) * 0.85
+	if offset.length() >= min_distance or offset == Vector2.ZERO:
+		return
+	var push := offset.normalized() * (min_distance - offset.length()) * 0.5
+	var pad := a.radius + 16.0
+	a.pos = (a.pos + push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	b.pos = (b.pos - push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
 
 
 func _update_pickups(delta: float) -> void:
