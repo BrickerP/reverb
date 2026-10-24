@@ -453,5 +453,30 @@
       "provenance": "isolated fixture only; no manual-play feedback claim"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-elite-verification/"
+  },
+  "selective_weapon_sale": {
+    "mechanics_source": "ea00b0a425f953f55aa61f3131ec6fd5f205d582",
+    "presentation_base": "047a7170c658e186aee5fe8defda89b47fbdfc26",
+    "excluded": "Boss phase2, offer lock, anomaly contracts, temporal rifts and upstream version metadata",
+    "rules": "Fixed source sell/refund/quote/last-weapon methods unchanged; price/state rules remain mechanics-owned",
+    "interface_correction": "ShopState stores non-restored/non-serialized operation-index annotation; one exact removed-to-empty/insertion-from-empty event for middle/duplicate slots; history limit32 unchanged",
+    "presentation": [
+      "Quote-driven refund and accessible disabled-last reason",
+      "Removal mount/refund feedback and reinsertion target from event contract",
+      "Safe Undo focus fallback when next upgrade disabled",
+      "Existing sale/undo audio exactly once",
+      "Family summary and effective echo power restore across consecutive undo"
+    ],
+    "verification": {
+      "before_event_regression": "32passed16failed",
+      "after_event_regression": "78passed0failed",
+      "focused_sale_assertions": 107,
+      "full_assertions": "5235passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced;4screenshots each; exact2sale2undo restore; lastweapon;reroll/start boundaries",
+      "timeout_followup": "Initial ZH reduced fixed-fps deadline before screenshots; diagnostics and real-time max-fps60 retry passed; no assertions relaxed; cause unproven",
+      "provenance": "isolated fixture only; no human playtest evidence"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-sell-verification/"
   }
 }

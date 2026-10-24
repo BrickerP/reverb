@@ -237,3 +237,40 @@ Presentation integration correction: death explosions keep `ExplosionInfo.BOMBER
 `bomber_explosion` for existing effects/audio, while `last_damage_source` and
 `PlayerHurtInfo.source` identify the actual `EnemyDef.id`. This corrects result/log
 attribution for volatile non-bombers without changing damage or gameplay rules.
+
+## 12. Weapon selling
+
+`ShopResult.SELL` is an equipment action that liquidates one equipped weapon without an
+offer. It is available only in the shop and only when at least two weapons are equipped.
+
+Mechanism API:
+
+- `Shop.quote(ShopResult.SELL, sim, null, index)` → a result whose `cost` is the negative
+  refund, or a failure with reason `invalid`/`last`.
+- `Shop.apply(ShopResult.SELL, sim, null, index)` → removes the weapon and adds
+  `Shop.resale_total(w, level)` materials.
+- `Shop.sell_weapon(sim, index)` remains the direct compatibility method.
+- `ShopState` already captures materials, weapons, levels, cooldowns, items, offers and
+  rerolls; undo restores a sale exactly.
+- A sale emits one `weapon_changed` event for the removed slot with `after_id = ""` and
+  `reason = SELL`; undo emits the inverse event at the same insertion index. The
+  size-change helper avoids false events for shifted later slots.
+- Selling the last weapon is blocked with reason `last`; buy a replacement first if the
+  player wants to pivot away from their only weapon.
+- Selling uses the same refund formula as replacement; it does not create a new price or
+  RNG path.
+
+Presentation requirements:
+
+- BuildPanel shows a sell button per equipped weapon with the exact refund; the last
+  weapon's button is disabled and reads `shop.sell_last`.
+- The button must call `Shop.apply(ShopResult.SELL, ...)`, not mutate arrays locally.
+- After a successful sale, refresh the build panel and keep focus valid; the freed slot
+  shows the normal empty/drop target.
+- Undo must restore the weapon, its level, cooldown and materials, and rebuild all cards.
+
+Presentation integration correction: removal/insertion events retain the acted-on slot
+through `ShopState.weapon_change_index`, which is event metadata only and is neither
+restored nor serialized as simulation state. Size changes emit an explicit empty
+side, so middle-slot and duplicate-ID sales never masquerade as shifted replacements.
+Refunds, sale eligibility, state restoration and history limits remain unchanged.

@@ -4,6 +4,7 @@ extends PanelContainer
 signal replace_cancelled
 signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
+signal sell_requested(index: int)
 signal detail_changed(text: String)
 
 var weapons_label: Label
@@ -18,6 +19,7 @@ var _weapons_row: Control
 var _items_row: Control
 var _slot_buttons: Array[Button] = []
 var _upgrade_buttons: Array[Button] = []
+var _sell_buttons: Array[Button] = []
 var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
 var _card_levels: Array[int] = []
@@ -60,6 +62,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
+	_sell_buttons.clear()
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
@@ -87,7 +90,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 		_box.add_child(cancel)
 		detail_changed.emit("")
 	else:
-		_weapons_row = _weapon_chips(pl)
+		_weapons_row = _weapon_chips(pl, sim)
 		_box.add_child(_weapons_row)
 		if pl.weapons.size() < Content.MAX_WEAPON_SLOTS:
 			empty_drop_target = _empty_target(&"empty_weapon", Loc.t("shop.drop_weapon"))
@@ -116,6 +119,7 @@ func close_session() -> void:
 	_items_row = null
 	_slot_buttons.clear()
 	_upgrade_buttons.clear()
+	_sell_buttons.clear()
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
@@ -137,6 +141,8 @@ func focus_first_slot() -> bool:
 
 func focus_upgrade(index: int) -> bool:
 	if index < 0 or index >= _upgrade_buttons.size():
+		return false
+	if _upgrade_buttons[index].disabled or not _upgrade_buttons[index].is_visible_in_tree():
 		return false
 	_upgrade_buttons[index].grab_focus()
 	return true
@@ -177,7 +183,7 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 	return flow
 
 
-func _weapon_chips(pl: PlayerState) -> Control:
+func _weapon_chips(pl: PlayerState, sim: Sim) -> Control:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 6)
@@ -186,17 +192,17 @@ func _weapon_chips(pl: PlayerState) -> Control:
 		grid.add_child(UiTheme.label(Loc.t("shop.none"), 15, UiTheme.DIM))
 		return grid
 	for i in pl.weapons.size():
-		grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl))
+		grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl, sim))
 	return grid
 
 
-func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
+func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Sim) -> Control:
 	var card := ShopDropTarget.new()
 	card.configure(&"weapon_slot", index, _quote_drop, _apply_drop, _clear_drop)
 	card.accessibility_name = Loc.weapon_name(w.id)
 	card.accessibility_description = _detail_text_for(w, level)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
-	card.custom_minimum_size = Vector2(136.0, 86.0)
+	card.custom_minimum_size = Vector2(136.0, 106.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
@@ -246,12 +252,30 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
+	var sell := Button.new()
+	sell.custom_minimum_size = Vector2(0.0, 20.0)
+	sell.add_theme_font_size_override("font_size", 10)
+	var sell_quote := sim.shop.quote(ShopResult.SELL, sim, null, index)
+	if not sell_quote.ok:
+		sell.text = Loc.t("shop.sell_last")
+		sell.tooltip_text = Loc.t("shop.sell_last_reason")
+		sell.accessibility_description = Loc.t("shop.sell_last_reason")
+		sell.disabled = true
+	else:
+		sell.text = Loc.t("shop.sell", [absi(sell_quote.cost)])
+		sell.tooltip_text = Loc.t("shop.sell_hint")
+		sell.accessibility_description = Loc.t("shop.sell_hint")
+		sell.pressed.connect(func() -> void: sell_requested.emit(index))
+	sell.accessibility_name = sell.text
+	box.add_child(sell)
+	_sell_buttons.append(sell)
 	_cards.append(card)
 	_card_weapons.append(w)
 	_card_levels.append(level)
 	slot_drop_targets.append(card)
 	card.mouse_entered.connect(func() -> void: _select(index))
 	upgrade.focus_entered.connect(func() -> void: _select(index))
+	sell.focus_entered.connect(func() -> void: _select(index))
 	return card
 
 
@@ -288,6 +312,13 @@ func pulse_weapon_slot(index: int, reverse: bool = false, reduced: bool = false)
 		empty_drop_target.feedback(reverse, reduced)
 		return true
 	return false
+
+
+func pulse_removed_weapon(reverse: bool = false, reduced: bool = false) -> bool:
+	if empty_drop_target == null:
+		return false
+	empty_drop_target.feedback(reverse, reduced)
+	return true
 
 
 func pulse_items(reverse: bool = false, reduced: bool = false) -> bool:

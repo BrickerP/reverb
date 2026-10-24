@@ -64,6 +64,24 @@ func test_build_panel_can_upgrade_an_equipped_weapon(c: Check) -> void:
 	ui.free()
 
 
+func test_build_panel_can_sell_a_weapon(c: Check) -> void:
+	var s := _shop_sim(1000)
+	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
+	s.player.cooldowns.clear()
+	s.player.add_weapon(Content.weapon(&"pistol"))
+	s.player.add_weapon(Content.weapon(&"rifle"))
+	var ui := _open_shop(s)
+	c.eq(ui.build_panel._sell_buttons.size(), 2, "one sell button per slot")
+	var refund := Shop.resale_total(s.player.weapons[1], s.player.level_at(1))
+	var before := s.player.materials
+	ui.build_panel._sell_buttons[1].pressed.emit()
+	c.eq(s.player.weapons.size(), 1, "panel sell removes the slot")
+	c.eq(s.player.materials, before + refund, "panel sell refunds materials")
+	c.ok(ui.build_panel._sell_buttons[0].disabled, "the last weapon's sell button is disabled")
+	ui.free()
+
+
 func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 	var s := _shop_sim()
 	var ui := _open_shop(s)

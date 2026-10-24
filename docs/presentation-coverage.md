@@ -312,3 +312,22 @@ shutdown resources still in use; a verbose rerun was already clean. The probe no
 explicitly returns to character select, asserts Sim ownership is released, and
 frees Main before quitting. The final ordinary rerun is clean. The original warning
 and both reruns are retained; its intermittent root cause is not claimed resolved.
+
+## Selective weapon-sale integration
+
+Fixed sale source `ea00b0a` is applied on presentation `047a717`; later shop features,
+held Boss ancestry and upstream version metadata remain excluded. Sell, eligibility,
+refund and quote methods match the fixed source. One event-interface repair preserves
+the actual operation index in undo history and emits explicit removal/insertion
+payloads. This prevents shifted and same-ID weapons being reported as replacements;
+the history annotation never becomes restored or serialized gameplay state.
+
+Quote-driven sell controls explain the last-weapon guard. Removal/refund and undo
+reinsertion use the authoritative event/result, play existing audio once, preserve
+family wrapping, and fall back to Undo focus if the neighboring upgrade is disabled.
+All 5235 assertions and smoke pass. EN/ZH x normal/reduced native runs cover exact
+two-sale/two-undo restoration, last-weapon protection and refresh/start history locks,
+with 16 screenshots. The initial ZH reduced fixed-fps run timed out before capture;
+the same checks with real-time max-fps 60 and added wait-position diagnostics passed.
+Its original timeout is retained and not described as a diagnosed game defect.
+Evidence: `outputs/take-stack-sell-verification/` in the parent task directory.

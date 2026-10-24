@@ -494,6 +494,8 @@ func _on_shop_action(result: ShopResult) -> void:
 	if not result.ok:
 		return
 	match result.action:
+		ShopResult.SELL:
+			play(&"buy")
 		ShopResult.UNDO:
 			play(&"equipment_undo")
 		ShopResult.REROLL:
