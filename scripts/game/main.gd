@@ -76,6 +76,7 @@ func _ready() -> void:
 	end_ui.seed_retry_requested.connect(_retry_seed)
 	end_ui.open_log_requested.connect(_open_log_folder)
 	end_ui.endless_requested.connect(_on_endless_requested)
+	end_ui.boss_rush_requested.connect(_on_boss_rush_requested)
 	end_ui.feedback_requested.connect(open_feedback)
 	feedback_ui.submit_requested.connect(_on_feedback_submit)
 	feedback_ui.open_log_requested.connect(_open_log_folder)
@@ -533,6 +534,16 @@ func _show_end() -> void:
 func _on_endless_requested() -> void:
 	if sim == null or not sim.begin_endless():
 		return
+	_leave_victory_for_endless()
+
+
+func _on_boss_rush_requested() -> void:
+	if sim == null or not sim.begin_boss_rush():
+		return
+	_leave_victory_for_endless()
+
+
+func _leave_victory_for_endless() -> void:
 	end_ui.visible = false
 	if _recorded and run_log != null:
 		run_log.remove_last()

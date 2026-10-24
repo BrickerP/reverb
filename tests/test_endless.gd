@@ -21,6 +21,41 @@ func test_begin_endless_only_after_a_win(c: Check) -> void:
 	c.ok(not s.begin_endless(), "endless cannot be started twice")
 
 
+func test_boss_rush_skips_normal_waves(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	c.ok(not s.begin_boss_rush(), "boss rush requires a victory")
+	s.phase = Sim.Phase.WON
+	c.ok(s.begin_boss_rush(), "boss rush starts after a victory")
+	c.ok(s.endless, "boss rush is an endless run")
+	c.ok(s.boss_rush, "boss rush is flagged")
+	c.eq(s.phase, Sim.Phase.SHOP, "boss rush starts in a shop")
+	c.eq(s.wave, WaveDirector.FINAL_WAVE, "the victory wave is retained for the shop")
+	c.eq(s.next_wave_number(), 25, "the first boss rush wave is 25")
+	s.start_next_wave()
+	c.eq(s.wave, 25, "boss rush starts at wave 25")
+	c.ok(s.is_boss_wave(25), "wave 25 is a boss wave")
+	c.eq(s.next_wave_number(), 30, "the next shop targets wave 30")
+
+
+func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.stats.add(Stats.MAX_HP, 100000.0)
+	s.player.hp = s.player.max_hp()
+	s.phase = Sim.Phase.WON
+	c.ok(s.begin_boss_rush(), "begin boss rush")
+	s.start_next_wave()
+	_run(s, 200)
+	c.ok(s.boss != null, "boss rush spawns Paradox")
+	s.damage_enemy(s.boss, 1000000.0, Vector2.ZERO, false, -1)
+	_run(s, 1)
+	c.eq(s.phase, Sim.Phase.SHOP, "boss rush boss returns to shop")
+	c.eq(s.wave, 25, "boss rush keeps the boss wave number")
+	c.eq(s.next_wave_number(), 30, "the next boss rush wave skips to 30")
+	c.eq(s.pending_boons.size(), 3, "boss rush offers the endless boon choice")
+
+
 func test_endless_wave_has_no_boss_and_returns_to_shop(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()

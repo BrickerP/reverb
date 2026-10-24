@@ -461,10 +461,13 @@ the run. Endless is an explicit opt-in; normal 20-wave results and balance are u
 
 Mechanism API:
 
-- `Sim.endless: bool` defaults false and resets in `start_run`.
+- `Sim.endless: bool` and `Sim.boss_rush: bool` default false and reset in `start_run`.
 - `Sim.begin_endless() -> bool` only from `Phase.WON`, not already endless. It sets
   `endless = true`, keeps the run seed/build/bank, sets `wave = FINAL_WAVE`, clears boss
   shards/rifts, switches to `Phase.SHOP`, and rolls a fresh shop.
+- `Sim.begin_boss_rush() -> bool` uses the same entry conditions and shop setup, sets
+  `boss_rush = true`, and jumps only on subsequent waves. `Sim.next_wave_number()` returns
+  `wave + 5` under boss rush and `wave + 1` otherwise; `start_next_wave` uses it.
 - `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
   `n > 20` where `n % 5 == 0` (25, 30, 35…).
 - `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
@@ -479,14 +482,15 @@ Mechanism API:
   caps at 40). Normal waves 1–20 are unchanged.
 - `AnomalyContract.make(wave, rng, endless = false)` only allows wave 20+ when `endless`;
   `Shop.roll` passes `sim.endless`.
-- `RunLog.append` includes `endless: bool`. Main removes the just-written wave-20 win line
-  when continuing, then writes one final endless death line with the endless wave; Meta
-  still records the wave-20 win/unlocks once.
+- `RunLog.append` includes `endless: bool` and `boss_rush: bool`. Main removes the
+  just-written wave-20 win line when continuing, then writes one final endless death line
+  with the endless wave; Meta still records the wave-20 win/unlocks once.
 
 Presentation requirements:
 
-- End screen shows `Continue · Endless` only on a normal win; hidden on losses and endless
-  deaths.
+- End screen shows `Continue · Endless` and `Boss Rush` only on a normal win; both hidden
+  on losses and endless deaths. The shop start button must use `Sim.next_wave_number()` so
+  Boss Rush shows 25/30/35… rather than 21/22/….
 - HUD endless branch shows `hud.endless` with the current wave and the 60s timer; it hides
   the 20-wave progress pips. Endless boss waves show `hud.endless_boss` plus the existing
   boss health bar and phase-2 pips, still without the 20-wave pips.

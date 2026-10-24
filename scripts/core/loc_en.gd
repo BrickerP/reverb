@@ -106,6 +106,7 @@ const TABLE := {
 	"shop.keys": "Drag into your build to install  ·  click or Enter / A also works",
 	"end.win": "You made it through all %d waves",
 	"end.endless_continue": "Continue · Endless",
+	"end.boss_rush": "Boss Rush",
 	"end.endless_lose": "Endless run fell on wave %d",
 	"end.endless_run": "Endless wave %d  ·  Kills %d",
 	"end.lose": "You fell on wave %d",

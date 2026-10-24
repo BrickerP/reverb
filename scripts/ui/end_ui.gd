@@ -6,11 +6,13 @@ signal character_requested
 signal seed_retry_requested(seed_value: int)
 signal open_log_requested
 signal endless_requested
+signal boss_rush_requested
 signal feedback_requested
 
 var restart_button: Button
 var character_button: Button
 var endless_button: Button
+var boss_rush_button: Button
 var retry_button: Button
 var open_log_button: Button
 var feedback_button: Button
@@ -94,9 +96,13 @@ func _ready() -> void:
 	var endless_row := HBoxContainer.new()
 	endless_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	endless_button = Button.new()
-	endless_button.custom_minimum_size = Vector2(460.0, 52.0)
+	endless_button.custom_minimum_size = Vector2(220.0, 52.0)
 	endless_button.pressed.connect(func() -> void: endless_requested.emit())
 	endless_row.add_child(endless_button)
+	boss_rush_button = Button.new()
+	boss_rush_button.custom_minimum_size = Vector2(220.0, 52.0)
+	boss_rush_button.pressed.connect(func() -> void: boss_rush_requested.emit())
+	endless_row.add_child(boss_rush_button)
 	box.add_child(endless_row)
 	restart_button = Button.new()
 	restart_button.custom_minimum_size = Vector2(220.0, 56.0)
@@ -141,6 +147,8 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	character_button.text = Loc.t("end.change")
 	endless_button.text = Loc.t("end.endless_continue")
 	endless_button.visible = won and not sim.endless
+	boss_rush_button.text = Loc.t("end.boss_rush")
+	boss_rush_button.visible = won and not sim.endless
 	retry_button.text = Loc.t("end.retry_seed")
 	open_log_button.text = Loc.t("end.open_log")
 	feedback_button.text = Loc.t("end.feedback")
@@ -173,7 +181,7 @@ func focus_default() -> void:
 
 func _rebuild_focus_cycle() -> void:
 	UiFocus.cycle([retry_button, open_log_button, feedback_button, endless_button,
-			restart_button, character_button])
+			boss_rush_button, restart_button, character_button])
 
 
 func _on_retry_seed() -> void:

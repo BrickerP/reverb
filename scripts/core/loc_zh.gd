@@ -106,6 +106,7 @@ const TABLE := {
 	"shop.keys": "拖入配置立即装配  ·  点击或 Enter / A 也可购买",
 	"end.win": "撑过了全部 %d 波",
 	"end.endless_continue": "继续 · 无尽",
+	"end.boss_rush": "Boss Rush",
 	"end.endless_lose": "无尽模式止步第 %d 波",
 	"end.endless_run": "无尽第 %d 波  ·  击杀 %d",
 	"end.lose": "倒在了第 %d 波",
