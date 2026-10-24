@@ -25,6 +25,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - 只控制移动，武器自动锁定射程内最近的敌人开火。
 - 击杀掉素材，波末自动拾取并进入商店：4 个报价，可买武器/道具，可花素材刷新；可锁定一个报价，刷新和下一商店都会保留。Build 面板可卖出已装备武器，返还基础价 + 50% 升级投入，空出槽位。
 - 第 3 波起商店会出现 1 个异常合约：付押金，下一波完成“不受伤害 / 击杀 N 个敌人 / 击杀精英”之一拿奖励；失败押金不退。
+- 第 12 波起场地会开启「时间裂隙」：先在玩家附近预警 1.5 秒，再激活 3 秒；站在圈内会持续受伤，必须离开。
 - 最多 6 把武器，可重复购买。满 6 格后，点武器卡进入替换模式：选一个槽换掉，旧武器按基础价半价抵扣，Esc 取消。
 - 每波结束会录下你这波的走位与武器/属性快照，成为一张回响。
 - 下一波回响会以「倒带循环」方式重放走位，并用快照武器开火。
@@ -54,7 +55,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.6.0 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定与异常合约），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.7.0 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约与时间裂隙），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -143,12 +144,13 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 - 武器卖出：Build 面板直接卖出任意非最后一把武器，返还基础价 + 50% 升级投入；卖出可撤销，空出的槽位可继续购买
 - 报价锁定：每张报价有 Lock 按钮；一次只保留 1 个，刷新和下一商店都保留，直到购买、解锁或被新的锁定替换
 - 异常合约：第 3–19 波每间商店 1 个，可选“不受伤害 / 击杀 N 个敌人 / 击杀精英”；先付押金，成功按合约奖励，失败没收押金
+- 时间裂隙：第 12–19 波，每 16 秒在玩家附近预警一个 80 半径的裂隙；1.5 秒后激活 3 秒，圈内每 0.75 秒受伤，不提供接触无敌
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 4882 项）
+make test     # 无头测试（当前 5450 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

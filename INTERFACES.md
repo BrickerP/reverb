@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -377,3 +377,36 @@ Presentation requirements:
   overcapacity warning when both are present.
 - Do not imply a contract is free: the deposit is material cost and a failure loses it.
 - Contract text must include "next wave" so the goal is not mistaken for the current shop.
+
+## 15. Temporal rifts
+
+Waves 12–19 add avoidable arena hazards. Rifts are floor effects, not enemies: they do not
+enter `EnemyState`, do not provide drops, and are not drawn with enemy art.
+
+Mechanism API:
+
+- `TemporalRift` fields: `pos`, `radius`, `telegraph`, `active`, `tick`; constants
+  `TELEGRAPH_TIME=1.5`, `ACTIVE_TIME=3.0`, `RADIUS=80`, `TICK_TIME=0.75`.
+- `Sim.rifts: Array[TemporalRift]` is the live hazard list. It is cleared at wave end
+  and in `start_wave`.
+- Waves 12–19 start with `RIFT_FIRST_DELAY=8s`, then spawn every `RIFT_INTERVAL=16s`.
+  Rifts spawn 0–70px from the player using the dedicated `hazard_rng`, so combat crit/spread
+  RNG is untouched.
+- The warning is 1.5s; activation emits `rift_activated`. Active ticks deal
+  `3 + 0.15 × wave` damage only when the player center is inside `radius + PlayerState.RADIUS`.
+- Rift damage sets `last_damage_source = &"rift"` and emits `player_hurt` /
+  `player_hurt_info`; it deliberately does **not** set `player.iframes`, so it cannot
+  shield the player from enemy contact.
+- Signals: `rift_spawned(rift)`, `rift_activated(rift)`, `rift_ended(rift)`.
+- The boss wave never spawns rifts. Expired rifts are compacted after the active timer.
+
+Presentation requirements:
+
+- Draw rifts below pickups/enemies: warning is an empty ring with spokes and a tightening
+  inner ring; active is a translucent fill with rotating arcs. Use purple, distinct from
+  echo tints, elite aura colors and enemy colors.
+- Do not add an enemy ID, HUD text or new health bar for rifts.
+- If the player dies to a rift, `last_damage_source` is `rift`; end-screen uses the
+  localized `enemy.rift` label rather than an unknown key.
+- Reduced-motion mode may drop the spokes/rotating arcs but must keep the warning ring and
+  active fill clearly distinct.

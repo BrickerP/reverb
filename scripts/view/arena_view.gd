@@ -216,6 +216,7 @@ func _draw() -> void:
 	else:
 		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT, reduced_effects)
 	ArenaPainter.pickup_range(self, sim)
+	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim, reduced_effects)
 	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects)

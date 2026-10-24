@@ -392,6 +392,7 @@
     "observed_merge": "f3c4e914d86e8b2784f5ac6c97a17ef1a97794fd",
     "feature": "Paradox phase 2 twin timelines",
     "status": "held_before_integration: remaining-health preservation contract fails at fractional nonlethal boundary",
+    "superseded_by": "trunk_integration",
     "accepted_mechanics_cursor": "4594fce592ac0d79e0c933b35af0bb742465c660",
     "playable_source_unchanged": "42b0c6e29d4b8ed02694986b0b2de3d7405ce567",
     "verification": {
@@ -478,5 +479,35 @@
       "provenance": "isolated fixture only; no human playtest evidence"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-sell-verification/"
+  },
+  "trunk_integration": {
+    "date": "2026-10-25",
+    "branch": "integration/presentation-sync",
+    "presentation_tip": "ba92fb21cfb7035743dc9761d584dc8a9986a824",
+    "mechanics_fix": "73717b12d9893182a41486bde637c9b43ef6eac3",
+    "trunk": "3120501b3daa503e6396b75def5128fe113c3c85",
+    "boss_phase2_blocker": "cleared in 73717b1: remaining health is preserved exactly, including the 0.25 HP boundary",
+    "boss_phase2_presentation": "unverified",
+    "presentation_not_yet_verified": [
+      "Combined boss health and living-body pips in English and Chinese",
+      "Phase transition, shard spawn/death and survivor enrage event feedback",
+      "Surviving-body silence origin and final-body victory origin",
+      "Reduced effects, pause, rebind and restart lifecycle for new events",
+      "Audio coverage for split and enrage"
+    ],
+    "temporal_rifts": {
+      "status": "incomplete",
+      "present": "mechanics-side ArenaPainter.rifts drawing and enemy.rift end-screen label",
+      "missing": "audio and event feedback (rift_spawned/rift_activated/rift_ended have no listeners outside tests); native and reduced-effects capture"
+    },
+    "conflict_policy": "trunk wins mechanics numbers and contracts; presentation lane wins event payloads and view wiring; duplicate _on_sell_weapon resolved to the Undo-focus fallback variant",
+    "verification": {
+      "scope": "headless only",
+      "full_assertions": "5450 passed, 0 failed",
+      "smoke": "OK",
+      "python_report_tests": "10 passed",
+      "native": "not rerun after merge"
+    },
+    "provenance": "no human playtest feedback claimed"
   }
 }
