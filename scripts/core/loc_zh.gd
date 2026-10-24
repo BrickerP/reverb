@@ -172,7 +172,7 @@ const TABLE := {
 	"select.seed_hint": "可选",
 	"select.ascension": "苦行 %d",
 	"select.ascension_locked": "苦行 · 通关解锁",
-	"select.ascension_hint": "每级敌人生命/伤害 +10%，速度 +5%。通关解锁，最高 3 级。",
+	"select.ascension_hint": "每级敌人生命/伤害 +10%，速度 +5%。L2 裂隙从第 10 波开始；L3 每波两个精英。通关解锁，最高 3 级。",
 	"select.settings": "设置",
 	"select.history": "记录",
 	"select.codex": "武器图鉴",
