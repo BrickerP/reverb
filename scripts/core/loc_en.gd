@@ -76,6 +76,7 @@ const TABLE := {
 	"shop.echo_value": "%d × %d%%",
 	"shop.echo_none": "No echoes yet. Every wave you survive is recorded, then replayed next wave.",
 	"shop.discard": "Discard",
+	"shop.refresh": "Refresh %d",
 	"shop.merge": "Merge",
 	"shop.merge_hint": "Pick two takes: one echo, both routes and loadouts.",
 	"shop.select": "Select",

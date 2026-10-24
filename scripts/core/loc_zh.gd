@@ -76,6 +76,7 @@ const TABLE := {
 	"shop.echo_value": "%d × %d%%",
 	"shop.echo_none": "还没有回响。每撑过一波，你的走位和武器都会被录下，下一波回放。",
 	"shop.discard": "丢弃",
+	"shop.refresh": "续录 %d",
 	"shop.merge": "合成",
 	"shop.merge_hint": "选择两张录像：合成一个回响，走位与武器合并。",
 	"shop.select": "选择",

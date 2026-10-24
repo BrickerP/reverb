@@ -556,6 +556,28 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 	main.free()
 
 
+func test_shop_refresh_button_spends_and_undoes(c: Check) -> void:
+	var s := _shop_sim(50, 3)
+	for existing: EchoTake in s.bank.takes:
+		existing.age = 0
+	var take := s.bank.takes[0]
+	take.age = 1
+	var ui := _open_shop(s)
+	c.eq(ui.echo_panel.refresh_buttons.size(), 1, "one refresh action for the aged take")
+	var button := ui.echo_panel.refresh_buttons[0]
+	c.ok(not button.disabled, "refresh is affordable")
+	var before := s.player.materials
+	var cost := s.shop.echo_refresh_cost(take)
+	button.pressed.emit()
+	c.eq(take.age, 0, "refresh removes one wave of age")
+	c.eq(s.player.materials, before - cost, "refresh spends materials")
+	c.ok(not ui.undo_button.disabled, "refresh is undoable")
+	ui.undo_button.pressed.emit()
+	c.eq(s.bank.takes[0].age, 1, "undo restores the age")
+	c.eq(s.player.materials, before, "undo restores materials")
+	ui.free()
+
+
 func test_shop_merges_two_takes(c: Check) -> void:
 	var s := _shop_sim(50, 3)
 	var ui := _open_shop(s)

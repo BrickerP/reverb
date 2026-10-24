@@ -70,6 +70,7 @@ func _ready() -> void:
 	echo_panel = EchoPanel.new()
 	echo_panel.discard_requested.connect(_on_discard)
 	echo_panel.merge_requested.connect(_on_merge)
+	echo_panel.refresh_requested.connect(_on_refresh_echo)
 	columns.add_child(echo_panel)
 	root.add_child(_build_footer())
 	_overlay = Control.new()
@@ -688,6 +689,17 @@ func _disconnect_shop() -> void:
 
 func _on_discard(take: EchoTake) -> void:
 	var result := sim.shop.discard_echo(sim, take)
+	if not result.ok:
+		return
+	refresh()
+	if sim.can_start_wave():
+		start_button.grab_focus()
+	else:
+		echo_panel.focus_first_discard()
+
+
+func _on_refresh_echo(take: EchoTake) -> void:
+	var result := sim.shop.refresh_echo(sim, take)
 	if not result.ok:
 		return
 	refresh()

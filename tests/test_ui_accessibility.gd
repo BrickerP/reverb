@@ -95,7 +95,7 @@ func test_echo_merge_cancel_and_reduced_paths_return_to_rest(c: Check) -> void:
 func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Check) -> void:
 	var sim := _shop_sim()
 	sim.bank.takes[0].merged = true
-	sim.bank.takes[0].age = 0
+	sim.bank.takes[0].age = 1
 	var ui := ShopUi.new()
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
@@ -112,6 +112,8 @@ func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Chec
 				"merge action stays in view")
 	for discard in ui.echo_panel.discard_buttons:
 		c.ok(viewport.encloses(discard.get_global_rect()), "discard action stays in view")
+	for refresh in ui.echo_panel.refresh_buttons:
+		c.ok(viewport.encloses(refresh.get_global_rect()), "refresh action stays in view")
 	ui.close_session()
 	ui.free()
 
