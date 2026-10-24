@@ -12,6 +12,7 @@ const MAX_UNDO := 32
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
+var contract: AnomalyContract
 
 var _undo_stack: Array[ShopState] = []
 
@@ -145,6 +146,17 @@ func toggle_lock(sim: Sim, offer: Offer) -> bool:
 	if current != null:
 		current.locked = false
 	offer.locked = true
+	return true
+
+
+func accept_contract(sim: Sim) -> bool:
+	if sim.phase != Sim.Phase.SHOP or contract == null or contract.accepted or sim.active_contract != null:
+		return false
+	if sim.player.materials < contract.deposit:
+		return false
+	sim.player.materials -= contract.deposit
+	contract.accepted = true
+	sim.active_contract = contract
 	return true
 
 
@@ -323,6 +335,7 @@ func roll(sim: Sim) -> void:
 	clear_history()
 	rerolls = 0
 	_fill(sim, locked_offer())
+	contract = AnomalyContract.make(sim.wave + 1, sim.rng)
 
 
 func can_buy(sim: Sim, o: Offer) -> bool:

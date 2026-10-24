@@ -159,6 +159,31 @@ static func pickup_range(ci: CanvasItem, sim: Sim) -> void:
 			ci.draw_arc(sim.player.pos, radius, float(k) * step, float(k + 1) * step, 4, Color(0.6, 0.9, 1.0, 0.1), 1.0)
 
 
+static func rifts(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
+	for r in sim.rifts:
+		var color := Color(0.72, 0.45, 1.0)
+		if r.telegraph > 0.0:
+			var progress := 1.0 - clampf(r.telegraph / TemporalRift.TELEGRAPH_TIME, 0.0, 1.0)
+			ci.draw_circle(r.pos, r.radius, Color(color, 0.025 + 0.06 * progress))
+			ci.draw_arc(r.pos, r.radius, 0.0, TAU, 48, Color(color, 0.22 + 0.28 * progress), 2.0)
+			ci.draw_arc(r.pos, r.radius * (0.18 + 0.82 * progress), 0.0, TAU, 32,
+					Color(color, 0.12 + 0.25 * progress), 1.5)
+			if not reduced:
+				var spokes := 6
+				for k in spokes:
+					var a := TAU * float(k) / float(spokes) + sim.wave_time * 0.35
+					ci.draw_line(r.pos, r.pos + Vector2.from_angle(a) * r.radius,
+							Color(color, 0.08 + 0.08 * progress), 1.0)
+		else:
+			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 6.0)
+			ci.draw_circle(r.pos, r.radius, Color(color, 0.08 + 0.05 * pulse))
+			ci.draw_arc(r.pos, r.radius, 0.0, TAU, 48, Color(color, 0.55), 2.5)
+			ci.draw_arc(r.pos, r.radius * 0.72, -sim.wave_time * 1.6,
+					-sim.wave_time * 1.6 + TAU * 0.62, 32, Color(color, 0.45), 1.5)
+			ci.draw_arc(r.pos, r.radius * 0.45, sim.wave_time * 2.1,
+					sim.wave_time * 2.1 + TAU * 0.45, 24, Color(color, 0.6), 1.5)
+
+
 static func pickups(ci: CanvasItem, sim: Sim) -> void:
 	for pk in sim.pickups:
 		ci.draw_circle(pk.pos, 6.0, Color(UiTheme.COIN, 0.25))
@@ -194,6 +219,9 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
 			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
 			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
+			if sim.boss_phase >= 2 and sim.boss_shards.has(e):
+				ci.draw_arc(e.pos, e.radius + 19.0, -spin * 1.4, -spin * 1.4 + TAU * 0.6, 32,
+						Color(0.65, 0.8, 1.0, 0.55), 2.0)
 		elif e.def.sides < 3:
 			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
 		if e.elite:
@@ -223,6 +251,20 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			var half := deg_to_rad(shield_arc * 0.5)
 			ci.draw_arc(e.pos, e.radius + 6.0, front - half, front + half, 24,
 					Color(col, 0.75), 3.0)
+	if sim.boss_phase >= 2:
+		var alive: Array[EnemyState] = []
+		for boss_shard in sim.boss_shards:
+			if not boss_shard.dead:
+				alive.append(boss_shard)
+		if alive.size() == 2:
+			var a := alive[0]
+			var b := alive[1]
+			var mid := (a.pos + b.pos) * 0.5
+			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 5.0)
+			var link := Color(0.65, 0.8, 1.0, 0.18 + 0.16 * pulse)
+			ci.draw_line(a.pos, mid, link, 2.0)
+			ci.draw_line(mid, b.pos, link, 2.0)
+			ci.draw_circle(mid, 4.0 + pulse * 2.0, Color(0.75, 0.6, 1.0, 0.5))
 
 
 static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: float,

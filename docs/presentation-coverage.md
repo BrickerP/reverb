@@ -352,3 +352,41 @@ sold/stale and full/poor/maxed states, sale/undo interoperability, history bound
 and cleanup, with 16 screenshots. Independent review is APPROVE with zero issues.
 Evidence is in `outputs/take-stack-lock-verification/`; fixtures do not establish
 human satisfaction or balance. No new image or audio resource is needed.
+
+## Trunk integration
+
+On 2026-10-25 this lane was merged into the mechanics trunk on branch
+`integration/presentation-sync`, so both lanes now share one history. Inputs are
+presentation `ba92fb2`, mechanics fix `73717b1` and trunk `3487a2b` (v0.8.0, which
+includes temporal rifts and echo collapse).
+
+Boss phase-2 blocker: the fractional-health defect recorded above is fixed on the
+mechanics side in `73717b1`. The twin-timeline split now preserves exact remaining
+health, including the 0.25 HP boundary that previously rose to 1.0 HP. The earlier hold
+no longer blocks integration. That does not mean the phase-2 presentation is accepted:
+combined health and living-body pips, split/shard/enrage event feedback, surviving-body
+silence and victory origins, reduced-effects/pause/rebind/restart lifecycle and
+split/enrage audio remain unverified.
+
+Conflict policy: the trunk wins mechanics numbers and contracts (phase 2, offer lock,
+anomaly contracts, rifts). This lane wins event payloads and view wiring: explicit
+`weapon_change_index` for sell and undo, quote-driven sell controls, the elite rule
+profile and the reduced-motion death pulse. Both lanes had added a `_on_sell_weapon`
+handler; the variant with the Undo-focus fallback is kept.
+
+Temporal rifts (trunk `b97a8be`) arrive with the mechanics lane's own minimal drawing
+(`ArenaPainter.rifts`) and the `enemy.rift` end-screen label. Nothing outside tests
+listens to `rift_spawned`, `rift_activated` or `rift_ended`, so rifts have no audio or
+event feedback, and no native or reduced-effects capture exists for them. The row stays
+incomplete until presentation coverage and verification land.
+
+Echo collapse (trunk `f3f967f`) arrives with a Space/RB input binding, the `hud.collapse`
+hint and the `echo_collapse` effect on the existing explosion event. Nothing listens to
+`echo_collapsed`. Whether the echo-tinted burst renders and sounds correctly through the
+existing explosion path, including reduced effects and rebinding, is unverified, and no
+native capture exists. This row also stays incomplete.
+
+Verification on the merged tree is headless only: import is clean, 5481 assertions pass,
+smoke passes and the 10 Python report tests pass. The native EN/ZH x normal/reduced
+probes recorded above were not rerun after the merge. The playtest-feedback stack came
+in as local-only code; no verified human feedback exists and none is claimed.

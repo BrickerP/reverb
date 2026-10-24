@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events and quote/apply shop UI implemented; M6 family mastery selectively integrated.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -163,13 +163,51 @@ Prefer the rich events for new animation/audio; keep the old signals as fallback
 - Rich events and old signals agree on a seeded smoke run.
 - Mechanism tests + smoke stay green; Codex adds UI tests for Undo, drag/drop, and event wiring.
 
-## Selective integration boundary
+## 9. Paradox phase 2: twin timelines
 
-Family mastery is imported from fixed commit `78145876f55c851b30b6fc923bdc464a50f209f1`
-on the accepted `4594fce` mechanics baseline. Its parent Paradox phase-2 change
-`bb09c95` remains held; no Boss APIs or phase-2 code are imported. Release/version
-metadata is intentionally retained at 0.2.0 for this private presentation build.
-The immutable build commit identifies the exact composition.
+At 50% health the final boss splits into two bodies. The remaining health is divided
+between them, not added: the split is a target-priority change, not a second health bar.
+
+Mechanism API:
+
+- `boss_phase: int` — `1` before the split, `2` after it.
+- `boss_shards: Array[EnemyState]` — one body in phase 1, two in phase 2; dead bodies stay
+  in the array until the next wave, so use `boss_alive_count()` rather than `size()`.
+- `boss_original_max_hp: float` — the pre-split maximum used by the combined HUD bar.
+- `boss_health_ratio() -> float` — total living health divided by the original maximum.
+- `boss_alive_count() -> int`, `boss_total_count() -> int`.
+- `boss_origin() -> Vector2` — first living body position; use this for silence/victory
+  effects instead of assuming `boss.pos`.
+- `boss` remains the first body for compatibility. After the split its `max_hp` is the
+  local phase-2 body scale; do **not** draw an overall bar from `boss.hp / boss.max_hp`.
+
+Signals:
+
+- `boss_phase_changed(phase)` — once per split; phase 2 only.
+- `boss_shard_spawned(enemy)` — the second body has been added and is active.
+- `boss_shard_defeated(enemy, remaining)` — every boss body death, including a phase-1
+  direct kill; `remaining` is the number of living bodies after the death.
+- `boss_enraged(enemy)` — exactly once, when the first of two bodies dies.
+- `boss_defeated` — only after all bodies are dead. A dead `boss` alone is no longer enough.
+- `echoes_silenced(duration)` — the split also emits a shorter transition silence; audio/view
+  may reuse the existing silence treatment.
+
+Presentation requirements:
+
+- HUD must use `boss_health_ratio()`, `boss_phase`, and the body counters. The phase-2 title
+  is `hud.boss_phase2`; the bar shows the combined total, with one pip per living body.
+- View/audio must use `boss_origin()` for effects while one body may be dead, and must not
+  end the run on `boss.dead`; wait for `boss_defeated`/phase `WON`.
+- The two bodies use the existing Paradox art. Do not add new enemy IDs or art for this slice.
+- Silence and summons share one cadence; the split must not double either cadence.
+
+Validation contract:
+
+- A hit that crosses 50% splits exactly once and preserves the health after that hit.
+- Splitting does not reroll or advance randomized wave planning.
+- One death emits `boss_shard_defeated` and `boss_enraged`; the survivor has the documented
+  speed/damage multiplier.
+- Both deaths emit `boss_defeated`; a lethal hit above 50% may skip phase 2 intentionally.
 
 ## 10. Family mastery
 
@@ -310,3 +348,101 @@ Presentation-order correction: `_fill` retains the held offer during generation 
 duplicate prevention, then restores its previous clamped slot. The held object,
 price, generated offer set, RNG consumption and refresh cost are unchanged.
 The local sale-event index annotation remains separate from lock snapshot state.
+
+## 14. Anomaly contracts
+
+From wave 3 to 19, each shop may offer one optional contract. It is a risk/reward shop
+decision, not an equipment transaction.
+
+Mechanism API:
+
+- `AnomalyContract` kind: `clean` (no damage next wave), `clear` (kill `target` enemies),
+  or `hunt` (kill the wave elite). `hunt` is only generated from wave 10 onward.
+- `Shop.contract` is the current shop contract; `Contract.accepted` is its local spent flag.
+- `Shop.accept_contract(sim) -> bool` requires shop phase, an unaccepted contract,
+  no existing `sim.active_contract`, and enough materials. It deducts `deposit` once and
+  assigns `sim.active_contract`.
+- Contract goals read `Sim.wave_damage_taken`, `Sim.wave_kills`, and
+  `Sim.wave_elite_kills`; those counters reset in `Sim.start_wave`.
+- `Sim._end_wave` evaluates the active contract before computing `last_wave_earned`;
+  success adds `reward` before interest, failure adds nothing. The deposit is never
+  refunded on failure.
+- `Sim.contract_resolved(contract, success, reward)` fires once per evaluated contract.
+- `Sim.last_contract_done/success/reward` stay available for the following shop; they reset
+  on the next `start_wave`.
+- `Shop.roll` generates a fresh contract; `Shop.reroll` keeps the current one. Contract
+  state is not part of `ShopState` undo history.
+
+Presentation requirements:
+
+- Keep the contract strip between offers and the reroll/start row; show goal, deposit,
+  reward, and Accept in one line.
+- After accepting, show ACTIVE and disable Accept; do not charge again.
+- Show the previous contract result in the shop warning line; combine it with the
+  overcapacity warning when both are present.
+- Do not imply a contract is free: the deposit is material cost and a failure loses it.
+- Contract text must include "next wave" so the goal is not mistaken for the current shop.
+
+## 15. Temporal rifts
+
+Waves 12–19 add avoidable arena hazards. Rifts are floor effects, not enemies: they do not
+enter `EnemyState`, do not provide drops, and are not drawn with enemy art.
+
+Mechanism API:
+
+- `TemporalRift` fields: `pos`, `radius`, `telegraph`, `active`, `tick`; constants
+  `TELEGRAPH_TIME=1.5`, `ACTIVE_TIME=3.0`, `RADIUS=80`, `TICK_TIME=0.75`.
+- `Sim.rifts: Array[TemporalRift]` is the live hazard list. It is cleared at wave end
+  and in `start_wave`.
+- Waves 12–19 start with `RIFT_FIRST_DELAY=8s`, then spawn every `RIFT_INTERVAL=16s`.
+  Rifts spawn 0–70px from the player using the dedicated `hazard_rng`, so combat crit/spread
+  RNG is untouched.
+- The warning is 1.5s; activation emits `rift_activated`. Active ticks deal
+  `3 + 0.15 × wave` damage only when the player center is inside `radius + PlayerState.RADIUS`.
+- Rift damage sets `last_damage_source = &"rift"` and emits `player_hurt` /
+  `player_hurt_info`; it deliberately does **not** set `player.iframes`, so it cannot
+  shield the player from enemy contact.
+- Signals: `rift_spawned(rift)`, `rift_activated(rift)`, `rift_ended(rift)`.
+- The boss wave never spawns rifts. Expired rifts are compacted after the active timer.
+
+Presentation requirements:
+
+- Draw rifts below pickups/enemies: warning is an empty ring with spokes and a tightening
+  inner ring; active is a translucent fill with rotating arcs. Use purple, distinct from
+  echo tints, elite aura colors and enemy colors.
+- Do not add an enemy ID, HUD text or new health bar for rifts.
+- If the player dies to a rift, `last_damage_source` is `rift`; end-screen uses the
+  localized `enemy.rift` label rather than an unknown key.
+- Reduced-motion mode may drop the spokes/rotating arcs but must keep the warning ring and
+  active fill clearly distinct.
+
+## 16. Echo collapse
+
+One active echo can be sacrificed during a wave. This is a permanent resource spend, not a
+temporary silence.
+
+Mechanism API:
+
+- Input action `collapse_echo`, bound to Space and controller right shoulder by `Controls`.
+- `Sim.can_collapse_echo()` is true only in `Phase.WAVE`, when `collapse_used` is false and
+  at least one echo is active.
+- `Sim.collapse_oldest_echo()` consumes `echoes[0]` and its `EchoTake` from `EchoBank`,
+  reindexes the survivors, marks `collapse_used`, deals damage in a 180 radius around the
+  echo's last position, heals 15% max HP, and emits one explosion event with
+  `effect = &"echo_collapse"`.
+- Burst damage is `max(12, take.power() * echo_power() * 3 * synergy_damage_mult())`; it
+  counts as player damage (`source = -1`) so it does not leave a stale echo index.
+- `Sim.collapse_used` resets in `start_wave`; one use per wave.
+- Signals: `echo_collapsed(pos, color, radius)`. The existing `explosion_info` event carries
+  the echo tint, radius and `echo_collapse` effect; no new ExplosionInfo kind is required.
+- No echoes (e.g. Soloist) means no action and no input consumption.
+
+Presentation requirements:
+
+- HUD shows `SPACE` plus `hud.collapse` only when `can_collapse_echo()` is true; hide it
+  immediately after use. Controller binding is RB.
+- Play the burst as an echo-tinted explosion at the echo position; use the existing
+  weapon-explosion audio path unless a distinct cue is added later.
+- Do not show a confirmation dialog; the cost is permanent, so keep the hint explicit.
+- Main's input handler must ignore the action while paused, modal, in shop, or after the
+  run ends.

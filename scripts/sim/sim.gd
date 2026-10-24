@@ -11,6 +11,7 @@ signal player_hurt(amount: float)
 signal player_hurt_info(info: PlayerHurtInfo)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
+signal echo_collapsed(pos: Vector2, color: Color, radius: float)
 signal shot_fired(source: int)
 signal shot_fired_info(info: ShotInfo)
 signal damage_event(info: DamageInfo)
@@ -20,8 +21,16 @@ signal material_collected(amount: int)
 signal purchased
 signal explosion(pos: Vector2, radius: float, color: Color)
 signal boss_spawned(enemy: EnemyState)
+signal boss_phase_changed(phase: int)
+signal boss_shard_spawned(enemy: EnemyState)
+signal boss_shard_defeated(enemy: EnemyState, remaining: int)
+signal boss_enraged(enemy: EnemyState)
 signal boss_defeated
 signal echoes_silenced(duration: float)
+signal contract_resolved(contract: AnomalyContract, success: bool, reward: int)
+signal rift_spawned(rift: TemporalRift)
+signal rift_activated(rift: TemporalRift)
+signal rift_ended(rift: TemporalRift)
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
@@ -38,6 +47,12 @@ const INTEREST_CAP := 5
 const BOSS_SILENCE_TIME := 3.0
 const BOSS_SILENCE_EVERY := 8.0
 const BOSS_MINION_EVERY := 10.0
+const BOSS_PHASE2_HP_RATIO := 0.5
+const BOSS_PHASE2_SILENCE := 2.0
+const BOSS_PHASE2_SPLIT_SHARE := 0.5
+const BOSS_PHASE2_SHARD_SPEED := 0.86
+const BOSS_ENRAGE_SPEED := 1.30
+const BOSS_ENRAGE_DAMAGE := 1.20
 const ELITE_HP_MULT := 1.7
 const ELITE_SPEED_MULT := 1.08
 const ELITE_DAMAGE_MULT := 1.15
@@ -49,21 +64,39 @@ const ELITE_BULWARK_ARC := 120.0
 const ELITE_BULWARK_REDUCTION := 0.25
 const ELITE_VOLATILE_RADIUS := 64.0
 const ELITE_VOLATILE_DAMAGE := 6.0
+const RIFT_START_WAVE := 12
+const RIFT_FIRST_DELAY := 8.0
+const RIFT_INTERVAL := 16.0
+const RIFT_DAMAGE_BASE := 3.0
+const RIFT_DAMAGE_PER_WAVE := 0.15
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
+var hazard_rng := RandomNumberGenerator.new()
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
 var wave_duration: float = 0.0
 var kills: int = 0
+var wave_kills: int = 0
+var wave_elite_kills: int = 0
+var wave_damage_taken: bool = false
+var active_contract: AnomalyContract
+var last_contract_done: bool = false
+var last_contract_success: bool = false
+var last_contract_reward: int = 0
 var player := PlayerState.new()
 var enemies: Array[EnemyState] = []
 var projectiles: Array[Projectile] = []
 var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
+var rifts: Array[TemporalRift] = []
+var collapse_used: bool = false
 var boss: EnemyState
+var boss_phase: int = 1
+var boss_shards: Array[EnemyState] = []
+var boss_original_max_hp: float = 0.0
 var echo_silenced := 0.0
 var live_echo := false
 var synergy_damage_per_echo := 0.0
@@ -83,11 +116,14 @@ var _plan_idx: int = 0
 var _next_uid: int = 1
 var _boss_silence_cd := 0.0
 var _boss_minion_cd := 0.0
+var _boss_enraged := false
+var _rift_cd := 0.0
 
 
 func _init(seed_value: int = 1) -> void:
 	run_seed = seed_value
 	rng.seed = seed_value
+	hazard_rng.seed = seed_value * 7919 + 17
 	player.hp = player.max_hp()
 	player.materials = START_MATERIALS
 	player.add_weapon(Content.weapon(Content.STARTER_WEAPON))
@@ -119,6 +155,39 @@ func echo_power() -> float:
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
 		power += Combat.FAMILY_MASTERY_ARCANE_ECHO
 	return maxf(0.0, power)
+
+
+# Boss UI reads these instead of assuming a single EnemyState. Phase 1 has one
+# shard; phase 2 keeps the same remaining health but splits it across two bodies.
+func boss_total_count() -> int:
+	return boss_shards.size()
+
+
+func boss_alive_count() -> int:
+	var alive := 0
+	for e in boss_shards:
+		if not e.dead:
+			alive += 1
+	return alive
+
+
+func boss_health_ratio() -> float:
+	if boss == null or boss_original_max_hp <= 0.0:
+		return 0.0
+	var total := 0.0
+	for e in boss_shards:
+		if not e.dead:
+			total += maxf(0.0, e.hp)
+	return clampf(total / boss_original_max_hp, 0.0, 1.0)
+
+
+func boss_origin() -> Vector2:
+	for e in boss_shards:
+		if not e.dead:
+			return e.pos
+	if boss != null:
+		return boss.pos
+	return ARENA.get_center()
 
 
 func synergy_damage_mult() -> float:
@@ -153,6 +222,15 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
+	wave_kills = 0
+	wave_elite_kills = 0
+	wave_damage_taken = false
+	last_contract_done = false
+	last_contract_success = false
+	last_contract_reward = 0
+	collapse_used = false
+	rifts.clear()
+	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and n < WaveDirector.FINAL_WAVE else 0.0
 	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
@@ -167,6 +245,10 @@ func start_wave(n: int) -> void:
 		_plan.sort_custom(func(a: SpawnEvent, b: SpawnEvent) -> bool: return a.time < b.time)
 	_plan_idx = 0
 	boss = null
+	boss_phase = 1
+	boss_shards.clear()
+	boss_original_max_hp = 0.0
+	_boss_enraged = false
 	echo_silenced = 0.0
 	_boss_silence_cd = 0.0
 	_boss_minion_cd = 0.0
@@ -201,6 +283,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_spawn_enemies(delta)
 	_move_enemies(delta)
 	_boss_step(delta)
+	_step_rifts(delta)
 	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.weapon_levels,
 			player.cooldowns, 1.0, delta, -1, Color.WHITE, synergy_damage_mult(), synergy_cooldown_mult())
 	if echo_silenced <= 0.0:
@@ -221,7 +304,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 		phase = Phase.LOST
 		run_lost.emit()
 	elif wave == WaveDirector.FINAL_WAVE:
-		if boss != null and boss.dead:
+		if boss != null and boss_alive_count() == 0:
 			_end_wave()
 	elif wave_time >= wave_duration:
 		_end_wave()
@@ -235,7 +318,8 @@ func _fit_echo_cooldowns(actor: EchoActor) -> void:
 
 
 func _boss_step(delta: float) -> void:
-	if boss == null or boss.dead:
+	var controller := _alive_boss()
+	if controller == null:
 		return
 	_boss_silence_cd -= delta
 	if _boss_silence_cd <= 0.0:
@@ -251,6 +335,13 @@ func _boss_step(delta: float) -> void:
 			ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 			ps.delay = SPAWN_TELEGRAPH
 			pending.append(ps)
+
+
+func _alive_boss() -> EnemyState:
+	for e in boss_shards:
+		if not e.dead:
+			return e
+	return null
 
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
@@ -278,19 +369,83 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.hit_dir = hit_dir
 	info.effect = effect
 	damage_event.emit(info)
+	if e == boss and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * BOSS_PHASE2_HP_RATIO:
+		_begin_boss_phase2()
 	if e.hp > 0.0 or e.dead:
 		return
 	e.dead = true
 	kills += 1
+	wave_kills += 1
+	if e.elite:
+		wave_elite_kills += 1
 	var pk := Pickup.new()
 	pk.pos = e.pos
 	pk.value = e.def.drop * e.drop_mult
 	pickups.append(pk)
 	enemy_killed.emit(e.pos, e.def.color, source)
-	if e == boss:
-		boss_defeated.emit()
+	if boss_shards.has(e):
+		_handle_boss_shard_death(e)
 	if e.death_radius_value() > 0.0:
 		_bomber_explode(e)
+
+
+func _begin_boss_phase2() -> void:
+	if boss == null or boss_phase != 1:
+		return
+	boss_phase = 2
+	var remaining := boss.hp
+	var shard_hp := remaining * BOSS_PHASE2_SPLIT_SHARE
+	boss.hp = shard_hp
+	boss.max_hp = shard_hp
+	boss.flash = 0.18
+	var shard := EnemyState.new()
+	shard.uid = _next_uid
+	_next_uid += 1
+	shard.def = boss.def
+	shard.max_hp = shard_hp
+	shard.hp = shard_hp
+	shard.speed = boss.speed * BOSS_PHASE2_SHARD_SPEED
+	shard.damage = boss.damage
+	shard.radius = boss.radius
+	shard.flash = 0.18
+	var center := ARENA.get_center()
+	shard.pos = center * 2.0 - boss.pos
+	var pad := shard.radius + 16.0
+	shard.pos = shard.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	if shard.pos.distance_to(player.pos) < 140.0:
+		var away := (shard.pos - player.pos).normalized()
+		if away == Vector2.ZERO:
+			away = Vector2.RIGHT
+		shard.pos = (player.pos + away * 180.0).clamp(
+				ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	boss_shards.append(shard)
+	enemies.append(shard)
+	echo_silenced = maxf(echo_silenced, BOSS_PHASE2_SILENCE)
+	echoes_silenced.emit(echo_silenced)
+	boss_phase_changed.emit(2)
+	boss_shard_spawned.emit(shard)
+
+
+func _handle_boss_shard_death(e: EnemyState) -> void:
+	var remaining := boss_alive_count()
+	boss_shard_defeated.emit(e, remaining)
+	if remaining <= 0:
+		boss_defeated.emit()
+	elif remaining == 1:
+		_enrage_boss()
+
+
+func _enrage_boss() -> void:
+	if _boss_enraged:
+		return
+	var survivor := _alive_boss()
+	if survivor == null:
+		return
+	_boss_enraged = true
+	survivor.speed *= BOSS_ENRAGE_SPEED
+	survivor.damage *= BOSS_ENRAGE_DAMAGE
+	survivor.flash = 0.25
+	boss_enraged.emit(survivor)
 
 
 func _bomber_explode(e: EnemyState) -> void:
@@ -307,6 +462,7 @@ func _bomber_explode(e: EnemyState) -> void:
 	if player.iframes > 0.0:
 		return
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
+		wave_damage_taken = true
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
 		last_damage_source = e.def.id
@@ -323,6 +479,49 @@ func _bomber_explode(e: EnemyState) -> void:
 
 func discard_take(take: EchoTake) -> void:
 	bank.discard(take)
+
+
+func can_collapse_echo() -> bool:
+	return phase == Phase.WAVE and not collapse_used and not echoes.is_empty()
+
+
+# Sacrifice the oldest active echo: a one-per-wave burst at its last position plus
+# a small heal. This is deliberately permanent and removes the take from the bank.
+func collapse_oldest_echo() -> bool:
+	if not can_collapse_echo():
+		return false
+	var actor := echoes[0]
+	var take := actor.take
+	var pos := actor.pos
+	var tint := take.tint()
+	var damage := maxf(12.0, take.power() * echo_power() * 3.0 * synergy_damage_mult())
+	var radius := 180.0
+	if not bank.discard(take):
+		return false
+	echoes.remove_at(0)
+	for i in echoes.size():
+		echoes[i].index = i
+	collapse_used = true
+	for e: EnemyState in enemies.duplicate():
+		if e.dead:
+			continue
+		if pos.distance_to(e.pos) > radius + e.radius:
+			continue
+		var knock := (e.pos - pos).normalized() * 160.0
+		if knock == Vector2.ZERO:
+			knock = Vector2.RIGHT * 160.0
+		damage_enemy(e, damage, knock, false, -1, Vector2.ZERO, &"", &"echo_collapse")
+	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * 0.15)
+	explosion.emit(pos, radius, tint)
+	var info := ExplosionInfo.new()
+	info.kind = ExplosionInfo.WEAPON
+	info.pos = pos
+	info.radius = radius
+	info.color = tint
+	info.effect = &"echo_collapse"
+	explosion_info.emit(info)
+	echo_collapsed.emit(pos, tint, radius)
+	return true
 
 
 func merge_takes(a: EchoTake, b: EchoTake) -> EchoTake:
@@ -402,6 +601,11 @@ func _materialize(ps: PendingSpawn) -> void:
 	enemies.append(e)
 	if ps.def.is_boss:
 		boss = e
+		boss_phase = 1
+		boss_original_max_hp = e.max_hp
+		boss_shards.clear()
+		boss_shards.append(e)
+		_boss_enraged = false
 		_boss_silence_cd = 5.0
 		_boss_minion_cd = 8.0
 		boss_spawned.emit(e)
@@ -417,6 +621,7 @@ func _move_enemies(delta: float) -> void:
 		grid.insert(e)
 		var touch := e.radius + PlayerState.RADIUS
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
+			wave_damage_taken = true
 			player.hp -= e.damage
 			player.iframes = IFRAME_TIME
 			last_damage_source = e.def.id
@@ -432,6 +637,88 @@ func _move_enemies(delta: float) -> void:
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
 				echoes_silenced.emit(e.def.silence_time)
+	_separate_boss_shards()
+
+
+func _separate_boss_shards() -> void:
+	if boss_phase != 2 or boss_shards.size() < 2:
+		return
+	var alive: Array[EnemyState] = []
+	for e in boss_shards:
+		if not e.dead:
+			alive.append(e)
+	if alive.size() < 2:
+		return
+	var a := alive[0]
+	var b := alive[1]
+	var offset := a.pos - b.pos
+	var min_distance := (a.radius + b.radius) * 0.85
+	if offset.length() >= min_distance or offset == Vector2.ZERO:
+		return
+	var push := offset.normalized() * (min_distance - offset.length()) * 0.5
+	var pad := a.radius + 16.0
+	a.pos = (a.pos + push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	b.pos = (b.pos - push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+
+
+func _step_rifts(delta: float) -> void:
+	for r in rifts:
+		if r.telegraph > 0.0:
+			r.telegraph = maxf(0.0, r.telegraph - delta)
+			if r.telegraph <= 0.0:
+				r.active = TemporalRift.ACTIVE_TIME
+				r.tick = TemporalRift.TICK_TIME
+				rift_activated.emit(r)
+			continue
+		if r.active <= 0.0:
+			continue
+		r.active -= delta
+		r.tick -= delta
+		if r.tick <= 0.0:
+			r.tick += TemporalRift.TICK_TIME
+			_damage_rift(r)
+		if r.active <= 0.0:
+			rift_ended.emit(r)
+	var kept: Array[TemporalRift] = []
+	for r in rifts:
+		if r.telegraph > 0.0 or r.active > 0.0:
+			kept.append(r)
+	rifts = kept
+	if wave >= RIFT_START_WAVE and wave < WaveDirector.FINAL_WAVE:
+		_rift_cd -= delta
+		if _rift_cd <= 0.0:
+			_spawn_rift()
+			_rift_cd = RIFT_INTERVAL
+
+
+func _spawn_rift() -> void:
+	var pad := TemporalRift.RADIUS + 20.0
+	var offset := Vector2.from_angle(hazard_rng.randf() * TAU) * hazard_rng.randf_range(0.0, 70.0)
+	var pos := (player.pos + offset).clamp(
+			ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	var r := TemporalRift.new()
+	r.pos = pos
+	r.radius = TemporalRift.RADIUS
+	rifts.append(r)
+	rift_spawned.emit(r)
+
+
+func _damage_rift(r: TemporalRift) -> void:
+	if player.pos.distance_to(r.pos) > r.radius + PlayerState.RADIUS:
+		return
+	var damage := RIFT_DAMAGE_BASE + RIFT_DAMAGE_PER_WAVE * float(wave)
+	wave_damage_taken = true
+	player.hp -= damage
+	last_damage_source = &"rift"
+	player_hurt.emit(damage)
+	var hurt := PlayerHurtInfo.new()
+	hurt.source = &"rift"
+	hurt.amount = damage
+	hurt.pos = player.pos
+	hurt.direction = Vector2.ZERO
+	hurt.effect = &"rift"
+	hurt.lethal = player.hp <= 0.0
+	player_hurt_info.emit(hurt)
 
 
 func _update_pickups(delta: float) -> void:
@@ -477,12 +764,24 @@ func _end_wave() -> void:
 	for pk in pickups:
 		player.materials += pk.value
 	pickups.clear()
+	if active_contract != null:
+		var contract := active_contract
+		var success := contract.is_complete(self)
+		var reward := contract.reward if success else 0
+		last_contract_done = true
+		last_contract_success = success
+		last_contract_reward = reward
+		if reward > 0:
+			player.materials += reward
+		contract_resolved.emit(contract, success, reward)
+		active_contract = null
 	last_wave_earned = maxi(0, player.materials - wave_start_materials)
 	last_interest = interest_for(player.materials)
 	player.materials += last_interest
 	enemies.clear()
 	projectiles.clear()
 	pending.clear()
+	rifts.clear()
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * WAVE_END_HEAL)
 	bank.age_after_wave(echo_lifespan())
 	if echo_capacity() > 0:

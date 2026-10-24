@@ -58,4 +58,6 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 		"materials": sim.player.materials,
 		"upgrades": bot.upgrades,
 		"evolutions": bot.evolutions,
+		"boss_phase": sim.boss_phase,
+		"boss_shards": sim.boss_total_count(),
 	}

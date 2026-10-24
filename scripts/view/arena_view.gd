@@ -25,6 +25,7 @@ var _victory := false
 var _victory_time := 0.0
 var _victory_origin := Vector2.ZERO
 var _victory_color := Color.WHITE
+var _boss_death_origin := Vector2.ZERO
 var shake_enabled := true
 var reduced_effects := false
 var _paused := false
@@ -64,6 +65,7 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_beat_time = 0.0
 	_victory = false
 	_victory_time = 0.0
+	_boss_death_origin = Vector2.ZERO
 	_visual_time = 0.0
 	_last_player_pos = sim.player.pos
 	_motion_amount = 0.0
@@ -79,6 +81,10 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.weapon_changed.connect(_on_weapon_changed)
 	sim.echo_spawned.connect(_on_echo)
 	sim.boss_spawned.connect(_on_boss_spawned)
+	sim.boss_phase_changed.connect(_on_boss_phase_changed)
+	sim.boss_shard_spawned.connect(_on_boss_shard_spawned)
+	sim.boss_shard_defeated.connect(_on_boss_shard_defeated)
+	sim.boss_enraged.connect(_on_boss_enraged)
 	sim.echoes_silenced.connect(_on_echo_silence)
 	sim.wave_started.connect(_on_wave_started)
 	sim.wave_ended.connect(_on_wave_phase)
@@ -100,6 +106,7 @@ func unbind() -> void:
 	_beat_time = 0.0
 	_victory = false
 	_victory_time = 0.0
+	_boss_death_origin = Vector2.ZERO
 	_visual_time = 0.0
 	_last_player_pos = Vector2.ZERO
 	_motion_amount = 0.0
@@ -144,7 +151,9 @@ func play_victory_beat(s: Sim) -> void:
 		_shake = minf(1.0, _shake + 0.9)
 	_victory_origin = s.player.pos
 	_victory_color = Color(1.0, 0.75, 1.0)
-	if s.boss != null:
+	if _boss_death_origin != Vector2.ZERO:
+		_victory_origin = _boss_death_origin
+	elif s.boss != null:
 		_victory_origin = s.boss.pos
 		_victory_color = s.boss.def.color
 	var spark_count := 10 if reduced_effects else 30
@@ -207,6 +216,7 @@ func _draw() -> void:
 	else:
 		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT, reduced_effects)
 	ArenaPainter.pickup_range(self, sim)
+	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.enemies(self, sim, reduced_effects)
 	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects)
@@ -326,10 +336,53 @@ func _on_boss_spawned(enemy: EnemyState) -> void:
 		ring.radius = enemy.radius
 
 
-func _on_echo_silence(_duration: float) -> void:
-	if sim == null or sim.boss == null:
+func _on_boss_phase_changed(phase: int) -> void:
+	if sim == null or phase < 2:
 		return
-	var ring := _spark(sim.boss.pos, Color(1.0, 0.5, 0.9), 0.0, 0.8)
+	var origin := sim.boss_origin()
+	var ring := _spark(origin, Color(0.65, 0.8, 1.0), 0.0, 1.1)
+	if ring != null:
+		ring.ring = true
+		ring.radius = 46.0
+	if shake_enabled and not reduced_effects:
+		_shake = minf(1.0, _shake + 0.7)
+
+
+func _on_boss_shard_spawned(enemy: EnemyState) -> void:
+	var ring := _spark(enemy.pos, Color(0.65, 0.8, 1.0), 0.0, 0.8)
+	if ring != null:
+		ring.ring = true
+		ring.radius = enemy.radius
+	for i in 8:
+		_spark(enemy.pos, Color(0.75, 0.6, 1.0), 80.0 + _noise01(i) * 180.0, 0.35)
+
+
+func _on_boss_shard_defeated(enemy: EnemyState, remaining: int) -> void:
+	_boss_death_origin = enemy.pos
+	var count := 6 if reduced_effects else 16
+	for i in count:
+		_spark(enemy.pos, Color(0.65, 0.8, 1.0), 90.0 + _noise01(i) * 240.0, 0.4)
+	var ring := _spark(enemy.pos, Color(0.65, 0.8, 1.0), 0.0, 0.55)
+	if ring != null:
+		ring.ring = true
+		ring.radius = enemy.radius + 10.0
+	if remaining > 0 and shake_enabled and not reduced_effects:
+		_shake = minf(1.0, _shake + 0.45)
+
+
+func _on_boss_enraged(enemy: EnemyState) -> void:
+	var ring := _spark(enemy.pos, Color(1.0, 0.35, 0.55), 0.0, 0.8)
+	if ring != null:
+		ring.ring = true
+		ring.radius = enemy.radius + 18.0
+	if shake_enabled and not reduced_effects:
+		_shake = minf(1.0, _shake + 0.5)
+
+
+func _on_echo_silence(_duration: float) -> void:
+	if sim == null or sim.boss_shards.is_empty():
+		return
+	var ring := _spark(sim.boss_origin(), Color(1.0, 0.5, 0.9), 0.0, 0.8)
 	if ring != null:
 		ring.ring = true
 		ring.radius = sim.boss.radius
@@ -478,6 +531,10 @@ func _disconnect_sim(s: Sim) -> void:
 		[s.damage_event, _on_damage_info], [s.player_hurt_info, _on_hurt_info],
 		[s.explosion_info, _on_explosion_info], [s.weapon_changed, _on_weapon_changed],
 		[s.echo_spawned, _on_echo], [s.boss_spawned, _on_boss_spawned],
+		[s.boss_phase_changed, _on_boss_phase_changed],
+		[s.boss_shard_spawned, _on_boss_shard_spawned],
+		[s.boss_shard_defeated, _on_boss_shard_defeated],
+		[s.boss_enraged, _on_boss_enraged],
 		[s.echoes_silenced, _on_echo_silence], [s.wave_started, _on_wave_started],
 		[s.wave_ended, _on_wave_phase],
 		[s.run_lost, _on_run_lost], [s.run_won, _on_run_won],

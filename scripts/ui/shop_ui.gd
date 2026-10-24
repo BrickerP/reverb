@@ -19,6 +19,9 @@ var _materials: Label
 var _interest: Label
 var _footer: Label
 var _warning: Label
+var _contract_panel: PanelContainer
+var _contract_label: Label
+var _contract_button: Button
 var _overlay: Control
 var _replacing: Offer
 var _replacing_index: int = -1
@@ -144,7 +147,14 @@ func refresh(animate_echo: bool = false) -> void:
 	start_button.text = Loc.t("shop.start", [sim.wave + 1])
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
-	_warning.text = Loc.t("shop.over", [over]) if over > 0 else ""
+	var notices: Array[String] = []
+	if over > 0:
+		notices.append(Loc.t("shop.over", [over]))
+	if sim.last_contract_done:
+		notices.append(Loc.t("contract.result_success", [sim.last_contract_reward])
+				if sim.last_contract_success else Loc.t("contract.result_fail"))
+	_warning.text = "\n".join(notices)
+	_refresh_contract()
 	var replace_with := ""
 	var chooser := Callable()
 	if _replacing != null:
@@ -192,6 +202,8 @@ func _build_left() -> Control:
 	offers_box = VBoxContainer.new()
 	offers_box.add_theme_constant_override("separation", 6)
 	column.add_child(offers_box)
+	_contract_panel = _build_contract_panel()
+	column.add_child(_contract_panel)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	reroll_button = Button.new()
@@ -213,6 +225,64 @@ func _build_left() -> Control:
 	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_warning)
 	return column
+
+
+func _build_contract_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel",
+			UiTheme.box(Color(0.05, 0.07, 0.1, 0.92), Color(UiTheme.ACCENT, 0.35), 1, 5))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	panel.add_child(row)
+	_contract_label = UiTheme.label("", 11, UiTheme.DIM)
+	_contract_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_contract_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(_contract_label)
+	_contract_button = Button.new()
+	_contract_button.custom_minimum_size = Vector2(64.0, 28.0)
+	_contract_button.add_theme_font_size_override("font_size", 10)
+	_contract_button.pressed.connect(_on_accept_contract)
+	row.add_child(_contract_button)
+	panel.visible = false
+	return panel
+
+
+func _refresh_contract() -> void:
+	if _contract_panel == null:
+		return
+	var contract := sim.shop.contract
+	if contract == null:
+		_contract_panel.visible = false
+		return
+	var text := Loc.t("contract.title") + " · "
+	match contract.kind:
+		AnomalyContract.CLEAN:
+			text += Loc.t("contract.clean", [contract.deposit, contract.reward])
+		AnomalyContract.CLEAR:
+			text += Loc.t("contract.clear", [contract.target, contract.deposit, contract.reward])
+		AnomalyContract.HUNT:
+			text += Loc.t("contract.hunt", [contract.deposit, contract.reward])
+	var active := contract.accepted or sim.active_contract == contract
+	if active:
+		text += " · " + Loc.t("contract.active")
+	_contract_label.text = text
+	_contract_panel.visible = true
+	if active:
+		_contract_button.text = Loc.t("contract.active")
+		_contract_button.disabled = true
+	elif sim.player.materials < contract.deposit:
+		_contract_button.text = Loc.t("contract.poor", [contract.deposit])
+		_contract_button.disabled = true
+	else:
+		_contract_button.text = Loc.t("contract.accept")
+		_contract_button.disabled = false
+
+
+func _on_accept_contract() -> void:
+	if sim == null or not sim.shop.accept_contract(sim):
+		return
+	refresh()
+	_focus_card(0)
 
 
 func _on_offer(o: Offer, card: OfferCard) -> void:

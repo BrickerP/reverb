@@ -388,6 +388,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"history") and (character_select.visible or end_ui.visible):
 		open_history()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"collapse_echo") and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
+		if sim.collapse_oldest_echo():
+			get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"pause"):
 		toggle_pause()
 	elif event.is_action_pressed(&"restart") and end_ui.visible:
