@@ -30,7 +30,8 @@ static func speed_scale(wave: int) -> float:
 	return minf(1.3, 1.0 + 0.015 * float(wave - 1))
 
 
-static func plan(wave: int, run_seed: int, budget_mult: float = 1.0) -> Array[SpawnEvent]:
+static func plan(wave: int, run_seed: int, budget_mult: float = 1.0,
+		endless: bool = false) -> Array[SpawnEvent]:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = run_seed * 7919 + wave * 104729
 	var pool: Array[EnemyDef] = []
@@ -54,7 +55,7 @@ static func plan(wave: int, run_seed: int, budget_mult: float = 1.0) -> Array[Sp
 		events.append(e)
 	# One visible elite per wave from wave 10. It upgrades an existing budget slot;
 	# it never adds spawn cost or consumes an extra RNG stream for the rest of the plan.
-	if wave >= ELITE_START_WAVE and wave < FINAL_WAVE and not events.is_empty():
+	if wave >= ELITE_START_WAVE and (wave < FINAL_WAVE or (endless and wave > FINAL_WAVE)) and not events.is_empty():
 		var elite_index := rng.randi_range(0, events.size() - 1)
 		var kind_index := rng.randi_range(0, ELITE_KINDS.size() - 1)
 		events[elite_index].elite_kind = ELITE_KINDS[kind_index]

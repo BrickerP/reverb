@@ -20,8 +20,9 @@ var target: int = 0
 var accepted: bool = false
 
 
-static func make(wave: int, rng: RandomNumberGenerator) -> AnomalyContract:
-	if wave < START_WAVE or wave >= WaveDirector.FINAL_WAVE:
+static func make(wave: int, rng: RandomNumberGenerator,
+		endless: bool = false) -> AnomalyContract:
+	if wave < START_WAVE or (wave >= WaveDirector.FINAL_WAVE and not endless):
 		return null
 	var pool: Array[StringName] = [CLEAN, CLEAR]
 	if wave >= WaveDirector.ELITE_START_WAVE:
@@ -35,7 +36,7 @@ static func make(wave: int, rng: RandomNumberGenerator) -> AnomalyContract:
 		CLEAR:
 			contract.deposit = CLEAR_DEPOSIT
 			contract.reward = CLEAR_REWARD
-			contract.target = mini(30, 10 + wave)
+			contract.target = mini(40, 10 + wave)
 		HUNT:
 			contract.deposit = HUNT_DEPOSIT
 			contract.reward = HUNT_REWARD
