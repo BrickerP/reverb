@@ -8,6 +8,13 @@ func _has_button(action: StringName, button: JoyButton) -> bool:
 	return false
 
 
+func _has_key(action: StringName, key: Key) -> bool:
+	for event in InputMap.action_get_events(action):
+		if event is InputEventKey and event.physical_keycode == key:
+			return true
+	return false
+
+
 func test_gamepad_ui_uses_standard_buttons(c: Check) -> void:
 	Controls.register()
 	c.ok(_has_button(&"ui_accept", JOY_BUTTON_A), "A activates")
@@ -17,3 +24,5 @@ func test_gamepad_ui_uses_standard_buttons(c: Check) -> void:
 	c.ok(_has_button(&"ui_left", JOY_BUTTON_DPAD_LEFT), "d-pad left")
 	c.ok(_has_button(&"ui_right", JOY_BUTTON_DPAD_RIGHT), "d-pad right")
 	c.ok(_has_button(&"debug", JOY_BUTTON_BACK), "View toggles debug")
+	c.ok(_has_key(&"collapse_echo", KEY_SPACE), "Space collapses an echo")
+	c.ok(_has_button(&"collapse_echo", JOY_BUTTON_RIGHT_SHOULDER), "right shoulder collapses an echo")
