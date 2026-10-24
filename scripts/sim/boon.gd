@@ -11,9 +11,10 @@ const PRECISION := &"precision"
 const SLIPSTREAM := &"slipstream"
 const MAGNET := &"magnet"
 const ETERNITY := &"eternity"
+const SECOND_WIND := &"second_wind"
 const ALL: Array[StringName] = [
 	DAMAGE, HASTE, VITALITY, ECHO, SHIELD, FORTUNE,
-	PRECISION, SLIPSTREAM, MAGNET, ETERNITY,
+	PRECISION, SLIPSTREAM, MAGNET, ETERNITY, SECOND_WIND,
 ]
 
 
@@ -47,6 +48,8 @@ static func title_key(id: StringName) -> String:
 			return "boon.magnet_name"
 		ETERNITY:
 			return "boon.eternity_name"
+		SECOND_WIND:
+			return "boon.second_wind_name"
 		_:
 			return "boon.damage_name"
 
@@ -73,6 +76,8 @@ static func desc_key(id: StringName) -> String:
 			return "boon.magnet_desc"
 		ETERNITY:
 			return "boon.eternity_desc"
+		SECOND_WIND:
+			return "boon.second_wind_desc"
 		_:
 			return "boon.damage_desc"
 
@@ -101,6 +106,8 @@ static func apply(sim: Sim, id: StringName) -> bool:
 			sim.player.stats.add(Stats.PICKUP_RANGE, 30.0)
 		ETERNITY:
 			sim.player.stats.add(Stats.ECHO_LIFESPAN, 1.0)
+		SECOND_WIND:
+			sim.second_wind_charges += 1
 		_:
 			return false
 	return true
