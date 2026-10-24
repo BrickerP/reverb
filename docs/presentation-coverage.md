@@ -395,8 +395,9 @@ in as local-only code; no verified human feedback exists and none is claimed.
 
 On 2026-10-25 the offer-lock work (`8403188`) was merged with the mechanics trunk on
 branch `integration/offer-lock-sync`, replacing the selective re-application recorded
-above. The branch merged main twice: `c755946` (ten textual conflicts resolved by hand)
-and `a355dc0` (endless mode, no conflicts).
+above. The branch merged main three times: `c755946` (ten textual conflicts resolved by
+hand), `a355dc0` (endless mode, no conflicts) and `c7cdd85` (endless escalation, one
+conflict in the README test-count line).
 
 Conflict policy: the trunk wins mechanics (offer-lock simulation, contracts, rifts, echo
 collapse, endless); this lane wins view, UI strings and event payloads. Kept from this
@@ -408,15 +409,19 @@ lock probe and its tests. Kept from the trunk: `accept_contract`, the per-roll c
 draw and every `contract.*` string. RNG draws, the offer multiset, price and refresh
 cost are unchanged.
 
-Verification on the merged tree: import is clean, 5601 assertions pass (trunk alone:
-5528), smoke passes with the same frame count as the trunk, the 10 Python report tests
-pass, and the native lock probe passes in EN and ZH with normal and reduced effects.
-These are fixtures only; no human playtest feedback exists or is claimed.
+Verification on the merged tree: import is clean, 5894 assertions pass (pristine trunk
+`c7cdd85` alone: 5821, so the integration adds 73 lock assertions), smoke prints the
+same line as the trunk, the 10 Python report tests pass, and the native lock probe passes
+in EN and ZH with normal and reduced effects. These are fixtures only; no human playtest
+feedback exists or is claimed.
 
-Open issue, present on the trunk and not caused by this integration: at 1280x720 a
-visible contract strip pushes the shop footer past the bottom edge. In a headless layout
-probe (seed 7, wave 10, four offers, hunt contract) the footer ends at 700 px without a
-strip and at 738 px (EN, strip 53 px) or 732 px (ZH, strip 47 px) with one, so 18 px or
-12 px fall off-screen. The strip label wraps to two lines at 400 px and the warning label
-is always laid out. The fix belongs to this lane and is not part of the offer-lock
-integration.
+Open issue, present on the pristine trunk and not caused by this integration: at 1280x720
+a visible contract strip pushes the shop footer (key hints and weapon detail line) past
+the bottom edge. In a headless layout probe (seed 7, wave 10, four offers, hunt contract)
+the footer ends at 700 px without a strip and at 738 px (EN, strip 53 px) or 732 px (ZH,
+strip 47 px) with one, so 18 px or 12 px fall off-screen; the numbers are identical on
+trunk `c7cdd85` and on this branch. On the trunk, 170 of 190 normal shops (10 seeds) and
+110 of 110 endless shops carry a contract, so the clipped footer is the usual shop
+state. The strip label wraps to two lines at 400 px in EN and the warning label below the
+buttons is always laid out, even when empty. The fix belongs to this lane and is not part
+of the offer-lock integration.

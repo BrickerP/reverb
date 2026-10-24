@@ -544,9 +544,9 @@
     "date": "2026-10-25",
     "branch": "integration/offer-lock-sync",
     "presentation_tip": "84031880ec40d877b9227fb50f7bb8e4d15381ca",
-    "trunk": "a355dc0216fc3ee22fee2515e98c3e694a576ae8",
+    "trunk": "c7cdd857dbb77c9db535544bb9b5286ca4b1b216",
     "supersedes": "selective_offer_lock",
-    "merge_history": "main merged twice: c755946 (10 textual conflicts resolved by hand), then a355dc0 (endless mode, no conflicts)",
+    "merge_history": "main merged three times: c755946 (10 textual conflicts resolved by hand), a355dc0 (endless mode, no conflicts), c7cdd85 (endless escalation; one conflict, the README test-count line)",
     "conflict_policy": "trunk wins mechanics (offer lock simulation, contracts, rifts, echo collapse, endless); presentation lane wins view, UI strings and event payloads",
     "kept_from_presentation": [
       "Held offer keeps its original clamped slot after refresh (trunk INTERFACES section 13 already requires it)",
@@ -558,16 +558,17 @@
     "kept_from_trunk": "accept_contract, the per-roll contract draw and every contract.* string",
     "unchanged": "RNG draws, offer multiset, price and refresh cost",
     "known_issue": {
-      "status": "open; present on trunk a355dc0 and not introduced by this integration",
-      "what": "At 1280x720 a visible contract strip pushes the shop footer past the bottom edge",
-      "measured": "headless layout probe, seed 7, wave 10, four offers, hunt contract: footer bottom 700 without a strip; with a strip 738 in EN (strip 53 px, 18 px off-screen) and 732 in ZH (strip 47 px, 12 px off-screen); identical on trunk and on this branch",
-      "cause": "the left column grows by the strip height plus 8 px separation; the strip label wraps to two lines at 400 px width and the warning label is always laid out, so the column outgrows the 576 px available",
+      "status": "open; present on pristine trunk c7cdd85 (and a355dc0) and not introduced by this integration",
+      "what": "At 1280x720 a visible contract strip pushes the shop footer (key hints and weapon detail line) past the bottom edge",
+      "measured": "headless layout probe, seed 7, wave 10, four offers, hunt contract: footer bottom 700 without a strip; with a strip 738 in EN (strip 53 px, 18 px off-screen) and 732 in ZH (strip 47 px, 12 px off-screen); identical on pristine trunk c7cdd85 and on this branch",
+      "frequency": "pristine trunk c7cdd85, 10 seeds: 170 of 190 normal shops (rolled after waves 1-19; every shop after waves 2-18) and 110 of 110 endless shops (after waves 20-30) carry a contract, so the clipped footer is the usual shop state",
+      "cause": "the left column grows by the strip height plus 8 px separation; in EN the strip label wraps to two lines at 400 px width, and the warning label below the buttons is always laid out even when empty",
       "owner": "presentation lane; not fixed here so the integration stays scoped to offer lock"
     },
     "verification": {
       "scope": "headless plus native windowed lock probe",
-      "full_assertions": "5601 passed, 0 failed (trunk a355dc0 alone: 5528)",
-      "smoke": "OK (frames=5246, wave 4, 3 purchases; same as trunk)",
+      "full_assertions": "5894 passed, 0 failed (pristine trunk c7cdd85 alone: 5821, so the integration adds 73 lock assertions)",
+      "smoke": "OK (frames=5246, wave 4, 3 purchases, 3330 echo frames; identical line on pristine trunk c7cdd85)",
       "python_report_tests": "10 passed",
       "native": "tools/offer_lock_probe.gd EN/ZH x normal/reduced all OK on the merged tree",
       "static": "no conflict markers; JSON parses; 252 en and 252 zh keys with identical sets and no duplicates; no duplicate function names"
