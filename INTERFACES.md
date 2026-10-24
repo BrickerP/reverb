@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -525,6 +525,11 @@ Mechanism/API:
   - damage × `(1 + 0.10 * ascension)`;
   - speed × `(1 + 0.05 * ascension)`.
   Bosses and elites use the same multipliers; wave scaling is applied first.
+- Level rules also change:
+  - A2+: `Sim.ascension_rift_wave()` is 10 (vs 12) and
+    `Sim.ascension_rift_interval()` is 14s (vs 16s).
+  - A3: `Sim.ascension_elite_count()` is 2; `WaveDirector.plan` accepts an `elite_count`
+    argument and marks that many distinct events.
 - `RunLog` records `ascension`.
 - No change to wave planning, shop prices, drops, echo power or item sets.
 - Normal `ascension = 0` keeps all existing stats/balance unchanged.
