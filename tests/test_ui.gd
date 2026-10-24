@@ -283,6 +283,21 @@ func test_main_continues_into_endless(c: Check) -> void:
 	main.free()
 
 
+func test_boon_ui_emits_the_chosen_index(c: Check) -> void:
+	var ui := BoonUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.open([Boon.DAMAGE, Boon.HASTE, Boon.FORTUNE])
+	c.ok(ui.visible, "boon modal is visible")
+	var row := ui._box.get_child(2) as HBoxContainer
+	c.eq(row.get_child_count(), 3, "three boon buttons")
+	var picked := [-1]
+	ui.chosen.connect(func(index: int) -> void: picked[0] = index)
+	(row.get_child(1) as Button).pressed.emit()
+	c.eq(picked[0], 1, "the second boon emits index one")
+	ui.free()
+
+
 func test_character_select_cycles_unlocked_ascension(c: Check) -> void:
 	var path := "user://test_ascension_meta.json"
 	var abs := ProjectSettings.globalize_path(path)
