@@ -112,6 +112,7 @@ func append(sim: Sim, character_id: StringName, seconds: float, context: Diction
 		"wave": sim.wave,
 		"won": sim.phase == Sim.Phase.WON,
 		"endless": sim.endless,
+		"boss_rush": sim.boss_rush,
 		"ascension": sim.ascension,
 		"daily_modifier": String(sim.daily_modifier),
 		"kills": sim.kills,

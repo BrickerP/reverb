@@ -268,6 +268,41 @@ func test_end_screen_offers_endless_after_a_win(c: Check) -> void:
 	ui.free()
 
 
+func test_end_screen_offers_boss_rush_on_a_win(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.phase = Sim.Phase.WON
+	var ui := EndUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.show_result(s)
+	c.ok(ui.boss_rush_button.visible, "boss rush button appears on a win")
+	var requested := [0]
+	ui.boss_rush_requested.connect(func() -> void: requested[0] += 1)
+	ui.boss_rush_button.pressed.emit()
+	c.eq(requested[0], 1, "boss rush request is emitted once")
+	s.endless = true
+	s.phase = Sim.Phase.LOST
+	ui.show_result(s)
+	c.ok(not ui.boss_rush_button.visible, "boss rush is hidden on an endless death")
+	ui.free()
+
+
+func test_main_continues_into_boss_rush(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5)
+	var s: Sim = main.sim
+	s.phase = Sim.Phase.WON
+	main._phase = Sim.Phase.WON
+	main.end_ui.show_result(s)
+	main.end_ui.boss_rush_button.pressed.emit()
+	c.ok(s.boss_rush, "main starts boss rush mode")
+	c.eq(s.phase, Sim.Phase.SHOP, "main opens the boss rush shop")
+	c.eq(s.next_wave_number(), 25, "boss rush shop targets wave 25")
+	main.free()
+
+
 func test_main_continues_into_endless(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)

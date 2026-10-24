@@ -77,6 +77,7 @@ var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
 var hazard_rng := RandomNumberGenerator.new()
 var endless: bool = false
+var boss_rush: bool = false
 var ascension: int = 0
 var daily_modifier: StringName = &""
 var phase: Phase = Phase.SHOP
@@ -140,6 +141,7 @@ func _init(seed_value: int = 1) -> void:
 
 func start_run() -> void:
 	endless = false
+	boss_rush = false
 	second_wind_charges = 0
 	boon_rerolls = 0
 	last_interest = 0
@@ -258,15 +260,33 @@ func ascension_rift_interval() -> float:
 	return 14.0 if ascension >= 2 else RIFT_INTERVAL
 
 
+func next_wave_number() -> int:
+	return wave + (5 if boss_rush else 1)
+
+
 func start_next_wave() -> void:
 	if phase == Phase.SHOP:
-		start_wave(wave + 1)
+		start_wave(next_wave_number())
 
 
 func begin_endless() -> bool:
 	if phase != Phase.WON or endless:
 		return false
 	endless = true
+	boss_rush = false
+	wave = WaveDirector.FINAL_WAVE
+	phase = Phase.SHOP
+	boss_shards.clear()
+	rifts.clear()
+	shop.roll(self)
+	return true
+
+
+func begin_boss_rush() -> bool:
+	if phase != Phase.WON or endless:
+		return false
+	endless = true
+	boss_rush = true
 	wave = WaveDirector.FINAL_WAVE
 	phase = Phase.SHOP
 	boss_shards.clear()
