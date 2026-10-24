@@ -165,6 +165,8 @@ make test     # 无头测试（当前 6394 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
+# Boss Rush/无尽矩阵：
+# godot --headless --path . --script res://tools/endless_matrix.gd -- 10 1 40 boss looper balanced 0
 make frames   # 窗口帧耗时（需要显示器）
 make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
 make export   # 导出 macOS/Windows/Linux（需要 Godot export templates）
