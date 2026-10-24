@@ -70,6 +70,17 @@ func test_boss_splits_at_half_health(c: Check) -> void:
 	c.eq(phase_changes[0], 1, "the transition is one-shot")
 
 
+func test_split_preserves_fractional_health(c: Check) -> void:
+	for remaining in [10.0, 0.25]:
+		var s := _boss_sim()
+		s.boss.hp = remaining + 0.5
+		s.damage_enemy(s.boss, 0.5, Vector2.ZERO, false, -1)
+		c.eq(s.boss_phase, 2, "a nonlethal hit leaving %s HP still splits" % remaining)
+		c.near(_total_hp(s), remaining, 0.0001, "%s HP is conserved across the split" % remaining)
+		c.near(s.boss_health_ratio(), remaining / s.boss_original_max_hp, 0.000001,
+				"the combined bar reads %s HP" % remaining)
+
+
 func test_one_survivor_enrages(c: Check) -> void:
 	var s := _boss_sim()
 	s.boss.hp = s.boss.max_hp * 0.5 + 1.0
