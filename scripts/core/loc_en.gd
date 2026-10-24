@@ -213,6 +213,8 @@ const TABLE := {
 	"boon.magnet_desc": "+30 pickup range",
 	"boon.eternity_name": "Eternity",
 	"boon.eternity_desc": "+1 echo lifespan",
+	"boon.second_wind_name": "Second Wind",
+	"boon.second_wind_desc": "Survive a lethal hit at 1 HP; stacks",
 	"history.title": "Run history",
 	"history.empty": "No runs recorded yet.",
 	"history.seed": "Seed",

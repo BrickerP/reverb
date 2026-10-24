@@ -101,3 +101,21 @@ func test_each_boon_applies(c: Check) -> void:
 	var lifespan := s.echo_lifespan()
 	c.ok(Boon.apply(s, Boon.ETERNITY), "eternity boon applies")
 	c.eq(s.echo_lifespan(), lifespan + 1, "echo lifespan increases")
+	c.ok(Boon.apply(s, Boon.SECOND_WIND), "second wind boon applies")
+	c.eq(s.second_wind_charges, 1, "second wind grants one charge")
+
+
+func test_second_wind_consumes_one_charge_per_lethal_hit(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	c.eq(s.second_wind_charges, 0, "no starting second wind")
+	s.player.hp = 5.0
+	s._hurt_player(10.0, &"test", &"contact", s.player.pos, Vector2.RIGHT)
+	c.ok(s.player.hp <= 0.0, "without a charge a lethal hit stays lethal")
+	s.player.hp = 5.0
+	c.ok(Boon.apply(s, Boon.SECOND_WIND), "second wind applies")
+	s._hurt_player(10.0, &"test", &"contact", s.player.pos, Vector2.RIGHT)
+	c.eq(s.player.hp, 1.0, "the first charge saves the run at 1 HP")
+	c.eq(s.second_wind_charges, 0, "the charge is consumed")
+	s._hurt_player(10.0, &"test", &"contact", s.player.pos, Vector2.RIGHT)
+	c.ok(s.player.hp <= 0.0, "the next lethal hit is not saved")

@@ -213,6 +213,8 @@ const TABLE := {
 	"boon.magnet_desc": "+30 拾取范围",
 	"boon.eternity_name": "永续",
 	"boon.eternity_desc": "+1 回响寿命",
+	"boon.second_wind_name": "回光",
+	"boon.second_wind_desc": "致命伤时保留 1 点生命；可叠层",
 	"history.title": "对局记录",
 	"history.empty": "还没有对局记录。",
 	"history.seed": "种子",

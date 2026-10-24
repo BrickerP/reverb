@@ -108,6 +108,7 @@ var echo_silenced := 0.0
 var live_echo := false
 var synergy_damage_per_echo := 0.0
 var synergy_haste_per_echo := 0.0
+var second_wind_charges := 0
 var last_interest := 0
 var last_wave_earned := 0
 var wave_start_materials := 0
@@ -138,6 +139,7 @@ func _init(seed_value: int = 1) -> void:
 
 func start_run() -> void:
 	endless = false
+	second_wind_charges = 0
 	last_interest = 0
 	last_wave_earned = 0
 	wave_start_materials = player.materials
@@ -553,6 +555,9 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt
+		if player.hp <= 0.0 and second_wind_charges > 0:
+			second_wind_charges -= 1
+			player.hp = 1.0
 	if grant_iframes:
 		player.iframes = IFRAME_TIME
 	wave_damage_taken = true
