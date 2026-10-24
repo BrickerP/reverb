@@ -298,6 +298,24 @@ func test_boon_ui_emits_the_chosen_index(c: Check) -> void:
 	ui.free()
 
 
+func test_boon_ui_offers_reroll_when_materials_allow(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.materials = 100
+	s.pending_boons = [Boon.DAMAGE, Boon.HASTE, Boon.FORTUNE]
+	var ui := BoonUi.new()
+	ui.theme = UiTheme.build()
+	_root().add_child(ui)
+	ui.open(s.pending_boons, s)
+	c.ok(ui.reroll_button != null, "reroll button appears for endless boons")
+	c.eq(ui.reroll_button.text, Loc.t("boon.reroll", [15]), "reroll shows its cost")
+	var emitted := [false]
+	ui.reroll_requested.connect(func() -> void: emitted[0] = true)
+	ui.reroll_button.pressed.emit()
+	c.ok(emitted[0], "reroll emits the request")
+	ui.free()
+
+
 func test_character_select_cycles_unlocked_ascension(c: Check) -> void:
 	var path := "user://test_ascension_meta.json"
 	var abs := ProjectSettings.globalize_path(path)

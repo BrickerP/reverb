@@ -193,6 +193,7 @@ const TABLE := {
 	"daily.riftstorm": "裂隙风暴 · 第 8 波开始，每 8 秒一次",
 	"boon.title": "无尽恩惠",
 	"boon.subtitle": "进入下一间商店前，选择一项永久强化。",
+	"boon.reroll": "重抽 %d",
 	"boon.damage_name": "锋刃",
 	"boon.damage_desc": "+10% 伤害",
 	"boon.haste_name": "节拍",

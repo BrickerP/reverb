@@ -624,6 +624,10 @@ Mechanism API:
 - `Boon.roll(rng, 3)` samples three distinct IDs from the full pool.
 - `Sim.pending_boons: Array[StringName]` is set by `_end_wave` only when `endless` and
   `is_boss_wave()`; `Shop.roll` has already produced the shop.
+- `Sim.boon_reroll_cost()` = `15 + 10 × boon_rerolls`; `Sim.reroll_boons()` spends
+  materials, increments the counter, replaces the three choices and returns false when the
+  pending array is empty or materials are insufficient. The counter resets after each boss
+  offer and at `start_run`.
 - `Sim.choose_boon(index)` applies one and clears the pending array; failed indices leave
   the offer intact. Effects are immediate and permanent for the run:
   - damage +10%; haste +10%; vitality +15 max/current HP; echo +10%; shield +5 cap/current;
@@ -641,6 +645,8 @@ Presentation requirements:
 
 - Main shows the `BoonUi` modal and does not open the shop while `pending_boons` is non-empty.
 - BoonUi shows exactly three buttons with localized name/description; no cancel is allowed.
+- When `BoonUi.open` receives a `Sim`, it also shows one `Reroll <cost>` button. It must
+  call `Sim.reroll_boons` through Main, then rebuild the modal; disabled when unaffordable.
 - Choosing applies via `Sim.choose_boon` and then opens the already-rolled shop.
 - The modal pauses simulation; Hide/quit flows close it without applying.
 - No new art is required; reuse UiTheme panels/buttons.
