@@ -73,6 +73,7 @@ const RIFT_DAMAGE_PER_WAVE := 0.15
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
 var hazard_rng := RandomNumberGenerator.new()
+var endless: bool = false
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
@@ -130,6 +131,7 @@ func _init(seed_value: int = 1) -> void:
 
 
 func start_run() -> void:
+	endless = false
 	last_interest = 0
 	last_wave_earned = 0
 	wave_start_materials = player.materials
@@ -218,6 +220,18 @@ func start_next_wave() -> void:
 		start_wave(wave + 1)
 
 
+func begin_endless() -> bool:
+	if phase != Phase.WON or endless:
+		return false
+	endless = true
+	wave = WaveDirector.FINAL_WAVE
+	phase = Phase.SHOP
+	boss_shards.clear()
+	rifts.clear()
+	shop.roll(self)
+	return true
+
+
 func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
@@ -235,9 +249,10 @@ func start_wave(n: int) -> void:
 	wave_start_materials = player.materials
 	last_wave_earned = 0
 	last_interest = 0
-	var mult := 0.35 if n == WaveDirector.FINAL_WAVE else 1.0
+	var boss_wave := n == WaveDirector.FINAL_WAVE and not endless
+	var mult := 0.35 if boss_wave else 1.0
 	_plan = WaveDirector.plan(n, run_seed, mult)
-	if n == WaveDirector.FINAL_WAVE:
+	if boss_wave:
 		var boss_event := SpawnEvent.new()
 		boss_event.def = Content.enemy(&"paradox")
 		boss_event.time = 1.5
@@ -303,7 +318,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	if player.hp <= 0.0:
 		phase = Phase.LOST
 		run_lost.emit()
-	elif wave == WaveDirector.FINAL_WAVE:
+	elif wave == WaveDirector.FINAL_WAVE and not endless:
 		if boss != null and boss_alive_count() == 0:
 			_end_wave()
 	elif wave_time >= wave_duration:
@@ -789,7 +804,7 @@ func _end_wave() -> void:
 		bank.add(take)
 		echo_recorded.emit(take)
 	wave_ended.emit(wave)
-	if wave >= WaveDirector.FINAL_WAVE:
+	if wave >= WaveDirector.FINAL_WAVE and not endless:
 		phase = Phase.WON
 		run_won.emit()
 	else:

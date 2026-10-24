@@ -43,7 +43,7 @@ func test_append_writes_one_json_line(c: Check) -> void:
 	c.eq(lines, 2, "two runs")
 	c.eq(int(first.get("seed", 0)), 7, "seed")
 	c.eq(str(first.get("character", "")), "looper", "character")
-	c.eq(str(first.get("version", "")), "0.8.0", "build version")
+	c.eq(str(first.get("version", "")), "0.9.0", "build version")
 	c.eq(int(first.get("wave", 0)), 5, "wave")
 	c.eq(bool(first.get("won", true)), false, "loss")
 	c.eq(int(first.get("kills", 0)), 42, "kills")
@@ -53,6 +53,9 @@ func test_append_writes_one_json_line(c: Check) -> void:
 	var recent := log.recent(1)
 	c.eq(recent.size(), 1, "recent respects the limit")
 	c.eq(int(recent[0].get("seed", 0)), 7, "recent keeps the last run")
+	c.ok(not bool(first.get("endless", true)), "normal runs are not endless")
+	c.ok(log.remove_last(), "the last line can be removed")
+	c.eq(log.recent(8).size(), 1, "remove_last leaves the earlier log")
 	_cleanup()
 
 
