@@ -6,7 +6,7 @@ const DT := 1.0 / 60.0
 
 static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDirector.FINAL_WAVE,
 		character_id: StringName = &"", style: StringName = &"balanced",
-		ascension: int = 0) -> Dictionary:
+		ascension: int = 0, target_wave: int = 0, boss_rush: bool = false) -> Dictionary:
 	var sim := Sim.new(seed_value)
 	sim.ascension = clampi(ascension, 0, 3)
 	var bot := Bot.new(style)
@@ -25,12 +25,27 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 	var total_earned := 0
 	var total_interest := 0
 	var max_materials := 0
-	while sim.phase == Sim.Phase.WAVE or sim.phase == Sim.Phase.SHOP:
+	while sim.phase == Sim.Phase.WAVE or sim.phase == Sim.Phase.SHOP \
+			or (sim.phase == Sim.Phase.WON and target_wave > WaveDirector.FINAL_WAVE):
+		if sim.phase == Sim.Phase.WON:
+			if target_wave <= WaveDirector.FINAL_WAVE:
+				break
+			if boss_rush:
+				if not sim.begin_boss_rush():
+					break
+			elif not sim.begin_endless():
+				break
+			continue
 		if sim.phase == Sim.Phase.SHOP:
 			total_earned += sim.last_wave_earned
 			total_interest += sim.last_interest
 			max_materials = maxi(max_materials, sim.player.materials)
-			if sim.wave >= max_wave:
+			if not sim.pending_boons.is_empty():
+				sim.choose_boon(0)
+				continue
+			if sim.endless and target_wave > WaveDirector.FINAL_WAVE and sim.wave >= target_wave:
+				break
+			if not sim.endless and sim.wave >= max_wave:
 				break
 			bot.shop(sim)
 			sim.start_next_wave()
@@ -46,6 +61,9 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 	return {
 		"seed": seed_value,
 		"won": sim.phase == Sim.Phase.WON,
+		"endless": sim.endless,
+		"boss_rush": sim.boss_rush,
+		"target_reached": target_wave > WaveDirector.FINAL_WAVE and sim.wave >= target_wave,
 		"wave": sim.wave,
 		"kills": sim.kills,
 		"weapons": sim.player.weapons.size(),
