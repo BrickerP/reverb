@@ -5,6 +5,7 @@ var weapon: WeaponDef
 var item: ItemDef
 var price: int = 0
 var sold: bool = false
+var locked: bool = false
 
 
 func id() -> StringName:

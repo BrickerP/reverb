@@ -331,3 +331,24 @@ with 16 screenshots. The initial ZH reduced fixed-fps run timed out before captu
 the same checks with real-time max-fps 60 and added wait-position diagnostics passed.
 Its original timeout is retained and not described as a diagnosed game defect.
 Evidence: `outputs/take-stack-sell-verification/` in the parent task directory.
+
+## Selective offer-lock integration
+
+Fixed lock source `699ee83` is applied on presentation `ba92fb2`, preserving the
+sale-event index annotation and excluding Boss/later-system ancestry and release
+metadata. The held offer now stays at its original clamped slot after reroll and
+the next shop, with the same object and price. Generation, duplicate prevention,
+RNG consumption and refresh cost remain unchanged; this repairs six failing
+nonzero-position checks from the fixed candidate.
+
+Independent Lock/Unlock controls suppress purchase and equipment drag, retain
+keyboard focus after refresh, and show a compact full-slot reason with detailed
+accessible text. The free hold produces no material or purchase feedback. The hint
+explains that equipment undo restores the hold snapshot at that transaction.
+
+All 5358 assertions, resource import and smoke pass. Native EN/ZH x normal/reduced
+runs pass physical click, drag-away and keyboard guards, stable object/index/price,
+sold/stale and full/poor/maxed states, sale/undo interoperability, history boundaries
+and cleanup, with 16 screenshots. Independent review is APPROVE with zero issues.
+Evidence is in `outputs/take-stack-lock-verification/`; fixtures do not establish
+human satisfaction or balance. No new image or audio resource is needed.

@@ -478,5 +478,29 @@
       "provenance": "isolated fixture only; no human playtest evidence"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-sell-verification/"
+  },
+  "selective_offer_lock": {
+    "mechanics_source": "699ee83ee82b4a51844c5234fa8db452b83441fa",
+    "presentation_base": "ba92fb21cfb7035743dc9761d584dc8a9986a824",
+    "excluded": "Boss/contract/rift/collapse ancestry and upstream version metadata",
+    "order_correction": "Keep same locked object at original clamped slot after unchangedgeneration; duplicate prevention,price,pool,RNG,cost preserved",
+    "presentation": [
+      "Independent Lock/Unlock action; no purchase or drag from nestedcontrols",
+      "Refreshed nestedbutton keeps keyboardfocus",
+      "Singlefree hold moves/unlocks; compact FULL and detailed tooltip/accessibility",
+      "Plain-language equipment-undo snapshot behavior in hint",
+      "Sale event-index annotation preserved separately from locked snapshotflag"
+    ],
+    "verification": {
+      "position_before": "27pass6fail",
+      "position_after": "55pass0fail",
+      "focused": 90,
+      "full": "5358passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced;16screenshots;physicalmouse/keyboard/drag guards;heldindex/object/price;stale/sold/full/poor/maxed;saleundo;history;cleanup",
+      "review": "APPROVE0issues",
+      "provenance": "isolated fixture only"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-lock-verification/"
   }
 }

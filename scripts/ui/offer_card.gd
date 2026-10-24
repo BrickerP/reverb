@@ -2,12 +2,14 @@ class_name OfferCard
 extends Button
 
 signal replacement_requested(offer: Offer)
+signal lock_toggled(offer: Offer)
 
 const HEIGHT := 112.0
 
 var offer: Offer
 var blocked_reason: StringName = &""
 var swap_button: Button
+var lock_button: Button
 var _drag_payload := Callable()
 var _clear_drag_hint := Callable()
 var _suppress_next_pressed := false
@@ -52,6 +54,8 @@ static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
 func setup(o: Offer, sim: Sim, selected: bool = false,
 		payload_provider: Callable = Callable(), clear_drag_hint: Callable = Callable()) -> void:
 	offer = o
+	swap_button = null
+	lock_button = null
 	_drag_payload = payload_provider
 	_clear_drag_hint = clear_drag_hint
 	var reason := sim.shop.block_reason(sim, o)
@@ -61,10 +65,11 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	var state := Loc.t("shop.quote_buy", [o.price])
 	match reason:
 		&"sold": state = Loc.t("shop.sold")
-		&"full": state = Loc.t("shop.full")
+		&"full": state = Loc.t("shop.full_reason")
 		&"maxed": state = Loc.t("shop.maxed")
 		&"poor": state = Loc.t("shop.drop_poor")
 	accessibility_description = "%s · %s" % [_description(o), state]
+	tooltip_text = state if reason != &"" else ""
 	# Sold cards are inert. Every other blocked card stays pressable so it can explain
 	# the constraint by flashing the resource it needs.
 	disabled = reason == &"sold"
@@ -94,8 +99,10 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 		box.add_child(desc)
 
 
-func _get_drag_data(_at_position: Vector2) -> Variant:
+func _get_drag_data(at_position: Vector2) -> Variant:
 	if disabled or offer == null or not _drag_payload.is_valid():
+		return null
+	if _nested_action_at(at_position):
 		return null
 	var data: Variant = _drag_payload.call(offer)
 	if data == null:
@@ -104,6 +111,15 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	var preview := _drag_preview()
 	set_drag_preview(preview)
 	return data
+
+
+func _nested_action_at(local_position: Vector2) -> bool:
+	var global_position := get_global_transform_with_canvas() * local_position
+	for action: Button in [swap_button, lock_button]:
+		if action != null and action.is_visible_in_tree() \
+				and action.get_global_rect().has_point(global_position):
+			return true
+	return false
 
 
 func drag_started() -> void:
@@ -208,6 +224,18 @@ func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) ->
 		swap_button.mouse_filter = Control.MOUSE_FILTER_STOP
 		swap_button.pressed.connect(_on_swap_pressed)
 		row.add_child(swap_button)
+	if reason != &"sold":
+		lock_button = Button.new()
+		lock_button.text = Loc.t("shop.unlock") if o.locked else Loc.t("shop.lock")
+		lock_button.tooltip_text = Loc.t("shop.lock_hint")
+		lock_button.accessibility_description = Loc.t("shop.lock_hint")
+		lock_button.custom_minimum_size = Vector2(46.0, 26.0)
+		lock_button.add_theme_font_size_override("font_size", 9)
+		lock_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		if o.locked:
+			lock_button.add_theme_color_override("font_color", UiTheme.ACCENT)
+		lock_button.pressed.connect(_on_lock_pressed)
+		row.add_child(lock_button)
 	row.add_child(_price_label(o, reason, selected))
 	return row
 
@@ -218,6 +246,15 @@ func _on_swap_pressed() -> void:
 	# A nested focusable action must never bubble into the parent purchase button.
 	_suppress_next_pressed = true
 	replacement_requested.emit(offer)
+	call_deferred("_clear_drag_guard_deferred")
+
+
+func _on_lock_pressed() -> void:
+	if offer == null or offer.sold or lock_button == null:
+		return
+	# Same nested-action guard as replace: locking is not a purchase.
+	_suppress_next_pressed = true
+	lock_toggled.emit(offer)
 	call_deferred("_clear_drag_guard_deferred")
 
 
@@ -279,7 +316,7 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 		&"sold":
 			return UiTheme.label(Loc.t("shop.sold"), 16, UiTheme.DIM, right)
 		&"full":
-			return UiTheme.label(Loc.t("shop.full"), 15, UiTheme.WARN, right)
+			return UiTheme.label(Loc.t("shop.full_short"), 15, UiTheme.WARN, right)
 		&"maxed":
 			return UiTheme.label(Loc.t("shop.maxed"), 15, UiTheme.WARN, right)
 	var color := UiTheme.WARN if reason == &"poor" else UiTheme.COIN

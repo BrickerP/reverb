@@ -82,6 +82,28 @@ func test_build_panel_can_sell_a_weapon(c: Check) -> void:
 	ui.free()
 
 
+func test_shop_locks_one_offer_through_reroll(c: Check) -> void:
+	var s := _shop_sim(1000)
+	var ui := _open_shop(s)
+	c.ok(ui.offers_box.get_child_count() == Shop.OFFER_COUNT, "four offer cards")
+	var first := ui.offers_box.get_child(0) as OfferCard
+	var second := ui.offers_box.get_child(1) as OfferCard
+	c.ok(first.lock_button != null and second.lock_button != null, "offer cards expose lock buttons")
+	var materials_before := s.player.materials
+	first.lock_button.pressed.emit()
+	c.eq(s.player.materials, materials_before, "locking does not spend materials")
+	c.ok(not s.shop.offers[0].sold, "locking does not buy the offer")
+	c.ok(s.shop.offers[0].locked, "first offer locked")
+	second.lock_button.pressed.emit()
+	c.ok(not s.shop.offers[0].locked, "locking another moves the hold")
+	c.ok(s.shop.offers[1].locked, "second offer locked")
+	var held := s.shop.offers[1]
+	ui.reroll_button.pressed.emit()
+	c.ok(s.shop.offers.has(held), "the locked offer survives a reroll")
+	c.ok(held.locked, "the held offer remains locked after reroll")
+	ui.free()
+
+
 func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 	var s := _shop_sim()
 	var ui := _open_shop(s)

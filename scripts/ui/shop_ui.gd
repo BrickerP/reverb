@@ -135,6 +135,7 @@ func refresh(animate_echo: bool = false) -> void:
 		card.setup(o, sim, o == _replacing, drag_payload_for, clear_drop_hint)
 		card.pressed.connect(_on_offer.bind(o, card))
 		card.replacement_requested.connect(_begin_replace)
+		card.lock_toggled.connect(_on_lock_offer)
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("shop.reroll", [cost])
 	reroll_button.disabled = sim.player.materials < cost
@@ -236,6 +237,24 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 	else:
 		card.reject(reduced_effects)
 		_flash_block(result.reason)
+
+
+func _on_lock_offer(o: Offer) -> void:
+	if sim == null or not sim.shop.toggle_lock(sim, o):
+		return
+	var index := maxi(0, sim.shop.offers.find(o))
+	refresh()
+	_focus_offer_lock(index)
+
+
+func _focus_offer_lock(index: int) -> bool:
+	if index < 0 or index >= offers_box.get_child_count():
+		return false
+	var card := offers_box.get_child(index) as OfferCard
+	if card == null or card.lock_button == null or card.lock_button.disabled:
+		return false
+	card.lock_button.grab_focus()
+	return true
 
 
 func is_replacing() -> bool:

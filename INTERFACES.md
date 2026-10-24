@@ -274,3 +274,39 @@ through `ShopState.weapon_change_index`, which is event metadata only and is nei
 restored nor serialized as simulation state. Size changes emit an explicit empty
 side, so middle-slot and duplicate-ID sales never masquerade as shifted replacements.
 Refunds, sale eligibility, state restoration and history limits remain unchanged.
+
+## 13. Offer locking
+
+One offer can be held across rerolls and the next shop. Locking is a shop decision, not an
+equipment transaction, and does not consume materials or push undo history.
+
+Mechanism API:
+
+- `Offer.locked: bool` is the per-offer flag.
+- `Shop.locked_offer()` returns the unsold locked offer, or `null`.
+- `Shop.toggle_lock(sim, offer) -> bool` locks/unlocks; locking a second offer moves the
+  hold, so at most one offer is held. Sold offers cannot be locked.
+- `Shop.reroll(sim)` keeps the locked offer and fills the remaining `OFFER_COUNT` slots;
+  `Shop.roll(sim)` also keeps it when the next shop opens.
+- Locked prices do not change while held.
+- `ShopState` captures/restores `Offer.locked`, so an equipment undo after a purchase
+  preserves the hold at the time of that transaction. Lock toggles themselves are not undo
+  steps.
+- If the held offer is bought, it is sold and stops being held; the next roll fills a fresh
+  slot. Unlock explicitly releases it.
+
+Presentation requirements:
+
+- Each unsold offer card exposes a `Lock`/`Unlock` action; do not bake lock state into the
+  purchase button.
+- Locking a second offer must visibly move the hold; only one card may show the locked state.
+- After a reroll, the held offer remains and should keep its card position/visibility.
+- The full-slot reason on a card is the short `shop.full_short`; the detailed
+  `shop.full` remains available in the footer/tooltip so the lock button does not squeeze
+  the price.
+- Locking is free and must not show a material transaction animation.
+
+Presentation-order correction: `_fill` retains the held offer during generation for
+duplicate prevention, then restores its previous clamped slot. The held object,
+price, generated offer set, RNG consumption and refresh cost are unchanged.
+The local sale-event index annotation remains separate from lock snapshot state.

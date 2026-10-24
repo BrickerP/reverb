@@ -35,6 +35,7 @@ static func capture(sim: Sim) -> ShopState:
 			"id": o.id(),
 			"price": o.price,
 			"sold": o.sold,
+			"locked": o.locked,
 		})
 	state.rerolls = sim.shop.rerolls
 	state.phase = int(sim.phase)
@@ -63,6 +64,7 @@ func restore(sim: Sim) -> void:
 			o.item = Content.item(StringName(str(entry.get("id", ""))))
 		o.price = int(entry.get("price", 0))
 		o.sold = bool(entry.get("sold", false))
+		o.locked = bool(entry.get("locked", false))
 		sim.shop.offers.append(o)
 	sim.shop.rerolls = rerolls
 	sim.phase = phase as Sim.Phase
