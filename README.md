@@ -31,6 +31,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - 下一波回响会以「倒带循环」方式重放走位，并用快照武器开火。
 - 回响寿命默认 3 波；槽位与威力由角色决定：复读机 3 个槽、40% 威力，独行者没有回响，镜像 2 个槽、40% 威力但实时复制当前装备。
 - 回响无敌、不挡敌人。槽满时必须先丢一张才能开下一波——留哪张是核心决策。
+- 每波可崩解一次最旧回响：永久消耗它，在它的位置造成范围爆发并回复 15% 最大生命；Space 或手柄 RB。
 - 商店里可把两张录像合成「叠录」：两条走位接成一条，武器合并（最多 8 件），只占一个槽；寿命按较老的那张算。
 - 三件粉色道具专门强化回响：备用卡座（+1 槽）、长播放（+1 波寿命）、大声公（+25% 威力）。
 
@@ -42,6 +43,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 |---|---|
 | 移动 | WASD / 方向键 / 左摇杆 / 十字键 |
 | 开火 | 自动 |
+| 崩解最旧回响 | Space / 手柄 RB |
 | 暂停 | P / Esc / Start |
 | 设置（音量/全屏/震动/语言） | O |
 | 对局记录（选角/结算界面） | H |
@@ -55,7 +57,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.7.0 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约与时间裂隙），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.8.0 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙与回响崩解），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -145,12 +147,13 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 - 报价锁定：每张报价有 Lock 按钮；一次只保留 1 个，刷新和下一商店都保留，直到购买、解锁或被新的锁定替换
 - 异常合约：第 3–19 波每间商店 1 个，可选“不受伤害 / 击杀 N 个敌人 / 击杀精英”；先付押金，成功按合约奖励，失败没收押金
 - 时间裂隙：第 12–19 波，每 16 秒在玩家附近预警一个 80 半径的裂隙；1.5 秒后激活 3 秒，圈内每 0.75 秒受伤，不提供接触无敌
+- 回响崩解：每波一次，Space / 手柄 RB 永久消耗最旧回响，在它的位置造成 180 半径爆发并回复 15% 最大生命；爆发伤害约为 3 秒回响 DPS
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 5450 项）
+make test     # 无头测试（当前 5481 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

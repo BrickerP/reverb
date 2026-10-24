@@ -485,7 +485,7 @@
     "branch": "integration/presentation-sync",
     "presentation_tip": "ba92fb21cfb7035743dc9761d584dc8a9986a824",
     "mechanics_fix": "73717b12d9893182a41486bde637c9b43ef6eac3",
-    "trunk": "3120501b3daa503e6396b75def5128fe113c3c85",
+    "trunk": "3487a2b1c844326ddf26e70bf053f00827b406e6",
     "boss_phase2_blocker": "cleared in 73717b1: remaining health is preserved exactly, including the 0.25 HP boundary",
     "boss_phase2_presentation": "unverified",
     "presentation_not_yet_verified": [
@@ -500,10 +500,15 @@
       "present": "mechanics-side ArenaPainter.rifts drawing and enemy.rift end-screen label",
       "missing": "audio and event feedback (rift_spawned/rift_activated/rift_ended have no listeners outside tests); native and reduced-effects capture"
     },
+    "echo_collapse": {
+      "status": "incomplete",
+      "present": "Space/RB input binding, hud.collapse hint, echo_collapse effect on the existing explosion event",
+      "missing": "listener for echo_collapsed; verified rendering and audio of the echo-tinted burst, reduced-effects and rebinding behavior; native capture"
+    },
     "conflict_policy": "trunk wins mechanics numbers and contracts; presentation lane wins event payloads and view wiring; duplicate _on_sell_weapon resolved to the Undo-focus fallback variant",
     "verification": {
       "scope": "headless only",
-      "full_assertions": "5450 passed, 0 failed",
+      "full_assertions": "5481 passed, 0 failed",
       "smoke": "OK",
       "python_report_tests": "10 passed",
       "native": "not rerun after merge"

@@ -18,6 +18,7 @@ const TABLE := {
 	"hud.settings": "Settings",
 	"hud.mute": "Mute / unmute",
 	"hud.help_echo": "Each wave is recorded, then replayed next wave",
+	"hud.collapse": "Collapse oldest echo",
 	"shop.title": "Shop  ·  wave %d cleared",
 	"shop.reroll": "Reroll (%d)",
 	"shop.undo": "Undo",

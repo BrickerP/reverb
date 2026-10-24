@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -410,3 +410,34 @@ Presentation requirements:
   localized `enemy.rift` label rather than an unknown key.
 - Reduced-motion mode may drop the spokes/rotating arcs but must keep the warning ring and
   active fill clearly distinct.
+
+## 16. Echo collapse
+
+One active echo can be sacrificed during a wave. This is a permanent resource spend, not a
+temporary silence.
+
+Mechanism API:
+
+- Input action `collapse_echo`, bound to Space and controller right shoulder by `Controls`.
+- `Sim.can_collapse_echo()` is true only in `Phase.WAVE`, when `collapse_used` is false and
+  at least one echo is active.
+- `Sim.collapse_oldest_echo()` consumes `echoes[0]` and its `EchoTake` from `EchoBank`,
+  reindexes the survivors, marks `collapse_used`, deals damage in a 180 radius around the
+  echo's last position, heals 15% max HP, and emits one explosion event with
+  `effect = &"echo_collapse"`.
+- Burst damage is `max(12, take.power() * echo_power() * 3 * synergy_damage_mult())`; it
+  counts as player damage (`source = -1`) so it does not leave a stale echo index.
+- `Sim.collapse_used` resets in `start_wave`; one use per wave.
+- Signals: `echo_collapsed(pos, color, radius)`. The existing `explosion_info` event carries
+  the echo tint, radius and `echo_collapse` effect; no new ExplosionInfo kind is required.
+- No echoes (e.g. Soloist) means no action and no input consumption.
+
+Presentation requirements:
+
+- HUD shows `SPACE` plus `hud.collapse` only when `can_collapse_echo()` is true; hide it
+  immediately after use. Controller binding is RB.
+- Play the burst as an echo-tinted explosion at the echo position; use the existing
+  weapon-explosion audio path unless a distinct cue is added later.
+- Do not show a confirmation dialog; the cost is permanent, so keep the hint explicit.
+- Main's input handler must ignore the action while paused, modal, in shop, or after the
+  run ends.

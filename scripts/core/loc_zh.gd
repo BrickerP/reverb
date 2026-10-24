@@ -18,6 +18,7 @@ const TABLE := {
 	"hud.settings": "设置",
 	"hud.mute": "静音 / 取消静音",
 	"hud.help_echo": "每波录制你的走位与武器，下一波回放",
+	"hud.collapse": "崩解最旧回响",
 	"shop.title": "商店  ·  第 %d 波完成",
 	"shop.reroll": "刷新 (%d)",
 	"shop.undo": "撤销",

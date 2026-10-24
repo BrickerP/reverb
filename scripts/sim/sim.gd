@@ -11,6 +11,7 @@ signal player_hurt(amount: float)
 signal player_hurt_info(info: PlayerHurtInfo)
 signal echo_spawned(actor: EchoActor)
 signal echo_recorded(take: EchoTake)
+signal echo_collapsed(pos: Vector2, color: Color, radius: float)
 signal shot_fired(source: int)
 signal shot_fired_info(info: ShotInfo)
 signal damage_event(info: DamageInfo)
@@ -91,6 +92,7 @@ var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
 var rifts: Array[TemporalRift] = []
+var collapse_used: bool = false
 var boss: EnemyState
 var boss_phase: int = 1
 var boss_shards: Array[EnemyState] = []
@@ -226,6 +228,7 @@ func start_wave(n: int) -> void:
 	last_contract_done = false
 	last_contract_success = false
 	last_contract_reward = 0
+	collapse_used = false
 	rifts.clear()
 	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and n < WaveDirector.FINAL_WAVE else 0.0
 	shop.clear_history()
@@ -476,6 +479,49 @@ func _bomber_explode(e: EnemyState) -> void:
 
 func discard_take(take: EchoTake) -> void:
 	bank.discard(take)
+
+
+func can_collapse_echo() -> bool:
+	return phase == Phase.WAVE and not collapse_used and not echoes.is_empty()
+
+
+# Sacrifice the oldest active echo: a one-per-wave burst at its last position plus
+# a small heal. This is deliberately permanent and removes the take from the bank.
+func collapse_oldest_echo() -> bool:
+	if not can_collapse_echo():
+		return false
+	var actor := echoes[0]
+	var take := actor.take
+	var pos := actor.pos
+	var tint := take.tint()
+	var damage := maxf(12.0, take.power() * echo_power() * 3.0 * synergy_damage_mult())
+	var radius := 180.0
+	if not bank.discard(take):
+		return false
+	echoes.remove_at(0)
+	for i in echoes.size():
+		echoes[i].index = i
+	collapse_used = true
+	for e: EnemyState in enemies.duplicate():
+		if e.dead:
+			continue
+		if pos.distance_to(e.pos) > radius + e.radius:
+			continue
+		var knock := (e.pos - pos).normalized() * 160.0
+		if knock == Vector2.ZERO:
+			knock = Vector2.RIGHT * 160.0
+		damage_enemy(e, damage, knock, false, -1, Vector2.ZERO, &"", &"echo_collapse")
+	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * 0.15)
+	explosion.emit(pos, radius, tint)
+	var info := ExplosionInfo.new()
+	info.kind = ExplosionInfo.WEAPON
+	info.pos = pos
+	info.radius = radius
+	info.color = tint
+	info.effect = &"echo_collapse"
+	explosion_info.emit(info)
+	echo_collapsed.emit(pos, tint, radius)
+	return true
 
 
 func merge_takes(a: EchoTake, b: EchoTake) -> EchoTake:
