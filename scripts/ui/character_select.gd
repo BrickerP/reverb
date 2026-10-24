@@ -11,6 +11,8 @@ var _cards_box: HBoxContainer
 var _summary: Label
 var _cards: Array[Button] = []
 var _daily_button: Button
+var _ascension_button: Button
+var _meta: Meta
 var seed_edit: LineEdit
 
 
@@ -51,6 +53,11 @@ func _ready() -> void:
 	seed_edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	seed_edit.max_length = 12
 	seed_row.add_child(seed_edit)
+	_ascension_button = Button.new()
+	_ascension_button.custom_minimum_size = Vector2(156.0, 32.0)
+	_ascension_button.add_theme_font_size_override("font_size", 12)
+	_ascension_button.pressed.connect(_cycle_ascension)
+	seed_row.add_child(_ascension_button)
 	box.add_child(seed_row)
 	_summary = UiTheme.label("", 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_summary)
@@ -83,6 +90,7 @@ func _ready() -> void:
 
 
 func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
+	_meta = meta
 	UiTheme.clear(_cards_box)
 	_cards.clear()
 	for def: CharacterDef in Content.characters().values():
@@ -92,6 +100,7 @@ func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 	_summary.text = "%s  ·  v%s" % [Loc.t("select.best", [meta.best_wave, meta.wins]),
 			str(ProjectSettings.get_setting("application/config/version", ""))]
 	_daily_button.text = Loc.t("select.daily_best", [daily_best]) if daily_best > 0 else Loc.t("select.daily")
+	_update_ascension_button()
 	for card in _cards:
 		if not card.disabled:
 			card.grab_focus()
@@ -108,6 +117,28 @@ func focus_default() -> void:
 func chosen_seed() -> int:
 	var text := seed_edit.text.strip_edges()
 	return int(text) if text.is_valid_int() else -1
+
+
+func _update_ascension_button() -> void:
+	if _ascension_button == null or _meta == null:
+		return
+	var max_level := _meta.max_ascension()
+	if max_level > 0:
+		_ascension_button.text = Loc.t("select.ascension", [_meta.ascension])
+	else:
+		_ascension_button.text = Loc.t("select.ascension_locked")
+	_ascension_button.disabled = max_level <= 0
+	_ascension_button.tooltip_text = Loc.t("select.ascension_hint")
+
+
+func _cycle_ascension() -> void:
+	if _meta == null:
+		return
+	var max_level := _meta.max_ascension()
+	if max_level <= 0:
+		return
+	_meta.set_ascension((_meta.ascension + 1) % (max_level + 1))
+	_update_ascension_button()
 
 
 func _make_card(def: CharacterDef, meta: Meta) -> Button:

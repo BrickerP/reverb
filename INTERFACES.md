@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -502,3 +502,32 @@ Presentation requirements:
   does not simulate completing a set; do not claim it does.
 - Set bonuses are small numeric completion rewards, not hidden affinity or drop bias.
 - No new icons, audio or item IDs; use the existing item icons.
+
+## 19. Ascension
+
+Optional difficulty levels 0–3 are selected on the character select screen and apply for
+the whole run, including endless.
+
+Mechanism/API:
+
+- `Meta.ascension` is the saved selected level; `Meta.max_ascension()` returns
+  `min(3, wins)` and `Meta.set_ascension(value)` clamps and saves.
+- `Sim.ascension` defaults 0. Main sets it before `sim.start_run()` from Meta, or forces 0
+  for the daily challenge.
+- Enemy scaling at materialization:
+  - HP × `(1 + 0.10 * ascension)`;
+  - damage × `(1 + 0.10 * ascension)`;
+  - speed × `(1 + 0.05 * ascension)`.
+  Bosses and elites use the same multipliers; wave scaling is applied first.
+- `RunLog` records `ascension`.
+- No change to wave planning, shop prices, drops, echo power or item sets.
+- Normal `ascension = 0` keeps all existing stats/balance unchanged.
+
+Presentation requirements:
+
+- Character select shows an `Ascension N` button beside Seed. It is disabled when
+  `max_ascension() == 0`; clicking cycles 0..max and persists immediately.
+- Tooltip explains the per-level HP/damage/speed increases and that wins unlock levels.
+- Do not offer in-run ascension changes; retry/restart uses the saved Meta selection.
+- Daily challenge always starts at 0.
+- The end screen need not add a new line for ascension; RunLog remains the evidence source.

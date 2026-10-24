@@ -10,6 +10,7 @@ var runs: int = 0
 var daily_seed: int = 0
 var daily_best: int = 0
 var daily_wins: int = 0
+var ascension: int = 0
 var unlocked: Dictionary = {}
 
 
@@ -26,6 +27,7 @@ func _defaults() -> void:
 	daily_seed = 0
 	daily_best = 0
 	daily_wins = 0
+	ascension = 0
 	unlocked = {}
 	for def: CharacterDef in Content.characters().values():
 		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
@@ -50,6 +52,7 @@ func _load() -> void:
 	daily_seed = int(data.get("daily_seed", 0))
 	daily_best = int(data.get("daily_best", 0))
 	daily_wins = int(data.get("daily_wins", 0))
+	ascension = clampi(int(data.get("ascension", 0)), 0, max_ascension())
 	var saved: Variant = data.get("unlocked", {})
 	if typeof(saved) == TYPE_DICTIONARY:
 		for key: Variant in (saved as Dictionary):
@@ -72,12 +75,22 @@ func save() -> void:
 		"daily_seed": daily_seed,
 		"daily_best": daily_best,
 		"daily_wins": daily_wins,
+		"ascension": ascension,
 		"unlocked": flags,
 	}, "\t"))
 
 
 func is_unlocked(id: StringName) -> bool:
 	return bool(unlocked.get(id, false))
+
+
+func max_ascension() -> int:
+	return mini(3, wins)
+
+
+func set_ascension(value: int) -> void:
+	ascension = clampi(value, 0, max_ascension())
+	save()
 
 
 # Records one finished run and returns any characters unlocked by it.

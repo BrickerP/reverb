@@ -110,7 +110,7 @@ func _ready() -> void:
 	show_select()
 
 
-func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
+func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1) -> void:
 	_detach_presentation_session()
 	feedback_ui.reset()
 	_latest_saved_run.clear()
@@ -118,6 +118,10 @@ func new_run(seed_value: int = -1, char_id: StringName = &"") -> void:
 		character_id = char_id
 	_daily_run = false
 	sim = Sim.new(seed_value if seed_value >= 0 else randi())
+	if ascension_value >= 0:
+		sim.ascension = clampi(ascension_value, 0, 3)
+	elif meta != null:
+		sim.ascension = meta.ascension
 	var def := Content.character(character_id)
 	if def != null:
 		def.apply(sim)
@@ -162,7 +166,7 @@ func today_seed() -> int:
 
 
 func start_daily() -> void:
-	new_run(today_seed(), &"looper")
+	new_run(today_seed(), &"looper", 0)
 	_daily_run = true
 
 
