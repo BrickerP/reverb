@@ -285,6 +285,10 @@ static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:
 func _draw_controls() -> void:
 	var size := 14
 	var label_w := UiTheme.font()
+	if sim.can_collapse_echo():
+		var hint := Loc.t("hud.collapse")
+		_keycap("SPACE", Vector2(40.0, 654.0), 12)
+		_text(hint, Vector2(40.0 + _keycap_width("SPACE", 12) + 8.0, 667.0), 12, UiTheme.ECHO)
 	var move_label := Loc.t("hud.move")
 	var pause_label := Loc.t("hud.pause")
 	var move_w := _keycap_width("WASD", size) + 8.0 + label_w.get_string_size(move_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
