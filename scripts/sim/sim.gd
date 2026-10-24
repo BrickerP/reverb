@@ -64,6 +64,9 @@ const ELITE_BULWARK_ARC := 120.0
 const ELITE_BULWARK_REDUCTION := 0.25
 const ELITE_VOLATILE_RADIUS := 64.0
 const ELITE_VOLATILE_DAMAGE := 6.0
+const ELITE_SPLIT_SHARE := 0.22
+const ELITE_SPLIT_DAMAGE := 0.55
+const ELITE_SPLIT_SPEED := 0.90
 const RIFT_START_WAVE := 12
 const RIFT_FIRST_DELAY := 8.0
 const RIFT_INTERVAL := 16.0
@@ -439,6 +442,27 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		_handle_boss_shard_death(e)
 	if e.death_radius_value() > 0.0:
 		_bomber_explode(e)
+	_split_elite(e)
+
+
+func _split_elite(e: EnemyState) -> void:
+	if e == null or not e.elite or e.elite_kind != &"splitter":
+		return
+	for i in 2:
+		var child := EnemyState.new()
+		child.uid = _next_uid
+		_next_uid += 1
+		child.def = e.def
+		child.max_hp = maxf(1.0, e.max_hp * ELITE_SPLIT_SHARE)
+		child.hp = child.max_hp
+		child.speed = e.speed * ELITE_SPLIT_SPEED
+		child.damage = e.damage * ELITE_SPLIT_DAMAGE
+		child.radius = e.def.radius
+		var offset := Vector2(-24.0 if i == 0 else 24.0, 0.0)
+		var pad := child.radius + 8.0
+		child.pos = (e.pos + offset).clamp(ARENA.position + Vector2(pad, pad),
+				ARENA.end - Vector2(pad, pad))
+		enemies.append(child)
 
 
 func _begin_boss_phase2() -> void:
@@ -656,6 +680,8 @@ func _apply_elite(e: EnemyState, kind: StringName) -> void:
 		&"volatile":
 			e.death_radius_override = ELITE_VOLATILE_RADIUS
 			e.death_damage_override = ELITE_VOLATILE_DAMAGE
+		&"splitter":
+			pass
 
 
 func _materialize(ps: PendingSpawn) -> void:

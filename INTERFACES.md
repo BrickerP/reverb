@@ -263,13 +263,16 @@ Rules:
 - `overclocked`: additional speed ×1.3 and damage ×1.1.
 - `bulwark`: shield arc 120°, reduction 0.25.
 - `volatile`: death radius 64, death damage 6.
+- `splitter`: on death spawn two non-elite copies of the same enemy at 22% of the elite
+  max HP, 55% damage and 90% speed. Children keep the host `def.id`, use normal radius and
+  cannot split again.
 - The final wave has no regular elite; the boss is never marked elite.
 - Elite selection is deterministic for a seed/wave; it does not add a new reward roll.
 
 Presentation requirements:
 
 - Draw an elite aura in the family-independent color map: overclocked cyan, bulwark blue,
-  volatile orange. Pending spawn telegraphs must use the same color.
+  volatile orange, splitter green. Pending spawn telegraphs must use the same color.
 - Use `EnemyState.death_*_value()` and `shield_*_value()` in the arena painter; do not read
   `def.death_radius`/`def.shield_arc` directly for elites.
 - The volatile death uses the existing bomber explosion event/audio path; no new event type.

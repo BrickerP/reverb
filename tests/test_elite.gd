@@ -50,6 +50,29 @@ func test_bulwark_elite_uses_runtime_shield(c: Check) -> void:
 	c.near(back_hp - e.hp, 100.0, 0.001, "back hits ignore the shield")
 
 
+func test_splitter_elite_spawns_two_weaker_children(c: Check) -> void:
+	var s := _sim()
+	var e := _materialize(s, &"splitter")
+	var before := s.enemies.size()
+	e.hp = 1.0
+	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1)
+	c.eq(s.enemies.size(), before + 2, "splitter leaves two children")
+	var children: Array[EnemyState] = []
+	for enemy in s.enemies:
+		if not enemy.dead:
+			children.append(enemy)
+	c.eq(children.size(), 2, "both children are alive")
+	for child in children:
+		c.ok(not child.elite, "children are normal enemies")
+		c.eq(child.def.id, e.def.id, "children keep the host enemy identity")
+		c.near(child.max_hp, e.max_hp * Sim.ELITE_SPLIT_SHARE, 0.001,
+				"children use the split health share")
+		c.near(child.damage, e.damage * Sim.ELITE_SPLIT_DAMAGE, 0.001,
+				"children use the split damage share")
+		c.near(child.speed, e.speed * Sim.ELITE_SPLIT_SPEED, 0.001,
+				"children use the split speed share")
+
+
 func test_volatile_elite_explodes_with_a_runtime_radius(c: Check) -> void:
 	var s := _sim()
 	var e := _materialize(s, &"volatile")

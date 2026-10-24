@@ -3,7 +3,7 @@ extends RefCounted
 
 const FINAL_WAVE := 20
 const ELITE_START_WAVE := 10
-const ELITE_KINDS := [&"overclocked", &"bulwark", &"volatile"]
+const ELITE_KINDS := [&"overclocked", &"bulwark", &"volatile", &"splitter"]
 const MIN_SPAWN_DISTANCE := 240.0
 const EDGE_INSET := 24.0
 
