@@ -408,7 +408,7 @@ func _begin_boss_phase2() -> void:
 	if boss == null or boss_phase != 1:
 		return
 	boss_phase = 2
-	var remaining := maxf(1.0, boss.hp)
+	var remaining := boss.hp
 	var shard_hp := remaining * BOSS_PHASE2_SPLIT_SHARE
 	boss.hp = shard_hp
 	boss.max_hp = shard_hp
@@ -480,10 +480,10 @@ func _bomber_explode(e: EnemyState) -> void:
 		wave_damage_taken = true
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
-		last_damage_source = &"bomber"
+		last_damage_source = e.def.id
 		player_hurt.emit(damage)
 		var hurt := PlayerHurtInfo.new()
-		hurt.source = &"bomber"
+		hurt.source = e.def.id
 		hurt.amount = damage
 		hurt.pos = player.pos
 		hurt.direction = (player.pos - e.pos).normalized()

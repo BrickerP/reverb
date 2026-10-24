@@ -90,7 +90,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 		_box.add_child(cancel)
 		detail_changed.emit("")
 	else:
-		_weapons_row = _weapon_chips(pl)
+		_weapons_row = _weapon_chips(pl, sim)
 		_box.add_child(_weapons_row)
 		if pl.weapons.size() < Content.MAX_WEAPON_SLOTS:
 			empty_drop_target = _empty_target(&"empty_weapon", Loc.t("shop.drop_weapon"))
@@ -142,6 +142,8 @@ func focus_first_slot() -> bool:
 func focus_upgrade(index: int) -> bool:
 	if index < 0 or index >= _upgrade_buttons.size():
 		return false
+	if _upgrade_buttons[index].disabled or not _upgrade_buttons[index].is_visible_in_tree():
+		return false
 	_upgrade_buttons[index].grab_focus()
 	return true
 
@@ -181,7 +183,7 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 	return flow
 
 
-func _weapon_chips(pl: PlayerState) -> Control:
+func _weapon_chips(pl: PlayerState, sim: Sim) -> Control:
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 6)
@@ -190,11 +192,11 @@ func _weapon_chips(pl: PlayerState) -> Control:
 		grid.add_child(UiTheme.label(Loc.t("shop.none"), 15, UiTheme.DIM))
 		return grid
 	for i in pl.weapons.size():
-		grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl))
+		grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl, sim))
 	return grid
 
 
-func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Control:
+func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Sim) -> Control:
 	var card := ShopDropTarget.new()
 	card.configure(&"weapon_slot", index, _quote_drop, _apply_drop, _clear_drop)
 	card.accessibility_name = Loc.weapon_name(w.id)
@@ -253,13 +255,16 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	var sell := Button.new()
 	sell.custom_minimum_size = Vector2(0.0, 20.0)
 	sell.add_theme_font_size_override("font_size", 10)
-	sell.tooltip_text = Loc.t("shop.sell_hint")
-	sell.accessibility_description = Loc.t("shop.sell_hint")
-	if pl.weapons.size() <= 1:
+	var sell_quote := sim.shop.quote(ShopResult.SELL, sim, null, index)
+	if not sell_quote.ok:
 		sell.text = Loc.t("shop.sell_last")
+		sell.tooltip_text = Loc.t("shop.sell_last_reason")
+		sell.accessibility_description = Loc.t("shop.sell_last_reason")
 		sell.disabled = true
 	else:
-		sell.text = Loc.t("shop.sell", [Shop.resale_total(w, level)])
+		sell.text = Loc.t("shop.sell", [absi(sell_quote.cost)])
+		sell.tooltip_text = Loc.t("shop.sell_hint")
+		sell.accessibility_description = Loc.t("shop.sell_hint")
 		sell.pressed.connect(func() -> void: sell_requested.emit(index))
 	sell.accessibility_name = sell.text
 	box.add_child(sell)
@@ -270,6 +275,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState) -> Cont
 	slot_drop_targets.append(card)
 	card.mouse_entered.connect(func() -> void: _select(index))
 	upgrade.focus_entered.connect(func() -> void: _select(index))
+	sell.focus_entered.connect(func() -> void: _select(index))
 	return card
 
 
@@ -306,6 +312,13 @@ func pulse_weapon_slot(index: int, reverse: bool = false, reduced: bool = false)
 		empty_drop_target.feedback(reverse, reduced)
 		return true
 	return false
+
+
+func pulse_removed_weapon(reverse: bool = false, reduced: bool = false) -> bool:
+	if empty_drop_target == null:
+		return false
+	empty_drop_target.feedback(reverse, reduced)
+	return true
 
 
 func pulse_items(reverse: bool = false, reduced: bool = false) -> bool:
@@ -376,9 +389,8 @@ func _detail_text_for(w: WeaponDef, level: int) -> String:
 
 
 func _family_summary(pl: PlayerState) -> Control:
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 2)
+	var flow := VBoxContainer.new()
+	flow.add_theme_constant_override("separation", 2)
 	var counts: Dictionary = {}
 	for w in pl.weapons:
 		counts[w.family] = int(counts.get(w.family, 0)) + 1
@@ -402,7 +414,9 @@ func _family_summary(pl: PlayerState) -> Control:
 				parts.append(Loc.t(mastery_key))
 		if count >= 6:
 			parts.append(Loc.t("shop.family_master"))
-		flow.add_child(UiTheme.label(" · ".join(parts), 12, UiTheme.COIN if count >= 2 else UiTheme.DIM))
+		var summary := UiTheme.label(" · ".join(parts), 12, UiTheme.COIN if count >= 2 else UiTheme.DIM)
+		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		flow.add_child(summary)
 	return flow
 
 

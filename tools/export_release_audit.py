@@ -114,7 +114,11 @@ def archive_commit(repo: Path, commit: str, stage: Path) -> None:
     archive.unlink()
 
 
-def inject_isolated_user_dir(project_file: Path, custom_name: str) -> dict[str, str]:
+def inject_isolated_user_dir(
+    project_file: Path, custom_name: str, build_commit: str,
+) -> dict[str, str]:
+    if re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", build_commit) is None:
+        raise RuntimeError("build commit must be a full hexadecimal Git object ID")
     original = project_file.read_text()
     marker = "[application]\n"
     if original.count(marker) != 1:
@@ -124,6 +128,7 @@ def inject_isolated_user_dir(project_file: Path, custom_name: str) -> dict[str, 
     addition = (
         "config/use_custom_user_dir=true\n"
         f'config/custom_user_dir_name="{custom_name}"\n'
+        f'config/build_commit="{build_commit}"\n'
     )
     overlaid = original.replace(marker, marker + addition, 1)
     project_file.write_text(overlaid)
@@ -131,6 +136,7 @@ def inject_isolated_user_dir(project_file: Path, custom_name: str) -> dict[str, 
         "source_sha256": hashlib.sha256(original.encode()).hexdigest(),
         "overlay_sha256": hashlib.sha256(overlaid.encode()).hexdigest(),
         "custom_user_dir_name": custom_name,
+        "build_commit": build_commit,
     }
 
 
@@ -311,7 +317,7 @@ def main() -> None:
     short = commit[:12]
     created_at = int(time.time())
     custom_name = f"Codex/TakeStack-ExportAudit-{short}-{created_at}"
-    overlay = inject_isolated_user_dir(stage / "project.godot", custom_name)
+    overlay = inject_isolated_user_dir(stage / "project.godot", custom_name, commit)
     expected = expected_inventory(stage)
     # Keep every audit script, pack and binary outside res:// so `all_resources`
     # cannot accidentally package its own verification machinery or outputs.

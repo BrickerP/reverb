@@ -358,7 +358,8 @@ func _on_upgrade_weapon(index: int) -> void:
 	var result := sim.shop.apply(ShopResult.UPGRADE, sim, null, index)
 	if result.ok:
 		refresh()
-		build_panel.focus_upgrade(index)
+		if not build_panel.focus_upgrade(index):
+			undo_button.grab_focus()
 	else:
 		_flash_block(result.reason)
 
@@ -367,7 +368,8 @@ func _on_evolve_weapon(index: int) -> void:
 	var result := sim.shop.apply(ShopResult.EVOLVE, sim, null, index)
 	if result.ok:
 		refresh()
-		build_panel.focus_upgrade(index)
+		if not build_panel.focus_upgrade(index):
+			undo_button.grab_focus()
 	else:
 		_flash_block(result.reason)
 
@@ -377,7 +379,8 @@ func _on_sell_weapon(index: int) -> void:
 	if result.ok:
 		var next := mini(index, sim.player.weapons.size() - 1)
 		refresh()
-		build_panel.focus_upgrade(next)
+		if not build_panel.focus_upgrade(next):
+			undo_button.grab_focus()
 	else:
 		_flash_block(result.reason)
 
@@ -462,8 +465,11 @@ func reset_feedback() -> void:
 func _on_weapon_changed(info: WeaponChangeInfo) -> void:
 	if info == null or not info.ok:
 		return
-	_queue_feedback(StringName("slot_%d" % info.index), {
-		"kind": &"weapon", "index": info.index,
+	var removed := info.before_id != &"" and info.after_id == &""
+	var key := StringName("removed_%d" % info.index) if removed \
+			else StringName("slot_%d" % info.index)
+	_queue_feedback(key, {
+		"kind": &"weapon_removed" if removed else &"weapon", "index": info.index,
 		"reverse": info.reason == ShopResult.UNDO, "action": info.reason,
 		"before_id": info.before_id, "after_id": info.after_id,
 	})
@@ -483,6 +489,7 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 			_queue_feedback(&"materials", {
 				"kind": &"materials", "index": -1, "reverse": reverse,
 				"action": result.action,
+				"refund": result.action == ShopResult.SELL and result.cost < 0,
 			})
 	elif result.action == ShopResult.REROLL and result.cost != 0:
 		_queue_feedback(&"materials", {
@@ -516,6 +523,8 @@ func _flush_feedback_deferred(epoch: int, generation: int) -> void:
 			&"weapon":
 				build_panel.pulse_weapon_slot(int(data.get("index", -1)),
 						bool(data.get("reverse", false)), reduced_effects)
+			&"weapon_removed":
+				build_panel.pulse_removed_weapon(bool(data.get("reverse", false)), reduced_effects)
 			&"items":
 				build_panel.pulse_items(bool(data.get("reverse", false)), reduced_effects)
 			&"materials":
