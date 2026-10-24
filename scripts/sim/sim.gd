@@ -75,6 +75,7 @@ var rng := RandomNumberGenerator.new()
 var hazard_rng := RandomNumberGenerator.new()
 var endless: bool = false
 var ascension: int = 0
+var daily_modifier: StringName = &""
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
@@ -157,6 +158,8 @@ func echo_power() -> float:
 	var power := player.stats.get_stat(Stats.ECHO_POWER)
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
 		power += Combat.FAMILY_MASTERY_ARCANE_ECHO
+	if daily_modifier == DailyAnomaly.ECHO_SURGE:
+		power += DailyAnomaly.ECHO_BONUS
 	return maxf(0.0, power)
 
 
@@ -224,14 +227,20 @@ func is_boss_wave(n: int = wave) -> bool:
 
 
 func ascension_elite_count() -> int:
+	if daily_modifier == DailyAnomaly.TWIN_HUNT:
+		return 2
 	return 2 if ascension >= 3 else 1
 
 
 func ascension_rift_wave() -> int:
+	if daily_modifier == DailyAnomaly.RIFTFALL:
+		return DailyAnomaly.RIFT_WAVE
 	return 10 if ascension >= 2 else RIFT_START_WAVE
 
 
 func ascension_rift_interval() -> float:
+	if daily_modifier == DailyAnomaly.RIFTFALL:
+		return DailyAnomaly.RIFT_INTERVAL
 	return 14.0 if ascension >= 2 else RIFT_INTERVAL
 
 

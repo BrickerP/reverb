@@ -100,6 +100,8 @@ func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 	_summary.text = "%s  ·  v%s" % [Loc.t("select.best", [meta.best_wave, meta.wins]),
 			str(ProjectSettings.get_setting("application/config/version", ""))]
 	_daily_button.text = Loc.t("select.daily_best", [daily_best]) if daily_best > 0 else Loc.t("select.daily")
+	_daily_button.tooltip_text = Loc.t("select.daily_anomaly", [
+			Loc.t(DailyAnomaly.title_key(DailyAnomaly.for_seed(daily_seed)))])
 	_update_ascension_button()
 	for card in _cards:
 		if not card.disabled:
