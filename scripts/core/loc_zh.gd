@@ -4,6 +4,7 @@ extends RefCounted
 const TABLE := {
 	"hud.wave": "第 %d / %d 波",
 	"hud.endless": "无尽  ·  第 %d 波",
+	"hud.endless_boss": "无尽第 %d 波  ·  悖论",
 	"hud.boss": "悖论",
 	"hud.boss_phase2": "悖论 // 双线",
 	"hud.boss_down": "悖论 已击败",

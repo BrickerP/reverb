@@ -216,6 +216,13 @@ func can_start_wave() -> bool:
 	return phase == Phase.SHOP and bank.overflow(echo_capacity()) == 0
 
 
+# Normal final wave, or every fifth endless wave, schedules Paradox.
+func is_boss_wave(n: int = wave) -> bool:
+	if not endless:
+		return n == WaveDirector.FINAL_WAVE
+	return n > WaveDirector.FINAL_WAVE and n % 5 == 0
+
+
 func start_next_wave() -> void:
 	if phase == Phase.SHOP:
 		start_wave(wave + 1)
@@ -250,8 +257,8 @@ func start_wave(n: int) -> void:
 	wave_start_materials = player.materials
 	last_wave_earned = 0
 	last_interest = 0
-	var boss_wave := n == WaveDirector.FINAL_WAVE and not endless
-	var mult := 0.35 if boss_wave else 1.0
+	var boss_wave := is_boss_wave(n)
+	var mult := 0.35 if boss_wave and not endless else (0.55 if boss_wave else 1.0)
 	_plan = WaveDirector.plan(n, run_seed, mult, endless)
 	if boss_wave:
 		var boss_event := SpawnEvent.new()
@@ -319,7 +326,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	if player.hp <= 0.0:
 		phase = Phase.LOST
 		run_lost.emit()
-	elif wave == WaveDirector.FINAL_WAVE and not endless:
+	elif is_boss_wave():
 		if boss != null and boss_alive_count() == 0:
 			_end_wave()
 	elif wave_time >= wave_duration:
@@ -604,6 +611,8 @@ func _materialize(ps: PendingSpawn) -> void:
 	e.def = ps.def
 	e.pos = ps.pos
 	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
+	if ps.def.is_boss and endless and wave > WaveDirector.FINAL_WAVE:
+		hp_scale = 1.0 + 0.20 * float(wave - WaveDirector.FINAL_WAVE)
 	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * float(ascension))
 	e.hp = e.max_hp
 	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * float(ascension))
