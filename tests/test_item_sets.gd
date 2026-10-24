@@ -34,13 +34,12 @@ func test_gunsmith_and_field_sets(c: Check) -> void:
 	c.near(gunsmith.player.stats.get_stat(Stats.ATTACK_SPEED_PCT), haste_before, 0.001,
 			"a fourth set member does not apply haste twice")
 	var field := _sim()
-	var max_hp := field.player.max_hp()
 	for id in [&"iron_heart", &"regen_patch", &"sneakers"]:
 		field.player.add_item(Content.item(id))
-	c.near(field.player.max_hp(), max_hp + 10.0 + 3.0, 0.001,
-			"field set adds max health after the iron heart")
-	c.near(field.player.stats.get_stat(Stats.HP_REGEN), 0.65 + 0.10, 0.001,
-			"field set adds regen")
+	c.near(field.player.stats.get_stat(Stats.SHIELD), 8.0, 0.001,
+			"field set grants shield")
+	c.near(field.player.stats.get_stat(Stats.HP_REGEN), 0.65, 0.001,
+			"field set no longer adds regen")
 
 
 func test_shop_state_restores_set_bonus(c: Check) -> void:

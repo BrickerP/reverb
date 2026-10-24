@@ -140,6 +140,12 @@ func _draw_health() -> void:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 110.0)
 		border = Color(1.0, 0.25, 0.35, 0.5 + 0.5 * pulse)
 	draw_rect(bar, border, false, 2.0)
+	if pl.max_shield() > 0.0:
+		var shield_bar := Rect2(40.0, 36.0, 300.0, 4.0)
+		draw_rect(shield_bar, Color(0.04, 0.1, 0.16))
+		var shield_ratio := clampf(pl.shield / pl.max_shield(), 0.0, 1.0)
+		draw_rect(Rect2(shield_bar.position, Vector2(shield_bar.size.x * shield_ratio, shield_bar.size.y)),
+				Color(0.45, 0.9, 1.0, 0.9))
 	_text("%s  %d / %d" % [Loc.t("hud.hp"), maxi(0, ceili(pl.hp)), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
 
 

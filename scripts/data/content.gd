@@ -26,7 +26,7 @@ const ITEM_SETS := {
 		"name": "set.field",
 		"members": [&"iron_heart", &"regen_patch", &"sneakers", &"magnet"],
 		"required": 3,
-		"mods": {&"max_hp": 3.0, &"hp_regen": 0.10},
+		"mods": {&"shield": 8.0},
 	},
 }
 

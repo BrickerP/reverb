@@ -9,6 +9,7 @@ const RANGE_PCT := &"range_pct"
 const CRIT_CHANCE := &"crit_chance"
 const PICKUP_RANGE := &"pickup_range"
 const HP_REGEN := &"hp_regen"
+const SHIELD := &"shield"
 const ECHO_SLOTS := &"echo_slots"
 const ECHO_LIFESPAN := &"echo_lifespan"
 const ECHO_POWER := &"echo_power"
@@ -16,7 +17,7 @@ const ECHO_POWER := &"echo_power"
 const PERCENT: Array[StringName] = [DAMAGE_PCT, ATTACK_SPEED_PCT, RANGE_PCT, CRIT_CHANCE, ECHO_POWER]
 const ORDER: Array[StringName] = [
 	MAX_HP, MOVE_SPEED, DAMAGE_PCT, ATTACK_SPEED_PCT, RANGE_PCT, CRIT_CHANCE,
-	PICKUP_RANGE, HP_REGEN, ECHO_SLOTS, ECHO_LIFESPAN, ECHO_POWER,
+	PICKUP_RANGE, HP_REGEN, ECHO_SLOTS, ECHO_LIFESPAN, ECHO_POWER, SHIELD,
 ]
 
 const DEFAULTS := {
@@ -28,6 +29,7 @@ const DEFAULTS := {
 	CRIT_CHANCE: 0.05,
 	PICKUP_RANGE: 90.0,
 	HP_REGEN: 0.0,
+	SHIELD: 0.0,
 	ECHO_SLOTS: 2.0,
 	ECHO_LIFESPAN: 3.0,
 	ECHO_POWER: 0.5,
