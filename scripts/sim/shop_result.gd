@@ -6,6 +6,8 @@ const REPLACE := &"replace"
 const UPGRADE := &"upgrade"
 const EVOLVE := &"evolve"
 const SELL := &"sell"
+const ECHO_DISCARD := &"echo_discard"
+const ECHO_MERGE := &"echo_merge"
 const REROLL := &"reroll"
 const UNDO := &"undo"
 

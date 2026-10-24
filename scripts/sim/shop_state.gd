@@ -11,6 +11,8 @@ var weapon_levels: Array[int] = []
 var cooldowns: Array[float] = []
 var items: Dictionary = {}
 var set_bonus_applied: Dictionary = {}
+var echoes: Array[Dictionary] = []
+var tint_counter: int = 0
 var offers: Array[Dictionary] = []
 var rerolls: int = 0
 var phase: int = 0
@@ -31,6 +33,21 @@ static func capture(sim: Sim) -> ShopState:
 	state.cooldowns = sim.player.cooldowns.duplicate()
 	state.items = sim.player.items.duplicate()
 	state.set_bonus_applied = sim.player.set_bonus_applied.duplicate()
+	for take in sim.bank.takes:
+		var weapons_out := PackedStringArray()
+		for w in take.weapons:
+			weapons_out.append(String(w.id))
+		state.echoes.append({
+			"samples": take.samples.duplicate(),
+			"weapons": weapons_out,
+			"levels": take.levels.duplicate(),
+			"stats": take.stats.values.duplicate(),
+			"wave": take.wave,
+			"age": take.age,
+			"tint": take.tint_index,
+			"merged": take.merged,
+		})
+	state.tint_counter = sim.bank.tint_counter()
 	for o in sim.shop.offers:
 		state.offers.append({
 			"kind": "weapon" if o.is_weapon() else "item",
@@ -58,6 +75,26 @@ func restore(sim: Sim) -> void:
 			sim.player.weapons.append(w)
 	sim.player.items = items.duplicate()
 	sim.player.set_bonus_applied = set_bonus_applied.duplicate()
+	sim.bank.takes.clear()
+	var max_tint := -1
+	for entry: Dictionary in echoes:
+		var take := EchoTake.new()
+		take.samples = (entry.get("samples", PackedVector2Array()) as PackedVector2Array).duplicate()
+		for id: Variant in entry.get("weapons", []):
+			take.weapons.append(Content.weapon(StringName(str(id))))
+		for level: Variant in entry.get("levels", []):
+			take.levels.append(int(level))
+		while take.levels.size() < take.weapons.size():
+			take.levels.append(0)
+		take.stats = Stats.new()
+		take.stats.values = (entry.get("stats", {}) as Dictionary).duplicate()
+		take.wave = int(entry.get("wave", 0))
+		take.age = int(entry.get("age", 0))
+		take.tint_index = int(entry.get("tint", 0))
+		take.merged = bool(entry.get("merged", false))
+		max_tint = maxi(max_tint, take.tint_index)
+		sim.bank.takes.append(take)
+	sim.bank.set_tint_counter(maxi(tint_counter, max_tint + 1))
 	sim.shop.offers.clear()
 	for entry: Dictionary in offers:
 		var o := Offer.new()
@@ -89,6 +126,8 @@ func to_dict() -> Dictionary:
 		"weapon_levels": weapon_levels.duplicate(),
 		"items": items.duplicate(),
 		"set_bonus_applied": set_bonus_applied.duplicate(),
+		"echoes": echoes.duplicate(true),
+		"tint_counter": tint_counter,
 		"offers": offer_rows,
 		"rerolls": rerolls,
 		"phase": phase,
