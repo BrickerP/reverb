@@ -2,6 +2,9 @@ class_name BoonUi
 extends Control
 
 signal chosen(index: int)
+signal reroll_requested
+
+var reroll_button: Button
 
 var _panel: PanelContainer
 var _box: VBoxContainer
@@ -30,8 +33,9 @@ func _ready() -> void:
 	margin.add_child(_box)
 
 
-func open(boons: Array[StringName]) -> void:
+func open(boons: Array[StringName], sim: Sim = null) -> void:
 	UiTheme.clear(_box)
+	reroll_button = null
 	_box.add_child(UiTheme.label(Loc.t("boon.title"), 34, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER))
 	_box.add_child(UiTheme.label(Loc.t("boon.subtitle"), 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	var row := HBoxContainer.new()
@@ -46,6 +50,13 @@ func open(boons: Array[StringName]) -> void:
 		b.pressed.connect(_on_chosen.bind(i))
 		row.add_child(b)
 	_box.add_child(row)
+	if sim != null:
+		var cost := sim.boon_reroll_cost()
+		reroll_button = Button.new()
+		reroll_button.text = Loc.t("boon.reroll", [cost])
+		reroll_button.disabled = sim.player.materials < cost
+		reroll_button.pressed.connect(func() -> void: reroll_requested.emit())
+		_box.add_child(reroll_button)
 	visible = true
 	if row.get_child_count() > 0:
 		(row.get_child(0) as Button).grab_focus()
@@ -53,6 +64,7 @@ func open(boons: Array[StringName]) -> void:
 
 func close() -> void:
 	visible = false
+	reroll_button = null
 	UiTheme.clear(_box)
 
 

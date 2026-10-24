@@ -105,6 +105,33 @@ func test_each_boon_applies(c: Check) -> void:
 	c.eq(s.second_wind_charges, 1, "second wind grants one charge")
 
 
+func test_boon_reroll_spends_increasing_materials(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.phase = Sim.Phase.SHOP
+	s.pending_boons = Boon.roll(s.rng)
+	s.player.materials = 100
+	var first_cost := s.boon_reroll_cost()
+	c.eq(first_cost, 15, "first reroll costs 15")
+	c.ok(s.reroll_boons(), "first reroll applies")
+	c.eq(s.player.materials, 100 - first_cost, "first reroll spends materials")
+	c.eq(s.boon_rerolls, 1, "reroll count increases")
+	c.eq(s.pending_boons.size(), 3, "reroll keeps three choices")
+	var second_cost := s.boon_reroll_cost()
+	c.eq(second_cost, 25, "second reroll costs more")
+	c.ok(s.reroll_boons(), "second reroll applies")
+	c.eq(s.player.materials, 100 - first_cost - second_cost, "second reroll spends materials")
+
+	var poor := Sim.new(7)
+	poor.start_run()
+	poor.phase = Sim.Phase.SHOP
+	poor.pending_boons = Boon.roll(poor.rng)
+	poor.player.materials = 0
+	c.ok(not poor.reroll_boons(), "a poor reroll is rejected")
+	c.eq(poor.pending_boons.size(), 3, "failed reroll keeps the offer")
+	c.eq(poor.boon_rerolls, 0, "failed reroll does not increase the counter")
+
+
 func test_second_wind_consumes_one_charge_per_lethal_hit(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()

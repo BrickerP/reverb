@@ -89,6 +89,7 @@ var wave_elite_kills: int = 0
 var wave_damage_taken: bool = false
 var active_contract: AnomalyContract
 var pending_boons: Array[StringName] = []
+var boon_rerolls: int = 0
 var last_contract_done: bool = false
 var last_contract_success: bool = false
 var last_contract_reward: int = 0
@@ -140,6 +141,7 @@ func _init(seed_value: int = 1) -> void:
 func start_run() -> void:
 	endless = false
 	second_wind_charges = 0
+	boon_rerolls = 0
 	last_interest = 0
 	last_wave_earned = 0
 	wave_start_materials = player.materials
@@ -582,6 +584,22 @@ func can_collapse_echo() -> bool:
 	return phase == Phase.WAVE and not collapse_used and not echoes.is_empty()
 
 
+func boon_reroll_cost() -> int:
+	return 15 + 10 * boon_rerolls
+
+
+func reroll_boons() -> bool:
+	if pending_boons.is_empty():
+		return false
+	var cost := boon_reroll_cost()
+	if player.materials < cost:
+		return false
+	player.materials -= cost
+	boon_rerolls += 1
+	pending_boons = Boon.roll(rng)
+	return true
+
+
 func choose_boon(index: int) -> bool:
 	if pending_boons.is_empty() or index < 0 or index >= pending_boons.size():
 		return false
@@ -885,4 +903,5 @@ func _end_wave() -> void:
 		phase = Phase.SHOP
 		shop.roll(self)
 		if endless and is_boss_wave():
+			boon_rerolls = 0
 			pending_boons = Boon.roll(rng)

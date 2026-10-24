@@ -81,6 +81,7 @@ func _ready() -> void:
 	feedback_ui.open_log_requested.connect(_open_log_folder)
 	feedback_ui.closed.connect(_on_feedback_closed)
 	boon_ui.chosen.connect(_on_boon_chosen)
+	boon_ui.reroll_requested.connect(_on_boon_reroll)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
@@ -506,7 +507,7 @@ func _open_shop() -> void:
 func _show_boon() -> void:
 	shop_ui.visible = false
 	hud.visible = true
-	boon_ui.open(sim.pending_boons)
+	boon_ui.open(sim.pending_boons, sim)
 
 
 func _on_boon_chosen(index: int) -> void:
@@ -515,6 +516,12 @@ func _on_boon_chosen(index: int) -> void:
 	boon_ui.close()
 	_shop_delay = 0.0
 	_open_shop()
+
+
+func _on_boon_reroll() -> void:
+	if sim == null or not sim.reroll_boons():
+		return
+	_show_boon()
 
 
 func _show_end() -> void:

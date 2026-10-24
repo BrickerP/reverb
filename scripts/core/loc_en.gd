@@ -193,6 +193,7 @@ const TABLE := {
 	"daily.riftstorm": "Riftstorm · rifts from wave 8 every 8s",
 	"boon.title": "Endless Boon",
 	"boon.subtitle": "Choose one permanent upgrade before the next shop.",
+	"boon.reroll": "Reroll %d",
 	"boon.damage_name": "Edge",
 	"boon.damage_desc": "+10% damage",
 	"boon.haste_name": "Tempo",
