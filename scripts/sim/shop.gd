@@ -9,6 +9,8 @@ const WEAPON_CHANCE := 0.4
 const RESALE_RATE := 0.5
 const EVOLVE_FAMILY_COUNT := 3
 const MAX_UNDO := 32
+const ECHO_REFRESH_BASE := 5
+const ECHO_REFRESH_PER_AGE := 2
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
@@ -158,6 +160,39 @@ func accept_contract(sim: Sim) -> bool:
 	contract.accepted = true
 	sim.active_contract = contract
 	return true
+
+
+func echo_refresh_cost(take: EchoTake) -> int:
+	if take == null:
+		return 0
+	return ECHO_REFRESH_BASE + ECHO_REFRESH_PER_AGE * maxi(0, take.age)
+
+
+func echo_refresh_block_reason(sim: Sim, take: EchoTake) -> StringName:
+	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
+		return &"invalid"
+	if take.age <= 0:
+		return &"new"
+	if sim.player.materials < echo_refresh_cost(take):
+		return &"poor"
+	return &""
+
+
+func refresh_echo(sim: Sim, take: EchoTake) -> ShopResult:
+	var reason := echo_refresh_block_reason(sim, take)
+	if reason != &"":
+		return ShopResult.failure(ShopResult.ECHO_REFRESH, reason,
+				echo_refresh_cost(take))
+	var before := ShopState.capture(sim)
+	var cost := echo_refresh_cost(take)
+	sim.player.materials -= cost
+	take.age -= 1
+	_push_history(before)
+	var after := ShopState.capture(sim)
+	var result := ShopResult.success(ShopResult.ECHO_REFRESH, cost, -1, &"", before, after)
+	shop_action_resolved.emit(result)
+	shop_history_changed.emit(can_undo())
+	return result
 
 
 func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:

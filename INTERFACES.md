@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, M21 endless boons, M22 echo organization undo, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, M21 endless boons, M22 echo organization undo, M23 echo refresh, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -662,3 +662,28 @@ Presentation requirements:
 - After an echo undo, rebuild EchoPanel rows and selection state; stale take references are
   invalid.
 - Undo button already reflects `Shop.can_undo()`; no separate echo undo control.
+
+## 24. Echo refresh
+
+Shop-only material sink: reduce one echo's age by one wave. It does not change the route,
+weapons, stats or tint, and it uses the same Undo history as equipment.
+
+Mechanism API:
+
+- `Shop.ECHO_REFRESH_BASE = 5`, `Shop.ECHO_REFRESH_PER_AGE = 2`;
+  `Shop.echo_refresh_cost(take) = 5 + 2 * max(0, age)`.
+- `Shop.echo_refresh_block_reason(sim, take)` returns `invalid`, `new` (age 0) or `poor`.
+- `Shop.refresh_echo(sim, take) -> ShopResult`; action `ShopResult.ECHO_REFRESH`.
+  On success it subtracts the cost, decrements `age`, captures `ShopState`, pushes history
+  and emits the same shop signals as discard/merge.
+- There is no per-shop refresh limit. Repeated refreshes are allowed while age > 0 and
+  materials remain; undo restores the exact prior materials/age bank.
+- New echoes (age 0) cannot be refreshed.
+
+Presentation requirements:
+
+- EchoPanel exposes `refresh_requested(take)` and one `Refresh <cost>` button for each
+  aged take; disabled when the player cannot afford it.
+- Do not recompute the cost in UI; call `Shop.echo_refresh_cost`.
+- After refresh/undo, rebuild rows; age pips and the button disappear when age reaches 0.
+- No new art is required; reuse the existing button style.

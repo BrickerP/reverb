@@ -3,8 +3,10 @@ extends PanelContainer
 
 signal discard_requested(take: EchoTake)
 signal merge_requested(a: EchoTake, b: EchoTake)
+signal refresh_requested(take: EchoTake)
 
 var discard_buttons: Array[Button] = []
+var refresh_buttons: Array[Button] = []
 var merge_button: Button
 var last_new_row: Control
 var last_new_tint: Color = Color.WHITE
@@ -71,6 +73,7 @@ func close_session() -> void:
 	_merge_mode = false
 	_merge_first = null
 	discard_buttons.clear()
+	refresh_buttons.clear()
 	merge_button = null
 	last_new_row = null
 	last_new_tint = Color.WHITE
@@ -104,6 +107,7 @@ func _render() -> void:
 	_finish_new_row_animation()
 	UiTheme.clear(_box)
 	discard_buttons.clear()
+	refresh_buttons.clear()
 	merge_button = null
 	if _sim == null:
 		return
@@ -206,6 +210,16 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 12, UiTheme.ACCENT))
 	var dps_label := UiTheme.label(Loc.t("shop.take_dps", [dps]), 14, UiTheme.DIM)
 	meta.add_child(dps_label)
+	if not _merge_mode and take.age > 0:
+		var cost := sim.shop.echo_refresh_cost(take)
+		var refresh := Button.new()
+		refresh.text = Loc.t("shop.refresh", [cost])
+		refresh.disabled = sim.player.materials < cost
+		refresh.custom_minimum_size = Vector2(0.0, 28.0)
+		refresh.add_theme_font_size_override("font_size", 12)
+		refresh.pressed.connect(_on_refresh.bind(take))
+		refresh_buttons.append(refresh)
+		meta.add_child(refresh)
 	info.add_child(meta)
 	var meter := TakeMeter.new()
 	meter.tint = take.tint()
@@ -226,6 +240,10 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	discard_buttons.append(button)
 	row.add_child(button)
 	return row
+
+
+func _on_refresh(take: EchoTake) -> void:
+	refresh_requested.emit(take)
 
 
 func _on_row(take: EchoTake) -> void:
