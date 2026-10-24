@@ -236,6 +236,8 @@ func bind(sim: Sim) -> void:
 	sim.boss_spawned.connect(_on_boss)
 	sim.boss_phase_changed.connect(_on_boss_phase)
 	sim.boss_enraged.connect(_on_boss_enraged)
+	sim.rift_spawned.connect(_on_rift_warning)
+	sim.rift_activated.connect(_on_rift_activated)
 	sim.echoes_silenced.connect(_on_silence)
 	_bound_shop.shop_action_resolved.connect(_on_shop_action)
 
@@ -257,6 +259,8 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.boss_spawned, _on_boss)
 		_disconnect_signal(_bound.boss_phase_changed, _on_boss_phase)
 		_disconnect_signal(_bound.boss_enraged, _on_boss_enraged)
+		_disconnect_signal(_bound.rift_spawned, _on_rift_warning)
+		_disconnect_signal(_bound.rift_activated, _on_rift_activated)
 		_disconnect_signal(_bound.echoes_silenced, _on_silence)
 	if _bound_shop != null:
 		_disconnect_signal(_bound_shop.shop_action_resolved, _on_shop_action)
@@ -450,7 +454,7 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
-	var blast := info.effect == &"bomber_explosion"
+	var blast := info.effect in [&"bomber_explosion", &"rift"]
 	play(&"hurt_blast" if blast else &"hurt_contact", 2.0 if info.lethal else 0.0,
 			0.90 if info.lethal else 1.0)
 
@@ -529,3 +533,11 @@ func _on_boss_enraged(_enemy: EnemyState) -> void:
 
 func _on_silence(_duration: float) -> void:
 	play(&"silence")
+
+
+func _on_rift_warning(_rift: TemporalRift) -> void:
+	play(&"echo", -4.0, 0.70)
+
+
+func _on_rift_activated(_rift: TemporalRift) -> void:
+	play(&"silence", -4.0, 1.20)

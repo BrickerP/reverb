@@ -159,6 +159,63 @@ static func pickup_range(ci: CanvasItem, sim: Sim) -> void:
 			ci.draw_arc(sim.player.pos, radius, float(k) * step, float(k + 1) * step, 4, Color(0.6, 0.9, 1.0, 0.1), 1.0)
 
 
+static func rifts(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
+	for profile: Dictionary in rift_profiles(sim, reduced):
+		var color := Color(0.72, 0.45, 1.0)
+		var pos: Vector2 = profile["pos"]
+		var radius := float(profile["radius"])
+		ci.draw_circle(pos, radius, Color(color, float(profile["fill_alpha"])))
+		ci.draw_arc(pos, radius, 0.0, TAU, 48, Color(color, float(profile["boundary_alpha"])),
+				float(profile["boundary_width"]))
+		if float(profile["warning_ring_radius"]) > 0.0:
+			ci.draw_arc(pos, float(profile["warning_ring_radius"]), 0.0, TAU, 32,
+					Color(color, float(profile["warning_ring_alpha"])), 1.5)
+		if bool(profile["spokes"]):
+			var spokes := 6
+			for k in spokes:
+				var angle := TAU * float(k) / float(spokes) + float(profile["spoke_rotation"])
+				ci.draw_line(pos, pos + Vector2.from_angle(angle) * radius,
+						Color(color, float(profile["spoke_alpha"])), 1.0)
+		if int(profile["active_arc_count"]) > 0:
+			ci.draw_arc(pos, radius * 0.72, float(profile["outer_arc_start"]),
+					float(profile["outer_arc_start"]) + TAU * 0.62, 32, Color(color, 0.45), 1.5)
+			ci.draw_arc(pos, radius * 0.45, float(profile["inner_arc_start"]),
+					float(profile["inner_arc_start"]) + TAU * 0.45, 24, Color(color, 0.6), 1.5)
+
+
+static func rift_profiles(sim: Sim, reduced: bool = false) -> Array[Dictionary]:
+	var profiles: Array[Dictionary] = []
+	for rift: TemporalRift in sim.rifts:
+		profiles.append(rift_profile(rift, sim.wave_time, reduced))
+	return profiles
+
+
+static func rift_profile(rift: TemporalRift, wave_time: float,
+		reduced: bool = false) -> Dictionary:
+	var warning := rift.is_warning()
+	var progress := 1.0 - clampf(rift.telegraph / TemporalRift.TELEGRAPH_TIME, 0.0, 1.0)
+	var pulse := 0.5 if reduced else 0.5 + 0.5 * sin(wave_time * 6.0)
+	return {
+		"state": &"warning" if warning else &"active",
+		"pos": rift.pos,
+		"radius": rift.radius,
+		"bounds": Rect2(rift.pos - Vector2.ONE * rift.radius, Vector2.ONE * rift.radius * 2.0),
+		"fill_alpha": (0.05 if reduced else 0.025 + 0.06 * progress) if warning \
+				else (0.105 if reduced else 0.08 + 0.05 * pulse),
+		"boundary_alpha": (0.36 if reduced else 0.22 + 0.28 * progress) if warning else 0.55,
+		"boundary_width": 2.0 if warning else 2.5,
+		"warning_ring_radius": 0.0 if reduced or not warning \
+				else rift.radius * (0.18 + 0.82 * progress),
+		"warning_ring_alpha": 0.12 + 0.25 * progress,
+		"spokes": warning and not reduced,
+		"spoke_rotation": wave_time * 0.35,
+		"spoke_alpha": 0.08 + 0.08 * progress,
+		"active_arc_count": 0 if reduced or warning else 2,
+		"outer_arc_start": -wave_time * 1.6,
+		"inner_arc_start": wave_time * 2.1,
+	}
+
+
 static func pickups(ci: CanvasItem, sim: Sim) -> void:
 	for pk in sim.pickups:
 		ci.draw_circle(pk.pos, 6.0, Color(UiTheme.COIN, 0.25))

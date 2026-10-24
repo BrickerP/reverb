@@ -26,6 +26,9 @@ signal boss_shard_defeated(enemy: EnemyState, remaining: int)
 signal boss_enraged(enemy: EnemyState)
 signal boss_defeated
 signal echoes_silenced(duration: float)
+signal rift_spawned(rift: TemporalRift)
+signal rift_activated(rift: TemporalRift)
+signal rift_ended(rift: TemporalRift)
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
@@ -59,20 +62,29 @@ const ELITE_BULWARK_ARC := 120.0
 const ELITE_BULWARK_REDUCTION := 0.25
 const ELITE_VOLATILE_RADIUS := 64.0
 const ELITE_VOLATILE_DAMAGE := 6.0
+const RIFT_START_WAVE := 12
+const RIFT_FIRST_DELAY := 8.0
+const RIFT_INTERVAL := 16.0
+const RIFT_DAMAGE_BASE := 3.0
+const RIFT_DAMAGE_PER_WAVE := 0.15
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
+var hazard_rng := RandomNumberGenerator.new()
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
 var wave_duration: float = 0.0
 var kills: int = 0
+# Compatibility marker for the rift path; anomaly-contract accounting is excluded.
+var wave_damage_taken: bool = false
 var player := PlayerState.new()
 var enemies: Array[EnemyState] = []
 var projectiles: Array[Projectile] = []
 var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
+var rifts: Array[TemporalRift] = []
 var boss: EnemyState
 var boss_phase: int = 1
 var boss_shards: Array[EnemyState] = []
@@ -97,11 +109,13 @@ var _next_uid: int = 1
 var _boss_silence_cd := 0.0
 var _boss_minion_cd := 0.0
 var _boss_enraged := false
+var _rift_cd := 0.0
 
 
 func _init(seed_value: int = 1) -> void:
 	run_seed = seed_value
 	rng.seed = seed_value
+	hazard_rng.seed = seed_value * 7919 + 17
 	player.hp = player.max_hp()
 	player.materials = START_MATERIALS
 	player.add_weapon(Content.weapon(Content.STARTER_WEAPON))
@@ -197,6 +211,9 @@ func start_next_wave() -> void:
 
 
 func start_wave(n: int) -> void:
+	wave_damage_taken = false
+	rifts.clear()
+	_rift_cd = RIFT_FIRST_DELAY if n >= RIFT_START_WAVE and n < WaveDirector.FINAL_WAVE else 0.0
 	wave = n
 	wave_time = 0.0
 	wave_duration = WaveDirector.duration_for(n)
@@ -252,6 +269,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_spawn_enemies(delta)
 	_move_enemies(delta)
 	_boss_step(delta)
+	_step_rifts(delta)
 	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.weapon_levels,
 			player.cooldowns, 1.0, delta, -1, Color.WHITE, synergy_damage_mult(), synergy_cooldown_mult())
 	if echo_silenced <= 0.0:
@@ -427,9 +445,11 @@ func _bomber_explode(e: EnemyState) -> void:
 	if player.iframes > 0.0:
 		return
 	if player.pos.distance_to(e.pos) <= radius + PlayerState.RADIUS:
+		var was_alive := player.hp > 0.0
 		player.hp -= damage
 		player.iframes = IFRAME_TIME
-		last_damage_source = e.def.id
+		if was_alive:
+			last_damage_source = e.def.id
 		player_hurt.emit(damage)
 		var hurt := PlayerHurtInfo.new()
 		hurt.source = e.def.id
@@ -437,7 +457,7 @@ func _bomber_explode(e: EnemyState) -> void:
 		hurt.pos = player.pos
 		hurt.direction = (player.pos - e.pos).normalized()
 		hurt.effect = &"bomber_explosion"
-		hurt.lethal = player.hp <= 0.0
+		hurt.lethal = was_alive and player.hp <= 0.0
 		player_hurt_info.emit(hurt)
 
 
@@ -542,9 +562,11 @@ func _move_enemies(delta: float) -> void:
 		grid.insert(e)
 		var touch := e.radius + PlayerState.RADIUS
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
+			var was_alive := player.hp > 0.0
 			player.hp -= e.damage
 			player.iframes = IFRAME_TIME
-			last_damage_source = e.def.id
+			if was_alive:
+				last_damage_source = e.def.id
 			player_hurt.emit(e.damage)
 			var hurt := PlayerHurtInfo.new()
 			hurt.source = e.def.id
@@ -552,7 +574,7 @@ func _move_enemies(delta: float) -> void:
 			hurt.pos = player.pos
 			hurt.direction = (player.pos - e.pos).normalized()
 			hurt.effect = &"contact"
-			hurt.lethal = player.hp <= 0.0
+			hurt.lethal = was_alive and player.hp <= 0.0
 			player_hurt_info.emit(hurt)
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
@@ -579,6 +601,68 @@ func _separate_boss_shards() -> void:
 	var pad := a.radius + 16.0
 	a.pos = (a.pos + push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
 	b.pos = (b.pos - push).clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+
+
+func _step_rifts(delta: float) -> void:
+	for r in rifts:
+		if r.telegraph > 0.0:
+			r.telegraph = maxf(0.0, r.telegraph - delta)
+			if r.telegraph <= 0.0:
+				r.active = TemporalRift.ACTIVE_TIME
+				r.tick = TemporalRift.TICK_TIME
+				rift_activated.emit(r)
+			continue
+		if r.active <= 0.0:
+			continue
+		r.active -= delta
+		r.tick -= delta
+		if r.tick <= 0.0:
+			r.tick += TemporalRift.TICK_TIME
+			_damage_rift(r)
+		if r.active <= 0.0:
+			rift_ended.emit(r)
+	var kept: Array[TemporalRift] = []
+	for r in rifts:
+		if r.telegraph > 0.0 or r.active > 0.0:
+			kept.append(r)
+	rifts = kept
+	if wave >= RIFT_START_WAVE and wave < WaveDirector.FINAL_WAVE:
+		_rift_cd -= delta
+		if _rift_cd <= 0.0:
+			_spawn_rift()
+			_rift_cd = RIFT_INTERVAL
+
+
+func _spawn_rift() -> void:
+	var pad := TemporalRift.RADIUS + 20.0
+	var offset := Vector2.from_angle(hazard_rng.randf() * TAU) * hazard_rng.randf_range(0.0, 70.0)
+	var pos := (player.pos + offset).clamp(
+			ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	var r := TemporalRift.new()
+	r.pos = pos
+	r.radius = TemporalRift.RADIUS
+	rifts.append(r)
+	rift_spawned.emit(r)
+
+
+func _damage_rift(r: TemporalRift) -> void:
+	if player.pos.distance_to(r.pos) > r.radius + PlayerState.RADIUS:
+		return
+	var damage := RIFT_DAMAGE_BASE + RIFT_DAMAGE_PER_WAVE * float(wave)
+	wave_damage_taken = true
+	var was_alive := player.hp > 0.0
+	player.hp -= damage
+	if was_alive:
+		last_damage_source = &"rift"
+	player_hurt.emit(damage)
+	var hurt := PlayerHurtInfo.new()
+	hurt.source = &"rift"
+	hurt.amount = damage
+	hurt.pos = player.pos
+	hurt.direction = Vector2.ZERO
+	hurt.effect = &"rift"
+	hurt.lethal = was_alive and player.hp <= 0.0
+	player_hurt_info.emit(hurt)
 
 
 func _update_pickups(delta: float) -> void:
@@ -630,6 +714,7 @@ func _end_wave() -> void:
 	enemies.clear()
 	projectiles.clear()
 	pending.clear()
+	rifts.clear()
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * WAVE_END_HEAL)
 	bank.age_after_wave(echo_lifespan())
 	if echo_capacity() > 0:

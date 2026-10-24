@@ -1,8 +1,8 @@
 # Mechanism / Presentation Interfaces
 
 Status: **Rich events, equipment transactions, family mastery, elites, selling,
-offer locking and repaired Paradox phase 2 are selectively integrated.** Contracts
-and later mechanics remain outside this presentation build.
+offer locking, repaired Paradox phase 2 and temporal rifts are selectively integrated.**
+Anomaly contracts, echo collapse, endless and item sets remain outside this build.
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -358,3 +358,43 @@ Presentation-order correction: `_fill` retains the held offer during generation 
 duplicate prevention, then restores its previous clamped slot. The held object,
 price, generated offer set, RNG consumption and refresh cost are unchanged.
 The local sale-event index annotation remains separate from lock snapshot state.
+
+## 15. Temporal rifts
+
+Waves 12–19 add avoidable arena hazards. Rifts are floor effects, not enemies: they do not
+enter `EnemyState`, do not provide drops, and are not drawn with enemy art.
+
+Mechanism API:
+
+- `TemporalRift` fields: `pos`, `radius`, `telegraph`, `active`, `tick`; constants
+  `TELEGRAPH_TIME=1.5`, `ACTIVE_TIME=3.0`, `RADIUS=80`, `TICK_TIME=0.75`.
+- `Sim.rifts: Array[TemporalRift]` is the live hazard list. It is cleared at wave end
+  and in `start_wave`.
+- Waves 12–19 start with `RIFT_FIRST_DELAY=8s`, then spawn every `RIFT_INTERVAL=16s`.
+  Rifts spawn 0–70px from the player using the dedicated `hazard_rng`, so combat crit/spread
+  RNG is untouched.
+- The warning is 1.5s; activation emits `rift_activated`. Active ticks deal
+  `3 + 0.15 × wave` damage only when the player center is inside `radius + PlayerState.RADIUS`.
+- Rift damage sets `last_damage_source = &"rift"` and emits `player_hurt` /
+  `player_hurt_info`; it deliberately does **not** set `player.iframes`, so it cannot
+  shield the player from enemy contact.
+- Signals: `rift_spawned(rift)`, `rift_activated(rift)`, `rift_ended(rift)`.
+- The boss wave never spawns rifts. Expired rifts are compacted after the active timer.
+
+Presentation requirements:
+
+- Draw rifts below pickups/enemies: warning is an empty ring with spokes and a tightening
+  inner ring; active is a translucent fill with rotating arcs. Use purple, distinct from
+  echo tints, elite aura colors and enemy colors.
+- Do not add an enemy ID, HUD text or new health bar for rifts.
+- If the player dies to a rift, `last_damage_source` is `rift`; end-screen uses the
+  localized `enemy.rift` label rather than an unknown key.
+- Reduced-motion mode may drop the spokes/rotating arcs but must keep the warning ring and
+  active fill clearly distinct.
+
+Selective integration boundary: `wave_damage_taken` is only the compatibility marker
+required by the rift path in this build. It is reset on wave start and set by rift
+damage; no contract acceptance, reward or complete clean-contract accounting is
+imported. Contact, bomber and rift damage retain amounts/order/iframes/signals;
+only presentation provenance is corrected so the first actual lethal transition
+sets the final death cause and later same-tick hits do not claim another lethal hit.

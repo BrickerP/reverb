@@ -216,6 +216,7 @@ const TABLE := {
 	"enemy.warden": "守卫",
 	"enemy.silencer": "静音者",
 	"enemy.paradox": "悖论",
+	"enemy.rift": "时间裂隙",
 	"item.iron_heart": "铁心",
 	"item.sneakers": "跑鞋",
 	"item.sharp_edge": "利刃",

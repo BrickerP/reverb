@@ -109,7 +109,8 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_title.add_theme_color_override("font_color", UiTheme.COIN if won else UiTheme.WARN)
 	_stats.text = Loc.t("end.run", [sim.wave, WaveDirector.FINAL_WAVE, sim.kills])
 	if not won and sim.last_damage_source != &"":
-		_stats.text += "  ·  " + Loc.t("end.death_cause", [Loc.enemy_name(sim.last_damage_source)])
+		var cause := Loc.t("enemy.rift") if sim.last_damage_source == &"rift" else Loc.enemy_name(sim.last_damage_source)
+		_stats.text += "  ·  " + Loc.t("end.death_cause", [cause])
 	_seed_value = sim.run_seed
 	_seed.text = Loc.t("end.seed", [sim.run_seed])
 	_unlock.text = unlocked_text

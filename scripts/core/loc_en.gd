@@ -216,6 +216,7 @@ const TABLE := {
 	"enemy.warden": "Warden",
 	"enemy.silencer": "Silencer",
 	"enemy.paradox": "Paradox",
+	"enemy.rift": "Temporal Rift",
 	"item.iron_heart": "Iron Heart",
 	"item.sneakers": "Sneakers",
 	"item.sharp_edge": "Sharp Edge",

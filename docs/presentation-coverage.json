@@ -572,5 +572,30 @@
       "provenance": "isolated fixture only"
     },
     "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-boss-verification/"
+  },
+  "selective_temporal_rifts": {
+    "mechanics_source": "b97a8be6c1085abf03afd2b8e05c6d37dc6f9967",
+    "presentation_base": "225d5b3a7cd25002b572325df273ad39058e7dc0",
+    "excluded": "contractacceptance/accounting,collapse,endless,sets,ascension,upstreamversions",
+    "compatibility": "wave_damage_taken declared/reset/set only for rifts; notcomplete contract/damage accounting",
+    "metadata_repair": "contact/bomber/rift lastsource andlethal markactualfirst zero crossing; HPamounts/order/iframes/signals unchanged",
+    "presentation": [
+      "Warning vs active proceduralfloor state belowactors",
+      "Reduced stablefill/boundary without rotating/pulsingdetail",
+      "Existing echo/silence/hurt_blast resources reused for warning/activation/damage",
+      "Localized rift deathcause and savedrun provenance",
+      "Pause,rebind,expiry,multiarray andwave/boss exclusions"
+    ],
+    "verification": {
+      "focused": 72,
+      "attribution": "14pass4fail before;18pass0fail after",
+      "full": "5522passed0failed",
+      "smoke": "5246frames,wave4,3purchases,OK",
+      "native": "EN/ZH x normal/reduced,16screenshots,exact spawn1/activate1/hurt1/end1",
+      "review": "APPROVE0issues",
+      "stress": "bounded andclean; adjacent225 baseline/current means comparable but tailframe times variable; no stableFPS or isolatedregression claim",
+      "provenance": "isolated fixtures only"
+    },
+    "evidence": "/Users/yupeng/Documents/Codex/2026-10-23/qu/outputs/take-stack-rift-verification/"
   }
 }

@@ -395,3 +395,30 @@ completed within feedback/audio bounds with clean exit. Its first sample include
 243.716/123.481ms frame outliers; an unchanged-code follow-up did not reproduce those
 outliers (p99 13.173/14.556/14.829ms). Both samples are retained; they do not establish
 universal frame pacing. Evidence: `outputs/take-stack-boss-verification/`.
+
+## Selective temporal-rift integration
+
+Fixed rift source `b97a8be` is selectively integrated on `225d5b3`. Only its missing
+`wave_damage_taken` compatibility declaration/reset is added; this rift-path marker
+does not implement general damage accounting or the held anomaly-contract system.
+Scheduling, dedicated hazard RNG, radius, damage, iframes and lifetime remain fixed.
+
+A same-tick provenance regression was reproduced and corrected: contact, bomber and
+rift paths still subtract the same HP and emit the same events in the same order,
+but only an actual positive-to-nonpositive transition is marked lethal, and later
+postmortem hits cannot replace the end-screen/run-log death source. Four failing
+metadata checks become 18 passing checks without changing damage totals.
+
+Warnings/active states use procedural floor geometry below actors, with stable
+essential geometry in reduced mode. Existing echo/silence/environmental-hurt sounds
+are reused with distinct routing; no new bitmap or audio resource is required.
+EN/ZH x normal/reduced native runs pass scheduling, warning safety, inside/outside
+damage, expiry, provenance/localization, pause/rebind/cleanup and manual multi-rift
+compaction, with 16 screenshots. Full tests pass 5522 assertions; smoke and import pass.
+Independent review is APPROVE with zero remaining issues.
+
+General stress remains bounded and exits cleanly. An adjacent immutable `225d5b3`
+baseline also showed higher frame times than historical samples. Current/baseline
+means were comparable, while tails varied; the run does not establish a code-specific
+regression or stable universal FPS. All initial and paired samples are retained in
+`outputs/take-stack-rift-verification/`. These are automated fixtures, not human play.
