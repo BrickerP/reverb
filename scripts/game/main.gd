@@ -110,7 +110,8 @@ func _ready() -> void:
 	show_select()
 
 
-func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1) -> void:
+func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1,
+		daily_modifier: StringName = &"") -> void:
 	_detach_presentation_session()
 	feedback_ui.reset()
 	_latest_saved_run.clear()
@@ -122,6 +123,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 		sim.ascension = clampi(ascension_value, 0, 3)
 	elif meta != null:
 		sim.ascension = meta.ascension
+	sim.daily_modifier = daily_modifier
 	var def := Content.character(character_id)
 	if def != null:
 		def.apply(sim)
@@ -157,7 +159,10 @@ func choose_character(id: StringName, seed_value: int = -1) -> void:
 
 
 func _retry_seed(seed_value: int) -> void:
-	new_run(seed_value, character_id)
+	var daily := _daily_run and sim != null and sim.run_seed == today_seed()
+	var anomaly := DailyAnomaly.for_seed(seed_value) if daily else &""
+	new_run(seed_value, character_id, 0 if daily else -1, anomaly)
+	_daily_run = daily
 
 
 func today_seed() -> int:
@@ -166,7 +171,8 @@ func today_seed() -> int:
 
 
 func start_daily() -> void:
-	new_run(today_seed(), &"looper", 0)
+	var seed_value := today_seed()
+	new_run(seed_value, &"looper", 0, DailyAnomaly.for_seed(seed_value))
 	_daily_run = true
 
 

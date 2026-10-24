@@ -1,6 +1,6 @@
 # Mechanism / Presentation Interfaces
 
-Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, and quote/apply shop UI are implemented.**
+Status: **M2 rich events, M5 Paradox phase 2, M6 family mastery, M7 echo-touched elites, M8 weapon selling, M9 offer locking, M10 anomaly contracts, M11 temporal rifts, M12 echo collapse, M13 endless mode, M14 endless escalation, M15 item sets, M16 ascension, M17 endless boss, M18 ascension identities, M19 survival shield, M20 daily anomaly, and quote/apply shop UI are implemented.**
 
 Baseline: `v0.1.36` / `d3d62b3`  
 Owner: mechanism side (`scripts/sim/**`, `scripts/data/**`, `scripts/echo/**`)
@@ -575,3 +575,29 @@ Presentation requirements:
 - Do not add a new health-like numeric label; the bar is the shield readout.
 - Shield absorption should not change enemy visuals, drops or boss logic.
 - Reduced-motion settings do not need special shield animation.
+
+## 21. Daily anomaly
+
+Daily challenge gets one rule derived from its date seed. It affects only Daily runs; normal
+runs stay empty and unchanged.
+
+Mechanism API:
+
+- `DailyAnomaly.ALL`: `echo_surge`, `riftfall`, `twin_hunt`.
+- `DailyAnomaly.for_seed(date_seed)` deterministically picks one.
+- `Sim.daily_modifier: StringName` defaults empty and is set by Main before `start_run`.
+- Effects:
+  - `echo_surge`: `Sim.echo_power()` adds 0.15.
+  - `riftfall`: `ascension_rift_wave()` = 8 and `ascension_rift_interval()` = 14.
+  - `twin_hunt`: `ascension_elite_count()` = 2.
+- Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
+- `RunLog` records `daily_modifier`.
+- Normal/Ascension/Endless runs pass an empty modifier.
+
+Presentation requirements:
+
+- Character select `Daily` button tooltip shows `select.daily_anomaly` plus the localized
+  anomaly title. Keep the button's best-score label intact.
+- Do not add a second Daily card or a run-selection screen.
+- The anomaly uses existing visuals; no new icons or audio are required.
+- A daily retry must use the same anomaly as the original date seed.

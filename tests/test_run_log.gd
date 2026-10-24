@@ -17,6 +17,7 @@ func test_append_writes_one_json_line(c: Check) -> void:
 	s.wave = 5
 	s.kills = 42
 	s.ascension = 2
+	s.daily_modifier = DailyAnomaly.RIFTFALL
 	s.last_damage_source = &"warden"
 	s.player.add_item(Content.item(&"iron_heart"))
 	var log := RunLog.new(PATH)
@@ -44,11 +45,12 @@ func test_append_writes_one_json_line(c: Check) -> void:
 	c.eq(lines, 2, "two runs")
 	c.eq(int(first.get("seed", 0)), 7, "seed")
 	c.eq(str(first.get("character", "")), "looper", "character")
-	c.eq(str(first.get("version", "")), "0.9.6", "build version")
+	c.eq(str(first.get("version", "")), "0.9.7", "build version")
 	c.eq(int(first.get("wave", 0)), 5, "wave")
 	c.eq(bool(first.get("won", true)), false, "loss")
 	c.eq(int(first.get("kills", 0)), 42, "kills")
 	c.eq(int(first.get("ascension", 0)), 2, "ascension recorded")
+	c.eq(str(first.get("daily_modifier", "")), "riftfall", "daily modifier recorded")
 	c.eq(str(first.get("death_cause", "")), "warden", "death cause")
 	c.near(float(first.get("seconds", 0.0)), 123.4, 0.01, "duration")
 	c.ok((first.get("items", {}) as Dictionary).has("iron_heart"), "items recorded")
