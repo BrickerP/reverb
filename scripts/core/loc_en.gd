@@ -226,6 +226,8 @@ const TABLE := {
 	"boon.eternity_desc": "+1 echo lifespan",
 	"boon.second_wind_name": "Second Wind",
 	"boon.second_wind_desc": "Survive a lethal hit at 1 HP; stacks",
+	"boon.reservoir_name": "Reservoir",
+	"boon.reservoir_desc": "+1 echo slot",
 	"history.title": "Run history",
 	"history.empty": "No runs recorded yet.",
 	"history.seed": "Seed",

@@ -62,7 +62,10 @@ func test_boons_never_change_echo_capacity(c: Check) -> void:
 	s.start_run()
 	s.player.stats.values[Stats.ECHO_SLOTS] = 0.0
 	for id in Boon.ALL:
-		c.ok(Boon.apply(s, id), "%s applies on a zero-slot character" % id)
+		if id == Boon.RESERVOIR:
+			c.ok(not Boon.apply(s, id), "reservoir refuses a zero-slot character")
+		else:
+			c.ok(Boon.apply(s, id), "%s applies on a zero-slot character" % id)
 	c.eq(s.echo_capacity(), 0, "no boon breaks the Soloist's zero-slot identity")
 
 
@@ -105,6 +108,9 @@ func test_each_boon_applies(c: Check) -> void:
 	c.eq(s.echo_lifespan(), lifespan + 1, "echo lifespan increases")
 	c.ok(Boon.apply(s, Boon.SECOND_WIND), "second wind boon applies")
 	c.eq(s.second_wind_charges, 1, "second wind grants one charge")
+	var slots := s.echo_capacity()
+	c.ok(Boon.apply(s, Boon.RESERVOIR), "reservoir boon applies")
+	c.eq(s.echo_capacity(), slots + 1, "reservoir adds an echo slot")
 
 
 func test_zero_slot_boons_skip_echo_options(c: Check) -> void:
@@ -116,6 +122,7 @@ func test_zero_slot_boons_skip_echo_options(c: Check) -> void:
 		c.eq(boons.size(), 3, "zero-slot rolls still offer three boons")
 		c.ok(not boons.has(Boon.ECHO), "echo power is filtered")
 		c.ok(not boons.has(Boon.ETERNITY), "echo lifespan is filtered")
+		c.ok(not boons.has(Boon.RESERVOIR), "echo capacity is filtered")
 
 
 func test_boon_reroll_spends_increasing_materials(c: Check) -> void:

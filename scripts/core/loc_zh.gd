@@ -226,6 +226,8 @@ const TABLE := {
 	"boon.eternity_desc": "+1 回响寿命",
 	"boon.second_wind_name": "回光",
 	"boon.second_wind_desc": "致命伤时保留 1 点生命；可叠层",
+	"boon.reservoir_name": "扩容",
+	"boon.reservoir_desc": "+1 回响槽位",
 	"history.title": "对局记录",
 	"history.empty": "还没有对局记录。",
 	"history.seed": "种子",
