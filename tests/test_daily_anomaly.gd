@@ -53,6 +53,18 @@ func test_daily_anomalies_apply_to_the_sim(c: Check) -> void:
 			"glass reduces max HP")
 	c.eq(glass.player.hp, glass.player.max_hp(), "glass starts at the reduced max HP")
 
+	var horde := Sim.new(7)
+	horde.daily_modifier = DailyAnomaly.HORDE
+	horde.start_run()
+	c.near(horde.wave_budget_multiplier(), DailyAnomaly.HORDE_BUDGET_MULT, 0.001,
+			"horde increases the wave budget")
+	horde.start_wave(5)
+	var normal_five := Sim.new(7)
+	normal_five.start_run()
+	normal_five.start_wave(5)
+	c.ok(horde._plan.size() > normal_five._plan.size(),
+			"the same seed plans more enemies under horde")
+
 	var normal := Sim.new(7)
 	normal.start_run()
 	var normal_grunt := _grunt(normal)

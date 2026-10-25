@@ -187,6 +187,10 @@ func material_drop_multiplier() -> float:
 	return DailyAnomaly.FORTUNE_DROP_MULT if daily_modifier == DailyAnomaly.FORTUNE else 1.0
 
 
+func wave_budget_multiplier() -> float:
+	return DailyAnomaly.HORDE_BUDGET_MULT if daily_modifier == DailyAnomaly.HORDE else 1.0
+
+
 func echo_power() -> float:
 	var power := player.stats.get_stat(Stats.ECHO_POWER)
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
@@ -339,6 +343,7 @@ func start_wave(n: int) -> void:
 	last_interest = 0
 	var boss_wave := is_boss_wave(n)
 	var mult := 0.35 if boss_wave and not endless else (0.55 if boss_wave else 1.0)
+	mult *= wave_budget_multiplier()
 	_plan = WaveDirector.plan(n, run_seed, mult, endless, ascension_elite_count())
 	if boss_wave:
 		var boss_event := SpawnEvent.new()

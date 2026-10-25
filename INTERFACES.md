@@ -634,6 +634,8 @@ Mechanism API:
   - `riftstorm`: `ascension_rift_wave()` = 8 and `ascension_rift_interval()` = 8.
   - `glass_cannon`: `DailyAnomaly.apply_start(sim)` adds +0.30 damage and removes 20% of
     the starting max HP before the run begins; current HP is clamped to the new maximum.
+  - `horde`: `Sim.wave_budget_multiplier()` = 1.35; `start_wave` multiplies the planned
+    budget before `WaveDirector.plan`.
 - Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
 - `Meta.record_daily` tracks `daily_streak` and `daily_last_win_seed`; a win on the next
   calendar day increments the streak, a skipped day resets it to 1, and repeat wins on the
