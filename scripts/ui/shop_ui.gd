@@ -263,6 +263,8 @@ func _refresh_contract() -> void:
 			text += Loc.t("contract.clear", [contract.target, contract.deposit, contract.reward])
 		AnomalyContract.HUNT:
 			text += Loc.t("contract.hunt", [contract.deposit, contract.reward])
+		AnomalyContract.COLLAPSE:
+			text += Loc.t("contract.collapse", [contract.deposit, contract.reward])
 	var active := contract.accepted or sim.active_contract == contract
 	if active:
 		text += " · " + Loc.t("contract.active")

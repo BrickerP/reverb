@@ -94,6 +94,7 @@ const TABLE := {
 	"contract.clean": "Next wave: no damage · deposit %d · reward %d",
 	"contract.clear": "Next wave: kill %d · deposit %d · reward %d",
 	"contract.hunt": "Next wave: kill the elite · deposit %d · reward %d",
+	"contract.collapse": "Next wave: collapse an echo · deposit %d · reward %d",
 	"contract.accept": "Accept",
 	"contract.active": "ACTIVE",
 	"contract.poor": "Need %d",

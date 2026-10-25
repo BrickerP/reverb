@@ -364,21 +364,24 @@ decision, not an equipment transaction.
 Mechanism API:
 
 - `AnomalyContract` kind: `clean` (no damage next wave), `clear` (kill `target` enemies),
-  or `hunt` (kill the wave elite). `hunt` is only generated from wave 10 onward.
+  `hunt` (kill the wave elite), or `collapse` (use echo collapse once). `hunt` is only
+  generated from wave 10 onward; `collapse` only when the sim has echo capacity and a
+  non-empty bank.
 - `Shop.contract` is the current shop contract; `Contract.accepted` is its local spent flag.
 - `Shop.accept_contract(sim) -> bool` requires shop phase, an unaccepted contract,
   no existing `sim.active_contract`, and enough materials. It deducts `deposit` once and
   assigns `sim.active_contract`.
-- Contract goals read `Sim.wave_damage_taken`, `Sim.wave_kills`, and
-  `Sim.wave_elite_kills`; those counters reset in `Sim.start_wave`.
+- Contract goals read `Sim.wave_damage_taken`, `Sim.wave_kills`,
+  `Sim.wave_elite_kills`, and `Sim.collapse_used`; those counters reset in `Sim.start_wave`.
 - `Sim._end_wave` evaluates the active contract before computing `last_wave_earned`;
   success adds `reward` before interest, failure adds nothing. The deposit is never
   refunded on failure.
 - `Sim.contract_resolved(contract, success, reward)` fires once per evaluated contract.
 - `Sim.last_contract_done/success/reward` stay available for the following shop; they reset
   on the next `start_wave`.
-- `Shop.roll` generates a fresh contract; `Shop.reroll` keeps the current one. Contract
-  state is not part of `ShopState` undo history.
+- `Shop.roll` generates a fresh contract; `Shop.reroll` keeps the current one.
+  `AnomalyContract.make(..., allow_collapse = false)` excludes the collapse contract.
+  Contract state is not part of `ShopState` undo history.
 
 Presentation requirements:
 

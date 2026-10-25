@@ -402,7 +402,8 @@ func roll(sim: Sim) -> void:
 	clear_history()
 	rerolls = 0
 	_fill(sim, locked_offer())
-	contract = AnomalyContract.make(sim.wave + 1, sim.rng, sim.endless)
+	contract = AnomalyContract.make(sim.wave + 1, sim.rng, sim.endless,
+			sim.echo_capacity() > 0 and not sim.bank.takes.is_empty())
 
 
 func can_buy(sim: Sim, o: Offer) -> bool:

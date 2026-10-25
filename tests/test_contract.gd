@@ -28,11 +28,17 @@ func test_contract_generation_window(c: Check) -> void:
 	c.ok(AnomalyContract.make(WaveDirector.FINAL_WAVE + 1, rng, false) == null,
 			"non-endless wave 21 has no contract")
 	var c10 := AnomalyContract.make(10, rng)
-	c.ok(c10 != null and c10.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR, AnomalyContract.HUNT],
+	c.ok(c10 != null and c10.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR,
+			AnomalyContract.HUNT, AnomalyContract.COLLAPSE],
 			"wave 10 can offer all contract kinds")
 	var c3 := AnomalyContract.make(3, rng)
-	c.ok(c3 != null and c3.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR],
+	c.ok(c3 != null and c3.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR,
+			AnomalyContract.COLLAPSE],
 			"early waves do not offer the elite hunt")
+	for i in 20:
+		var no_collapse := AnomalyContract.make(3, rng, false, false)
+		c.ok(no_collapse.kind != AnomalyContract.COLLAPSE,
+				"contracts can exclude collapse when no echo is available")
 	for i in 10:
 		c.ok(AnomalyContract.make(3, rng).deposit > 0, "contract has a deposit")
 	var s := Sim.new(7)
@@ -43,6 +49,14 @@ func test_contract_generation_window(c: Check) -> void:
 	s.wave = 19
 	s.shop.roll(s)
 	c.ok(s.shop.contract == null, "the shop after wave 19 does not offer a boss-wave contract")
+
+
+func test_collapse_contract_completes_after_echo_collapse(c: Check) -> void:
+	var s := _shop_sim(100)
+	var contract := _contract(AnomalyContract.COLLAPSE, 8, 24)
+	c.ok(not contract.is_complete(s), "collapse contract starts incomplete")
+	s.collapse_used = true
+	c.ok(contract.is_complete(s), "collapse contract completes after a collapse")
 
 
 func test_accept_contract_pays_once_and_blocks_poor(c: Check) -> void:

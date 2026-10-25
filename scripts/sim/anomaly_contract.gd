@@ -4,6 +4,7 @@ extends RefCounted
 const CLEAN := &"clean"
 const CLEAR := &"clear"
 const HUNT := &"hunt"
+const COLLAPSE := &"collapse"
 
 const START_WAVE := 3
 const CLEAN_DEPOSIT := 6
@@ -12,6 +13,8 @@ const CLEAR_DEPOSIT := 6
 const CLEAR_REWARD := 18
 const HUNT_DEPOSIT := 8
 const HUNT_REWARD := 24
+const COLLAPSE_DEPOSIT := 8
+const COLLAPSE_REWARD := 24
 
 var kind: StringName = CLEAN
 var deposit: int = 0
@@ -21,12 +24,14 @@ var accepted: bool = false
 
 
 static func make(wave: int, rng: RandomNumberGenerator,
-		endless: bool = false) -> AnomalyContract:
+		endless: bool = false, allow_collapse: bool = true) -> AnomalyContract:
 	if wave < START_WAVE or (wave >= WaveDirector.FINAL_WAVE and not endless):
 		return null
 	var pool: Array[StringName] = [CLEAN, CLEAR]
 	if wave >= WaveDirector.ELITE_START_WAVE:
 		pool.append(HUNT)
+	if allow_collapse:
+		pool.append(COLLAPSE)
 	var contract := AnomalyContract.new()
 	contract.kind = pool[rng.randi_range(0, pool.size() - 1)]
 	match contract.kind:
@@ -40,6 +45,9 @@ static func make(wave: int, rng: RandomNumberGenerator,
 		HUNT:
 			contract.deposit = HUNT_DEPOSIT
 			contract.reward = HUNT_REWARD
+		COLLAPSE:
+			contract.deposit = COLLAPSE_DEPOSIT
+			contract.reward = COLLAPSE_REWARD
 	return contract
 
 
@@ -51,5 +59,7 @@ func is_complete(sim: Sim) -> bool:
 			return sim.wave_kills >= target
 		HUNT:
 			return sim.wave_elite_kills >= 1
+		COLLAPSE:
+			return sim.collapse_used
 		_:
 			return false
