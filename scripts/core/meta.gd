@@ -5,6 +5,8 @@ const DEFAULT_PATH := "user://reverb_save.json"
 
 var path: String
 var best_wave: int = 0
+var best_endless: int = 0
+var best_boss_rush: int = 0
 var wins: int = 0
 var runs: int = 0
 var daily_seed: int = 0
@@ -22,6 +24,8 @@ func _init(save_path: String = DEFAULT_PATH) -> void:
 
 func _defaults() -> void:
 	best_wave = 0
+	best_endless = 0
+	best_boss_rush = 0
 	wins = 0
 	runs = 0
 	daily_seed = 0
@@ -47,6 +51,8 @@ func _load() -> void:
 		return
 	var data: Dictionary = parsed
 	best_wave = int(data.get("best_wave", 0))
+	best_endless = int(data.get("best_endless", 0))
+	best_boss_rush = int(data.get("best_boss_rush", 0))
 	wins = int(data.get("wins", 0))
 	runs = int(data.get("runs", 0))
 	daily_seed = int(data.get("daily_seed", 0))
@@ -70,6 +76,8 @@ func save() -> void:
 		flags[String(id)] = bool(unlocked[id])
 	file.store_string(JSON.stringify({
 		"best_wave": best_wave,
+		"best_endless": best_endless,
+		"best_boss_rush": best_boss_rush,
 		"wins": wins,
 		"runs": runs,
 		"daily_seed": daily_seed,
@@ -106,6 +114,16 @@ func record_run(sim: Sim) -> Array[StringName]:
 			newly.append(def.id)
 	save()
 	return newly
+
+
+func record_endless(sim: Sim) -> void:
+	if not sim.endless:
+		return
+	if sim.boss_rush:
+		best_boss_rush = maxi(best_boss_rush, sim.wave)
+	else:
+		best_endless = maxi(best_endless, sim.wave)
+	save()
 
 
 func record_daily(sim: Sim, seed_value: int) -> void:

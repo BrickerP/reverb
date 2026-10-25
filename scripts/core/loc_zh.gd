@@ -171,6 +171,8 @@ const TABLE := {
 	"select.locked": "第 %d 波解锁",
 	"select.ready": "可开始",
 	"select.best": "最佳 %d 波  ·  通关 %d 次",
+	"select.endless_best": "无尽最佳 %d 波",
+	"select.boss_rush_best": "Boss Rush 最佳 %d 波",
 	"select.hint": "Enter / 点击开始  ·  WASD 移动  ·  自动开火  ·  P 暂停",
 	"select.seed": "种子",
 	"select.seed_hint": "可选",
