@@ -72,6 +72,7 @@ const RIFT_FIRST_DELAY := 8.0
 const RIFT_INTERVAL := 16.0
 const RIFT_DAMAGE_BASE := 3.0
 const RIFT_DAMAGE_PER_WAVE := 0.15
+const BOSS_RUSH_SOLO_SHIELD := 10.0
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -294,6 +295,9 @@ func begin_boss_rush() -> bool:
 	phase = Phase.SHOP
 	boss_shards.clear()
 	rifts.clear()
+	if echo_capacity() <= 0:
+		player.stats.add(Stats.SHIELD, BOSS_RUSH_SOLO_SHIELD)
+		player.shield = player.max_shield()
 	shop.roll(self)
 	boon_rerolls = 0
 	pending_boons = Boon.roll(rng, 3, self)

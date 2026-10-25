@@ -467,8 +467,10 @@ Mechanism API:
   shards/rifts, switches to `Phase.SHOP`, and rolls a fresh shop.
 - `Sim.begin_boss_rush() -> bool` uses the same entry conditions and shop setup, sets
   `boss_rush = true`, rolls a **starting boon offer** into `pending_boons`, and jumps only
-  on subsequent waves. Main must show that boon before opening the shop. `Sim.next_wave_number()`
-  returns `wave + 5` under boss rush and `wave + 1` otherwise; `start_next_wave` uses it.
+  on subsequent waves. If `echo_capacity() <= 0`, it also adds
+  `BOSS_RUSH_SOLO_SHIELD = 10` max shield and fills it. Main must show the boon before
+  opening the shop. `Sim.next_wave_number()` returns `wave + 5` under boss rush and
+  `wave + 1` otherwise; `start_next_wave` uses it.
 - `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
   `n > 20` where `n % 5 == 0` (25, 30, 35…).
 - `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
