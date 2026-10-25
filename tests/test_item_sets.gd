@@ -42,6 +42,24 @@ func test_gunsmith_and_field_sets(c: Check) -> void:
 			"field set no longer adds regen")
 
 
+func test_gunsmith_set_makes_every_sixth_player_shot_crit(c: Check) -> void:
+	var s := _sim()
+	for id in [&"sharp_edge", &"quick_trigger", &"long_barrel"]:
+		s.player.add_item(Content.item(id))
+	var enemy := EnemyState.new()
+	enemy.def = Content.enemy(&"grunt")
+	enemy.pos = s.player.pos + Vector2(60.0, 0.0)
+	enemy.hp = 1000.0
+	s.enemies.append(enemy)
+	s.player_shots = 5
+	Combat.step_weapons(s, s.player.pos, s.player.stats, s.player.weapons,
+			s.player.weapon_levels, s.player.cooldowns, 1.0, 1.0 / 60.0, -1,
+			Color.WHITE)
+	c.ok(not s.projectiles.is_empty(), "the player fires")
+	c.ok(s.projectiles[0].crit, "the sixth player shot is a forced crit")
+	c.eq(s.player_shots, 6, "the player shot counter advances")
+
+
 func test_shop_state_restores_set_bonus(c: Check) -> void:
 	var s := _sim()
 	s.player.add_item(Content.item(&"spare_deck"))

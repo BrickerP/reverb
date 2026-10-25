@@ -514,11 +514,15 @@ Mechanism data:
 - `Content.ITEM_SETS` and `Content.item_sets()` define:
   - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`, plus a
     two-material discount on echo refresh (`Shop.echo_refresh_cost`).
-  - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`, `attack_speed_pct +0.02`.
+  - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`,
+    `attack_speed_pct +0.02`, and every sixth player shot is a guaranteed crit.
   - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `shield +8`, refilled each wave.
 - `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
 - `PlayerState.set_bonus_applied` records which sets have paid out, so adding a fourth member
   cannot apply the same bonus twice. Max-HP set bonuses also add current HP.
+- `Sim.player_shots` counts only player-origin volleys, resets at `start_run`, and drives the
+  Gunsmith sixth-shot guaranteed crit. Echo volleys increment `shot_sequence` but not
+  `player_shots`.
 - `ShopState` captures/restores `items`, `stats` and `set_bonus_applied`; undo after the
   third item removes both the item and the set contribution.
 
