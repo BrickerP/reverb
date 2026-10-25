@@ -2,7 +2,7 @@ class_name HistoryUi
 extends Control
 
 signal closed
-signal replay_requested(seed_value: int, character: StringName)
+signal replay_requested(seed_value: int, character: StringName, daily_modifier: StringName)
 
 var close_button: Button
 var replay_buttons: Array[Button] = []
@@ -72,6 +72,7 @@ func open(run_log: RunLog) -> void:
 		var won := bool(run.get("won", false))
 		var char := StringName(str(run.get("character", "?")))
 		var seed_value := int(run.get("seed", 0))
+		var daily_modifier := StringName(str(run.get("daily_modifier", "")))
 		_add_cell(str(seed_value), UiTheme.INK, 16)
 		_add_cell(Loc.character_name(char), UiTheme.INK, 16)
 		_add_cell(_mode_label(run), UiTheme.DIM, 14)
@@ -84,7 +85,7 @@ func open(run_log: RunLog) -> void:
 		replay.accessibility_name = "%s · %s · %s" % [
 				Loc.t("history.replay"), Loc.character_name(char), str(seed_value)]
 		replay.custom_minimum_size = Vector2(86.0, 30.0)
-		replay.pressed.connect(_on_replay.bind(seed_value, char))
+		replay.pressed.connect(_on_replay.bind(seed_value, char, daily_modifier))
 		_grid.add_child(replay)
 		replay_buttons.append(replay)
 		_row_count += 1
@@ -118,8 +119,8 @@ func _mode_label(run: Dictionary) -> String:
 	return Loc.t("history.mode_normal")
 
 
-func _on_replay(seed_value: int, char: StringName) -> void:
-	replay_requested.emit(seed_value, char)
+func _on_replay(seed_value: int, char: StringName, daily_modifier: StringName) -> void:
+	replay_requested.emit(seed_value, char, daily_modifier)
 
 
 func close() -> void:

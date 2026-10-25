@@ -236,8 +236,12 @@ func open_history() -> void:
 	history_ui.open(run_log)
 
 
-func _on_history_replay(seed_value: int, char_id: StringName) -> void:
+func _on_history_replay(seed_value: int, char_id: StringName, daily_modifier: StringName = &"") -> void:
 	history_ui.close()
+	if daily_modifier != &"":
+		new_run(seed_value, char_id, 0, daily_modifier)
+		_daily_run = true
+		return
 	choose_character(char_id, seed_value)
 
 
