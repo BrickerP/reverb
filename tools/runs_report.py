@@ -122,6 +122,10 @@ def norm(run):
     try:
         result = dict(run)
         result["won"] = _boolean(run.get("won", False))
+        result["endless"] = _boolean(run.get("endless", False))
+        result["boss_rush"] = _boolean(run.get("boss_rush", False))
+        result["daily_modifier"] = _text(run.get("daily_modifier", ""), allow_empty=True)
+        result["ascension"] = _integer(run.get("ascension", 0))
         result["wave"] = _integer(run.get("wave", 0))
         result["kills"] = _integer(run.get("kills", 0))
         result["seconds"] = _number(run.get("seconds", 0.0))
@@ -182,6 +186,16 @@ def norm_feedback(record):
         return result
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def _mode(run):
+    if run["boss_rush"]:
+        return "Boss Rush"
+    if run["endless"]:
+        return "Endless"
+    if run["daily_modifier"]:
+        return "Daily"
+    return "Normal"
 
 
 def pct(part, total):
@@ -265,6 +279,31 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
         lines.append("Deaths: " + " · ".join(f"{markdown(cause)}: {count}" for cause, count in causes.most_common()))
     lines.append("")
 
+    modes = Counter()
+    for run in runs:
+        if run["boss_rush"]:
+            modes["Boss Rush"] += 1
+        elif run["endless"]:
+            modes["Endless"] += 1
+        elif run["daily_modifier"]:
+            modes["Daily"] += 1
+        else:
+            modes["Normal"] += 1
+    lines += ["## Modes", "", "| Mode | Runs | Wins | Mean wave |", "|---|---:|---:|---:|"]
+    for mode in ("Normal", "Daily", "Endless", "Boss Rush"):
+        count = modes[mode]
+        if not count:
+            continue
+        group = [run for run in runs if _mode(run) == mode]
+        mode_wins = sum(run["won"] for run in group)
+        lines.append(f"| {mode} | {count} | {mode_wins} | {statistics.mean([run['wave'] for run in group]):.1f} |")
+    lines.append("")
+    anomalies = Counter(run["daily_modifier"] for run in runs if run["daily_modifier"])
+    if anomalies:
+        lines.append("Daily anomalies: " + " · ".join(
+            f"{markdown(name)}: {count}" for name, count in anomalies.most_common()))
+        lines.append("")
+
     by_char = defaultdict(list)
     for run in runs:
         by_char[run["character"]].append(run)
@@ -294,10 +333,10 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
         lines += [f"| {markdown(weapon)} | {count} | {weapon_wins} | {rate:.1f}% |" for weapon, count, weapon_wins, rate in rows]
         lines.append("")
 
-    lines += ["## Recent runs", "", "| Seed | Character | Source | Build | Result | Wave | Kills | Time |", "|---:|---|---|---|---|---:|---:|---:|"]
+    lines += ["## Recent runs", "", "| Seed | Character | Mode | Source | Build | Result | Wave | Kills | Time |", "|---:|---|---|---|---|---|---:|---:|---:|"]
     for run in runs[-10:][::-1]:
         result = "WIN" if run["won"] else "loss"
-        lines.append(f"| {markdown(run.get('seed', '?'))} | {markdown(NAMES.get(run['character'], run['character']))} | {run['source']} | {markdown(run['build_commit'])} | {result} | {run['wave']} | {run['kills']} | {run['seconds']:.0f}s |")
+        lines.append(f"| {markdown(run.get('seed', '?'))} | {markdown(NAMES.get(run['character'], run['character']))} | {_mode(run)} | {run['source']} | {markdown(run['build_commit'])} | {result} | {run['wave']} | {run['kills']} | {run['seconds']:.0f}s |")
     lines.append("")
 
     joined, warnings = join_feedback(runs, feedback)

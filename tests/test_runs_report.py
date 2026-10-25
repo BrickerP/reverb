@@ -80,6 +80,29 @@ class RunsReportTest(unittest.TestCase):
         self.assertIn("Builds: def456: 2 · abc123: 1 · unavailable: 1", text)
         self.assertNotIn("human", text.lower())
 
+    def test_modes_and_anomalies_are_separated(self):
+        rows = [
+            REPORT.norm(run_row(run_id="run-0001")),
+            REPORT.norm(run_row(run_id="run-0002", endless=True, boss_rush=True, wave=30)),
+            REPORT.norm(run_row(run_id="run-0003", endless=True, wave=22)),
+            REPORT.norm(run_row(run_id="run-0004", daily_modifier="riftstorm", wave=9)),
+        ]
+        text = REPORT.build_report(rows)
+        self.assertIn("| Normal | 1 | 0 | 7.0 |", text)
+        self.assertIn("| Daily | 1 | 0 | 9.0 |", text)
+        self.assertIn("| Endless | 1 | 0 | 22.0 |", text)
+        self.assertIn("| Boss Rush | 1 | 0 | 30.0 |", text)
+        self.assertIn("Daily anomalies: riftstorm: 1", text)
+
+    def test_malformed_endgame_fields_are_skipped(self):
+        malformed = [
+            run_row(run_id="bad-endless", endless="yes"),
+            run_row(run_id="bad-rush", boss_rush=2),
+            run_row(run_id="bad-daily", daily_modifier=3),
+            run_row(run_id="bad-ascension", ascension=-1),
+        ]
+        self.assertTrue(all(REPORT.norm(row) is None for row in malformed))
+
     def test_malformed_values_are_skipped_without_crashing(self):
         malformed = [
             run_row(run_id="bad-bool", won="yes"),
