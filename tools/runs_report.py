@@ -126,6 +126,11 @@ def norm(run):
         result["boss_rush"] = _boolean(run.get("boss_rush", False))
         result["daily_modifier"] = _text(run.get("daily_modifier", ""), allow_empty=True)
         result["ascension"] = _integer(run.get("ascension", 0))
+        boons = run.get("boons", [])
+        if not isinstance(boons, list) or any(not isinstance(item, str) for item in boons):
+            raise ValueError
+        result["boons"] = list(boons)
+        result["echo_refreshes"] = _integer(run.get("echo_refreshes", 0))
         result["wave"] = _integer(run.get("wave", 0))
         result["kills"] = _integer(run.get("kills", 0))
         result["seconds"] = _number(run.get("seconds", 0.0))
@@ -303,6 +308,18 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
         lines.append("Daily anomalies: " + " · ".join(
             f"{markdown(name)}: {count}" for name, count in anomalies.most_common()))
         lines.append("")
+    refresh_total = sum(run["echo_refreshes"] for run in runs)
+    if refresh_total:
+        lines.append(f"Echo refreshes: **{refresh_total}** total · **{refresh_total / len(runs):.2f}** per run")
+        lines.append("")
+
+    boon_counts = Counter()
+    for run in runs:
+        boon_counts.update(run["boons"])
+    if boon_counts:
+        lines += ["## Boons", "", "| Boon | Picks |", "|---|---:|"]
+        lines += [f"| {markdown(boon)} | {count} |" for boon, count in boon_counts.most_common()]
+        lines.append("")
 
     by_char = defaultdict(list)
     for run in runs:
@@ -333,10 +350,10 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
         lines += [f"| {markdown(weapon)} | {count} | {weapon_wins} | {rate:.1f}% |" for weapon, count, weapon_wins, rate in rows]
         lines.append("")
 
-    lines += ["## Recent runs", "", "| Seed | Character | Mode | Source | Build | Result | Wave | Kills | Time |", "|---:|---|---|---|---|---|---:|---:|---:|"]
+    lines += ["## Recent runs", "", "| Seed | Character | Mode | Source | Build | Result | Wave | Kills | Refreshes | Time |", "|---:|---|---|---|---|---|---:|---:|---:|---:|"]
     for run in runs[-10:][::-1]:
         result = "WIN" if run["won"] else "loss"
-        lines.append(f"| {markdown(run.get('seed', '?'))} | {markdown(NAMES.get(run['character'], run['character']))} | {_mode(run)} | {run['source']} | {markdown(run['build_commit'])} | {result} | {run['wave']} | {run['kills']} | {run['seconds']:.0f}s |")
+        lines.append(f"| {markdown(run.get('seed', '?'))} | {markdown(NAMES.get(run['character'], run['character']))} | {_mode(run)} | {run['source']} | {markdown(run['build_commit'])} | {result} | {run['wave']} | {run['kills']} | {run['echo_refreshes']} | {run['seconds']:.0f}s |")
     lines.append("")
 
     joined, warnings = join_feedback(runs, feedback)
