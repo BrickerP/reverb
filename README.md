@@ -59,7 +59,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.20 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.21 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -154,14 +154,14 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 - 回响续录：商店里花 `5 + 2×age` 材料把单张回响的寿命往回拨 1 波；新回响不能续录，续录可逐步撤销
 - 物品套装：回响套件（备用卡座 / 长播放 / 大声公）、枪械套件（锋利边缘 / 快速扳机 / 长枪管 / 幸运币）、生存套件（铁心 / 回复贴片 / 跑鞋 / 磁铁）各集齐 3 件获得小型完成奖励；生存套件给每波 8 点护盾
 - 无尽 Boss：第 25/30/35… 波悖论回归，生命按 `1 + 0.20 × (波数-20)` 成长，伤害沿用波数缩放；击杀后回商店，不重复发胜利
-- 无尽恩惠：每次击杀无尽 Boss 后从 11 个永久强化中随机展示 3 个并选 1 个（伤害/攻速/生命/回响/护盾/材料/暴击/移速/拾取/回响寿命/回光），可花 15/25/35… 材料重抽，再进入商店
+- 无尽恩惠：每次击杀无尽 Boss 后从 11 个永久强化中随机展示 3 个并选 1 个（伤害/攻速/生命/回响/护盾/材料/暴击/移速/拾取/回响寿命/回光），0 槽角色不会抽到回响类，恩惠可花 15/25/35… 材料重抽，再进入商店
 - 无尽模式：击败 Boss 后从结算页继续第 21 波+，保留构筑与商店；普通波使用成长敌人，第 25/30/35… 波悖论回归，击杀后继续无尽；死亡结算显示无尽波数。Boss Rush 先给一次开局恩惠，再从第 25 波开始，每 5 波只打 Boss。
 - 高弹量时自动关闭弹道拖尾、限制火花密度，优先保帧率
 
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 6427 项）
+make test     # 无头测试（当前 6487 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

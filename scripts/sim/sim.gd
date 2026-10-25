@@ -293,7 +293,7 @@ func begin_boss_rush() -> bool:
 	rifts.clear()
 	shop.roll(self)
 	boon_rerolls = 0
-	pending_boons = Boon.roll(rng)
+	pending_boons = Boon.roll(rng, 3, self)
 	return true
 
 
@@ -618,7 +618,7 @@ func reroll_boons() -> bool:
 		return false
 	player.materials -= cost
 	boon_rerolls += 1
-	pending_boons = Boon.roll(rng)
+	pending_boons = Boon.roll(rng, 3, self)
 	return true
 
 
@@ -926,4 +926,4 @@ func _end_wave() -> void:
 		shop.roll(self)
 		if endless and is_boss_wave():
 			boon_rerolls = 0
-			pending_boons = Boon.roll(rng)
+			pending_boons = Boon.roll(rng, 3, self)
