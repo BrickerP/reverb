@@ -636,6 +636,8 @@ Mechanism API:
     the starting max HP before the run begins; current HP is clamped to the new maximum.
   - `horde`: `Sim.wave_budget_multiplier()` = 1.35; `start_wave` multiplies the planned
     budget before `WaveDirector.plan`.
+  - `echo_bloom`: `DailyAnomaly.apply_start` adds 1 to `Stats.ECHO_SLOTS`; normal capacity
+    clamp still applies.
 - Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
 - `Meta.record_daily` tracks `daily_streak` and `daily_last_win_seed`; a win on the next
   calendar day increments the streak, a skipped day resets it to 1, and repeat wins on the

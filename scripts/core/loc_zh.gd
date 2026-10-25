@@ -201,6 +201,7 @@ const TABLE := {
 	"daily.riftstorm": "裂隙风暴 · 第 8 波开始，每 8 秒一次",
 	"daily.glass_cannon": "玻璃大炮 · +30% 伤害，-20% 生命",
 	"daily.horde": "兽潮 · 波次预算 +35%",
+	"daily.echo_bloom": "回响绽放 · +1 回响槽位",
 	"boon.title": "无尽恩惠",
 	"boon.subtitle": "进入下一间商店前，选择一项永久强化。",
 	"boon.reroll": "重抽 %d",
