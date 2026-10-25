@@ -7,8 +7,9 @@ const TWIN_HUNT := &"twin_hunt"
 const FORTUNE := &"fortune"
 const RIFTSTORM := &"riftstorm"
 const GLASS_CANNON := &"glass_cannon"
+const HORDE := &"horde"
 const ALL: Array[StringName] = [
-	ECHO_SURGE, RIFTFALL, TWIN_HUNT, FORTUNE, RIFTSTORM, GLASS_CANNON,
+	ECHO_SURGE, RIFTFALL, TWIN_HUNT, FORTUNE, RIFTSTORM, GLASS_CANNON, HORDE,
 ]
 
 const ECHO_BONUS := 0.15
@@ -18,6 +19,7 @@ const FORTUNE_DROP_MULT := 1.5
 const RIFTSTORM_INTERVAL := 8.0
 const GLASS_DAMAGE_BONUS := 0.30
 const GLASS_HP_PENALTY := 0.20
+const HORDE_BUDGET_MULT := 1.35
 
 
 static func for_seed(seed_value: int) -> StringName:
@@ -38,6 +40,8 @@ static func title_key(id: StringName) -> String:
 			return "daily.riftstorm"
 		GLASS_CANNON:
 			return "daily.glass_cannon"
+		HORDE:
+			return "daily.horde"
 		_:
 			return "daily.echo_surge"
 

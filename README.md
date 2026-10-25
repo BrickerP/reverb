@@ -59,7 +59,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.35 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.36 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -119,7 +119,7 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 - 系统：叠录（两张录像合成一个回响，走位与武器合并）
 - 设置面板：音量、屏幕震动、全屏、语言（自动/English/中文），保存到本地设置文件；切语言会重载回选角。
 - 对局记录：选角页 `History` 或 H，显示最近 8 局的模式、角色、种子、胜负、波数与击杀；普通 `Replay`、Daily `Replay Daily`、终局记录 `Replay seed` 会明确区分，Daily 保留当天异象，终局记录不会恢复终局状态。
-- 每日挑战：固定复读机、用当天日期做种子，并附带一条按日期确定的「每日异象」（回响威力 +15% / 裂隙第 8 波开始 / 每波两个精英 / 材料掉落 +50% / 裂隙风暴 / 玻璃大炮 +30% 伤害、-20% 生命）；Daily 按钮 tooltip 显示当天规则，并记录连续通关天数。
+- 每日挑战：固定复读机、用当天日期做种子，并附带一条按日期确定的「每日异象」（回响威力 +15% / 裂隙第 8 波开始 / 每波两个精英 / 材料掉落 +50% / 裂隙风暴 / 玻璃大炮 +30% 伤害、-20% 生命 / 兽潮 +35% 波次预算）；Daily 按钮 tooltip 显示当天规则，并记录连续通关天数。
 - 本地存档：最佳波数、通关次数、角色解锁
 - 20 波，波次预算与血量随波数增长
 - 内置 Noto Sans CJK SC，Windows/Linux/Steam Deck 不依赖系统中文字体
@@ -161,7 +161,7 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 6627 项）
+make test     # 无头测试（当前 6634 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试
