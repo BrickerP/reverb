@@ -512,7 +512,8 @@ Three small completion rewards use the existing 11 items; no new art, drops or i
 Mechanism data:
 
 - `Content.ITEM_SETS` and `Content.item_sets()` define:
-  - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`.
+  - `echo`: spare_deck, long_play, loud_speaker (3/3) → `echo_power +0.02`, plus a
+    two-material discount on echo refresh (`Shop.echo_refresh_cost`).
   - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`, `attack_speed_pct +0.02`.
   - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `shield +8`, refilled each wave.
 - `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
@@ -697,7 +698,8 @@ weapons, stats or tint, and it uses the same Undo history as equipment.
 Mechanism API:
 
 - `Shop.ECHO_REFRESH_BASE = 5`, `Shop.ECHO_REFRESH_PER_AGE = 2`;
-  `Shop.echo_refresh_cost(take) = 5 + 2 * max(0, age)`.
+  `Shop.echo_refresh_cost(take, sim = null) = 5 + 2 * max(0, age)`, minus 2 when the
+  echo set is complete, floored at 1.
 - `Shop.echo_refresh_block_reason(sim, take)` returns `invalid`, `new` (age 0) or `poor`.
 - `Shop.refresh_echo(sim, take) -> ShopResult`; action `ShopResult.ECHO_REFRESH`.
   On success it subtracts the cost, decrements `age`, captures `ShopState`, pushes history
@@ -710,6 +712,7 @@ Presentation requirements:
 
 - EchoPanel exposes `refresh_requested(take)` and one `Refresh <cost>` button for each
   aged take; disabled when the player cannot afford it.
-- Do not recompute the cost in UI; call `Shop.echo_refresh_cost`.
+- Do not recompute the cost in UI; call `Shop.echo_refresh_cost(take, sim)` so set discounts
+  are reflected.
 - After refresh/undo, rebuild rows; age pips and the button disappear when age reaches 0.
 - No new art is required; reuse the existing button style.

@@ -211,7 +211,7 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	var dps_label := UiTheme.label(Loc.t("shop.take_dps", [dps]), 14, UiTheme.DIM)
 	meta.add_child(dps_label)
 	if not _merge_mode and take.age > 0:
-		var cost := sim.shop.echo_refresh_cost(take)
+		var cost := sim.shop.echo_refresh_cost(take, sim)
 		var refresh := Button.new()
 		refresh.text = Loc.t("shop.refresh", [cost])
 		refresh.disabled = sim.player.materials < cost

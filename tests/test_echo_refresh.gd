@@ -76,6 +76,19 @@ func test_refresh_rejects_new_and_poor_takes(c: Check) -> void:
 	c.eq(invalid.reason, &"invalid", "invalid reason")
 
 
+func test_echo_set_reduces_refresh_cost(c: Check) -> void:
+	var s := _shop_sim()
+	var t := _take(s)
+	s.bank.add(t)
+	t.age = 1
+	var base := s.shop.echo_refresh_cost(t, s)
+	for id: StringName in [&"spare_deck", &"long_play", &"loud_speaker"]:
+		s.player.add_item(Content.item(id))
+	c.ok(bool(s.player.set_bonus_applied.get(&"echo", false)), "echo set completes")
+	c.eq(s.shop.echo_refresh_cost(t, s), maxi(1, base - 2),
+			"echo set discounts refresh by two")
+
+
 func test_refresh_label_exists(c: Check) -> void:
 	c.ok(not Loc.t("shop.refresh", [7]).begins_with("shop."),
 			"refresh action has a localized label")

@@ -162,10 +162,13 @@ func accept_contract(sim: Sim) -> bool:
 	return true
 
 
-func echo_refresh_cost(take: EchoTake) -> int:
+func echo_refresh_cost(take: EchoTake, sim: Sim = null) -> int:
 	if take == null:
 		return 0
-	return ECHO_REFRESH_BASE + ECHO_REFRESH_PER_AGE * maxi(0, take.age)
+	var cost := ECHO_REFRESH_BASE + ECHO_REFRESH_PER_AGE * maxi(0, take.age)
+	if sim != null and bool(sim.player.set_bonus_applied.get(&"echo", false)):
+		cost = maxi(1, cost - 2)
+	return cost
 
 
 func echo_refresh_block_reason(sim: Sim, take: EchoTake) -> StringName:
@@ -173,7 +176,7 @@ func echo_refresh_block_reason(sim: Sim, take: EchoTake) -> StringName:
 		return &"invalid"
 	if take.age <= 0:
 		return &"new"
-	if sim.player.materials < echo_refresh_cost(take):
+	if sim.player.materials < echo_refresh_cost(take, sim):
 		return &"poor"
 	return &""
 
@@ -182,9 +185,9 @@ func refresh_echo(sim: Sim, take: EchoTake) -> ShopResult:
 	var reason := echo_refresh_block_reason(sim, take)
 	if reason != &"":
 		return ShopResult.failure(ShopResult.ECHO_REFRESH, reason,
-				echo_refresh_cost(take))
+				echo_refresh_cost(take, sim))
 	var before := ShopState.capture(sim)
-	var cost := echo_refresh_cost(take)
+	var cost := echo_refresh_cost(take, sim)
 	sim.player.materials -= cost
 	take.age -= 1
 	_push_history(before)
