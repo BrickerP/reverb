@@ -12,9 +12,10 @@ const SLIPSTREAM := &"slipstream"
 const MAGNET := &"magnet"
 const ETERNITY := &"eternity"
 const SECOND_WIND := &"second_wind"
+const RESERVOIR := &"reservoir"
 const ALL: Array[StringName] = [
 	DAMAGE, HASTE, VITALITY, ECHO, SHIELD, FORTUNE,
-	PRECISION, SLIPSTREAM, MAGNET, ETERNITY, SECOND_WIND,
+	PRECISION, SLIPSTREAM, MAGNET, ETERNITY, SECOND_WIND, RESERVOIR,
 ]
 
 
@@ -24,6 +25,7 @@ static func roll(rng: RandomNumberGenerator, count: int = 3,
 	if sim != null and sim.echo_capacity() <= 0:
 		pool.erase(ECHO)
 		pool.erase(ETERNITY)
+		pool.erase(RESERVOIR)
 	var out: Array[StringName] = []
 	while out.size() < count and not pool.is_empty():
 		out.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
@@ -54,6 +56,8 @@ static func title_key(id: StringName) -> String:
 			return "boon.eternity_name"
 		SECOND_WIND:
 			return "boon.second_wind_name"
+		RESERVOIR:
+			return "boon.reservoir_name"
 		_:
 			return "boon.damage_name"
 
@@ -82,6 +86,8 @@ static func desc_key(id: StringName) -> String:
 			return "boon.eternity_desc"
 		SECOND_WIND:
 			return "boon.second_wind_desc"
+		RESERVOIR:
+			return "boon.reservoir_desc"
 		_:
 			return "boon.damage_desc"
 
@@ -112,6 +118,10 @@ static func apply(sim: Sim, id: StringName) -> bool:
 			sim.player.stats.add(Stats.ECHO_LIFESPAN, 1.0)
 		SECOND_WIND:
 			sim.second_wind_charges += 1
+		RESERVOIR:
+			if sim.echo_capacity() <= 0:
+				return false
+			sim.player.stats.add(Stats.ECHO_SLOTS, 1.0)
 		_:
 			return false
 	return true

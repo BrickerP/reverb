@@ -665,7 +665,7 @@ shop. Normal wave 20, non-boss endless waves and all normal runs never create bo
 Mechanism API:
 
 - `Boon.ALL`: damage, haste, vitality, echo, shield, fortune, precision, slipstream,
-  magnet, eternity, second_wind.
+  magnet, eternity, second_wind, reservoir.
 - `Boon.roll(rng, 3, sim = null)` samples three distinct IDs; when `sim` is supplied and
   `sim.echo_capacity()` is 0, it removes `echo` and `eternity` before sampling.
 - `Sim.pending_boons: Array[StringName]` is set by `_end_wave` only when `endless` and
@@ -678,9 +678,9 @@ Mechanism API:
   the offer intact. Effects are immediate and permanent for the run:
   - damage +10%; haste +10%; vitality +15 max/current HP; echo +10%; shield +5 cap/current;
     fortune +30 materials; precision +5% crit; slipstream +20 move speed; magnet +30 pickup
-    range; eternity +1 echo lifespan; second_wind adds one charge. Echo lifespan is read
-    from `Stats.ECHO_LIFESPAN` immediately; no boon changes echo capacity or the Soloist's
-    zero-slot identity.
+    range; eternity +1 echo lifespan; second_wind adds one charge; reservoir +1 echo slot.
+    Reservoir is filtered from zero-slot offers and `Boon.apply` rejects it for zero-slot
+    characters, preserving the Soloist identity.
 - `Sim.second_wind_charges` starts at 0 each run. When a real HP hit would drop the player
   to 0 or below, one charge is consumed and HP is set to 1. Shield absorption happens first;
   a fully absorbed hit does not consume a charge. Charges stack and are not refunded on undo.
