@@ -6,6 +6,8 @@ const TABLE := {
 	"hud.endless": "无尽  ·  第 %d 波",
 	"hud.endless_boss": "无尽第 %d 波  ·  悖论",
 	"hud.boss_rush_boss": "Boss Rush 第 %d 波  ·  悖论",
+	"hud.crit_charge": "暴击 %d 发后",
+	"hud.crit_next": "下一发暴击",
 	"hud.boss": "悖论",
 	"hud.boss_phase2": "悖论 // 双线",
 	"hud.boss_down": "悖论 已击败",
