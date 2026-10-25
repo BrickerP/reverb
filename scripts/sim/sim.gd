@@ -144,6 +144,7 @@ func start_run() -> void:
 	boss_rush = false
 	second_wind_charges = 0
 	boon_rerolls = 0
+	DailyAnomaly.apply_start(self)
 	last_interest = 0
 	last_wave_earned = 0
 	wave_start_materials = player.materials

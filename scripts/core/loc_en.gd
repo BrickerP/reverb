@@ -195,6 +195,7 @@ const TABLE := {
 	"daily.twin_hunt": "Twin Hunt · two elites per wave",
 	"daily.fortune": "Fortune · +50% material drops",
 	"daily.riftstorm": "Riftstorm · rifts from wave 8 every 8s",
+	"daily.glass_cannon": "Glass Cannon · +30% damage, -20% HP",
 	"boon.title": "Endless Boon",
 	"boon.subtitle": "Choose one permanent upgrade before the next shop.",
 	"boon.reroll": "Reroll %d",
