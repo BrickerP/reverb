@@ -324,6 +324,17 @@ func test_main_keeps_the_second_boss_rush_boon_open(c: Check) -> void:
 	main.free()
 
 
+func test_main_replays_daily_with_its_anomaly(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(7)
+	main._on_history_replay(20261024, &"looper", DailyAnomaly.RIFTSTORM)
+	c.eq(main.sim.daily_modifier, DailyAnomaly.RIFTSTORM,
+			"daily replay preserves the anomaly")
+	c.ok(main._daily_run, "daily replay keeps the daily flag")
+	main.free()
+
+
 func test_main_continues_into_endless(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)
