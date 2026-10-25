@@ -46,6 +46,29 @@ func test_history_lists_recent_runs(c: Check) -> void:
 	_cleanup()
 
 
+func test_history_shows_mode_labels(c: Check) -> void:
+	_cleanup()
+	var log := RunLog.new(PATH)
+	var s := Sim.new(7)
+	s.start_run()
+	s.phase = Sim.Phase.LOST
+	s.endless = true
+	s.boss_rush = true
+	s.wave = 30
+	var saved := log.append(s, &"looper", 1.0)
+	c.ok(not saved.is_empty(), "mode fixture is saved")
+	var ui := HistoryUi.new()
+	ui.theme = UiTheme.build()
+	(Engine.get_main_loop() as SceneTree).root.add_child(ui)
+	ui.open(log)
+	c.eq(ui._grid.columns, 7, "history has a mode column")
+	c.ok(ui._grid.find_children("*", "Label", true, false).any(
+			func(node: Node) -> bool: return (node as Label).text == Loc.t("history.mode_boss_rush")),
+			"boss rush appears in history")
+	ui.free()
+	_cleanup()
+
+
 func test_history_empty_state(c: Check) -> void:
 	_cleanup()
 	var ui := HistoryUi.new()

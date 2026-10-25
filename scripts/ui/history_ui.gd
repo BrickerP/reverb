@@ -37,7 +37,7 @@ func _ready() -> void:
 	_empty = UiTheme.label(Loc.t("history.empty"), 18, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_empty)
 	_grid = GridContainer.new()
-	_grid.columns = 6
+	_grid.columns = 7
 	_grid.add_theme_constant_override("h_separation", 28)
 	_grid.add_theme_constant_override("v_separation", 8)
 	box.add_child(_grid)
@@ -63,6 +63,7 @@ func open(run_log: RunLog) -> void:
 		return
 	_add_cell(Loc.t("history.seed"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.character"), UiTheme.DIM, 14)
+	_add_cell(Loc.t("history.mode"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.result"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.wave"), UiTheme.DIM, 14)
 	_add_cell(Loc.t("history.kills"), UiTheme.DIM, 14)
@@ -73,6 +74,7 @@ func open(run_log: RunLog) -> void:
 		var seed_value := int(run.get("seed", 0))
 		_add_cell(str(seed_value), UiTheme.INK, 16)
 		_add_cell(Loc.character_name(char), UiTheme.INK, 16)
+		_add_cell(_mode_label(run), UiTheme.DIM, 14)
 		_add_cell(Loc.t("history.win") if won else Loc.t("history.loss"),
 				UiTheme.COIN if won else UiTheme.WARN, 16)
 		_add_cell(str(int(run.get("wave", 0))), UiTheme.INK, 16)
@@ -104,6 +106,16 @@ func focus_default() -> void:
 		replay_buttons[0].grab_focus()
 	elif close_button != null:
 		close_button.grab_focus()
+
+
+func _mode_label(run: Dictionary) -> String:
+	if bool(run.get("boss_rush", false)):
+		return Loc.t("history.mode_boss_rush")
+	if bool(run.get("endless", false)):
+		return Loc.t("history.mode_endless")
+	if str(run.get("daily_modifier", "")) != "":
+		return Loc.t("history.mode_daily")
+	return Loc.t("history.mode_normal")
 
 
 func _on_replay(seed_value: int, char: StringName) -> void:
