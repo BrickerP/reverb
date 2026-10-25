@@ -76,6 +76,7 @@ const BOSS_RUSH_SOLO_SHIELD := 10.0
 const FIELD_SHIELD_BURST_RADIUS := 72.0
 const FIELD_SHIELD_BURST_DAMAGE := 8.0
 const FIELD_SHIELD_BURST_KNOCK := 90.0
+const MAX_ECHO_CAPACITY := 8
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -176,7 +177,7 @@ static func interest_for(materials: int) -> int:
 
 
 func echo_capacity() -> int:
-	return maxi(0, int(round(player.stats.get_stat(Stats.ECHO_SLOTS))))
+	return mini(MAX_ECHO_CAPACITY, maxi(0, int(round(player.stats.get_stat(Stats.ECHO_SLOTS)))))
 
 
 func echo_lifespan() -> int:

@@ -186,6 +186,13 @@ func test_echo_replays_with_reduced_power(c: Check) -> void:
 	c.ok(s.echo_power() < 1.0, "echoes hit for less than the player")
 
 
+func test_echo_capacity_is_capped_at_eight(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.stats.values[Stats.ECHO_SLOTS] = 20.0
+	c.eq(s.echo_capacity(), Sim.MAX_ECHO_CAPACITY, "capacity never exceeds the HUD-safe cap")
+
+
 func test_echo_overflow_blocks_next_wave_until_discarded(c: Check) -> void:
 	var s := _sim()
 	_immortal(s)
