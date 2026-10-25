@@ -191,6 +191,7 @@ const TABLE := {
 	"codex.evolves": "→ %s (max level + %d family)",
 	"select.daily": "Daily",
 	"select.daily_best": "Daily · best %d",
+	"select.daily_streak": "streak %d",
 	"select.daily_anomaly": "Daily anomaly: %s",
 	"daily.echo_surge": "Echo Surge · +15% echo power",
 	"daily.riftfall": "Riftfall · rifts from wave 8",

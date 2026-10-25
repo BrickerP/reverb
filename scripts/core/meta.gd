@@ -12,6 +12,8 @@ var runs: int = 0
 var daily_seed: int = 0
 var daily_best: int = 0
 var daily_wins: int = 0
+var daily_streak: int = 0
+var daily_last_win_seed: int = 0
 var ascension: int = 0
 var unlocked: Dictionary = {}
 
@@ -31,6 +33,8 @@ func _defaults() -> void:
 	daily_seed = 0
 	daily_best = 0
 	daily_wins = 0
+	daily_streak = 0
+	daily_last_win_seed = 0
 	ascension = 0
 	unlocked = {}
 	for def: CharacterDef in Content.characters().values():
@@ -58,6 +62,8 @@ func _load() -> void:
 	daily_seed = int(data.get("daily_seed", 0))
 	daily_best = int(data.get("daily_best", 0))
 	daily_wins = int(data.get("daily_wins", 0))
+	daily_streak = int(data.get("daily_streak", 0))
+	daily_last_win_seed = int(data.get("daily_last_win_seed", 0))
 	ascension = clampi(int(data.get("ascension", 0)), 0, max_ascension())
 	var saved: Variant = data.get("unlocked", {})
 	if typeof(saved) == TYPE_DICTIONARY:
@@ -83,6 +89,8 @@ func save() -> void:
 		"daily_seed": daily_seed,
 		"daily_best": daily_best,
 		"daily_wins": daily_wins,
+		"daily_streak": daily_streak,
+		"daily_last_win_seed": daily_last_win_seed,
 		"ascension": ascension,
 		"unlocked": flags,
 	}, "\t"))
@@ -126,6 +134,22 @@ func record_endless(sim: Sim) -> void:
 	save()
 
 
+static func next_calendar_day(previous: int, current: int) -> bool:
+	if previous <= 0 or current <= 0:
+		return false
+	var before := Time.get_unix_time_from_datetime_dict({
+		"year": int(previous / 10000),
+		"month": int(previous / 100) % 100,
+		"day": previous % 100,
+	})
+	var after := Time.get_unix_time_from_datetime_dict({
+		"year": int(current / 10000),
+		"month": int(current / 100) % 100,
+		"day": current % 100,
+	})
+	return after - before == 86400
+
+
 func record_daily(sim: Sim, seed_value: int) -> void:
 	if daily_seed != seed_value:
 		daily_seed = seed_value
@@ -134,4 +158,7 @@ func record_daily(sim: Sim, seed_value: int) -> void:
 	daily_best = maxi(daily_best, sim.wave)
 	if sim.phase == Sim.Phase.WON:
 		daily_wins += 1
+		if daily_last_win_seed != seed_value:
+			daily_streak = daily_streak + 1 if next_calendar_day(daily_last_win_seed, seed_value) else 1
+			daily_last_win_seed = seed_value
 	save()

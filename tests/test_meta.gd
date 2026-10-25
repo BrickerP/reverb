@@ -58,6 +58,29 @@ func test_daily_best_persists_and_resets(c: Check) -> void:
 	_cleanup()
 
 
+func test_daily_streak_counts_consecutive_wins(c: Check) -> void:
+	_cleanup()
+	c.ok(Meta.next_calendar_day(20261024, 20261025), "consecutive dates")
+	c.ok(not Meta.next_calendar_day(20261024, 20261026), "a skipped day is not consecutive")
+	var meta := Meta.new(PATH)
+	var s := Sim.new(1)
+	s.start_run()
+	s.phase = Sim.Phase.WON
+	s.wave = 20
+	meta.record_daily(s, 20261024)
+	c.eq(meta.daily_streak, 1, "first daily win starts a streak")
+	meta.record_daily(s, 20261024)
+	c.eq(meta.daily_streak, 1, "the same day does not add a streak")
+	meta.record_daily(s, 20261025)
+	c.eq(meta.daily_streak, 2, "the next day extends the streak")
+	meta.record_daily(s, 20261027)
+	c.eq(meta.daily_streak, 1, "a skipped day resets the streak")
+	var loaded := Meta.new(PATH)
+	c.eq(loaded.daily_streak, 1, "streak persists")
+	c.eq(loaded.daily_last_win_seed, 20261027, "last win day persists")
+	_cleanup()
+
+
 func test_endless_and_boss_rush_bests_persist(c: Check) -> void:
 	_cleanup()
 	var meta := Meta.new(PATH)

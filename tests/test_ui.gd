@@ -375,7 +375,10 @@ func test_character_select_cycles_unlocked_ascension(c: Check) -> void:
 	c.eq(meta.ascension, 0, "the button wraps back to zero")
 	meta.best_endless = 31
 	meta.best_boss_rush = 40
-	ui.refresh(meta)
+	meta.daily_streak = 3
+	ui.refresh(meta, 20261025, 18)
+	c.ok(ui._daily_button.text.contains(Loc.t("select.daily_streak", [3])),
+			"the Daily button shows the streak")
 	c.ok(ui._summary.text.contains(Loc.t("select.endless_best", [31])),
 			"the summary shows the endless best")
 	c.ok(ui._summary.text.contains(Loc.t("select.boss_rush_best", [40])),
