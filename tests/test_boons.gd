@@ -40,8 +40,10 @@ func test_endless_boss_offers_and_applies_a_boon(c: Check) -> void:
 	c.eq(s.phase, Sim.Phase.SHOP, "boss death returns to shop")
 	c.eq(s.pending_boons.size(), 3, "boss offers three boons")
 	var before_hp := s.player.hp
+	var chosen := s.pending_boons[0]
 	c.ok(s.choose_boon(0), "a boon can be chosen")
 	c.ok(s.pending_boons.is_empty(), "the choice is cleared")
+	c.ok(s.boons_taken.has(chosen), "the chosen boon is recorded")
 	c.ok(s.player.hp >= before_hp, "vitality-like boon does not reduce health")
 
 

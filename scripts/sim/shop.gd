@@ -189,6 +189,7 @@ func refresh_echo(sim: Sim, take: EchoTake) -> ShopResult:
 	var before := ShopState.capture(sim)
 	var cost := echo_refresh_cost(take, sim)
 	sim.player.materials -= cost
+	sim.echo_refreshes += 1
 	take.age -= 1
 	_push_history(before)
 	var after := ShopState.capture(sim)

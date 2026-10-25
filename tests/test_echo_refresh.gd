@@ -42,6 +42,7 @@ func test_refresh_spends_materials_and_undoes_exactly(c: Check) -> void:
 	c.eq(result.action, ShopResult.ECHO_REFRESH, "refresh action")
 	c.eq(result.cost, 9, "refresh cost is reported")
 	c.eq(s.player.materials, 11, "materials are spent")
+	c.eq(s.echo_refreshes, 1, "refresh count is recorded")
 	c.eq(t.age, 1, "one wave is restored")
 	c.ok(s.shop.can_undo(), "refresh enters history")
 	c.ok(s.shop.undo(s).ok, "undo applies")
