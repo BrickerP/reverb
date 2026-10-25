@@ -105,6 +105,16 @@ class RunsReportTest(unittest.TestCase):
         self.assertIn("| haste | 1 |", text)
         self.assertIn("| 2 | 92s |", text)
 
+    def test_contract_outcomes_are_reported(self):
+        rows = [
+            REPORT.norm(run_row(run_id="run-0001", contracts_accepted=2,
+                                contracts_completed=1, contracts_failed=1)),
+            REPORT.norm(run_row(run_id="run-0002", contracts_accepted=1,
+                                contracts_completed=1, contracts_failed=0)),
+        ]
+        text = REPORT.build_report(rows)
+        self.assertIn("Contracts: accepted **3** · completed **2** · failed **1**", text)
+
     def test_malformed_endgame_fields_are_skipped(self):
         malformed = [
             run_row(run_id="bad-endless", endless="yes"),
@@ -113,6 +123,7 @@ class RunsReportTest(unittest.TestCase):
             run_row(run_id="bad-ascension", ascension=-1),
             run_row(run_id="bad-boons", boons="damage"),
             run_row(run_id="bad-refreshes", echo_refreshes=-1),
+            run_row(run_id="bad-contracts", contracts_accepted=-1),
         ]
         self.assertTrue(all(REPORT.norm(row) is None for row in malformed))
 

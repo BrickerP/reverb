@@ -131,6 +131,8 @@ def norm(run):
             raise ValueError
         result["boons"] = list(boons)
         result["echo_refreshes"] = _integer(run.get("echo_refreshes", 0))
+        for key in ("contracts_accepted", "contracts_completed", "contracts_failed"):
+            result[key] = _integer(run.get(key, 0))
         result["wave"] = _integer(run.get("wave", 0))
         result["kills"] = _integer(run.get("kills", 0))
         result["seconds"] = _number(run.get("seconds", 0.0))
@@ -311,6 +313,14 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
     refresh_total = sum(run["echo_refreshes"] for run in runs)
     if refresh_total:
         lines.append(f"Echo refreshes: **{refresh_total}** total · **{refresh_total / len(runs):.2f}** per run")
+        lines.append("")
+    contract_accepted = sum(run["contracts_accepted"] for run in runs)
+    contract_completed = sum(run["contracts_completed"] for run in runs)
+    contract_failed = sum(run["contracts_failed"] for run in runs)
+    if contract_accepted:
+        lines.append(
+            f"Contracts: accepted **{contract_accepted}** · completed **{contract_completed}** · failed **{contract_failed}**"
+        )
         lines.append("")
 
     boon_counts = Counter()
