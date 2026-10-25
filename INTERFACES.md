@@ -622,6 +622,9 @@ Mechanism API:
   - `glass_cannon`: `DailyAnomaly.apply_start(sim)` adds +0.30 damage and removes 20% of
     the starting max HP before the run begins; current HP is clamped to the new maximum.
 - Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
+- `Meta.record_daily` tracks `daily_streak` and `daily_last_win_seed`; a win on the next
+  calendar day increments the streak, a skipped day resets it to 1, and repeat wins on the
+  same day do not add. The character-select Daily button appends the streak when non-zero.
 - `RunLog` records `daily_modifier`.
 - Normal/Ascension/Endless runs pass an empty modifier.
 

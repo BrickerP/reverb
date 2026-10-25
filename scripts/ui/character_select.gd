@@ -105,6 +105,8 @@ func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 	_summary.text = "%s  ·  v%s" % [summary,
 			str(ProjectSettings.get_setting("application/config/version", ""))]
 	_daily_button.text = Loc.t("select.daily_best", [daily_best]) if daily_best > 0 else Loc.t("select.daily")
+	if meta.daily_streak > 0:
+		_daily_button.text += "  ·  " + Loc.t("select.daily_streak", [meta.daily_streak])
 	_daily_button.tooltip_text = Loc.t("select.daily_anomaly", [
 			Loc.t(DailyAnomaly.title_key(DailyAnomaly.for_seed(daily_seed)))])
 	_update_ascension_button()
