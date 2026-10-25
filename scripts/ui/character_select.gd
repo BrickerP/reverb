@@ -97,7 +97,12 @@ func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
 		var card := _make_card(def, meta)
 		_cards_box.add_child(card)
 		_cards.append(card)
-	_summary.text = "%s  ·  v%s" % [Loc.t("select.best", [meta.best_wave, meta.wins]),
+	var summary := Loc.t("select.best", [meta.best_wave, meta.wins])
+	if meta.best_endless > 0:
+		summary += "  ·  " + Loc.t("select.endless_best", [meta.best_endless])
+	if meta.best_boss_rush > 0:
+		summary += "  ·  " + Loc.t("select.boss_rush_best", [meta.best_boss_rush])
+	_summary.text = "%s  ·  v%s" % [summary,
 			str(ProjectSettings.get_setting("application/config/version", ""))]
 	_daily_button.text = Loc.t("select.daily_best", [daily_best]) if daily_best > 0 else Loc.t("select.daily")
 	_daily_button.tooltip_text = Loc.t("select.daily_anomaly", [

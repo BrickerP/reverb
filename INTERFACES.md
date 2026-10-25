@@ -485,6 +485,9 @@ Mechanism API:
 - `RunLog.append` includes `endless: bool` and `boss_rush: bool`. Main removes the
   just-written wave-20 win line when continuing, then writes one final endless death line
   with the endless wave; Meta still records the wave-20 win/unlocks once.
+- `Meta.record_endless(sim)` persists `best_endless` or `best_boss_rush` separately; normal
+  `best_wave` is not raised by an endless death. The character-select summary displays both
+  values when non-zero.
 
 Presentation requirements:
 

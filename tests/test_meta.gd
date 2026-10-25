@@ -58,6 +58,28 @@ func test_daily_best_persists_and_resets(c: Check) -> void:
 	_cleanup()
 
 
+func test_endless_and_boss_rush_bests_persist(c: Check) -> void:
+	_cleanup()
+	var meta := Meta.new(PATH)
+	var s := Sim.new(1)
+	s.start_run()
+	c.eq(meta.best_endless, 0, "fresh endless best")
+	c.eq(meta.best_boss_rush, 0, "fresh boss rush best")
+	s.endless = true
+	s.wave = 33
+	meta.record_endless(s)
+	c.eq(meta.best_endless, 33, "endless best recorded")
+	s.boss_rush = true
+	s.wave = 40
+	meta.record_endless(s)
+	c.eq(meta.best_boss_rush, 40, "boss rush best recorded")
+	c.eq(meta.best_endless, 33, "boss rush does not overwrite endless best")
+	var loaded := Meta.new(PATH)
+	c.eq(loaded.best_endless, 33, "endless best persists")
+	c.eq(loaded.best_boss_rush, 40, "boss rush best persists")
+	_cleanup()
+
+
 func test_wins_and_corrupt_file(c: Check) -> void:
 	var file := FileAccess.open(PATH, FileAccess.WRITE)
 	file.store_string("not json")

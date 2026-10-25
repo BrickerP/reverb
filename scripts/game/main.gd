@@ -473,6 +473,7 @@ func _record_run() -> void:
 		return
 	_recorded = true
 	if sim.endless:
+		meta.record_endless(sim)
 		if run_log != null:
 			var endless_seconds := float(Time.get_ticks_msec() - _run_started_msec) / 1000.0
 			var saved_endless: Dictionary = run_log.append(sim, character_id, endless_seconds, _run_context)
