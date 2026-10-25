@@ -26,6 +26,18 @@ endless boons and rerolls, Ascension 0–3, Daily anomalies, streak, history rep
 
 Also attached: `SHA256SUMS.txt`, `AUDIT.json`, `BUILD_INFO.txt`.
 
+## Install
+
+- **macOS**: unzip `TakeStack-macos.zip`, right-click `Take Stack.app` → Open. The build is
+  unsigned; if macOS says it is damaged, run
+  `xattr -dr com.apple.quarantine "Take Stack.app"`.
+- **Windows**: unzip `TakeStack-windows.zip` and run `TakeStack.exe`; keep the `.pck` beside it.
+  SmartScreen may require “More info → Run anyway”.
+- **Linux**: unzip `TakeStack-linux.zip`, then
+  `chmod +x TakeStack.x86_64 && ./TakeStack.x86_64`; keep the `.pck` beside the binary.
+- **Checksums**: `shasum -a 256 -c SHA256SUMS.txt` (macOS) or
+  `sha256sum -c SHA256SUMS.txt` (Linux).
+
 ## Verification
 
 - Godot: **6683 tests passed**
@@ -44,5 +56,5 @@ Also attached: `SHA256SUMS.txt`, `AUDIT.json`, `BUILD_INFO.txt`.
 - No human playtest data: difficulty, readability, defensive builds, Boss Rush and Daily balance
   remain unverified.
 - Formal `Take Stack` trademark clearance is not complete.
-- Windows/Linux packages have not been launched on their native systems here; CI performs native
-  export startup smoke.
+- Windows/Linux packages passed native CI export startup smoke; they were not launched on the
+  maintainer's macOS host.
