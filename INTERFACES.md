@@ -632,6 +632,8 @@ Presentation requirements:
 - Do not add a second Daily card or a run-selection screen.
 - The anomaly uses existing visuals; no new icons or audio are required.
 - A daily retry must use the same anomaly as the original date seed.
+- History rows read `endless`, `boss_rush` and `daily_modifier` from RunLog to show the mode;
+  Replay still starts the normal seeded run and does not restore an endgame mode.
 
 ## 22. Endless boons
 
