@@ -73,6 +73,9 @@ const RIFT_INTERVAL := 16.0
 const RIFT_DAMAGE_BASE := 3.0
 const RIFT_DAMAGE_PER_WAVE := 0.15
 const BOSS_RUSH_SOLO_SHIELD := 10.0
+const FIELD_SHIELD_BURST_RADIUS := 72.0
+const FIELD_SHIELD_BURST_DAMAGE := 8.0
+const FIELD_SHIELD_BURST_KNOCK := 90.0
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -557,6 +560,30 @@ func _enrage_boss() -> void:
 	boss_enraged.emit(survivor)
 
 
+func _shield_break_burst() -> void:
+	var center := player.pos
+	var targets: Array[EnemyState] = []
+	for e in enemies:
+		if e.dead:
+			continue
+		if center.distance_to(e.pos) <= FIELD_SHIELD_BURST_RADIUS + e.radius:
+			targets.append(e)
+	for e in targets:
+		if e.dead:
+			continue
+		var push := (e.pos - center).normalized() * FIELD_SHIELD_BURST_KNOCK
+		damage_enemy(e, FIELD_SHIELD_BURST_DAMAGE, push, false, -1,
+				Vector2.ZERO, &"", &"shield_burst")
+	explosion.emit(center, FIELD_SHIELD_BURST_RADIUS, Color(0.45, 0.9, 1.0))
+	var info := ExplosionInfo.new()
+	info.kind = ExplosionInfo.WEAPON
+	info.effect = &"shield_burst"
+	info.pos = center
+	info.radius = FIELD_SHIELD_BURST_RADIUS
+	info.color = Color(0.45, 0.9, 1.0)
+	explosion_info.emit(info)
+
+
 func _bomber_explode(e: EnemyState) -> void:
 	var radius := e.death_radius_value()
 	var damage := e.death_damage_value() * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * float(ascension))
@@ -581,8 +608,12 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 		direction: Vector2, grant_iframes: bool = true) -> void:
 	if amount <= 0.0:
 		return
+	var had_shield := player.shield > 0.0
 	var absorbed := minf(player.shield, amount)
 	player.shield -= absorbed
+	if had_shield and player.shield <= 0.0 \
+			and bool(player.set_bonus_applied.get(&"field", false)):
+		_shield_break_burst()
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt
