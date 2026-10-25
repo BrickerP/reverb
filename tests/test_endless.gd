@@ -41,6 +41,18 @@ func test_boss_rush_skips_normal_waves(c: Check) -> void:
 	c.eq(s.next_wave_number(), 30, "the next shop targets wave 30")
 
 
+func test_boss_rush_zero_slot_build_gets_a_shield(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.stats.values[Stats.ECHO_SLOTS] = 0.0
+	s.phase = Sim.Phase.WON
+	c.ok(s.begin_boss_rush(), "enter boss rush with zero slots")
+	c.near(s.player.max_shield(), Sim.BOSS_RUSH_SOLO_SHIELD, 0.001,
+			"zero-slot boss rush gains a shield cap")
+	c.near(s.player.shield, Sim.BOSS_RUSH_SOLO_SHIELD, 0.001,
+			"the shield starts filled")
+
+
 func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()
