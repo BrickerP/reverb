@@ -82,9 +82,14 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		var level := levels[i] if i >= 0 and i < levels.size() else 0
 		var shot_damage := family_damage_mult(weapons, w.family) * extra_damage
 		shot_damage *= family_mastery_damage(weapons, w.family, origin.distance_to(target.pos))
+		var force_crit := source < 0 \
+				and bool(sim.player.set_bonus_applied.get(&"gunsmith", false)) \
+				and (sim.player_shots + 1) % 6 == 0
 		fire(sim, origin, target.pos, w, level, shot_damage,
 				stats, power_mult, source, tint,
-				family_mastery_pierce(weapons, w.family))
+				family_mastery_pierce(weapons, w.family), force_crit)
+		if source < 0:
+			sim.player_shots += 1
 		sim.shot_sequence += 1
 		var info := ShotInfo.new()
 		info.source = source
@@ -100,7 +105,7 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
 		family_mult: float, stats: Stats, power_mult: float, source: int, tint: Color,
-		bonus_pierce: int = 0) -> void:
+		bonus_pierce: int = 0, force_crit: bool = false) -> void:
 	var base_dir := (target_pos - origin).normalized()
 	if base_dir == Vector2.ZERO:
 		base_dir = Vector2.RIGHT
@@ -116,7 +121,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		var dir := base_dir.rotated(angle)
 		var p := Projectile.new()
 		p.damage = w.damage * w.level_mult(level) * family_mult * stats.damage_mult() * power_mult
-		if sim.rng.randf() < stats.get_stat(Stats.CRIT_CHANCE):
+		if force_crit or sim.rng.randf() < stats.get_stat(Stats.CRIT_CHANCE):
 			p.damage *= 2.0
 			p.crit = true
 		p.pos = origin + dir * 14.0

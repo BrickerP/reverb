@@ -116,6 +116,7 @@ var last_wave_earned := 0
 var wave_start_materials := 0
 var last_damage_source: StringName = &""
 var shot_sequence := 0
+var player_shots := 0
 var bank := EchoBank.new()
 var recorder := EchoRecorder.new()
 var grid := SpatialGrid.new()
@@ -144,6 +145,7 @@ func start_run() -> void:
 	boss_rush = false
 	second_wind_charges = 0
 	boon_rerolls = 0
+	player_shots = 0
 	DailyAnomaly.apply_start(self)
 	last_interest = 0
 	last_wave_earned = 0
