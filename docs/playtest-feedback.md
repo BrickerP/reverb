@@ -29,7 +29,9 @@ and duplicate submission is rejected. Cancel closes the form without writing.
 - `source`: `manual`, `fixture`, `bot`, or `unknown`;
 - `build_commit`, taken from the immutable build stamp or explicit environment;
 - character, wave, win/loss, duration, kills, weapons, items, echoes, merge count,
-  earnings, interest, death cause and best echo summary.
+  earnings, interest, death cause and best echo summary;
+- mode fields `endless`, `boss_rush`, `daily_modifier` and `ascension`;
+- chosen `boons` in order, `echo_refreshes`, and `contracts_accepted/completed/failed`.
 
 Old schema-1 rows remain readable. Because they cannot prove source or build, the
 report classifies them as `unknown` / `unavailable` even if similarly named fields
@@ -49,7 +51,9 @@ Source classification is evidence, not a guarantee of who was at the keyboard:
 - `bot`: automated gameplay, never counted as human feedback;
 - `unknown`: legacy or unproven origin, never silently counted as human feedback.
 
-No verified human feedback has been received at this delivery checkpoint.
+No verified human feedback has been received at this delivery checkpoint. The current
+public RC is v0.10.0-rc.1; its release notes list the unverified balance and readability
+areas.
 
 ## Build a local report
 
@@ -60,8 +64,10 @@ python3 tools/runs_report.py runs.jsonl \
 ```
 
 Use `--source manual` when you intentionally want only records marked for manual
-play. The report groups runs by source and build, joins valid feedback, keeps
-Conductor labels, and lists every malformed/orphan/duplicate/provenance mismatch.
+play. The report groups runs by source and build, separates Normal / Daily / Endless /
+Boss Rush, shows Daily-anomaly and boon performance, reports echo refreshes and contract
+outcomes, joins valid feedback, keeps Conductor labels, and lists every
+malformed/orphan/duplicate/provenance mismatch.
 
 ## Developer and QA boundaries
 
