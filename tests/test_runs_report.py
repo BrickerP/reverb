@@ -92,7 +92,8 @@ class RunsReportTest(unittest.TestCase):
         self.assertIn("| Daily | 1 | 0 | 9.0 |", text)
         self.assertIn("| Endless | 1 | 0 | 22.0 |", text)
         self.assertIn("| Boss Rush | 1 | 0 | 30.0 |", text)
-        self.assertIn("Daily anomalies: riftstorm: 1", text)
+        self.assertIn("## Daily anomalies", text)
+        self.assertIn("| riftstorm | 1 | 0 | 0.0% | 9.0 |", text)
 
     def test_boons_and_refreshes_are_reported(self):
         rows = [

@@ -305,10 +305,18 @@ def build_report(runs, skipped_runs=0, feedback=(), skipped_feedback=0, source_f
         mode_wins = sum(run["won"] for run in group)
         lines.append(f"| {mode} | {count} | {mode_wins} | {statistics.mean([run['wave'] for run in group]):.1f} |")
     lines.append("")
-    anomalies = Counter(run["daily_modifier"] for run in runs if run["daily_modifier"])
+    daily_runs = [run for run in runs if run["daily_modifier"]]
+    anomalies = Counter(run["daily_modifier"] for run in daily_runs)
     if anomalies:
-        lines.append("Daily anomalies: " + " · ".join(
-            f"{markdown(name)}: {count}" for name, count in anomalies.most_common()))
+        lines += ["## Daily anomalies", "", "| Anomaly | Runs | Wins | Win rate | Mean wave |",
+                  "|---|---:|---:|---:|---:|"]
+        for name, count in anomalies.most_common():
+            group = [run for run in daily_runs if run["daily_modifier"] == name]
+            wins = sum(run["won"] for run in group)
+            lines.append(
+                f"| {markdown(name)} | {count} | {wins} | {pct(wins, count):.1f}% | "
+                f"{statistics.mean([run['wave'] for run in group]):.1f} |"
+            )
         lines.append("")
     refresh_total = sum(run["echo_refreshes"] for run in runs)
     if refresh_total:
