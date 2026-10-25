@@ -1,31 +1,48 @@
 # Take Stack v0.10.0-rc.1
 
-发布候选说明。**尚未创建 tag，也未发布到 Releases。**
+Published 2026-10-25. Tag `v0.10.0-rc.1` points at
+`2288b9457366098beec338d5a5dc85a2c74ad141`.
 
-## 定位
+This release is intentionally versioned as a release candidate but was explicitly marked
+**Latest** at the maintainer's request.
 
-20 波单屏竞技场 roguelite 的垂直切片：录下每波走位与构筑，让过去的自己以回响形式参战。完整 20 波、Boss、商店、4 角色、每日挑战、无尽与 Boss Rush 均可玩。
+## Scope
 
-## 本版要点
+20-wave single-screen arena roguelite vertical slice: record each wave's movement and build,
+then let a past self fight as an echo. 20 waves, Paradox boss, shop, four characters, Daily,
+Endless and Boss Rush.
 
-- 20 波 + Paradox 双线 Boss；无尽 25/30/35… 与 Boss Rush 终局。
-- 4 角色：复读机、独行者、镜像、指挥。
-- 12 武器（含 4 进化）、11 道具、3 套物品套装。
-- 回响：叠录、崩解、续录、超容量、撤销。
-- 精英：超频、盾墙、爆裂、分裂。
-- 时间裂隙、异常合约（含崩解合约）、无尽恩惠与重抽。
-- 苦行 A0–A3；Daily 异象池 9 条、连续天数、历史回放。
-- 运行日志包含模式、恩惠、续录、合约结果。
+Highlights: 4 characters, 12 weapons (4 evolutions), 11 items, 3 item sets, echo overdub /
+collapse / refresh / undo, four elite rules, temporal rifts, contracts (including collapse),
+endless boons and rerolls, Ascension 0–3, Daily anomalies, streak, history replay, run logs.
 
-## 验证
+## Artifacts
 
-- Godot 测试：**6683 项**（版本号更新前）
-- smoke、CI 三平台、Python 报告测试
-- 发布打包审计：macOS / Windows / Linux，资源清单与禁止路径检查；macOS 实际启动
+| File | Size | SHA-256 |
+|---|---:|---|
+| `TakeStack-macos.zip` | 89,302,589 B | `0a30c5783db0167814ac1f06e42d69b343137d87ab764154bf6b64173c23cd79` |
+| `TakeStack-windows.zip` | 65,861,077 B | `506f23bfdd5a7cd87f8e932386e438eaea699b2fb6afdf5c97a5ab064ff6cc4c` |
+| `TakeStack-linux.zip` | 56,143,055 B | `5103687cf0a67134089b40bad479459dbcf881f4c08cea0cf5dad09ff17e97fd` |
 
-## 已知限制
+Also attached: `SHA256SUMS.txt`, `AUDIT.json`, `BUILD_INFO.txt`.
 
-- 没有真人试玩数据：难度、可读性、防御流、Boss Rush、Daily 平衡未验证。
-- 正式 `Take Stack` 商标检索未完成。
-- Windows / Linux 包需要在原生系统再做一次启动确认。
-- 当前 `HEAD` 构建包含 RC 版本号；发布标签与商店上传尚未授权。
+## Verification
+
+- Godot: **6683 tests passed**
+- smoke passed
+- Python report tests passed
+- exact-head export audit passed for macOS, Windows and Linux
+- 18 provenance files, 79 checked resources, 317 inventory items, no forbidden paths
+- macOS package launched 30 frames with isolated user data
+- Linux executable permission preserved
+- `main` CI green
+- Remote assets were downloaded and all checksums/zip integrity checks passed before
+  publication
+
+## Known limits
+
+- No human playtest data: difficulty, readability, defensive builds, Boss Rush and Daily balance
+  remain unverified.
+- Formal `Take Stack` trademark clearance is not complete.
+- Windows/Linux packages have not been launched on their native systems here; CI performs native
+  export startup smoke.
