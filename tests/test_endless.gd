@@ -31,6 +31,9 @@ func test_boss_rush_skips_normal_waves(c: Check) -> void:
 	c.ok(s.boss_rush, "boss rush is flagged")
 	c.eq(s.phase, Sim.Phase.SHOP, "boss rush starts in a shop")
 	c.eq(s.wave, WaveDirector.FINAL_WAVE, "the victory wave is retained for the shop")
+	c.eq(s.pending_boons.size(), 3, "boss rush opens with a boon choice")
+	c.ok(s.choose_boon(0), "boss rush starting boon can be chosen")
+	c.eq(s.pending_boons.size(), 0, "starting boon is consumed before the shop")
 	c.eq(s.next_wave_number(), 25, "the first boss rush wave is 25")
 	s.start_next_wave()
 	c.eq(s.wave, 25, "boss rush starts at wave 25")
@@ -45,6 +48,7 @@ func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:
 	s.player.hp = s.player.max_hp()
 	s.phase = Sim.Phase.WON
 	c.ok(s.begin_boss_rush(), "begin boss rush")
+	c.ok(s.choose_boon(0), "choose the starting boon")
 	s.start_next_wave()
 	_run(s, 200)
 	c.ok(s.boss != null, "boss rush spawns Paradox")

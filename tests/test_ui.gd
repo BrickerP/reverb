@@ -299,6 +299,8 @@ func test_main_continues_into_boss_rush(c: Check) -> void:
 	main.end_ui.boss_rush_button.pressed.emit()
 	c.ok(s.boss_rush, "main starts boss rush mode")
 	c.eq(s.phase, Sim.Phase.SHOP, "main opens the boss rush shop")
+	c.ok(main.boon_ui.visible, "main shows the starting boon before the shop")
+	c.ok(not main.shop_ui.visible, "the shop waits for the boon choice")
 	c.eq(s.next_wave_number(), 25, "boss rush shop targets wave 25")
 	main.free()
 
