@@ -466,8 +466,9 @@ Mechanism API:
   `endless = true`, keeps the run seed/build/bank, sets `wave = FINAL_WAVE`, clears boss
   shards/rifts, switches to `Phase.SHOP`, and rolls a fresh shop.
 - `Sim.begin_boss_rush() -> bool` uses the same entry conditions and shop setup, sets
-  `boss_rush = true`, and jumps only on subsequent waves. `Sim.next_wave_number()` returns
-  `wave + 5` under boss rush and `wave + 1` otherwise; `start_next_wave` uses it.
+  `boss_rush = true`, rolls a **starting boon offer** into `pending_boons`, and jumps only
+  on subsequent waves. Main must show that boon before opening the shop. `Sim.next_wave_number()`
+  returns `wave + 5` under boss rush and `wave + 1` otherwise; `start_next_wave` uses it.
 - `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
   `n > 20` where `n % 5 == 0` (25, 30, 35…).
 - `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
@@ -492,8 +493,9 @@ Mechanism API:
 Presentation requirements:
 
 - End screen shows `Continue · Endless` and `Boss Rush` only on a normal win; both hidden
-  on losses and endless deaths. The shop start button must use `Sim.next_wave_number()` so
-  Boss Rush shows 25/30/35… rather than 21/22/….
+  on losses and endless deaths. Boss Rush opens the existing boon modal before the first
+  shop. The shop start button must use `Sim.next_wave_number()` so Boss Rush shows
+  25/30/35… rather than 21/22/….
 - HUD endless branch shows `hud.endless` with the current wave and the 60s timer; it hides
   the 20-wave progress pips. Endless boss waves show `hud.endless_boss` plus the existing
   boss health bar and phase-2 pips, still without the 20-wave pips.

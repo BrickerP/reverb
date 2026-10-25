@@ -292,6 +292,8 @@ func begin_boss_rush() -> bool:
 	boss_shards.clear()
 	rifts.clear()
 	shop.roll(self)
+	boon_rerolls = 0
+	pending_boons = Boon.roll(rng)
 	return true
 
 
