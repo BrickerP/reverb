@@ -515,6 +515,9 @@ func _show_boon() -> void:
 func _on_boon_chosen(index: int) -> void:
 	if sim == null or not sim.choose_boon(index):
 		return
+	if not sim.pending_boons.is_empty():
+		_show_boon()
+		return
 	boon_ui.close()
 	_shop_delay = 0.0
 	_open_shop()

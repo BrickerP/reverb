@@ -51,6 +51,11 @@ func test_boss_rush_zero_slot_build_gets_a_shield(c: Check) -> void:
 			"zero-slot boss rush gains a shield cap")
 	c.near(s.player.shield, Sim.BOSS_RUSH_SOLO_SHIELD, 0.001,
 			"the shield starts filled")
+	c.eq(s.pending_boons.size(), 3, "zero-slot boss rush opens with a boon")
+	c.ok(s.choose_boon(0), "choose the first bonus boon")
+	c.eq(s.pending_boons.size(), 3, "zero-slot boss rush offers a second boon")
+	c.ok(s.choose_boon(0), "choose the second bonus boon")
+	c.eq(s.pending_boons.size(), 0, "both starting boons are consumed")
 
 
 func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:

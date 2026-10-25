@@ -305,6 +305,25 @@ func test_main_continues_into_boss_rush(c: Check) -> void:
 	main.free()
 
 
+func test_main_keeps_the_second_boss_rush_boon_open(c: Check) -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	_root().add_child(main)
+	main.new_run(5, &"solo")
+	var s: Sim = main.sim
+	s.phase = Sim.Phase.WON
+	main._phase = Sim.Phase.WON
+	main.end_ui.show_result(s)
+	main.end_ui.boss_rush_button.pressed.emit()
+	c.ok(main.boon_ui.visible, "the first bonus boon is shown")
+	main.boon_ui.chosen.emit(0)
+	c.ok(main.boon_ui.visible, "the second bonus boon stays open")
+	c.eq(s.pending_boons.size(), 3, "the second offer is present")
+	main.boon_ui.chosen.emit(0)
+	c.eq(s.pending_boons.size(), 0, "both offers are consumed")
+	c.ok(main.shop_ui.visible, "the shop opens after both boons")
+	main.free()
+
+
 func test_main_continues_into_endless(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)
