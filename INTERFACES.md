@@ -493,8 +493,10 @@ Mechanism API:
   just-written wave-20 win line when continuing, then writes one final endless death line
   with the endless wave; Meta still records the wave-20 win/unlocks once.
 - `Sim.boons_taken` records chosen boon IDs in application order; `Sim.echo_refreshes`
-  counts successful refresh transactions. Both reset at `start_run`.
-- `RunLog.append` includes `boons` and `echo_refreshes` alongside `endless`/`boss_rush`.
+  counts successful refresh transactions; `contracts_accepted/completed/failed` count
+  contract outcomes. All reset at `start_run`.
+- `RunLog.append` includes `boons`, `echo_refreshes` and the three contract counters
+  alongside `endless`/`boss_rush`.
 - `Meta.record_endless(sim)` persists `best_endless` or `best_boss_rush` separately; normal
   `best_wave` is not raised by an endless death. The character-select summary displays both
   values when non-zero.

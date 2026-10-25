@@ -159,6 +159,7 @@ func accept_contract(sim: Sim) -> bool:
 	sim.player.materials -= contract.deposit
 	contract.accepted = true
 	sim.active_contract = contract
+	sim.contracts_accepted += 1
 	return true
 
 
