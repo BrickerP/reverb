@@ -94,6 +94,7 @@ const TABLE := {
 	"contract.clean": "下一波：不受伤害 · 押金 %d · 奖励 %d",
 	"contract.clear": "下一波：击杀 %d 个 · 押金 %d · 奖励 %d",
 	"contract.hunt": "下一波：击杀精英 · 押金 %d · 奖励 %d",
+	"contract.collapse": "下一波：崩解一次回响 · 押金 %d · 奖励 %d",
 	"contract.accept": "接受",
 	"contract.active": "进行中",
 	"contract.poor": "需要 %d",
