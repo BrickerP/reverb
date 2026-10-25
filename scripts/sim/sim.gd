@@ -192,6 +192,14 @@ func wave_budget_multiplier() -> float:
 	return DailyAnomaly.HORDE_BUDGET_MULT if daily_modifier == DailyAnomaly.HORDE else 1.0
 
 
+func daily_enemy_speed_multiplier() -> float:
+	return DailyAnomaly.OVERCLOCK_SPEED if daily_modifier == DailyAnomaly.OVERCLOCK else 1.0
+
+
+func daily_enemy_damage_multiplier() -> float:
+	return DailyAnomaly.OVERCLOCK_DAMAGE if daily_modifier == DailyAnomaly.OVERCLOCK else 1.0
+
+
 func echo_power() -> float:
 	var power := player.stats.get_stat(Stats.ECHO_POWER)
 	if Combat.family_count(player.weapons, &"arcane") >= 4:
@@ -803,8 +811,10 @@ func _materialize(ps: PendingSpawn) -> void:
 	var ascension_level := 1.0 if ascension >= 1 else 0.0
 	e.max_hp = ps.def.hp * hp_scale * (1.0 + 0.10 * ascension_level)
 	e.hp = e.max_hp
-	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * ascension_level)
-	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * ascension_level)
+	e.speed = ps.def.speed * WaveDirector.speed_scale(wave) * (1.0 + 0.05 * ascension_level) \
+			* daily_enemy_speed_multiplier()
+	e.damage = ps.def.damage * WaveDirector.damage_scale(wave) * (1.0 + 0.10 * ascension_level) \
+			* daily_enemy_damage_multiplier()
 	e.radius = ps.def.radius
 	if ps.elite_kind != &"":
 		_apply_elite(e, ps.elite_kind)
