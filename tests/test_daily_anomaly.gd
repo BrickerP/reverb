@@ -44,6 +44,15 @@ func test_daily_anomalies_apply_to_the_sim(c: Check) -> void:
 	c.eq(storm.ascension_rift_interval(), DailyAnomaly.RIFTSTORM_INTERVAL,
 			"riftstorm uses the fast interval")
 
+	var glass := Sim.new(7)
+	glass.daily_modifier = DailyAnomaly.GLASS_CANNON
+	glass.start_run()
+	c.near(glass.player.stats.get_stat(Stats.DAMAGE_PCT),
+			DailyAnomaly.GLASS_DAMAGE_BONUS, 0.001, "glass adds damage")
+	c.near(glass.player.stats.get_stat(Stats.MAX_HP), 30.0 * 0.8, 0.001,
+			"glass reduces max HP")
+	c.eq(glass.player.hp, glass.player.max_hp(), "glass starts at the reduced max HP")
+
 	var normal := Sim.new(7)
 	normal.start_run()
 	var normal_grunt := _grunt(normal)

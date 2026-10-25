@@ -195,6 +195,7 @@ const TABLE := {
 	"daily.twin_hunt": "双猎 · 每波两个精英",
 	"daily.fortune": "日进斗金 · 材料掉落 +50%",
 	"daily.riftstorm": "裂隙风暴 · 第 8 波开始，每 8 秒一次",
+	"daily.glass_cannon": "玻璃大炮 · +30% 伤害，-20% 生命",
 	"boon.title": "无尽恩惠",
 	"boon.subtitle": "进入下一间商店前，选择一项永久强化。",
 	"boon.reroll": "重抽 %d",
