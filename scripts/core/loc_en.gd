@@ -6,6 +6,8 @@ const TABLE := {
 	"hud.endless": "ENDLESS  ·  WAVE %d",
 	"hud.endless_boss": "ENDLESS %d  ·  PARADOX",
 	"hud.boss_rush_boss": "BOSS RUSH %d  ·  PARADOX",
+	"hud.crit_charge": "CRIT IN %d",
+	"hud.crit_next": "NEXT SHOT CRITS",
 	"hud.boss": "PARADOX",
 	"hud.boss_phase2": "PARADOX // TWO TIMELINES",
 	"hud.boss_down": "PARADOX DEFEATED",

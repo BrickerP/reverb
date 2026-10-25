@@ -427,6 +427,21 @@ func test_hud_labels_boss_rush_separately_from_endless(c: Check) -> void:
 	h.free()
 
 
+func test_hud_tracks_gunsmith_crit_charge(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	for id: StringName in [&"sharp_edge", &"quick_trigger", &"long_barrel"]:
+		s.player.add_item(Content.item(id))
+	var h := Hud.new()
+	h.bind(s)
+	c.eq(h.gunsmith_remaining(), 6, "a fresh gunsmith set counts six shots")
+	s.player_shots = 5
+	c.eq(h.gunsmith_remaining(), 1, "the next shot is the forced crit")
+	s.player_shots = 6
+	c.eq(h.gunsmith_remaining(), 6, "the counter wraps after the crit")
+	h.free()
+
+
 func test_hud_weapon_slots_show_cooldown_readiness(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()

@@ -114,6 +114,7 @@ func _draw() -> void:
 	_draw_wave()
 	_draw_materials()
 	_draw_weapons()
+	_draw_gunsmith_charge()
 	_draw_controls()
 	_draw_onboarding()
 	if debug:
@@ -305,6 +306,21 @@ func _draw_weapons() -> void:
 				draw_rect(slot.grow(1.0), Color(1, 1, 1, _flash[i] * 0.9), false, 2.0)
 		else:
 			draw_rect(slot, Color(1, 1, 1, 0.22), false, 1.5)
+
+
+func gunsmith_remaining() -> int:
+	if sim == null or not bool(sim.player.set_bonus_applied.get(&"gunsmith", false)):
+		return -1
+	return 6 - (sim.player_shots % 6)
+
+
+func _draw_gunsmith_charge() -> void:
+	var remaining := gunsmith_remaining()
+	if remaining < 0:
+		return
+	var text := Loc.t("hud.crit_next") if remaining == 1 else Loc.t("hud.crit_charge", [remaining])
+	var color := UiTheme.WARN if remaining == 1 else UiTheme.COIN
+	_text(text, Vector2(300.0, 705.0), 13, color)
 
 
 static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:

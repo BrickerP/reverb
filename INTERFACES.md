@@ -523,6 +523,8 @@ Mechanism data:
 - `Sim.player_shots` counts only player-origin volleys, resets at `start_run`, and drives the
   Gunsmith sixth-shot guaranteed crit. Echo volleys increment `shot_sequence` but not
   `player_shots`.
+- `Hud.gunsmith_remaining()` returns `-1` without the set, otherwise `6 - player_shots % 6`;
+  HUD text is `CRIT IN N` or `NEXT SHOT CRITS`. It never mutates combat state.
 - `ShopState` captures/restores `items`, `stats` and `set_bonus_applied`; undo after the
   third item removes both the item and the set contribution.
 
