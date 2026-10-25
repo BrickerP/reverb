@@ -201,6 +201,7 @@ const TABLE := {
 	"daily.riftstorm": "Riftstorm · rifts from wave 8 every 8s",
 	"daily.glass_cannon": "Glass Cannon · +30% damage, -20% HP",
 	"daily.horde": "Horde · +35% wave budget",
+	"daily.echo_bloom": "Echo Bloom · +1 echo slot",
 	"boon.title": "Endless Boon",
 	"boon.subtitle": "Choose one permanent upgrade before the next shop.",
 	"boon.reroll": "Reroll %d",

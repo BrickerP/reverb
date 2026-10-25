@@ -65,6 +65,11 @@ func test_daily_anomalies_apply_to_the_sim(c: Check) -> void:
 	c.ok(horde._plan.size() > normal_five._plan.size(),
 			"the same seed plans more enemies under horde")
 
+	var bloom := Sim.new(7)
+	bloom.daily_modifier = DailyAnomaly.ECHO_BLOOM
+	bloom.start_run()
+	c.eq(bloom.echo_capacity(), 3, "echo bloom adds one slot")
+
 	var normal := Sim.new(7)
 	normal.start_run()
 	var normal_grunt := _grunt(normal)

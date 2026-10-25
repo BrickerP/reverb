@@ -8,8 +8,10 @@ const FORTUNE := &"fortune"
 const RIFTSTORM := &"riftstorm"
 const GLASS_CANNON := &"glass_cannon"
 const HORDE := &"horde"
+const ECHO_BLOOM := &"echo_bloom"
 const ALL: Array[StringName] = [
 	ECHO_SURGE, RIFTFALL, TWIN_HUNT, FORTUNE, RIFTSTORM, GLASS_CANNON, HORDE,
+	ECHO_BLOOM,
 ]
 
 const ECHO_BONUS := 0.15
@@ -20,6 +22,7 @@ const RIFTSTORM_INTERVAL := 8.0
 const GLASS_DAMAGE_BONUS := 0.30
 const GLASS_HP_PENALTY := 0.20
 const HORDE_BUDGET_MULT := 1.35
+const ECHO_BLOOM_SLOTS := 1.0
 
 
 static func for_seed(seed_value: int) -> StringName:
@@ -42,11 +45,16 @@ static func title_key(id: StringName) -> String:
 			return "daily.glass_cannon"
 		HORDE:
 			return "daily.horde"
+		ECHO_BLOOM:
+			return "daily.echo_bloom"
 		_:
 			return "daily.echo_surge"
 
 
 static func apply_start(sim: Sim) -> void:
+	if sim.daily_modifier == ECHO_BLOOM:
+		sim.player.stats.add(Stats.ECHO_SLOTS, ECHO_BLOOM_SLOTS)
+		return
 	if sim.daily_modifier != GLASS_CANNON:
 		return
 	var max_hp := sim.player.stats.get_stat(Stats.MAX_HP)
