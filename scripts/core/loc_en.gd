@@ -73,7 +73,7 @@ const TABLE := {
 	"set.field": "Field Kit",
 	"set.echo_bonus": "+2% echo power, refresh costs 2 less",
 	"set.gunsmith_bonus": "+2% damage / +2% attack speed / every 6th shot crits",
-	"set.field_bonus": "+8 shield each wave",
+	"set.field_bonus": "+8 shield each wave; shield break shockwave",
 	"shop.none": "(none)",
 	"shop.echoes": "Echoes %d / %d",
 	"shop.echo_value": "%d × %d%%",

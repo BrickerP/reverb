@@ -518,13 +518,17 @@ Mechanism data:
     two-material discount on echo refresh (`Shop.echo_refresh_cost`).
   - `gunsmith`: sharp_edge, quick_trigger, long_barrel, lucky_coin (3/4) → `damage_pct +0.02`,
     `attack_speed_pct +0.02`, and every sixth player shot is a guaranteed crit.
-  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `shield +8`, refilled each wave.
+  - `field`: iron_heart, regen_patch, sneakers, magnet (3/4) → `shield +8`, refilled
+    each wave, plus an 8-damage / 72-radius knockback shockwave when the shield breaks.
 - `PlayerState.add_item()` calls `_apply_item_sets()` after applying the item's own mods.
 - `PlayerState.set_bonus_applied` records which sets have paid out, so adding a fourth member
   cannot apply the same bonus twice. Max-HP set bonuses also add current HP.
 - `Sim.player_shots` counts only player-origin volleys, resets at `start_run`, and drives the
   Gunsmith sixth-shot guaranteed crit. Echo volleys increment `shot_sequence` but not
   `player_shots`.
+- For the Field Kit, `Sim._hurt_player` emits a one-shot shockwave when positive shield
+  reaches zero. It damages/knocks back enemies within 72 radius and emits an
+  `ExplosionInfo` with `effect = "shield_burst"`; no extra event type is required.
 - `Hud.gunsmith_remaining()` returns `-1` without the set, otherwise `6 - player_shots % 6`;
   HUD text is `CRIT IN N` or `NEXT SHOT CRITS`. It never mutates combat state.
 - `ShopState` captures/restores `items`, `stats` and `set_bonus_applied`; undo after the

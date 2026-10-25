@@ -60,6 +60,32 @@ func test_gunsmith_set_makes_every_sixth_player_shot_crit(c: Check) -> void:
 	c.eq(s.player_shots, 6, "the player shot counter advances")
 
 
+func test_field_set_bursts_when_shield_breaks(c: Check) -> void:
+	var s := _sim()
+	for id in [&"iron_heart", &"regen_patch", &"sneakers"]:
+		s.player.add_item(Content.item(id))
+	var enemy := EnemyState.new()
+	enemy.def = Content.enemy(&"grunt")
+	enemy.pos = s.player.pos + Vector2(40.0, 0.0)
+	enemy.hp = 100.0
+	s.enemies.append(enemy)
+	s.player.shield = 8.0
+	s._hurt_player(8.0, &"test", &"contact", s.player.pos, Vector2.RIGHT)
+	c.eq(s.player.shield, 0.0, "the shield is consumed")
+	c.ok(enemy.hp < 100.0, "the shield break damages nearby enemies")
+	c.ok(enemy.knock.length() > 0.0, "the shield break knocks enemies back")
+
+	var plain := _sim()
+	var plain_enemy := EnemyState.new()
+	plain_enemy.def = Content.enemy(&"grunt")
+	plain_enemy.pos = plain.player.pos + Vector2(40.0, 0.0)
+	plain_enemy.hp = 100.0
+	plain.enemies.append(plain_enemy)
+	plain.player.shield = 8.0
+	plain._hurt_player(8.0, &"test", &"contact", plain.player.pos, Vector2.RIGHT)
+	c.eq(plain_enemy.hp, 100.0, "without the set there is no shockwave")
+
+
 func test_shop_state_restores_set_bonus(c: Check) -> void:
 	var s := _sim()
 	s.player.add_item(Content.item(&"spare_deck"))

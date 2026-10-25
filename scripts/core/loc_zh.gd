@@ -73,7 +73,7 @@ const TABLE := {
 	"set.field": "生存套件",
 	"set.echo_bonus": "+2% 回响威力，续录 -2 材料",
 	"set.gunsmith_bonus": "+2% 伤害 / +2% 攻速 / 每第 6 发必暴击",
-	"set.field_bonus": "每波 +8 护盾",
+	"set.field_bonus": "每波 +8 护盾；破盾冲击波",
 	"shop.none": "（无）",
 	"shop.echoes": "回响 %d / %d",
 	"shop.echo_value": "%d × %d%%",
