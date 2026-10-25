@@ -27,7 +27,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 - 第 3 波起商店会出现 1 个异常合约：付押金，下一波完成“不受伤害 / 击杀 N 个敌人 / 击杀精英”之一拿奖励；失败押金不退。
 - 第 12 波起场地会开启「时间裂隙」：先在玩家附近预警 1.5 秒，再激活 3 秒；站在圈内会持续受伤，必须离开。
 - 选角页可用 `Ascension` 选择 0–3 级苦行：A1 敌人生命/伤害 +10%、速度 +5%；A2 额外让裂隙从第 10 波开始并缩短到 14 秒；A3 额外每波两个精英；A2/A3 不再叠数值，胜利次数解锁，默认 0 不影响现有平衡。
-- 击败第 20 波 Boss 后，可在结算页选择「继续 · 无尽」：保留当前构筑进入第 21 波及以后；第 25/30/35… 波悖论回归，死亡时记录无尽波数。也可选「Boss Rush」，先选一次开局恩惠，再从第 25 波开始，每次跳 5 波，只打 Boss 波；0 槽角色额外获得 10 点护盾，两种终局的最佳波数分别记录。
+- 击败第 20 波 Boss 后，可在结算页选择「继续 · 无尽」：保留当前构筑进入第 21 波及以后；第 25/30/35… 波悖论回归，死亡时记录无尽波数。也可选「Boss Rush」，先选一次开局恩惠，再从第 25 波开始，每次跳 5 波，只打 Boss 波；0 槽角色额外获得 10 点护盾和第二次开局恩惠，两种终局的最佳波数分别记录。
 - 最多 6 把武器，可重复购买。满 6 格后，点武器卡进入替换模式：选一个槽换掉，旧武器按基础价半价抵扣，Esc 取消。
 - 每波结束会录下你这波的走位与武器/属性快照，成为一张回响。
 - 下一波回响会以「倒带循环」方式重放走位，并用快照武器开火。
@@ -59,7 +59,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 ## 下载玩
 
-[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.29 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
+[Releases](https://github.com/BrickerP/reverb/releases) 提供 v0.2.0 的 macOS / Windows / Linux 构建，不用装 Godot。当前源码为 v0.9.30 开发版（含悖论 Phase 2、家族专精、精英敌人、武器卖出、报价锁定、异常合约、时间裂隙、回响崩解、回响续录、无尽升级期、无尽 Boss、Boss Rush、物品套装、苦行等级、生存护盾、每日异象、无尽恩惠与回响整理撤销），Release 页仍是 v0.2.0 构建。
 
 - **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
@@ -161,7 +161,7 @@ Windows 和 Linux 导出包已在 exact-head CI 的原生 runner 上完成 60 �
 ## 开发
 
 ```bash
-make test     # 无头测试（当前 6562 项）
+make test     # 无头测试（当前 6572 项）
 make smoke    # 真实场景端到端烟测
 # CI: Ubuntu + macOS + Windows 上自动跑 import / tests / smoke；Linux/Windows 导出包真实启动冒烟
 make perf     # 模拟步耗时与压力测试

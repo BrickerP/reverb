@@ -95,6 +95,7 @@ var wave_damage_taken: bool = false
 var active_contract: AnomalyContract
 var pending_boons: Array[StringName] = []
 var boon_rerolls: int = 0
+var boss_rush_bonus_boon := false
 var last_contract_done: bool = false
 var last_contract_success: bool = false
 var last_contract_reward: int = 0
@@ -149,6 +150,7 @@ func start_run() -> void:
 	boss_rush = false
 	second_wind_charges = 0
 	boon_rerolls = 0
+	boss_rush_bonus_boon = false
 	player_shots = 0
 	DailyAnomaly.apply_start(self)
 	last_interest = 0
@@ -298,7 +300,8 @@ func begin_boss_rush() -> bool:
 	phase = Phase.SHOP
 	boss_shards.clear()
 	rifts.clear()
-	if echo_capacity() <= 0:
+	boss_rush_bonus_boon = echo_capacity() <= 0
+	if boss_rush_bonus_boon:
 		player.stats.add(Stats.SHIELD, BOSS_RUSH_SOLO_SHIELD)
 		player.shield = player.max_shield()
 	shop.roll(self)
@@ -665,7 +668,11 @@ func choose_boon(index: int) -> bool:
 		return false
 	if not Boon.apply(self, pending_boons[index]):
 		return false
-	pending_boons.clear()
+	if boss_rush_bonus_boon:
+		boss_rush_bonus_boon = false
+		pending_boons = Boon.roll(rng, 3, self)
+	else:
+		pending_boons.clear()
 	return true
 
 

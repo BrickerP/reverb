@@ -468,9 +468,10 @@ Mechanism API:
 - `Sim.begin_boss_rush() -> bool` uses the same entry conditions and shop setup, sets
   `boss_rush = true`, rolls a **starting boon offer** into `pending_boons`, and jumps only
   on subsequent waves. If `echo_capacity() <= 0`, it also adds
-  `BOSS_RUSH_SOLO_SHIELD = 10` max shield and fills it. Main must show the boon before
-  opening the shop. `Sim.next_wave_number()` returns `wave + 5` under boss rush and
-  `wave + 1` otherwise; `start_next_wave` uses it.
+  `BOSS_RUSH_SOLO_SHIELD = 10` max shield, fills it, and sets
+  `boss_rush_bonus_boon` for a second sequential three-choice offer. Main must show each
+  boon before opening the shop. `Sim.next_wave_number()` returns `wave + 5` under boss rush
+  and `wave + 1` otherwise; `start_next_wave` uses it.
 - `Sim.is_boss_wave(n = wave)` is true for the normal wave 20, or for endless waves
   `n > 20` where `n % 5 == 0` (25, 30, 35…).
 - `start_wave(n)` uses that helper: normal wave 20 and endless boss waves append Paradox;
@@ -675,10 +676,13 @@ Mechanism API:
 Presentation requirements:
 
 - Main shows the `BoonUi` modal and does not open the shop while `pending_boons` is non-empty.
+  Boss Rush zero-slot characters receive a second offer after the first choice; keep the
+  modal open until `pending_boons` is empty.
 - BoonUi shows exactly three buttons with localized name/description; no cancel is allowed.
 - When `BoonUi.open` receives a `Sim`, it also shows one `Reroll <cost>` button. It must
   call `Sim.reroll_boons` through Main, then rebuild the modal; disabled when unaffordable.
-- Choosing applies via `Sim.choose_boon` and then opens the already-rolled shop.
+- Choosing applies via `Sim.choose_boon` and then opens the already-rolled shop once no
+  follow-up offer remains.
 - The modal pauses simulation; Hide/quit flows close it without applying.
 - No new art is required; reuse UiTheme panels/buttons.
 
