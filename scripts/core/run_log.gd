@@ -99,6 +99,9 @@ func append(sim: Sim, character_id: StringName, seconds: float, context: Diction
 			best_wave = take.wave
 	if best_dps < 0.0:
 		best_dps = 0.0
+	var boons := PackedStringArray()
+	for id in sim.boons_taken:
+		boons.append(String(id))
 	var data := {
 		"schema_version": SCHEMA_VERSION,
 		"run_id": run_id,
@@ -115,6 +118,8 @@ func append(sim: Sim, character_id: StringName, seconds: float, context: Diction
 		"boss_rush": sim.boss_rush,
 		"ascension": sim.ascension,
 		"daily_modifier": String(sim.daily_modifier),
+		"boons": boons,
+		"echo_refreshes": sim.echo_refreshes,
 		"kills": sim.kills,
 		"seconds": snappedf(seconds, 0.1),
 		"weapons": weapons,

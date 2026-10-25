@@ -94,8 +94,10 @@ var wave_elite_kills: int = 0
 var wave_damage_taken: bool = false
 var active_contract: AnomalyContract
 var pending_boons: Array[StringName] = []
+var boons_taken: Array[StringName] = []
 var boon_rerolls: int = 0
 var boss_rush_bonus_boon := false
+var echo_refreshes: int = 0
 var last_contract_done: bool = false
 var last_contract_success: bool = false
 var last_contract_reward: int = 0
@@ -149,8 +151,10 @@ func start_run() -> void:
 	endless = false
 	boss_rush = false
 	second_wind_charges = 0
+	boons_taken.clear()
 	boon_rerolls = 0
 	boss_rush_bonus_boon = false
+	echo_refreshes = 0
 	player_shots = 0
 	DailyAnomaly.apply_start(self)
 	last_interest = 0
@@ -668,6 +672,7 @@ func choose_boon(index: int) -> bool:
 		return false
 	if not Boon.apply(self, pending_boons[index]):
 		return false
+	boons_taken.append(pending_boons[index])
 	if boss_rush_bonus_boon:
 		boss_rush_bonus_boon = false
 		pending_boons = Boon.roll(rng, 3, self)
