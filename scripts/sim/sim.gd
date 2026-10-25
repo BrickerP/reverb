@@ -101,6 +101,9 @@ var echo_refreshes: int = 0
 var last_contract_done: bool = false
 var last_contract_success: bool = false
 var last_contract_reward: int = 0
+var contracts_accepted: int = 0
+var contracts_completed: int = 0
+var contracts_failed: int = 0
 var player := PlayerState.new()
 var enemies: Array[EnemyState] = []
 var projectiles: Array[Projectile] = []
@@ -155,6 +158,9 @@ func start_run() -> void:
 	boon_rerolls = 0
 	boss_rush_bonus_boon = false
 	echo_refreshes = 0
+	contracts_accepted = 0
+	contracts_completed = 0
+	contracts_failed = 0
 	player_shots = 0
 	DailyAnomaly.apply_start(self)
 	last_interest = 0
@@ -946,6 +952,10 @@ func _end_wave() -> void:
 	if active_contract != null:
 		var contract := active_contract
 		var success := contract.is_complete(self)
+		if success:
+			contracts_completed += 1
+		else:
+			contracts_failed += 1
 		var reward := contract.reward if success else 0
 		last_contract_done = true
 		last_contract_success = success

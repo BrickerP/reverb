@@ -66,6 +66,7 @@ func test_accept_contract_pays_once_and_blocks_poor(c: Check) -> void:
 	c.eq(s.player.materials, 14, "deposit is paid")
 	c.ok(s.shop.contract.accepted, "contract is marked accepted")
 	c.ok(s.active_contract == s.shop.contract, "sim tracks the active contract")
+	c.eq(s.contracts_accepted, 1, "accepted contract is counted")
 	c.ok(not s.shop.accept_contract(s), "contract cannot be accepted twice")
 	c.eq(s.player.materials, 14, "second accept does not charge")
 	var poor := _shop_sim(2)
@@ -89,6 +90,7 @@ func test_clean_contract_success_and_failure(c: Check) -> void:
 	c.eq(s.player.materials, 100 + contract.reward + s.last_interest, "reward lands before interest")
 	c.eq(resolved.size(), 1, "contract result signal fires once")
 	c.eq(resolved[0]["kind"], AnomalyContract.CLEAN, "signal carries the contract kind")
+	c.eq(s.contracts_completed, 1, "completed contract is counted")
 	c.ok(s.active_contract == null, "active contract is cleared")
 
 	var failed := _shop_sim(100)
@@ -99,6 +101,7 @@ func test_clean_contract_success_and_failure(c: Check) -> void:
 	c.ok(failed.last_contract_done and not failed.last_contract_success,
 			"clean contract fails after damage")
 	c.eq(failed.last_contract_reward, 0, "failed contract pays nothing")
+	c.eq(failed.contracts_failed, 1, "failed contract is counted")
 
 
 func test_clear_and_hunt_contracts(c: Check) -> void:
