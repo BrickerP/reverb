@@ -638,6 +638,9 @@ Mechanism API:
     budget before `WaveDirector.plan`.
   - `echo_bloom`: `DailyAnomaly.apply_start` adds 1 to `Stats.ECHO_SLOTS`; normal capacity
     clamp still applies.
+  - `overclock`: `Sim.daily_enemy_speed_multiplier()` = 1.15 and
+    `daily_enemy_damage_multiplier()` = 1.10, applied at enemy materialization before
+    elite modifiers.
 - Daily runs force `ascension = 0`; retrying the daily seed preserves the date anomaly.
 - `Meta.record_daily` tracks `daily_streak` and `daily_last_win_seed`; a win on the next
   calendar day increments the streak, a skipped day resets it to 1, and repeat wins on the

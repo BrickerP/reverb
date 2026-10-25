@@ -70,6 +70,18 @@ func test_daily_anomalies_apply_to_the_sim(c: Check) -> void:
 	bloom.start_run()
 	c.eq(bloom.echo_capacity(), 3, "echo bloom adds one slot")
 
+	var overclock := Sim.new(7)
+	overclock.daily_modifier = DailyAnomaly.OVERCLOCK
+	overclock.start_run()
+	var overclock_grunt := _grunt(overclock)
+	var plain := Sim.new(7)
+	plain.start_run()
+	var plain_grunt := _grunt(plain)
+	c.near(overclock_grunt.speed, plain_grunt.speed * DailyAnomaly.OVERCLOCK_SPEED, 0.001,
+			"overclock raises enemy speed")
+	c.near(overclock_grunt.damage, plain_grunt.damage * DailyAnomaly.OVERCLOCK_DAMAGE, 0.001,
+			"overclock raises enemy damage")
+
 	var normal := Sim.new(7)
 	normal.start_run()
 	var normal_grunt := _grunt(normal)
