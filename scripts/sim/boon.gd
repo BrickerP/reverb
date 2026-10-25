@@ -18,8 +18,12 @@ const ALL: Array[StringName] = [
 ]
 
 
-static func roll(rng: RandomNumberGenerator, count: int = 3) -> Array[StringName]:
+static func roll(rng: RandomNumberGenerator, count: int = 3,
+		sim: Sim = null) -> Array[StringName]:
 	var pool := ALL.duplicate()
+	if sim != null and sim.echo_capacity() <= 0:
+		pool.erase(ECHO)
+		pool.erase(ETERNITY)
 	var out: Array[StringName] = []
 	while out.size() < count and not pool.is_empty():
 		out.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))

@@ -105,6 +105,17 @@ func test_each_boon_applies(c: Check) -> void:
 	c.eq(s.second_wind_charges, 1, "second wind grants one charge")
 
 
+func test_zero_slot_boons_skip_echo_options(c: Check) -> void:
+	var s := Sim.new(7)
+	s.start_run()
+	s.player.stats.values[Stats.ECHO_SLOTS] = 0.0
+	for i in 20:
+		var boons := Boon.roll(s.rng, 3, s)
+		c.eq(boons.size(), 3, "zero-slot rolls still offer three boons")
+		c.ok(not boons.has(Boon.ECHO), "echo power is filtered")
+		c.ok(not boons.has(Boon.ETERNITY), "echo lifespan is filtered")
+
+
 func test_boon_reroll_spends_increasing_materials(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()

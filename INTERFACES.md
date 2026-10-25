@@ -630,7 +630,8 @@ Mechanism API:
 
 - `Boon.ALL`: damage, haste, vitality, echo, shield, fortune, precision, slipstream,
   magnet, eternity, second_wind.
-- `Boon.roll(rng, 3)` samples three distinct IDs from the full pool.
+- `Boon.roll(rng, 3, sim = null)` samples three distinct IDs; when `sim` is supplied and
+  `sim.echo_capacity()` is 0, it removes `echo` and `eternity` before sampling.
 - `Sim.pending_boons: Array[StringName]` is set by `_end_wave` only when `endless` and
   `is_boss_wave()`; `Shop.roll` has already produced the shop.
 - `Sim.boon_reroll_cost()` = `15 + 10 × boon_rerolls`; `Sim.reroll_boons()` spends
