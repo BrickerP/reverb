@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-> 工作名：Take Stack / 回响。v0.1.14 起项目名、窗口名和导出包名已切换到 Take Stack；Reverb 因 Steam 冲突弃用。正式商标检索尚未完成，商店上架前仍需确认。以下为占位文案。
+> 工作名：Take Stack / 回响。v0.1.14 起项目名、窗口名和导出包名已切换到 Take Stack；Reverb 因 Steam 冲突弃用。正式商标检索尚未完成，商店上架前仍需确认。以下为占位文案，当前公开构建为 v0.10.0-rc.1。
 
 ## 短描述
 
@@ -20,11 +20,12 @@ A Brotato-like arena roguelite. Every wave is recorded, and your past self fight
 
 但回响不是免费的。槽位有限，寿命只有几波；每波结束你都会得到一张新录像，也必须决定丢掉哪一张。两张录像还可以合成一个「叠录」：走位与武器合并，只占一个槽，但少一个身体。
 
-- **三个角色，三种读法**：复读机堆数量，镜像实时复制当前 build，独行者放弃回响、只靠自己和一把枪。
-- **20 波 + Boss「悖论」**：它会周期性沉默你的回响，并召唤跑者。只靠回响，最后一战会很难看。
-- **会打断核心机制的敌人**：第 8 波起出现静音者，碰触会让回响停火 2 秒。
+- **四个角色，四种读法**：复读机堆数量，镜像实时复制当前 build，独行者放弃回响、只靠自己和一把枪，指挥用 4 个槽位把每张录像变成团队加成。
+- **20 波 + Boss「悖论」**：它会周期性沉默你的回响，并召唤跑者；半血分裂成两条时间线。只靠回响，最后一战会很难看。
+- **会打断核心机制的敌人**：第 8 波起出现静音者；第 10 波起精英会超频、盾墙、爆裂或分裂。
 - **每局可复现**：种子显示、历史回放、本地 run log；失败可以原样重开。
-- **每日挑战**：固定复读机、日期种子，和所有人玩同一局。
+- **每日挑战**：固定复读机、日期种子，和所有人玩同一局；每天一条异象，连续通关累计天数。
+- **打完之后还有终局**：无尽模式每 5 波重返 Boss，或选择 Boss Rush 直接连续打 Boss；苦行 0–3 级、物品套装与回响续录提供长线取舍。
 
 **EN**
 
@@ -34,19 +35,20 @@ Every wave records your movement, weapons and stats. Next wave, that tape replay
 
 Echoes are not free. Slots are scarce, each take expires after a few waves, and every wave hands you a new recording — so you must decide which past to keep. Two takes can be merged into an overdub: both routes and loadouts in one slot, but one fewer body.
 
-- Three characters, three readings: Looper stacks quantity, Mirror copies your current build live, Soloist gives up echoes entirely.
-- 20 waves and Paradox, a boss that periodically mutes your echoes and summons runners.
-- The Silencer, a regular enemy from wave 8 that stops your echoes for 2 seconds on contact.
+- Four characters, four readings: Looper stacks quantity, Mirror copies your current build live, Soloist gives up echoes entirely, Conductor turns each echo into a team buff.
+- 20 waves and Paradox, a boss that mutes your echoes, summons runners and splits into two timelines at half health.
+- The Silencer from wave 8; from wave 10, elites can overclock, shield, explode or split.
 - Reproducible runs: seeds, replayable history, local run logs.
-- Daily challenge: fixed character and date seed, same run for everyone.
+- Daily challenge: fixed character, date seed and a date-seeded anomaly; win streak tracking.
+- Post-victory Endless and Boss Rush modes, plus Ascension 0–3, item sets and echo refresh for long-run decisions.
 
 ## 卖点（按优先级）
 
-1. **“留下哪个过去的自己”**：稀缺槽位 + 寿命 + 叠录，构成录像层面的取舍，而不是免费分身。
-2. **三种角色读同一套系统**：数量、实时复制、完全放弃。
-3. **Boss 与静音者持续挑战核心机制**：不能只靠回响无脑推进。
+1. **“留下哪个过去的自己”**：稀缺槽位 + 寿命 + 叠录 + 续录，构成录像层面的取舍，而不是免费分身。
+2. **四种角色读同一套系统**：数量、实时复制、完全放弃、团队协同。
+3. **Boss 与精英持续挑战核心机制**：不能只靠回响无脑推进。
 4. **可复现**：种子、历史、日志，适合社区比较和每日挑战。
-5. **完整的一局**：20 波、商店、Boss、结算回顾。
+5. **完整的一局，也有终局**：20 波、商店、Boss、结算，以及无尽/Boss Rush 与苦行等级。
 
 ## 标签
 
@@ -75,7 +77,7 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 ## 定价与定位
 
 - 建议：$4.99–6.99，垂直切片阶段不收费。
-- 定位：短局、可复现、偏硬核的 Brotato 变体；不承诺 100+ 小时内容。
+- 定位：短局、可复现、偏硬核的 Brotato 变体；当前 RC 已包含每日、无尽、Boss Rush 与苦行，但不承诺 100+ 小时内容。
 - 不做的卖点：联机、程序化地图、在线排行榜、长剧情。
 
 ## 预告片 30 秒节奏
@@ -91,14 +93,15 @@ Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon
 - 标题：`回响 / Take Stack (working title)`
 - 一句话、长描述：本文件
 - 截图：`docs/wave.png`、`docs/shop.png`、`docs/reveal.png`、`docs/boss.png`、`docs/end.png`、`docs/select.png`、`docs/shop_merge.png`
-- 构建：<https://github.com/BrickerP/reverb/releases>
-- 代码与设计：<https://github.com/BrickerP/reverb>、`DESIGN.md`
+- 构建：<https://github.com/BrickerP/reverb/releases/tag/v0.10.0-rc.1>
+- 代码与设计：<https://github.com/BrickerP/reverb>、`DESIGN.md`、`RELEASE_NOTES.md`
 - 联系方式：yplmicro@gmail.com
 
 ## 发布前必须解决
 
 1. **英文更名（已完成，待商标）**：v0.1.14 起项目/构建名是 `Take Stack`，旧 `Reverb` 用户目录会自动迁移。`Take Stack` 检索未发现同名 Steam 游戏；`Ghost Take`、`Take Twenty` 备选，`Last Take` 已有独立游戏概念，`Overdub` 与 `Paratopic: Overdub` 冲突，`Dead Take` 已被 Steam 3352690 占用。正式商标检索前不能作为最终上架名。
 2. **辨识度**：GRIMLOOP（4709620）已做“每 30 秒过去幽灵重放走位和攻击”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
-3. **真人数据**：难度、防御流、8–14 波墙都还没有真人验证。
+3. **真人数据**：难度、防御流、Boss Rush、Daily 与 8–14 波墙都还没有真人验证。
 4. **音频**：目前是程序合成占位，需要至少一轮混音与音乐设计。
 5. **Steam Deck**：窗口、手柄、字体需要实机验证。
+6. **版本定位**：v0.10.0-rc.1 虽被标为 Latest，仍是候选版；稳定版需要先完成商标与真人验证。
