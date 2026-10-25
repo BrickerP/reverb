@@ -172,6 +172,7 @@ make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
 make export   # 导出 macOS/Windows/Linux（需要 Godot export templates）
 python3 tools/gen_audio.py  # 重新生成程序合成音效
 python3 tools/runs_report.py <runs.jsonl>  # 汇总试玩日志
+python3 tools/package_release.py --artifacts <audit-artifacts> --out <packages> --version <ver> --commit <sha>
 ```
 
 代码结构：
