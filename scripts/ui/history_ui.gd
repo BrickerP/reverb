@@ -82,9 +82,14 @@ func open(run_log: RunLog) -> void:
 		_add_cell(str(int(run.get("kills", 0))), UiTheme.INK, 16)
 		var replay := Button.new()
 		replay.text = Loc.t("history.replay")
+		if daily_modifier != &"":
+			replay.text = Loc.t("history.replay_daily")
+		elif bool(run.get("endless", false)):
+			replay.text = Loc.t("history.replay_seed")
+			replay.tooltip_text = Loc.t("history.replay_seed_hint")
 		replay.accessibility_name = "%s · %s · %s" % [
-				Loc.t("history.replay"), Loc.character_name(char), str(seed_value)]
-		replay.custom_minimum_size = Vector2(86.0, 30.0)
+				replay.text, Loc.character_name(char), str(seed_value)]
+		replay.custom_minimum_size = Vector2(104.0, 30.0)
 		replay.pressed.connect(_on_replay.bind(seed_value, char, daily_modifier))
 		_grid.add_child(replay)
 		replay_buttons.append(replay)
