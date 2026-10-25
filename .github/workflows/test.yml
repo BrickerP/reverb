@@ -55,7 +55,7 @@ jobs:
       - name: Python report tests
         if: runner.os == 'Linux'
         shell: bash
-        run: python3 -m unittest tests/test_runs_report.py
+        run: python3 -m unittest tests/test_runs_report.py tests/test_package_release.py
 
   export-linux:
     needs: test
