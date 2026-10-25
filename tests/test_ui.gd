@@ -332,6 +332,10 @@ func test_main_replays_daily_with_its_anomaly(c: Check) -> void:
 	c.eq(main.sim.daily_modifier, DailyAnomaly.RIFTSTORM,
 			"daily replay preserves the anomaly")
 	c.ok(main._daily_run, "daily replay keeps the daily flag")
+	main._retry_seed(20261024)
+	c.eq(main.sim.daily_modifier, DailyAnomaly.RIFTSTORM,
+			"retrying a historical daily keeps its anomaly")
+	c.ok(main._daily_run, "historical daily retry keeps the daily flag")
 	main.free()
 
 

@@ -166,8 +166,8 @@ func choose_character(id: StringName, seed_value: int = -1) -> void:
 
 
 func _retry_seed(seed_value: int) -> void:
-	var daily := _daily_run and sim != null and sim.run_seed == today_seed()
-	var anomaly := DailyAnomaly.for_seed(seed_value) if daily else &""
+	var daily := _daily_run and sim != null
+	var anomaly := sim.daily_modifier if daily else &""
 	new_run(seed_value, character_id, 0 if daily else -1, anomaly)
 	_daily_run = daily
 
