@@ -67,6 +67,10 @@ func test_history_shows_mode_labels(c: Check) -> void:
 	c.ok(ui._grid.find_children("*", "Label", true, false).any(
 			func(node: Node) -> bool: return (node as Label).text == Loc.t("history.mode_boss_rush")),
 			"boss rush appears in history")
+	c.eq(ui.replay_buttons[0].text, Loc.t("history.replay_seed"),
+			"endgame replay is labeled as a seed replay")
+	c.ok(ui.replay_buttons[0].tooltip_text.contains("Boss Rush"),
+			"endgame replay explains that state is not restored")
 	ui.free()
 	_cleanup()
 

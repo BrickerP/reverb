@@ -651,6 +651,9 @@ Presentation requirements:
 - History rows read `endless`, `boss_rush` and `daily_modifier` from RunLog to show the mode.
   Daily Replay passes the stored `daily_modifier` into `Main.new_run`; Endless/Boss Rush
   Replay still starts the normal seeded run and does not restore an endgame mode.
+- Button labels: `history.replay` for Normal, `history.replay_daily` for Daily,
+  `history.replay_seed` for Endless/Boss Rush; endgame buttons must carry the
+  `history.replay_seed_hint` tooltip.
 
 ## 22. Endless boons
 
