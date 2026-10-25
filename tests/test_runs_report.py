@@ -94,12 +94,25 @@ class RunsReportTest(unittest.TestCase):
         self.assertIn("| Boss Rush | 1 | 0 | 30.0 |", text)
         self.assertIn("Daily anomalies: riftstorm: 1", text)
 
+    def test_boons_and_refreshes_are_reported(self):
+        rows = [
+            REPORT.norm(run_row(run_id="run-0001", boons=["damage", "haste"], echo_refreshes=2)),
+            REPORT.norm(run_row(run_id="run-0002", boons=["damage"], echo_refreshes=1)),
+        ]
+        text = REPORT.build_report(rows)
+        self.assertIn("Echo refreshes: **3** total · **1.50** per run", text)
+        self.assertIn("| damage | 2 |", text)
+        self.assertIn("| haste | 1 |", text)
+        self.assertIn("| 2 | 92s |", text)
+
     def test_malformed_endgame_fields_are_skipped(self):
         malformed = [
             run_row(run_id="bad-endless", endless="yes"),
             run_row(run_id="bad-rush", boss_rush=2),
             run_row(run_id="bad-daily", daily_modifier=3),
             run_row(run_id="bad-ascension", ascension=-1),
+            run_row(run_id="bad-boons", boons="damage"),
+            run_row(run_id="bad-refreshes", echo_refreshes=-1),
         ]
         self.assertTrue(all(REPORT.norm(row) is None for row in malformed))
 
