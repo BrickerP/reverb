@@ -181,7 +181,6 @@ const TABLE := {
 	"select.best": "Best wave %d  ·  Wins %d",
 	"select.endless_best": "Endless best %d",
 	"select.boss_rush_best": "Boss Rush best %d",
-	"select.hint": "Enter / click to start  ·  WASD move  ·  auto-fire  ·  P pause",
 	"select.seed": "Batch seed",
 	"select.seed_hint": "optional",
 	"select.ascension": "Ascension %d",

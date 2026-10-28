@@ -181,7 +181,6 @@ const TABLE := {
 	"select.best": "最佳 %d 波  ·  通关 %d 次",
 	"select.endless_best": "无尽最佳 %d 波",
 	"select.boss_rush_best": "Boss Rush 最佳 %d 波",
-	"select.hint": "Enter / 点击开始  ·  WASD 移动  ·  自动开火  ·  P 暂停",
 	"select.seed": "批次种子",
 	"select.seed_hint": "选填",
 	"select.ascension": "苦行 %d",

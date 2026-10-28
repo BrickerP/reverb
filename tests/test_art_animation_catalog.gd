@@ -10,7 +10,7 @@ func test_copy_icon_uses_the_same_offline_bounds_as_world_art(c: Check) -> void:
 			expected = asset["bounds_ltrb"]
 	var metadata: Dictionary = PresentationAssets.SOURCE_METADATA[&"recording_cartridge"]
 	var source: Rect2 = metadata["region"]
-	c.eq([int(source.position.x), int(source.position.y), int(source.end.x), int(source.end.y)],
+	c.eq([source.position.x, source.position.y, source.end.x, source.end.y],
 			expected, "copy thumbnail derives its crop from the measured source alpha")
 	var icon := UiTheme.cartridge_icon()
 	var atlas := icon.texture as AtlasTexture
