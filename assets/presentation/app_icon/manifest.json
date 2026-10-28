@@ -1,15 +1,40 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-23",
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
-      "id": "take_stack_app_icon",
       "file": "take_stack_icon.png",
-      "source": "exec-58c0da93-538f-46eb-a93a-54b16c73e999.png",
-      "sha256": "9bd5689b1fe4c560f1cebca2b9966517ed70842bbed8b03d13810a9e6f510169",
-      "size": [1254, 1254],
-      "mode": "RGB",
-      "bounds_ltrb": [0, 0, 1254, 1254]
+      "sha256": "f4fc98210f367f841d58cc67144b75982fb0c74b6703545e43d5587c97bf7c61",
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        47,
+        56,
+        1213,
+        1196
+      ],
+      "frame_union_ltrb": [
+        47,
+        56,
+        1213,
+        1196
+      ],
+      "frame_bounds_ltrb": [
+        [
+          47,
+          56,
+          1213,
+          1196
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
     }
   ]
 }

@@ -1,102 +1,259 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-23",
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
       "file": "enemy_grunt.png",
-      "sha256": "c5818ddf86ae4ac567a4a14c052c40b914be1203cb6b26f01528ad24d7260c50",
+      "sha256": "c2ab1e55242475379311ba6a6917117d831a6e71cc3fdf6fc5ab80e1c0c08ed1",
       "size": [
-        1254,
-        1254
+        2172,
+        724
       ],
       "mode": "RGBA",
       "visible_alpha_min": 20,
       "bounds_ltrb": [
-        184,
-        273,
-        1090,
-        996
-      ]
+        54,
+        174,
+        2121,
+        561
+      ],
+      "frame_union_ltrb": [
+        45,
+        174,
+        522,
+        561
+      ],
+      "frame_bounds_ltrb": [
+        [
+          54,
+          199,
+          484,
+          548
+        ],
+        [
+          45,
+          204,
+          522,
+          561
+        ],
+        [
+          60,
+          208,
+          494,
+          554
+        ],
+        [
+          59,
+          174,
+          492,
+          548
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
     },
     {
       "file": "enemy_runner.png",
-      "sha256": "a161caae0dc9254469bfe4730ec30fca75eb0664e6137efa27dc913398e20043",
+      "sha256": "eef3846194f0f32e7c52d7c6d5ac02e4dfb0b57f9d8d74ecb6456e753b15eb80",
       "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        289,
-        207,
-        1074,
-        1047
-      ]
-    },
-    {
-      "file": "player.png",
-      "sha256": "196cb7c8d911515b06f1b89982fb72d266dd4d92a6e548195b69137291bd8ff7",
-      "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        379,
-        247,
-        904,
-        1063
-      ]
-    },
-    {
-      "file": "weapon_orb.png",
-      "sha256": "9c003f31a57051237bd08e892a2e6c20e1158ad0b1b06658b2a49a39a065109c",
-      "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        82,
-        318,
-        1207,
-        922
-      ]
-    },
-    {
-      "file": "weapon_pistol.png",
-      "sha256": "70f0d980f7186da2d6720248442018889113ee99bb38b6e4a4ec88980e096f95",
-      "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        145,
-        329,
-        1191,
-        968
-      ]
-    },
-    {
-      "file": "weapon_shotgun.png",
-      "sha256": "774ba9f17c157dc8fa0c50a932b186967cb505a3139ef31a3b3d8651a7f4e698",
-      "size": [
-        1254,
-        1254
+        2172,
+        724
       ],
       "mode": "RGBA",
       "visible_alpha_min": 20,
       "bounds_ltrb": [
         74,
-        403,
-        1218,
-        879
-      ]
+        93,
+        2136,
+        609
+      ],
+      "frame_union_ltrb": [
+        49,
+        93,
+        517,
+        609
+      ],
+      "frame_bounds_ltrb": [
+        [
+          74,
+          106,
+          472,
+          592
+        ],
+        [
+          55,
+          93,
+          517,
+          609
+        ],
+        [
+          49,
+          111,
+          496,
+          595
+        ],
+        [
+          64,
+          185,
+          507,
+          591
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "player.png",
+      "sha256": "f294f469610b585a26b0aea3447a6c4668f7b3bed714f6e7e71030c5e2d5d446",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        68,
+        110,
+        2121,
+        631
+      ],
+      "frame_union_ltrb": [
+        68,
+        110,
+        492,
+        631
+      ],
+      "frame_bounds_ltrb": [
+        [
+          68,
+          110,
+          489,
+          626
+        ],
+        [
+          69,
+          110,
+          485,
+          631
+        ],
+        [
+          70,
+          111,
+          485,
+          619
+        ],
+        [
+          71,
+          176,
+          492,
+          619
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "weapon_orb.png",
+      "sha256": "ee62b51ecf5ba692cc922ad8e22005aa4380910b7b6193f65e0cb8282bfcffee",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        292,
+        140,
+        1266,
+        863
+      ],
+      "frame_union_ltrb": [
+        292,
+        140,
+        1266,
+        863
+      ],
+      "frame_bounds_ltrb": [
+        [
+          292,
+          140,
+          1266,
+          863
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "file": "weapon_pistol.png",
+      "sha256": "2adbfcd53e9da02278f628cdf2c232a1741dd3842f939a0f4169ac3eb0de9932",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        191,
+        50,
+        1356,
+        964
+      ],
+      "frame_union_ltrb": [
+        191,
+        50,
+        1356,
+        964
+      ],
+      "frame_bounds_ltrb": [
+        [
+          191,
+          50,
+          1356,
+          964
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "file": "weapon_shotgun.png",
+      "sha256": "613d9891e5c15b7905b27d5d8c05803caae5e7e649ba3e5c96849e13022c5877",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        124,
+        194,
+        1412,
+        840
+      ],
+      "frame_union_ltrb": [
+        124,
+        194,
+        1412,
+        840
+      ],
+      "frame_bounds_ltrb": [
+        [
+          124,
+          194,
+          1412,
+          840
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
     }
   ]
 }

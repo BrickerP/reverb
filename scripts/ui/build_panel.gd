@@ -30,11 +30,12 @@ var _clear_drop := Callable()
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(320.0, 0.0)
+	custom_minimum_size = Vector2(344.0, 0.0)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var surface_source := UiTheme.surface_panel()
 	if surface_source != null:
 		var surface := surface_source.duplicate() as StyleBoxTexture
-		surface.region_rect = Rect2(32.0, 32.0, 448.0, 448.0)
+		surface.region_rect = Rect2(Vector2.ZERO, surface.texture.get_size())
 		surface.texture_margin_left = 10.0
 		surface.texture_margin_right = 10.0
 		surface.texture_margin_top = 10.0
@@ -45,7 +46,7 @@ func _init() -> void:
 		surface.content_margin_bottom = 8.0
 		add_theme_stylebox_override("panel", surface)
 	_box = VBoxContainer.new()
-	_box.add_theme_constant_override("separation", 8)
+	_box.add_theme_constant_override("separation", 9)
 	_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -74,7 +75,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_clear_drop = clear_drop
 	replacing = replace_with != ""
 	var pl := sim.player
-	_box.add_child(UiTheme.label(Loc.t("shop.build"), 22, UiTheme.ACCENT))
+	_box.add_child(UiTheme.section_label(Loc.t("shop.build"), 22))
 	weapons_label = UiTheme.label(Loc.t("shop.weapons", [pl.weapons.size(), Content.MAX_WEAPON_SLOTS]), 16, UiTheme.DIM)
 	_box.add_child(weapons_label)
 	if replacing:
@@ -178,8 +179,8 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 		var b := Button.new()
 		b.text = "%s  +%d" % [Loc.weapon_name(w.id), Shop.resale_total(w, pl.level_at(i))]
 		b.custom_minimum_size = Vector2(0.0, 34.0)
-		b.add_theme_color_override("font_color", w.color)
-		b.add_theme_color_override("font_hover_color", w.color.lightened(0.25))
+		b.add_theme_color_override("font_color", UiTheme.INK)
+		b.add_theme_color_override("font_hover_color", UiTheme.ACCENT)
 		if on_choose.is_valid():
 			b.pressed.connect(on_choose.bind(i))
 		flow.add_child(b)
@@ -206,7 +207,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	card.accessibility_name = Loc.weapon_name(w.id)
 	card.accessibility_description = _detail_text_for(w, level)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
-	card.custom_minimum_size = Vector2(136.0, 106.0)
+	card.custom_minimum_size = Vector2(146.0, 116.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
@@ -216,29 +217,29 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	var top := HBoxContainer.new()
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_theme_constant_override("separation", 4)
-	top.add_child(UiTheme.weapon_icon(w, Vector2(28.0, 22.0)))
-	var name_label := UiTheme.label(Loc.weapon_name(w.id), 12, UiTheme.INK)
+	top.add_child(UiTheme.weapon_icon(w, Vector2(34.0, 26.0)))
+	var name_label := UiTheme.label(Loc.weapon_name(w.id), 13, UiTheme.INK)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(name_label)
-	top.add_child(UiTheme.label(Loc.t("shop.level", [level + 1]), 10, UiTheme.DIM))
+	top.add_child(UiTheme.label(Loc.t("shop.level", [level + 1]), 11, UiTheme.DIM))
 	box.add_child(top)
 	var middle := HBoxContainer.new()
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	middle.add_theme_constant_override("separation", 4)
-	middle.add_child(UiTheme.label(Loc.weapon_family(w.family), 10, UiTheme.DIM))
+	middle.add_child(UiTheme.label(Loc.weapon_family(w.family), 11, UiTheme.DIM))
 	var dps := UiTheme.label("%d DPS" % int(round(OfferCard.weapon_dps(w, pl.stats, level,
 			Combat.family_damage_mult(pl.weapons, w.family),
-			Combat.family_cooldown_mult(pl.weapons, w.family)))), 10, UiTheme.COIN)
+			Combat.family_cooldown_mult(pl.weapons, w.family)))), 11, UiTheme.COIN)
 	dps.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dps.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	middle.add_child(dps)
 	box.add_child(middle)
 	var upgrade := Button.new()
 	upgrade.mouse_filter = Control.MOUSE_FILTER_PASS
-	upgrade.custom_minimum_size = Vector2(0.0, 20.0)
-	upgrade.add_theme_font_size_override("font_size", 10)
+	upgrade.custom_minimum_size = Vector2(0.0, 28.0)
+	upgrade.add_theme_font_size_override("font_size", 12)
 	if level >= WeaponDef.MAX_LEVEL:
 		if w.evolves_to != &"":
 			var family_count := Combat.family_count(pl.weapons, w.family)
@@ -257,8 +258,8 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
 	var sell := Button.new()
-	sell.custom_minimum_size = Vector2(0.0, 20.0)
-	sell.add_theme_font_size_override("font_size", 10)
+	sell.custom_minimum_size = Vector2(0.0, 28.0)
+	sell.add_theme_font_size_override("font_size", 12)
 	var sell_quote := sim.shop.quote(ShopResult.SELL, sim, null, index)
 	if not sell_quote.ok:
 		sell.text = Loc.t("shop.sell_last")
@@ -288,8 +289,7 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
 	target.accessibility_name = text
 	target.custom_minimum_size = Vector2(0.0, 36.0)
-	var style := UiTheme.box(Color(0.04, 0.06, 0.07, 0.78), Color(UiTheme.ACCENT, 0.32), 1, 6)
-	style.set_border_width_all(1)
+	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.55), 2, 2)
 	target.add_theme_stylebox_override("panel", style)
 	var label := UiTheme.label(text, 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -350,9 +350,10 @@ func clear_drop_highlights() -> void:
 		items_drop_target.clear_highlight()
 
 
-func _apply_card_style(card: PanelContainer, w: WeaponDef, selected: bool) -> void:
-	var style := UiTheme.box(Color(0.10, 0.14, 0.16) if selected else Color(0.075, 0.09, 0.105),
-			UiTheme.ACCENT if selected else Color(w.color, 0.35), 2 if selected else 1, 6)
+func _apply_card_style(card: PanelContainer, _w: WeaponDef, selected: bool) -> void:
+	var style := UiTheme.box(UiTheme.PAPER if selected else UiTheme.CARD,
+			UiTheme.ACCENT if selected else UiTheme.EDGE, 3 if selected else 2, 2)
+	style.set_border_width(SIDE_BOTTOM, 4)
 	style.content_margin_left = 7.0
 	style.content_margin_right = 7.0
 	style.content_margin_top = 5.0
@@ -434,7 +435,7 @@ func _item_chips(pl: PlayerState) -> Control:
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.add_theme_constant_override("separation", 4)
 		chip.add_child(UiTheme.item_icon(it, Vector2(26.0, 26.0)))
-		chip.add_child(UiTheme.label(_counted(Loc.item_name(id), pl.items[id]), 14, it.color))
+		chip.add_child(UiTheme.label(_counted(Loc.item_name(id), pl.items[id]), 14, UiTheme.INK))
 		flow.add_child(chip)
 	return flow
 
@@ -464,11 +465,13 @@ func _set_summary(pl: PlayerState) -> Control:
 		entries.append(text)
 	if entries.is_empty():
 		return null
-	var flow := HFlowContainer.new()
-	flow.add_theme_constant_override("h_separation", 10)
-	flow.add_theme_constant_override("v_separation", 2)
+	var flow := VBoxContainer.new()
+	flow.add_theme_constant_override("separation", 4)
 	for text in entries:
-		flow.add_child(UiTheme.label(text, 11, UiTheme.ECHO if text.contains("·") else UiTheme.DIM))
+		var label := UiTheme.label(text, 13, UiTheme.ECHO if text.contains("·") else UiTheme.DIM)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		flow.add_child(label)
 	return flow
 
 

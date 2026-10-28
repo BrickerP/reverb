@@ -36,7 +36,7 @@ func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.01, 0.01, 0.04, 0.9)
+	dim.color = Color(UiTheme.EDGE, 0.9)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
@@ -77,9 +77,9 @@ func _ready() -> void:
 	note_edit.tab_input_mode = false
 	note_edit.accessibility_name = Loc.t("feedback.note")
 	note_edit.add_theme_stylebox_override("normal",
-			UiTheme.box(Color(0.04, 0.055, 0.065), Color(0.25, 0.30, 0.34), 1))
+			UiTheme.box(UiTheme.CARD, UiTheme.EDGE, 2, 2))
 	note_edit.add_theme_stylebox_override("focus",
-			UiTheme.box(Color(0.04, 0.055, 0.065), UiTheme.ACCENT, 2))
+			UiTheme.box(UiTheme.CARD, UiTheme.WARN, 3, 2))
 	note_edit.text_changed.connect(_on_note_changed)
 	box.add_child(note_edit)
 
@@ -97,6 +97,7 @@ func _ready() -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	save_button = _button(Loc.t("feedback.save"))
 	save_button.pressed.connect(_submit)
+	UiTheme.stamp_button(save_button)
 	buttons.add_child(save_button)
 	cancel_button = _button(Loc.t("feedback.cancel"))
 	cancel_button.pressed.connect(close)

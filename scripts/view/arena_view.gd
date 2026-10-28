@@ -150,7 +150,7 @@ func play_victory_beat(s: Sim) -> void:
 	if shake_enabled and not reduced_effects:
 		_shake = minf(1.0, _shake + 0.9)
 	_victory_origin = s.player.pos
-	_victory_color = Color(1.0, 0.75, 1.0)
+	_victory_color = ArenaPainter.PAPER
 	if _boss_death_origin != Vector2.ZERO:
 		_victory_origin = _boss_death_origin
 	elif s.boss != null:
@@ -191,6 +191,7 @@ func _process(delta: float) -> void:
 		s.life -= delta
 		if s.life > 0.0:
 			s.pos += s.vel * delta
+			s.rotation += s.spin * delta
 			s.vel *= exp(-6.0 * delta)
 			_sparks[keep] = s
 			keep += 1
@@ -225,8 +226,8 @@ func _draw() -> void:
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
-	ArenaPainter.enemies(self, sim, reduced_effects)
-	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects)
+	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time)
+	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
@@ -347,7 +348,7 @@ func _on_boss_phase_changed(phase: int) -> void:
 	if sim == null or phase < 2:
 		return
 	var origin := sim.boss_origin()
-	var ring := _spark(origin, Color(0.65, 0.8, 1.0), 0.0, 1.1)
+	var ring := _spark(origin, ArenaPainter.PAPER, 0.0, 1.1)
 	if ring != null:
 		ring.ring = true
 		ring.radius = 46.0
@@ -356,20 +357,20 @@ func _on_boss_phase_changed(phase: int) -> void:
 
 
 func _on_boss_shard_spawned(enemy: EnemyState) -> void:
-	var ring := _spark(enemy.pos, Color(0.65, 0.8, 1.0), 0.0, 0.8)
+	var ring := _spark(enemy.pos, ArenaPainter.PAPER, 0.0, 0.8)
 	if ring != null:
 		ring.ring = true
 		ring.radius = enemy.radius
 	for i in 8:
-		_spark(enemy.pos, Color(0.75, 0.6, 1.0), 80.0 + _noise01(i) * 180.0, 0.35)
+		_spark(enemy.pos, Color("8f7a95"), 80.0 + _noise01(i) * 180.0, 0.35)
 
 
 func _on_boss_shard_defeated(enemy: EnemyState, remaining: int) -> void:
 	_boss_death_origin = enemy.pos
 	var count := 6 if reduced_effects else 16
 	for i in count:
-		_spark(enemy.pos, Color(0.65, 0.8, 1.0), 90.0 + _noise01(i) * 240.0, 0.4)
-	var ring := _spark(enemy.pos, Color(0.65, 0.8, 1.0), 0.0, 0.55)
+		_spark(enemy.pos, ArenaPainter.PAPER, 90.0 + _noise01(i) * 240.0, 0.4)
+	var ring := _spark(enemy.pos, ArenaPainter.PAPER, 0.0, 0.55)
 	if ring != null:
 		ring.ring = true
 		ring.radius = enemy.radius + 10.0
@@ -378,7 +379,7 @@ func _on_boss_shard_defeated(enemy: EnemyState, remaining: int) -> void:
 
 
 func _on_boss_enraged(enemy: EnemyState) -> void:
-	var ring := _spark(enemy.pos, Color(1.0, 0.35, 0.55), 0.0, 0.8)
+	var ring := _spark(enemy.pos, ArenaPainter.DANGER, 0.0, 0.8)
 	if ring != null:
 		ring.ring = true
 		ring.radius = enemy.radius + 18.0
@@ -389,7 +390,7 @@ func _on_boss_enraged(enemy: EnemyState) -> void:
 func _on_echo_silence(_duration: float) -> void:
 	if sim == null or sim.boss_shards.is_empty():
 		return
-	var ring := _spark(sim.boss_origin(), Color(1.0, 0.5, 0.9), 0.0, 0.8)
+	var ring := _spark(sim.boss_origin(), Color("8f7a95"), 0.0, 0.8)
 	if ring != null:
 		ring.ring = true
 		ring.radius = sim.boss.radius
@@ -409,13 +410,24 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 			"weapon_id": info.weapon_id, "effect": info.effect}, MAX_EXPLOSIONS)
 	_last_event = {"kind": &"explosion", "cause": info.kind, "weapon_id": info.weapon_id,
 			"pos": info.pos, "radius": info.radius, "effect": info.effect}
-	var ring := _spark(info.pos, info.color, 0.0, 0.35)
+	var is_collapse := info.effect == &"echo_collapse"
+	# Preserve the event's authoritative identity colour above; its paper-collapse art uses ink.
+	var feedback_color := ArenaPainter.INK if is_collapse else info.color
+	var ring := _spark(info.pos, feedback_color, 0.0, 0.35)
 	if ring != null:
 		ring.ring = true
 		ring.radius = maxf(2.0, info.radius * 0.4)
-	var spark_count := 2 if reduced_effects else 5
+	var spark_count := (4 if reduced_effects else 18) if is_collapse else (2 if reduced_effects else 5)
 	for i in spark_count:
-		_spark(info.pos, info.color, 60.0 + _noise01(i + 21) * 90.0, 0.2 + _noise01(i + 31) * 0.15)
+		var fragment_color := info.color
+		if is_collapse:
+			fragment_color = ArenaPainter.PAPER
+			if i % 4 == 0:
+				fragment_color = ArenaPainter.INK
+			elif i % 4 == 3:
+				fragment_color = ArenaPainter.DANGER
+		_spark(info.pos, fragment_color, 60.0 + _noise01(i + 21) * 90.0,
+				0.2 + _noise01(i + 31) * 0.15)
 
 
 func _on_weapon_changed(info: WeaponChangeInfo) -> void:
@@ -434,6 +446,8 @@ func _spark(pos: Vector2, color: Color, speed: float, life: float) -> Spark:
 	s.vel = Vector2.from_angle(TAU * _noise01(_noise_counter)) * speed
 	_noise_counter += 1
 	s.color = color
+	s.rotation = TAU * _noise01(_noise_counter + 2)
+	s.spin = (_noise01(_noise_counter + 3) - 0.5) * 14.0
 	s.life = life
 	s.max_life = life
 	_sparks.append(s)

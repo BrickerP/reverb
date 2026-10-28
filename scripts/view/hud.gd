@@ -4,13 +4,15 @@ extends Control
 const WIDTH := 1280.0
 const BAR_H := 72.0
 const SLOT_Y := 688.0
-const SLOT_W := 30.0
-const SLOT_H := 24.0
-const SLOT_GAP := 38.0
+const SLOT_W := 36.0
+const SLOT_H := 26.0
+const SLOT_GAP := 44.0
 
 var sim: Sim
 var paused: bool = false
 var debug: bool = false
+var reduced_effects: bool = false
+var _visual_time := 0.0
 
 var _hp_ghost := 1.0
 var _prev_cd: Array[float] = []
@@ -40,6 +42,7 @@ func bind(s: Sim) -> void:
 	_prev_materials = s.player.materials
 	_mat_pulse = 0.0
 	_hint_time = 0.0
+	_visual_time = 0.0
 
 
 func unbind() -> void:
@@ -51,6 +54,7 @@ func unbind() -> void:
 	_prev_materials = 0
 	_mat_pulse = 0.0
 	_hint_time = 0.0
+	_visual_time = 0.0
 	queue_redraw()
 
 
@@ -79,8 +83,9 @@ func hint_alpha() -> float:
 
 
 func _process(delta: float) -> void:
-	if sim == null:
+	if sim == null or paused:
 		return
+	_visual_time += delta
 	var ratio := clampf(sim.player.hp / maxf(1.0, sim.player.max_hp()), 0.0, 1.0)
 	if ratio < _hp_ghost:
 		_hp_ghost = move_toward(_hp_ghost, ratio, delta * 0.35)
@@ -107,8 +112,11 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
-	draw_rect(Rect2(0.0, 0.0, WIDTH, BAR_H), Color(0.02, 0.02, 0.05, 0.88))
-	draw_line(Vector2(0.0, BAR_H), Vector2(WIDTH, BAR_H), Color(0.25, 0.4, 0.8, 0.35), 2.0)
+	draw_rect(Rect2(0.0, 0.0, WIDTH, BAR_H), ArenaPainter.INK)
+	_paper_panel(Rect2(28.0, 5.0, 328.0, 63.0))
+	_paper_panel(Rect2(425.0, 5.0, 430.0, 63.0))
+	_paper_panel(Rect2(1000.0, 5.0, 250.0, 63.0))
+	_paper_panel(Rect2(28.0, 684.0, 1222.0, 34.0))
 	_draw_health()
 	_draw_echo_chips()
 	_draw_wave()
@@ -126,9 +134,9 @@ func _draw_health() -> void:
 	var ratio := clampf(pl.hp / maxf(1.0, pl.max_hp()), 0.0, 1.0)
 	var low := ratio < 0.3
 	var bar := Rect2(40.0, 12.0, 300.0, 22.0)
-	draw_rect(bar, Color(0.12, 0.05, 0.08))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * _hp_ghost, bar.size.y)), Color(1.0, 0.35, 0.45, 0.35))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), Color(1.0, 0.3, 0.45))
+	draw_rect(bar, Color("665248"))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * _hp_ghost, bar.size.y)), Color(ArenaPainter.PAPER, 0.4))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), ArenaPainter.DANGER)
 	if pl.max_hp() >= 40.0:
 		var step := bar.size.x * 10.0 / pl.max_hp()
 		if step >= 10.0:
@@ -136,18 +144,18 @@ func _draw_health() -> void:
 			while x < bar.end.x - 1.0:
 				draw_line(Vector2(x, bar.position.y), Vector2(x, bar.end.y), Color(0, 0, 0, 0.25), 1.0)
 				x += step
-	var border := Color(1.0, 0.3, 0.4, 0.55)
+	var border := ArenaPainter.INK
 	if low:
-		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 110.0)
-		border = Color(1.0, 0.25, 0.35, 0.5 + 0.5 * pulse)
+		var pulse := 0.5 if reduced_effects else 0.5 + 0.5 * sin(_visual_time * 9.0)
+		border = Color(ArenaPainter.DANGER, 0.5 + 0.5 * pulse)
 	draw_rect(bar, border, false, 2.0)
 	if pl.max_shield() > 0.0:
 		var shield_bar := Rect2(40.0, 36.0, 300.0, 4.0)
-		draw_rect(shield_bar, Color(0.04, 0.1, 0.16))
+		draw_rect(shield_bar, Color(ArenaPainter.INK, 0.25))
 		var shield_ratio := clampf(pl.shield / pl.max_shield(), 0.0, 1.0)
 		draw_rect(Rect2(shield_bar.position, Vector2(shield_bar.size.x * shield_ratio, shield_bar.size.y)),
-				Color(0.45, 0.9, 1.0, 0.9))
-	_text("%s  %d / %d" % [Loc.t("hud.hp"), maxi(0, ceili(pl.hp)), int(pl.max_hp())], Vector2(50.0, 29.0), 16)
+				Color("748894"))
+	_text("%s  %d / %d" % [Loc.t("hud.hp"), maxi(0, ceili(pl.hp)), int(pl.max_hp())], Vector2(50.0, 29.0), 16, ArenaPainter.PAPER)
 
 
 func _draw_echo_chips() -> void:
@@ -155,31 +163,33 @@ func _draw_echo_chips() -> void:
 		return
 	_text(Loc.t("hud.echo"), Vector2(40.0, 62.0), 14, UiTheme.DIM)
 	var lifespan := sim.echo_lifespan()
-	var now := Time.get_ticks_msec() / 1000.0
+	var now := 0.0 if reduced_effects else _visual_time
 	var muted := sim.echo_silenced > 0.0
 	for i in sim.echo_capacity():
 		var chip := Rect2(112.0 + float(i) * 28.0, 46.0, 22.0, 16.0)
 		if i < sim.echoes.size():
 			var take := sim.echoes[i].take
 			var remaining := echo_remaining(take)
-			var tint := take.tint()
+			var tint := ArenaPainter.paper_echo_color(take.tint())
 			draw_rect(chip, Color(tint, 0.35 if muted else 0.9))
+			draw_rect(chip, ArenaPainter.INK, false, 1.5)
+			draw_line(chip.position + Vector2(13.0, 1.0), chip.position + Vector2(20.0, 6.0), ArenaPainter.INK, 1.0)
 			var segments := maxi(1, lifespan)
 			var seg_w := 20.0 / float(segments)
 			for k in segments:
 				var filled := k < remaining
 				var pip := Rect2(chip.position.x + 1.0 + float(k) * seg_w, chip.position.y + 11.0, seg_w - 1.0, 4.0)
-				var pip_col := Color(1, 1, 1, 0.35 if muted else 0.85) if filled else Color(0.02, 0.03, 0.08, 0.55)
+				var pip_col := Color(ArenaPainter.PAPER, 0.35 if muted else 0.95) if filled else Color(ArenaPainter.INK, 0.55)
 				draw_rect(pip, pip_col)
 			if remaining <= 1:
 				var pulse := 0.5 + 0.5 * sin(now * 8.0)
 				draw_rect(chip.grow(1.0), Color(UiTheme.WARN, 0.35 + 0.55 * pulse), false, 1.5)
 		else:
-			draw_rect(chip, Color(1, 1, 1, 0.28), false, 1.5)
+			draw_rect(chip, Color(ArenaPainter.INK, 0.4), false, 1.5)
 	if muted:
 		var width := float(sim.echo_capacity()) * 28.0 - 6.0
 		var ratio := clampf(sim.echo_silenced / Sim.BOSS_SILENCE_TIME, 0.0, 1.0)
-		draw_rect(Rect2(112.0, 64.0, width, 3.0), Color(1, 1, 1, 0.1))
+		draw_rect(Rect2(112.0, 64.0, width, 3.0), Color(ArenaPainter.INK, 0.12))
 		draw_rect(Rect2(112.0, 64.0, width * ratio, 3.0), UiTheme.WARN)
 
 
@@ -194,14 +204,14 @@ func wave_title() -> String:
 func _draw_wave() -> void:
 	var boss_wave := sim.is_boss_wave()
 	if sim.endless and not boss_wave:
-		_text(Loc.t("hud.endless", [sim.wave]), Vector2(440.0, 34.0), 28, Color(0.8, 0.65, 1.0),
+		_text(Loc.t("hud.endless", [sim.wave]), Vector2(440.0, 34.0), 28, UiTheme.ECHO,
 				HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 		var endless_left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
 		var endless_bar := Rect2(520.0, 44.0, 240.0, 6.0)
-		draw_rect(endless_bar, Color(1, 1, 1, 0.12))
+		draw_rect(endless_bar, Color(ArenaPainter.INK, 0.12))
 		var endless_ratio := clampf(sim.wave_time / maxf(0.01, sim.wave_duration), 0.0, 1.0)
 		draw_rect(Rect2(endless_bar.position, Vector2(endless_bar.size.x * endless_ratio, endless_bar.size.y)),
-				Color(0.8, 0.65, 1.0))
+				UiTheme.ECHO)
 		_text("%d" % endless_left, Vector2(768.0, 54.0), 16, UiTheme.DIM)
 		return
 	if boss_wave:
@@ -214,35 +224,35 @@ func _draw_wave() -> void:
 			var title := Loc.t("hud.boss_phase2") if phase2 else Loc.t("hud.boss")
 			if sim.endless:
 				title = wave_title() + ("  //  II" if phase2 else "")
-			var title_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.9, 0.8, 1.0)
+			var title_color := UiTheme.WARN if phase2 else UiTheme.ECHO
 			_text(title, Vector2(440.0, 34.0), 26, title_color,
 					HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 			var boss_bar := Rect2(460.0, 44.0, 360.0, 8.0)
-			draw_rect(boss_bar, Color(1, 1, 1, 0.1))
+			draw_rect(boss_bar, Color(ArenaPainter.INK, 0.12))
 			var boss_ratio := sim.boss_health_ratio()
-			var bar_color := Color(0.65, 0.8, 1.0) if phase2 else Color(0.8, 0.5, 1.0)
+			var bar_color := UiTheme.WARN if phase2 else UiTheme.ECHO
 			draw_rect(Rect2(boss_bar.position, Vector2(boss_bar.size.x * boss_ratio, boss_bar.size.y)),
 					bar_color)
 			draw_rect(boss_bar, Color(bar_color, 0.7), false, 1.5)
 			if phase2:
 				draw_line(Vector2(boss_bar.position.x + boss_bar.size.x * 0.5, boss_bar.position.y),
 						Vector2(boss_bar.position.x + boss_bar.size.x * 0.5, boss_bar.end.y),
-						Color(1, 1, 1, 0.25), 1.0)
+						Color(ArenaPainter.INK, 0.25), 1.0)
 				for i in sim.boss_total_count():
 					var alive := i < sim.boss_alive_count()
 					draw_circle(Vector2(830.0 + float(i) * 12.0, 48.0), 3.5,
-							Color(bar_color, 0.95) if alive else Color(1, 1, 1, 0.14))
+							Color(bar_color, 0.95) if alive else Color(ArenaPainter.INK, 0.14))
 	else:
 		var title := Loc.t("hud.wave", [sim.wave, WaveDirector.FINAL_WAVE])
 		_text(title, Vector2(440.0, 34.0), 28, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
 		var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
 		var urgent := left <= 5
 		var bar := Rect2(520.0, 44.0, 240.0, 6.0)
-		draw_rect(bar, Color(1, 1, 1, 0.12))
+		draw_rect(bar, Color(ArenaPainter.INK, 0.12))
 		var ratio := clampf(sim.wave_time / maxf(0.01, sim.wave_duration), 0.0, 1.0)
 		var col := UiTheme.WARN if urgent else UiTheme.ACCENT
 		if urgent:
-			var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 90.0)
+			var pulse := 0.6 + 0.4 * sin((0.0 if reduced_effects else _visual_time) * 10.0)
 			col = Color(col, pulse)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), col)
 		_text("%d" % left, Vector2(768.0, 54.0), 16, UiTheme.WARN if urgent else UiTheme.DIM)
@@ -262,10 +272,10 @@ func _draw_wave() -> void:
 		if i < sim.wave - 1:
 			draw_rect(pip, Color(UiTheme.ACCENT, 0.55))
 		elif current:
-			var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 160.0)
-			draw_rect(pip, Color(1, 1, 1, pulse))
+			var pulse := 0.6 + 0.4 * sin((0.0 if reduced_effects else _visual_time) * 6.0)
+			draw_rect(pip, Color(ArenaPainter.INK, pulse))
 		else:
-			draw_rect(pip, Color(1, 1, 1, 0.12))
+			draw_rect(pip, Color(ArenaPainter.INK, 0.12))
 
 
 func _draw_materials() -> void:
@@ -274,7 +284,10 @@ func _draw_materials() -> void:
 	var coin := Vector2(1240.0 - text_width - 16.0, 25.0)
 	if _mat_pulse > 0.0:
 		draw_arc(coin, 8.0 + 14.0 * (1.0 - _mat_pulse), 0.0, TAU, 20, Color(UiTheme.COIN, _mat_pulse * 0.6), 2.0)
-	draw_circle(coin, 8.0, UiTheme.COIN)
+	draw_rect(Rect2(coin - Vector2(7.0, 8.0), Vector2(14.0, 16.0)), ArenaPainter.PAPER)
+	draw_rect(Rect2(coin - Vector2(7.0, 8.0), Vector2(14.0, 16.0)), ArenaPainter.INK, false, 2.0)
+	draw_line(coin + Vector2(-4.0, -2.0), coin + Vector2(4.0, -2.0), ArenaPainter.INK, 1.5)
+	draw_line(coin + Vector2(-4.0, 3.0), coin + Vector2(4.0, 3.0), ArenaPainter.INK, 1.5)
 	_text(amount, Vector2(1000.0, 36.0), 28, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT, 240.0)
 	_text(Loc.t("hud.materials"), Vector2(1000.0, 62.0), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_RIGHT, 240.0)
 
@@ -285,7 +298,7 @@ func _draw_weapons() -> void:
 		if i < sim.player.weapons.size():
 			var w: WeaponDef = sim.player.weapons[i]
 			var ready := weapon_ready(i)
-			draw_rect(slot, Color(0.025, 0.035, 0.08, 0.94))
+			draw_rect(slot, ArenaPainter.PAPER)
 			var key := PresentationAssets.weapon_key(w)
 			var texture := PresentationAssets.texture(key)
 			var source := PresentationAssets.region(key)
@@ -295,17 +308,17 @@ func _draw_weapons() -> void:
 			var cooldown_h := (slot.size.y - 2.0) * (1.0 - ready)
 			if cooldown_h > 0.0:
 				draw_rect(Rect2(slot.position + Vector2(1.0, 1.0),
-						Vector2(slot.size.x - 2.0, cooldown_h)), Color(0.01, 0.015, 0.04, 0.68))
+						Vector2(slot.size.x - 2.0, cooldown_h)), Color(ArenaPainter.INK, 0.48))
 			var readiness := Rect2(slot.position + Vector2(2.0, slot.size.y - 4.0),
 					Vector2(slot.size.x - 4.0, 2.0))
-			draw_rect(readiness, Color(1.0, 1.0, 1.0, 0.14))
+			draw_rect(readiness, Color(ArenaPainter.INK, 0.14))
 			draw_rect(Rect2(readiness.position, Vector2(readiness.size.x * ready, readiness.size.y)),
-					Color(w.color, 0.95))
-			draw_rect(slot, Color(1, 1, 1, 0.25), false, 1.0)
+					UiTheme.ACCENT)
+			draw_rect(slot, Color(ArenaPainter.INK, 0.25), false, 1.0)
 			if i < _flash.size() and _flash[i] > 0.0:
-				draw_rect(slot.grow(1.0), Color(1, 1, 1, _flash[i] * 0.9), false, 2.0)
+				draw_rect(slot.grow(1.0), Color(UiTheme.COIN, _flash[i] * 0.9), false, 2.0)
 		else:
-			draw_rect(slot, Color(1, 1, 1, 0.22), false, 1.5)
+			draw_rect(slot, Color(ArenaPainter.INK, 0.4), false, 1.5)
 
 
 func gunsmith_remaining() -> int:
@@ -320,7 +333,7 @@ func _draw_gunsmith_charge() -> void:
 		return
 	var text := Loc.t("hud.crit_next") if remaining == 1 else Loc.t("hud.crit_charge", [remaining])
 	var color := UiTheme.WARN if remaining == 1 else UiTheme.COIN
-	_text(text, Vector2(300.0, 705.0), 13, color)
+	_text(text, Vector2(320.0, 705.0), 13, color)
 
 
 static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:
@@ -334,8 +347,13 @@ func _draw_controls() -> void:
 	var label_w := UiTheme.font()
 	if sim.can_collapse_echo():
 		var hint := Loc.t("hud.collapse")
+		var profile := collapse_hint_profile(hint)
+		var rect: Rect2 = profile["rect"]
+		var foreground: Color = profile["foreground"]
+		draw_rect(rect, profile["background"])
+		draw_rect(rect, foreground, false, 2.0)
 		_keycap("SPACE", Vector2(40.0, 654.0), 12)
-		_text(hint, Vector2(40.0 + _keycap_width("SPACE", 12) + 8.0, 667.0), 12, UiTheme.ECHO)
+		_text(hint, Vector2(40.0 + _keycap_width("SPACE", 12) + 8.0, 670.0), 12, foreground)
 	var move_label := Loc.t("hud.move")
 	var pause_label := Loc.t("hud.pause")
 	var move_w := _keycap_width("WASD", size) + 8.0 + label_w.get_string_size(move_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
@@ -348,6 +366,14 @@ func _draw_controls() -> void:
 	_text(pause_label, Vector2(x + _keycap_width("P", size) + 8.0, 709.0), size, UiTheme.DIM)
 
 
+# The entire action hint sits on opaque stock, so it stays readable over any arena art.
+func collapse_hint_profile(hint: String) -> Dictionary:
+	var label_width := UiTheme.font().get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12).x
+	var width := _keycap_width("SPACE", 12) + 8.0 + label_width + 12.0
+	return {"rect": Rect2(36.0, 650.0, width + 4.0, 28.0),
+		"foreground": ArenaPainter.INK, "background": ArenaPainter.PAPER}
+
+
 func _draw_onboarding() -> void:
 	if paused:
 		return
@@ -355,8 +381,8 @@ func _draw_onboarding() -> void:
 	if alpha <= 0.0:
 		return
 	var panel := Rect2(450.0, 604.0, 380.0, 48.0)
-	draw_rect(panel, Color(0.02, 0.03, 0.08, 0.72 * alpha))
-	draw_rect(panel, Color(UiTheme.ACCENT, 0.35 * alpha), false, 1.0)
+	draw_rect(panel, Color(ArenaPainter.PAPER, 0.96 * alpha))
+	draw_rect(panel, Color(ArenaPainter.INK, 0.8 * alpha), false, 1.0)
 	var size := 16
 	var x := panel.position.x + 18.0
 	_keycap("WASD", Vector2(x, panel.position.y + 14.0), size, alpha)
@@ -382,8 +408,8 @@ func _draw_debug() -> void:
 		"Echoes %d  ·  v%s" % [sim.echoes.size(), str(ProjectSettings.get_setting("application/config/version", ""))],
 	])
 	var panel := Rect2(16.0, 84.0, 336.0, 22.0 * float(lines.size()) + 16.0)
-	draw_rect(panel, Color(0.01, 0.02, 0.05, 0.84))
-	draw_rect(panel, Color(0.35, 0.55, 0.95, 0.45), false, 1.0)
+	_paper_panel(panel)
+	draw_rect(panel, Color(ArenaPainter.INK, 0.8), false, 1.0)
 	for i in lines.size():
 		_text(lines[i], Vector2(28.0, 104.0 + float(i) * 22.0), 14, UiTheme.INK)
 
@@ -395,9 +421,20 @@ func _keycap_width(label: String, size: int) -> float:
 func _keycap(label: String, pos: Vector2, size: int, alpha: float = 1.0) -> void:
 	var w := _keycap_width(label, size)
 	var rect := Rect2(pos, Vector2(w, 22.0))
-	draw_rect(rect, Color(0.08, 0.1, 0.2, 0.95 * alpha))
-	draw_rect(rect, Color(0.4, 0.55, 0.9, 0.6 * alpha), false, 1.0)
+	draw_rect(rect, Color(ArenaPainter.PAPER, 0.95 * alpha))
+	draw_rect(rect, Color(ArenaPainter.INK, 0.8 * alpha), false, 1.0)
 	_text(label, pos + Vector2(7.0, 16.0), size, Color(UiTheme.INK, alpha))
+
+
+func set_reduced_effects(on: bool) -> void:
+	reduced_effects = on
+	queue_redraw()
+
+
+func _paper_panel(rect: Rect2) -> void:
+	draw_rect(Rect2(rect.position + Vector2(2.0, 2.0), rect.size), Color(ArenaPainter.INK, 0.35))
+	draw_rect(rect, ArenaPainter.PAPER)
+	draw_rect(rect, ArenaPainter.INK, false, 2.0)
 
 
 func _text(txt: String, pos: Vector2, size: int, color: Color = UiTheme.INK,

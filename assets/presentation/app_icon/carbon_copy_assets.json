@@ -1,0 +1,36 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
+  "reference": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-1e58b345-a0ae-40f8-b50a-bbb74b7a6c00.png",
+  "assets": [
+    {
+      "id": "app_icon",
+      "file": "assets/presentation/app_icon/take_stack_icon.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-f826c2f5-19b7-4396-884f-0651a8991d91.png",
+      "prompt": "Use case: logo-brand. Asset: actual square transparent app icon for original 2D black-comedy paper-copy game TAKE STACK. Match supplied approved concept's exhausted creased paper doll. Draw ONE big cropped square-ish folded PAPER FACE, heavy-lidded tired black ink eyes, tiny resigned crooked mouth, a folded top-right corner. Behind it, one slightly offset SECOND PAPER FACE visible along top-left edge, paler muted sage, looks even more fed up. One small brick-red torn corner or stamp SHAPE accents the front face. Thick confident imperfect charcoal-black outlines, warm recycled-paper cream fill and ONE flat smoke-yellow cel shadow. Extremely simple, 3 large shapes, immediately readable at 32x32 pixels. No weapons, bodies, labels, letters, words, border, rounded app squircle background, metal, neon, gradients, glossy 3D or cast shadows. Transparent background, generous 15% empty margin on all sides, complete face silhouette stays inside square canvas.",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "width": 1254,
+      "height": 1254,
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGBA",
+      "sha256": "f4fc98210f367f841d58cc67144b75982fb0c74b6703545e43d5587c97bf7c61",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        47,
+        56,
+        1213,
+        1196
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ]
+    }
+  ]
+}

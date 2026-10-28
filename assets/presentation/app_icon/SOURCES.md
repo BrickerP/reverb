@@ -1,16 +1,11 @@
-# Take Stack application icon
+# Carbon Copy Purgatory app icon
 
-Created on 2026-10-23 with the built-in image generation tool. The PNG is the
-unchanged original output. No raster derivatives were produced; Godot can consume
-the PNG directly for project and desktop-export icon settings.
+Generated with the built-in image generation tool on 2026-10-28 from the approved
+Take Stack concept board as a style reference. `take_stack_icon.png` is an
+unchanged copy of the selected transparent output: one exhausted folded paper
+face, an offset older copy and a small brick-red accent. Its strong black contour
+and large flat shapes are designed to remain readable at small icon sizes.
 
-Prompt: a square application icon that remains legible at 16px, combining one
-tactile recording-tape emblem with one simple echo ring. Crisp matte ivory and
-charcoal hardware, one brass latch and vivid cyan tape/status light on a deep
-dark-slate rounded-square field. Large centered silhouette, two reel openings and
-one clean cyan loop. No characters, weapons, scenery, screws, wires, tiny texture,
-letters, words, numerals, logo text, UI, watermark or cast shadow. Opaque and
-uncropped.
-
-Built-in source output:
-`/Users/yupeng/.codex/generated_images/01a16842-f0ff-7a23-b839-d5fd27b64ffe/exec-58c0da93-538f-46eb-a93a-54b16c73e999.png`.
+`carbon_copy_assets.json` and `manifest.json` record the complete prompt, original
+output path, dimensions, visible alpha bounds and SHA-256. No text, background,
+metallic frame or existing third-party character is embedded in the icon.

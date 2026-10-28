@@ -1,0 +1,237 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-28",
+  "assets": [
+    {
+      "file": "assets/presentation/items/iron_heart.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-2bc9b4bf-579b-4a16-a822-0e3b7348a03c.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. A single production-ready 2D game inventory sprite, genuinely transparent background. Use the supplied concept board ONLY as a style reference. Strong slightly irregular thick charcoal-black outline, clean flat paper-cream/smoke-yellow/mold-sage/brick-red colors, one simple shadow maximum. Deadpan black-comedy recycled-paper world. Center one complete object, large readable silhouette at 40px, consistent slightly top-down three-quarter view, no text, no UI, no scene, no cast shadow, no borders, no realistic metallic rendering, no gradients, no glow. Do not reproduce any other subjects from the reference. A chunky heart folded from creased recycled paper, bound with one big dark staple, stubbornly still beating. Warm cream with a tiny brick-red patch.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "fb18339b0bc5d524205b64815e746cdf3189de69b3f7e4646e1f851fb49283ac",
+      "bounds_ltrb": [
+        86,
+        125,
+        1234,
+        1096
+      ]
+    },
+    {
+      "file": "assets/presentation/items/sneakers.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-32a37f55-d7bf-495c-b07f-e32c23dbca1f.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. A single production-ready 2D game inventory sprite, genuinely transparent background. Use the supplied concept board ONLY as a style reference. Strong slightly irregular thick charcoal-black outline, clean flat paper-cream/smoke-yellow/mold-sage/brick-red colors, one simple shadow maximum. Deadpan black-comedy recycled-paper world. Center one complete object, large readable silhouette at 40px, consistent slightly top-down three-quarter view, no text, no UI, no scene, no cast shadow, no borders, no realistic metallic rendering, no gradients, no glow. Do not reproduce any other subjects from the reference. One pair of comically oversized battered paper-and-tape running shoes with fat rounded soles and mismatched laces, pointing diagonally right. Cream, smoke-yellow and dark charcoal.",
+      "width": 1536,
+      "height": 1024,
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "sha256": "d7ec858ceb6464c8048568069d8e473ef8bb2de6fb4644fe1b98a181ed6c154c",
+      "bounds_ltrb": [
+        65,
+        37,
+        1488,
+        994
+      ]
+    },
+    {
+      "file": "assets/presentation/items/sharp_edge.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-670b7009-f08d-4592-be59-69d4cfd4aed6.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. A single production-ready 2D game inventory sprite, genuinely transparent background. Use the supplied concept board ONLY as a style reference. Strong slightly irregular thick charcoal-black outline, clean flat paper-cream/smoke-yellow/mold-sage/brick-red colors, one simple shadow maximum. Deadpan black-comedy recycled-paper world. Center one complete object, large readable silhouette at 40px, consistent slightly top-down three-quarter view, no text, no UI, no scene, no cast shadow, no borders, no realistic metallic rendering, no gradients, no glow. Do not reproduce any other subjects from the reference. A vicious folded paper cutter blade / shard with one jagged serrated edge and a tiny tired face on its blunt base. A clear angular triangular silhouette. Cream paper and dark charcoal.",
+      "width": 1293,
+      "height": 1216,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "05ffc74597069b5aac85b61ece4509717233c1bfe6ee5d6345c80fd2851d6650",
+      "bounds_ltrb": [
+        91,
+        162,
+        1241,
+        1079
+      ]
+    },
+    {
+      "file": "assets/presentation/items/quick_trigger.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-52a6ec4f-08d9-4526-92ba-8ae15e2b91bb.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon, genuinely transparent RGBA background. The attached finished folded-paper heart is STYLE REFERENCE ONLY. Match its strong slightly irregular thick charcoal-black outline, clean flat recycled-paper cream, muted tobacco yellow, mold sage and brick-red accents, one simple cel-shadow maximum. Deadpan dark-comedy recycled-paper universe. One complete isolated centered object, large chunky readable silhouette at 40px, slightly elevated three-quarter view, broad simple forms, generous clear margins. No text, numbers, UI, label, scene, floor, cast shadow, borders, glossy metal, gradients, glow, photorealism or unrelated objects. SUBJECT: A comically over-eager trigger attachment made from a folded PAPER FINGER curled around a large simple spring lever. The folded finger shape and spring form one compact object, recognizable as a quick-trigger mechanism. Fat paper segments, one mustard-yellow paper-wrapped spring and a tiny charcoal latch. One tired little eye stamped on the paper finger can add deadpan attitude, but no printed words. It is an inventory attachment, NOT a human hand or a whole gun.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "e6cdec7c8a32b18a10e975ba3012b3c253ce693ced6b8f7459f9a859b50a4b75",
+      "bounds_ltrb": [
+        104,
+        96,
+        1268,
+        1115
+      ]
+    },
+    {
+      "file": "assets/presentation/items/long_barrel.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-486844d1-49e3-4de5-83b1-6df166b38544.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon, genuinely transparent RGBA background. The attached finished folded-paper heart is STYLE REFERENCE ONLY. Match its strong slightly irregular thick charcoal-black outline, clean flat recycled-paper cream, muted tobacco yellow, mold sage and brick-red accents, one simple cel-shadow maximum. Deadpan dark-comedy recycled-paper universe. One complete isolated centered object, large chunky readable silhouette at 40px, slightly elevated three-quarter view, broad simple forms, generous clear margins. No text, numbers, UI, label, scene, floor, cast shadow, borders, glossy metal, gradients, glow, photorealism or unrelated objects. SUBJECT: An absurdly long PAPER GUN-BARREL ATTACHMENT made from a thick rolled cream paper tube, two broad crooked mustard masking-tape bands and a dark open circular muzzle at the right end. A small simple mounting collar at the left. The tube points diagonally right and slightly up, one clear elongated silhouette, no trigger or grip and no full gun. Paper creases and a chipped end show that this overconfident attachment is barely holding together.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "359c4561c8e3fe4232338aa7becf7ae49e17d0b642b7e2402fc07bddaa7df676",
+      "bounds_ltrb": [
+        13,
+        228,
+        1303,
+        954
+      ]
+    },
+    {
+      "file": "assets/presentation/items/lucky_coin.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-c192984e-afba-4bd0-b9f7-1a4ad3c5ba64.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon on genuinely transparent RGBA. Attached folded-paper heart is STYLE REFERENCE ONLY. Match its thick slightly irregular charcoal-black outline, clean flat recycled-paper cream and tobacco-yellow with restrained mold-sage/brick-red accents, one simple cel-shadow. Original dark-comedy paper-recycling world. One complete centered object with generous empty margin, broad readable silhouette at 40px, slightly elevated three-quarter view. No text, numbers, labels, UI, floor, cast shadow, background, border, gradient, glow, realistic metal or unrelated objects. SUBJECT: One thick yellow lucky coin that obviously looks unlucky. An oversized chipped bite missing from the upper edge, simple uneven paper-wrapped coin rim, a tiny deadpan exhausted face embossed in dark ink at center: two drooping eyes and a downturned mouth. No letters, numerals, stars, currency symbols or shiny highlights. Tobacco-yellow flat face, one dark side plane, cream chipped paper edges. Funny squat almost-circular coin silhouette.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "f3bcdee75b28f91ad673200473c865ed072c4e4d11a45ce81cbb456d9f651351",
+      "bounds_ltrb": [
+        146,
+        92,
+        1191,
+        1122
+      ]
+    },
+    {
+      "file": "assets/presentation/items/magnet.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-66b3a058-9cc9-4d5b-82ea-22eee49d2123.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon on genuinely transparent RGBA. Attached folded-paper heart is STYLE REFERENCE ONLY. Match its thick slightly irregular charcoal-black outline, clean flat recycled-paper cream and tobacco-yellow with restrained mold-sage/brick-red accents, one simple cel-shadow. Original dark-comedy paper-recycling world. One complete centered object with generous empty margin, broad readable silhouette at 40px, slightly elevated three-quarter view. No text, numbers, labels, UI, floor, cast shadow, background, border, gradient, glow, realistic metal or unrelated objects. SUBJECT: A chunky horseshoe magnet crudely wrapped in creased recycled-paper and masking tape. One clear thick U shape with two broad squared pole ends, inner U opening remains large and readable. Cream paper body, dark charcoal end caps, one broad dull brick-red tape band and a muted sage mounting loop. A few large angular paper folds, no wires, no electronic lights and no complex machinery. Slight three-quarter angle but still instantly recognizable as a horseshoe magnet.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "0fa0fa1f4f65ef8e87660b02b0878e5cb74940d2253ed91e3cf5193cdd283dc2",
+      "bounds_ltrb": [
+        133,
+        80,
+        1203,
+        1117
+      ]
+    },
+    {
+      "file": "assets/presentation/items/regen_patch.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-ce985c4e-e542-4dd8-bbe3-c360b9a257d1.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D inventory icon for an original black-comedy paper-copy game. Attached folded paper heart is STYLE REFERENCE ONLY. Match its bold irregular charcoal-black ink outline, flat cream/tobacco-yellow paper colors with a restrained dull brick-red accent, simple one-step cel shadow, broad angular folds. Genuinely transparent RGBA background. Center one complete cohesive object with clear generous margins, readable at 40px, slightly elevated three-quarter angle. No text, letters, numbers, labels, UI, borders, scenery, floor, cast shadow, glow, gradients, realistic metal or extra unrelated objects. SUBJECT: An absurd repair plaster for a paper person: one thick rectangular recycled-paper bandage patch with softly rounded torn corners, a central cream pad, two broad mustard adhesive tabs, and ONE oversized charcoal staple holding a split in the pad together. A small dull brick-red stitched zigzag on the pad suggests medical repair without any text. Very chunky simple construction; no wires, electronics, light or realistic flesh.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "9db90524d5c895c267099e9d1b25fe57c10f0072d9fc9efcaf0650aa6a4aafe8",
+      "bounds_ltrb": [
+        42,
+        128,
+        1285,
+        1082
+      ]
+    },
+    {
+      "file": "assets/presentation/items/spare_deck.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-c1825014-0136-42f9-84d8-33f9f86cf051.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D inventory icon for an original black-comedy paper-copy game. Attached folded paper heart is STYLE REFERENCE ONLY. Match its bold irregular charcoal-black ink outline, flat cream/tobacco-yellow paper colors with a restrained dull brick-red accent, simple one-step cel shadow, broad angular folds. Genuinely transparent RGBA background. Center one complete cohesive object with clear generous margins, readable at 40px, slightly elevated three-quarter angle. No text, letters, numbers, labels, UI, borders, scenery, floor, cast shadow, glow, gradients, realistic metal or extra unrelated objects. SUBJECT: A fanned STACK OF THREE BLANK SPARE PAPER FACES. Three thick cream folded-paper head cutouts, square with slightly uneven creased sides and one dog-eared upper-right corner, stacked with a visible offset so the three layers are countable. Front face is blank, NO eyes, nose or mouth, ready to receive a new copy. A broad muted-sage paper band loosely bundles their lower edges, one tiny mustard tab. Clear chunky paper-stack silhouette, no printing, no letterforms, no metal box or machine.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "42ab41647b07ed85f80f081c1fcc88894050d0d24a14057dbf5a16e10e8fda19",
+      "bounds_ltrb": [
+        126,
+        75,
+        1177,
+        1110
+      ]
+    },
+    {
+      "file": "assets/presentation/items/long_play.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-f5a72921-27d6-4eca-b057-7cd91a3474af.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon, genuinely transparent RGBA background. Attached folded-paper heart is STYLE REFERENCE ONLY. Match its thick slightly irregular charcoal-black ink outline, flat recycled-paper cream/tobacco yellow with restrained dusty purple or mold-sage accents and one simple cel-shadow. Original funny, grim paper-copy recycling universe. One complete object centered with generous clear margin, broad readable silhouette at 40px, slightly elevated three-quarter view. No text, letters, numbers, UI card, floor, cast shadow, border, glow, gradients, realistic machinery/metal, photorealism or extra objects. SUBJECT: One comically oversized extra-long tape roll, with a wide cream paper cylinder, a large dark visible central hole, and thick mustard-yellow tape layers. A short broad loose tail curls out at the lower right, its end dog-eared and visibly creased like paper. A small dusty-purple band on the roll hints that it preserves old copies. Bold near-circular silhouette, only a few large concentric folds, not a cassette, film camera or recorder machine.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "b9da793cb5b6b71e1101bc047ccc8b169f1058803aa457b0fecd261752067f91",
+      "bounds_ltrb": [
+        93,
+        51,
+        1269,
+        1155
+      ]
+    },
+    {
+      "file": "assets/presentation/items/loud_speaker.png",
+      "originalsource": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-a12fd241-3985-4d0d-bc9e-b410daecaa9d.png",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "prompt": "Use case: stylized-concept. One production-ready 2D game inventory icon, genuinely transparent RGBA background. Attached folded-paper heart is STYLE REFERENCE ONLY. Match its thick slightly irregular charcoal-black ink outline, flat recycled-paper cream/tobacco yellow with restrained dusty purple or mold-sage accents and one simple cel-shadow. Original funny, grim paper-copy recycling universe. One complete object centered with generous clear margin, broad readable silhouette at 40px, slightly elevated three-quarter view. No text, letters, numbers, UI card, floor, cast shadow, border, glow, gradients, realistic machinery/metal, photorealism or extra objects. SUBJECT: A battered folded-PAPER MEGAPHONE, a wide crumpled cream cone with a big dark open mouth pointing diagonally right/up, narrow closed end on left and one chunky sage-green folded-paper handle underneath. A broad dull brick-red tape band wraps the narrow end; uneven paper rim and one large crease show it is barely holding together. Strong simple cone silhouette, no separate sound waves, no stars or effects, no electrical cables, metal grille or electronic speaker box.",
+      "width": 1312,
+      "height": 1199,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "249e308385999f60b05415a11e683b6a1b7d49157341eda856a146ebb9b5c12a",
+      "bounds_ltrb": [
+        52,
+        83,
+        1264,
+        1116
+      ]
+    }
+  ]
+}

@@ -57,7 +57,7 @@ func feedback(reverse: bool = false, reduced: bool = false) -> void:
 	feedback_runs += 1
 	last_feedback_reverse = reverse
 	pivot_offset = size * 0.5
-	var tint := Color(1.0, 0.62, 0.9) if reverse else Color(0.62, 1.0, 0.88)
+	var tint := Color(0.90, 0.81, 0.95) if reverse else Color(1.0, 0.92, 0.72)
 	modulate = tint
 	if not reduced:
 		scale = Vector2(0.94, 0.94) if reverse else Vector2(1.04, 1.04)
@@ -105,6 +105,6 @@ func _set_highlight(valid: bool, active: bool) -> void:
 	if not active:
 		modulate = Color.WHITE
 	elif valid:
-		modulate = Color(0.72, 1.0, 0.94)
+		modulate = Color(0.82, 0.94, 0.74)
 	else:
-		modulate = Color(1.0, 0.62, 0.68)
+		modulate = Color(1.0, 0.74, 0.65)

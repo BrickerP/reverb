@@ -1,64 +1,35 @@
-# Presentation artwork — first slice
+# Carbon Copy Purgatory artwork
 
-Created on 2026-10-23 with the built-in image generation tool. These are original
-generated PNG outputs, copied without destructive image editing. Visible alpha
-regions (alpha >= 20/255) were measured offline and recorded in `manifest.json`.
-`PresentationAssets` stores those bounds and scales them to the imported texture
-size; it never scans pixels during gameplay. Godot imports at a maximum of 512 px
-with mipmaps for stable minification, while the original PNGs remain unchanged.
+All 42 production PNGs use the approved original paper-puppet art direction:
+thick dark ink contours, flat recycled-paper fills, tired expressions, limited
+sage/yellow/red accents, and visual jokes about disposable copies. They replace
+the previous mechanical character, weapon, enemy and metal-panel artwork.
 
-Style reference: `take-stack-visual-direction-v1.png`, the concept board produced
-in the same design session. The PNGs are single-pose sprites, not frame animation
-sheets or 3D models. World motion is currently procedural sway/bob; family variants
-reuse the closest silhouette. Rich combat events are available after integrating
-mechanics `8f555e4`; this slice still uses compatible legacy signals, so precise
-per-weapon firing animation and audio remain a presentation follow-up.
+Generated with the built-in OpenAI image generation tool on 2026-10-28. Final
+PNG bytes are retained from tool outputs; required edits used the same tool.
+No existing game's characters or artwork are included.
 
-## Generation prompts
+The runtime catalog preserves all content IDs. Character fronts/backs and all
+seven enemy identities are four-column animation strips. Common crop bounds
+are measured across all four cells so changing poses never changes scale.
+Weapons remain independently mounted; echoes reuse the selected character art.
 
-Common actor specification: isolated production-oriented 2D game sprite matching
-the reference's crisp illustrated matte equipment, bold clean contour and restrained
-shading; square canvas, genuine transparent background, no floor, cast shadow, text,
-labels, UI, grid or extra objects; whole asset uncropped with clear padding; readable
-at approximately 40–60 display pixels; single static pose.
+## Production provenance
 
-- `player.png`: compact recording operator in off-white/beige armor, cyan visor,
-  dark trousers and boots, recording backpack and mustard accents. Full body,
-  slightly facing screen-right at an elevated top-down viewpoint. Distinct head,
-  torso, arms and feet, neutral ready stance, empty hands, no gun or halo.
-- `enemy_grunt.png`: squat four-legged armored scavenger robot, rounded brown and
-  charcoal shell, orange eyes, short angular legs, facing diagonally down-left.
-- `enemy_runner.png`: narrow pointed scout creature-machine, charcoal/rust shell,
-  orange eyes, front claws and rear legs, facing diagonally down-left; distinct from
-  the grunt silhouette.
-
-Common weapon specification: one isolated side-view weapon, slightly elevated,
-long axis horizontal and muzzle pointing right; matte ivory/charcoal equipment,
-clean outline, restrained shading, genuine transparent background, no person,
-hands, floor, shadow, text, ammo, projectile or muzzle flash. Usable both as small
-world weapon and larger UI thumbnail.
-
-- `weapon_pistol.png`: compact chunky pistol, ivory casing, charcoal grip, cyan
-  muzzle accent and one amber detail, matching the reference pistol.
-- `weapon_shotgun.png`: stout broad double-barrel scattergun, ivory receiver,
-  dark grip, burnt-orange chamber and foregrip, no scope.
-- `weapon_orb.png`: compact arcane pulse emitter, ivory/charcoal housing holding
-  a violet sphere, small lower-left grip, emitter facing right, restrained light
-  near the sphere and a distinct round silhouette.
-
-## Generated source files
-
-All originals are retained under the session's generated-images directory:
-
-| Asset | Source filename |
+| Top-level file | Group containing full prompts and original outputs |
 |---|---|
-| player | `exec-d7d37d24-67e3-41dd-86fc-257c1ad6c5c3.png` |
-| enemy_grunt | `exec-bc4790ce-43ed-49a4-bb3b-7b42b8ae0920.png` |
-| enemy_runner | `exec-905060b9-55a5-4ccd-9006-4d566eb48762.png` |
-| weapon_pistol | `exec-c3092e21-b9f9-4431-a59e-d1fa1ee09dc5.png` |
-| weapon_shotgun | `exec-3a7c895e-431e-472c-8740-bd8b58b53ed8.png` |
-| weapon_orb | `exec-1414532b-f29b-4e8e-8b42-3589f789020a.png` |
+| `player.png` | [Characters](characters/SOURCES.md) |
+| `enemy_grunt.png`, `enemy_runner.png` | [Enemies](enemies/SOURCES.md) |
+| `weapon_pistol.png`, `weapon_shotgun.png`, `weapon_orb.png` | [Weapons](weapons/SOURCES.md) |
 
-`manifest.json` records the exact file hashes, pixel dimensions and visible alpha
-bounds of the imported originals. Runtime attribution is independent of the CC0
-audio sources, which are documented in `audio/presentation/SOURCES.md`.
+Each group's `carbon_copy_assets.json` retains the exact prompt, original output,
+dimensions, alpha checks and SHA256. Group and root `manifest.json` are generated
+from the actual PNG bytes by `python3 tools/sync_art_catalog.py`. Pixel scanning
+occurs only offline; the game reads precomputed bounds.
+
+Other groups: [Items](items/SOURCES.md), [Surfaces](surfaces/SOURCES.md),
+[Application icon](app_icon/SOURCES.md).
+
+`bounds_ltrb` measures the complete PNG; `frame_union_ltrb` measures all poses
+in local cell coordinates. Right and bottom are exclusive. Visible alpha is
+20/255. Runtime imports retain mipmaps and a maximum 512px texture edge.

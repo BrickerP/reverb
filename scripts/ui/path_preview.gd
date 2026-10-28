@@ -1,7 +1,7 @@
 class_name PathPreview
 extends Control
 
-const PREVIEW_SIZE := Vector2(112.0, 56.0)
+const PREVIEW_SIZE := Vector2(76.0, 48.0)
 const STRIDE := 6
 const TRACE_TIME := 0.8
 
@@ -17,7 +17,7 @@ func _init() -> void:
 
 
 func setup(take: EchoTake, animate: bool = false) -> void:
-	_tint = take.tint()
+	_tint = take.tint().lerp(UiTheme.INK, 0.4)
 	var k := PREVIEW_SIZE.x / Sim.ARENA.size.x
 	_points = PackedVector2Array()
 	for i in range(0, take.samples.size(), STRIDE):
@@ -48,7 +48,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var frame := Rect2(Vector2.ZERO, PREVIEW_SIZE)
-	draw_rect(frame, Color(0.02, 0.03, 0.08))
+	draw_rect(frame, UiTheme.PAPER)
 	if _points.size() >= 2:
 		if _progress < 1.0:
 			# Faint full route, then the tape draws itself in.
@@ -61,5 +61,5 @@ func _draw() -> void:
 		else:
 			draw_polyline(_points, Color(_tint, 0.9), 1.5, true)
 	if not _points.is_empty():
-		draw_circle(_points[0], 3.0, Color.WHITE)
-	draw_rect(frame, Color(_tint, 0.7), false, 1.5)
+		draw_circle(_points[0], 3.0, UiTheme.INK)
+	draw_rect(frame, UiTheme.EDGE, false, 2.0)

@@ -24,14 +24,14 @@ func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.01, 0.01, 0.04, 0.86)
+	dim.color = Color(UiTheme.EDGE, 0.86)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(560.0, 0.0)
+	panel.custom_minimum_size = Vector2(640.0, 0.0)
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -108,6 +108,7 @@ func _ready() -> void:
 	close_button.custom_minimum_size = Vector2(160.0, 44.0)
 	close_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	close_button.pressed.connect(close)
+	UiTheme.stamp_button(close_button)
 	box.add_child(close_button)
 
 
@@ -129,6 +130,7 @@ func open(settings: Settings, language_enabled: bool = true) -> void:
 	UiFocus.cycle([volume_slider, shake_check, reduced_effects_check, fullscreen_check,
 			language_option, close_button])
 	volume_slider.grab_focus()
+	UiTheme.animate_open(self, settings.reduced_effects)
 
 
 func close() -> void:

@@ -4,7 +4,7 @@ extends Button
 signal replacement_requested(offer: Offer)
 signal lock_toggled(offer: Offer)
 
-const HEIGHT := 112.0
+const HEIGHT := 116.0
 
 var offer: Offer
 var blocked_reason: StringName = &""
@@ -13,11 +13,15 @@ var lock_button: Button
 var _drag_payload := Callable()
 var _clear_drag_hint := Callable()
 var _suppress_next_pressed := false
+var reduced_effects := false
+var _press_tween: Tween
 
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, HEIGHT)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button_down.connect(_press_paper)
+	button_up.connect(_release_paper)
 
 
 # Expected single-target DPS of everything already equipped.
@@ -73,30 +77,35 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	# Sold cards are inert. Every other blocked card stays pressable so it can explain
 	# the constraint by flashing the resource it needs.
 	disabled = reason == &"sold"
-	modulate.a = 0.4 if reason == &"sold" else (1.0 if selected else (0.72 if reason != &"" else 1.0))
-	if selected:
-		var style := UiTheme.box(Color(0.06, 0.09, 0.18), UiTheme.ACCENT, 2, 6)
-		add_theme_stylebox_override("normal", style)
-		add_theme_stylebox_override("hover", style)
+	# Preserve contrast for unaffordable/full cards: the stamped state explains why.
+	modulate.a = 0.64 if reason == &"sold" else 1.0
+	var normal := UiTheme.paper_panel(UiTheme.PAPER if selected else UiTheme.CARD)
+	if selected or o.locked:
+		normal.border_color = UiTheme.ACCENT
+	add_theme_stylebox_override("normal", normal)
+	add_theme_stylebox_override("hover", UiTheme.paper_panel(UiTheme.PAPER.lightened(0.05)))
+	add_theme_stylebox_override("pressed", UiTheme.box(UiTheme.SURFACE, UiTheme.EDGE, 3, 2))
 	var margin := MarginContainer.new()
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "right", "top", "bottom"]:
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 12)
+	for side in ["top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 8)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 4)
+	box.add_theme_constant_override("separation", 3)
 	margin.add_child(box)
 	box.add_child(_title_row(o, reason, selected, not sim.player.weapons.is_empty()))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim))
-		box.add_child(_weapon_meta(o.weapon))
 	else:
-		var desc := UiTheme.label(_description(o), 15, UiTheme.DIM)
+		var desc := UiTheme.label(_description(o), 14, UiTheme.DIM)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(desc)
+	box.add_child(_actions_row(o, reason, not sim.player.weapons.is_empty()))
 
 
 func _get_drag_data(at_position: Vector2) -> Variant:
@@ -161,7 +170,7 @@ func _drag_preview() -> Control:
 	preview.custom_minimum_size = Vector2(190.0, 58.0)
 	preview.position = Vector2(24.0, -70.0)
 	preview.add_theme_stylebox_override("panel",
-			UiTheme.box(Color(0.055, 0.08, 0.095, 0.96), UiTheme.ACCENT, 2, 7))
+			UiTheme.paper_panel(UiTheme.CARD))
 	preview_root.add_child(preview)
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -178,29 +187,31 @@ func _drag_preview() -> Control:
 
 func reject(reduced: bool = false) -> void:
 	UiTheme.flash(self)
+	if _press_tween != null and _press_tween.is_valid():
+		_press_tween.kill()
 	scale = Vector2.ONE
 	if reduced:
 		return
 	pivot_offset = size * 0.5
-	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector2(1.02, 1.02), 0.05).set_trans(Tween.TRANS_SINE)
-	tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
+	_press_tween = create_tween()
+	_press_tween.tween_property(self, "scale", Vector2(1.02, 1.02), 0.05).set_trans(Tween.TRANS_SINE)
+	_press_tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
 
 
-func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) -> Control:
+func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 8)
-	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
+	row.add_theme_constant_override("separation", 9)
 	if o.is_weapon():
-		row.add_child(UiTheme.weapon_icon(o.weapon, Vector2(48.0, 36.0)))
+		row.add_child(UiTheme.weapon_icon(o.weapon, Vector2(48.0, 37.0)))
 	else:
-		row.add_child(UiTheme.item_icon(o.item, Vector2(42.0, 42.0)))
+		row.add_child(UiTheme.item_icon(o.item, Vector2(44.0, 40.0)))
 	var identity := VBoxContainer.new()
 	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	identity.add_theme_constant_override("separation", 1)
-	var name_label := UiTheme.label(title, 20)
+	identity.add_theme_constant_override("separation", 0)
+	var title := Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())
+	var name_label := UiTheme.label(title, 19)
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(name_label)
@@ -213,14 +224,32 @@ func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) ->
 		tags.add_child(UiTheme.label(Loc.weapon_family(o.weapon.family), 12, UiTheme.DIM))
 		tags.add_child(UiTheme.label(Loc.rarity_name(o.weapon.rarity), 12,
 				_rarity_color(o.weapon.rarity)))
-	if not o.is_weapon() and o.item.echo_item:
+	elif o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
+	row.add_child(_price_label(o, reason, selected))
+	return row
+
+
+func _actions_row(o: Offer, reason: StringName, can_swap: bool) -> Control:
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 6)
+	if o.is_weapon():
+		var meta := _weapon_meta(o.weapon)
+		meta.add_theme_font_size_override("font_size", 12)
+		meta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(meta)
+	else:
+		var spacer := Control.new()
+		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(spacer)
 	if o.is_weapon() and reason != &"sold" and can_swap:
 		swap_button = Button.new()
 		swap_button.text = Loc.t("shop.replace_action")
-		swap_button.tooltip_text = Loc.t("shop.replace", [title])
-		swap_button.custom_minimum_size = Vector2(58.0, 26.0)
-		swap_button.add_theme_font_size_override("font_size", 10)
+		swap_button.tooltip_text = Loc.t("shop.replace", [Loc.weapon_name(o.id())])
+		swap_button.custom_minimum_size = Vector2(62.0, 28.0)
+		swap_button.add_theme_font_size_override("font_size", 12)
 		swap_button.mouse_filter = Control.MOUSE_FILTER_STOP
 		swap_button.pressed.connect(_on_swap_pressed)
 		row.add_child(swap_button)
@@ -229,15 +258,33 @@ func _title_row(o: Offer, reason: StringName, selected: bool, can_swap: bool) ->
 		lock_button.text = Loc.t("shop.unlock") if o.locked else Loc.t("shop.lock")
 		lock_button.tooltip_text = Loc.t("shop.lock_hint")
 		lock_button.accessibility_description = Loc.t("shop.lock_hint")
-		lock_button.custom_minimum_size = Vector2(46.0, 26.0)
-		lock_button.add_theme_font_size_override("font_size", 9)
+		lock_button.custom_minimum_size = Vector2(52.0, 28.0)
+		lock_button.add_theme_font_size_override("font_size", 12)
 		lock_button.mouse_filter = Control.MOUSE_FILTER_STOP
 		if o.locked:
-			lock_button.add_theme_color_override("font_color", UiTheme.ACCENT)
+			UiTheme.stamp_button(lock_button)
 		lock_button.pressed.connect(_on_lock_pressed)
 		row.add_child(lock_button)
-	row.add_child(_price_label(o, reason, selected))
 	return row
+
+
+func _press_paper() -> void:
+	if disabled or reduced_effects:
+		return
+	if _press_tween != null and _press_tween.is_valid():
+		_press_tween.kill()
+	pivot_offset = size * 0.5
+	scale = Vector2(0.99, 0.97)
+
+
+func _release_paper() -> void:
+	if _press_tween != null and _press_tween.is_valid():
+		_press_tween.kill()
+	if reduced_effects:
+		scale = Vector2.ONE
+		return
+	_press_tween = create_tween()
+	_press_tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 func _on_swap_pressed() -> void:
@@ -320,7 +367,7 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 		&"maxed":
 			return UiTheme.label(Loc.t("shop.maxed"), 15, UiTheme.WARN, right)
 	var color := UiTheme.WARN if reason == &"poor" else UiTheme.COIN
-	return UiTheme.label(str(o.price), 20, color, right)
+	return UiTheme.label(str(o.price), 25, color, right)
 
 
 func _description(o: Offer) -> String:

@@ -1,66 +1,34 @@
-# Item presentation artwork
+# Carbon Copy Purgatory item artwork
 
-Created on 2026-10-23 with the built-in image generation tool. Each file is one
-original generated PNG copied without cropping, resampling, compositing or other
-pixel editing. `manifest.json` records the exact hash, original dimensions and
-visible alpha bounds (alpha >= 20/255). These files are source assets; runtime
-catalog/import integration is intentionally handled by the parent presentation
-task after serialized Godot verification.
+Generated on 2026-10-28 with the built-in `image_gen` tool. All eleven PNGs are
+unchanged copies of the selected generated originals. The previous industrial
+hardware icons are replaced by the approved thick-ink recycled-paper art direction.
 
-## Shared prompt
+## Production contract
 
-Use case: `stylized-concept`. Asset type: transparent 2D Take Stack inventory
-icon, readable at 32–64 display pixels. Match the established project artwork:
-crisp illustrated matte hardware, bold clean dark contour, restrained cel-like
-shading, compact chunky industrial design, ivory/off-white casing, charcoal
-structure, small mustard/brass and cyan accents; use subtle violet recording-light
-accents for echo items. Use a slightly elevated three-quarter game-icon view.
+- One complete isolated inventory object per file, with genuine RGBA transparency.
+- Bold irregular charcoal outlines, flat cream/tobacco/sage/brick-red colors, one
+  simple cel-shadow; no embedded UI text, scene, cast shadow, neon or realistic metal.
+- All icons were checked for nonempty alpha, transparent margins and full bounds.
+- The first three items (iron heart, sneakers, sharp edge) were supplied by the parent
+  production lane. Their bytes and hashes were preserved when this group was completed.
+- `carbon_copy_assets.json` preserves the full per-image prompts, exact original paths,
+  dimensions, hashes and measured alpha bounds. `manifest.json` is the compact export catalog.
 
-Show one centered physical object, fully uncropped with even padding on a square
-canvas. Require genuine transparency. No floor, cast shadow, backdrop, UI card,
-person, hands, text, letters, numerals, logo, watermark or extra objects. Avoid
-bloom, visual noise and thin fragile details.
+## Subjects and original sources
 
-## Per-item subjects
+- `iron_heart.png`: stapled folded-paper heart. Original: `/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-2bc9b4bf-579b-4a16-a822-0e3b7348a03c.png`.
+- `sneakers.png`: battered paper-and-tape shoes. Original: `/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-32a37f55-d7bf-495c-b07f-e32c23dbca1f.png`.
+- `sharp_edge.png`: jagged paper cutter shard. Original: `/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-670b7009-f08d-4592-be59-69d4cfd4aed6.png`.
+- `quick_trigger.png`: spring-loaded folded-paper trigger finger. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-52a6ec4f-08d9-4526-92ba-8ae15e2b91bb.png`.
+- `long_barrel.png`: long paper barrel attachment bound with tape. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-486844d1-49e3-4de5-83b1-6df166b38544.png`.
+- `lucky_coin.png`: chipped yellow coin with a tired unlucky face. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-c192984e-afba-4bd0-b9f7-1a4ad3c5ba64.png`.
+- `magnet.png`: paper-wrapped horseshoe magnet. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-66b3a058-9cc9-4d5b-82ea-22eee49d2123.png`.
+- `regen_patch.png`: stapled paper medical repair plaster. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-ce985c4e-e542-4dd8-bbe3-c360b9a257d1.png`.
+- `spare_deck.png`: stack of blank spare paper faces. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-c1825014-0136-42f9-84d8-33f9f86cf051.png`.
+- `long_play.png`: large long tape roll. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-f5a72921-27d6-4eca-b057-7cd91a3474af.png`.
+- `loud_speaker.png`: crumpled paper megaphone. Original: `/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-a12fd241-3985-4d0d-bc9e-b410daecaa9d.png`.
 
-- `iron_heart.png`: compact armored heart-shaped life-support module; mechanical,
-  not anatomical; ivory plates, charcoal core, amber chamber and a cyan seam.
-- `sneakers.png`: one cohesive icon containing a matched pair of futuristic utility
-  boots; thick dark soles, ivory toes, mustard heel clips and cyan tread inserts.
-- `sharp_edge.png`: compact replaceable blade-edge module; a broad sharpened wedge
-  in a charcoal mount with an ivory housing and mustard locking latch.
-- `quick_trigger.png`: standalone trigger cartridge; visible curved trigger inside
-  a chunky charcoal/ivory guard, mustard spring latch and cyan readiness light.
-- `long_barrel.png`: extended barrel attachment rather than a firearm; long charcoal
-  tube, ivory heat shroud, brass collar and cyan alignment strip.
-- `lucky_coin.png`: thick brass token with abstract concentric mechanical grooves
-  and a cyan enamel inset; explicitly no writing or symbolic markings.
-- `magnet.png`: rugged industrial horseshoe magnet; squared arms, ivory casing,
-  charcoal poles, mustard mount and cyan charge lamps.
-- `regen_patch.png`: reusable medical repair patch/module; rectangular ivory pad in
-  a charcoal/mustard frame, cyan generic plus window and two attachment tabs.
-- `spare_deck.png`: portable field recorder/deck with handle and one visible extra
-  tape-reel chamber behind a violet-tinted window; unmarked controls.
-- `long_play.png`: chunky cassette cartridge with two oversized reels and extended
-  violet tape loop behind a window, with ivory shell and brass locks.
-- `loud_speaker.png`: compact powered loudspeaker; broad charcoal cone, ivory angular
-  enclosure, brass feet and restrained violet/cyan signal accents.
-
-## Generated source files
-
-| Item | Built-in output filename |
-| --- | --- |
-| iron_heart | `exec-7b150613-5213-403f-8603-f4170c4a6618.png` |
-| sneakers | `exec-0f112704-a838-4c8e-b203-5b3854f024cd.png` |
-| sharp_edge | `exec-343a94bf-1110-40ce-95bb-721f966556c9.png` |
-| quick_trigger | `exec-01045cdc-9b87-41fc-bd4e-dbc2b2bd1556.png` |
-| long_barrel | `exec-5a5d0adc-0b9e-41e8-8010-7071f3466bf4.png` |
-| lucky_coin | `exec-d667ca33-7a39-4fca-8dee-1d5a2bdfe07a.png` |
-| magnet | `exec-86eb1bb1-c80b-4e0f-954f-437b5c93b35c.png` |
-| regen_patch | `exec-b66bb754-8d49-49a4-b15f-cb22e4fcfdb6.png` |
-| spare_deck | `exec-42156a55-c4da-4d17-9fbf-e97308827563.png` |
-| long_play | `exec-d186db56-5b8d-4c0b-8970-001bd4de587b.png` |
-| loud_speaker | `exec-e0a0701b-afd4-4d87-b005-d5d7829196dd.png` |
-
-All source outputs remain under
-`/Users/yupeng/.codex/generated_images/01a16842-f0ff-7a23-b839-d5fd27b64ffe/`.
+The eight later icons used the finished `iron_heart.png` as the style reference;
+the first three used the approved Take Stack art-direction board. No image pixels
+were cropped, rescaled, recolored or composited by scripts. Bounds are read-only metadata.

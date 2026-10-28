@@ -1,16 +1,18 @@
 class_name ArenaPainter
 extends RefCounted
 
-const FILL := Color(0.05, 0.055, 0.1)
-const GRID_COLOR := Color(0.3, 0.4, 0.8, 0.08)
-const BORDER := Color(0.4, 0.85, 1.0, 0.85)
-const PLAYER := Color(0.6, 1.0, 1.0)
-const GRID := 60.0
+const FILL := Color("777d68")
+const PAPER := Color("e5d8b8")
+const INK := Color("292720")
+const BORDER := INK
+const PLAYER := PAPER
+const DANGER := Color("be5749")
+const MAX_PATH_POINTS := 18
 # Above this many bullets, trails are dropped; the heads still carry direction and readability.
 const TRAIL_LIMIT := 160
 # Above this many bullets, heads are drawn through one MultiMesh instead of one draw call each.
 const BATCH_LIMIT := 80
-const PLAYER_ART_SIZE := Vector2(44.0, 52.0)
+const PLAYER_ART_SIZE := Vector2(50.0, 58.0)
 const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
 const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
 const REDUCED_MOTION_SCALE := 0.3
@@ -26,18 +28,16 @@ static func arena(ci: CanvasItem) -> void:
 	ci.draw_rect(a, FILL)
 	var floor_texture := arena_floor_texture()
 	if floor_texture != null:
-		ci.draw_texture_rect(floor_texture, a, false, Color(0.72, 0.76, 0.86, 0.64))
-		ci.draw_rect(a, Color(FILL, 0.24))
-	var x := a.position.x + GRID
-	while x < a.end.x:
-		ci.draw_line(Vector2(x, a.position.y), Vector2(x, a.end.y), GRID_COLOR, 1.0)
-		x += GRID
-	var y := a.position.y + GRID
-	while y < a.end.y:
-		ci.draw_line(Vector2(a.position.x, y), Vector2(a.end.x, y), GRID_COLOR, 1.0)
-		y += GRID
-	ci.draw_rect(a.grow(4.0), Color(BORDER, 0.16), false, 8.0)
-	ci.draw_rect(a, BORDER, false, 3.0)
+		ci.draw_texture_rect(floor_texture, a, false, Color(1.0, 1.0, 1.0, 0.88))
+	# A quiet floor and a heavy ink perimeter leave moving silhouettes in charge.
+	ci.draw_rect(a, Color(INK, 0.10))
+	ci.draw_rect(a.grow(3.0), Color(INK, 0.18), false, 8.0)
+	ci.draw_rect(a, INK, false, 3.0)
+	for side: float in [-1.0, 1.0]:
+		var x := a.get_center().x + side * (a.size.x * 0.5 - 14.0)
+		for k in 5:
+			var y := a.position.y + 25.0 + float(k) * (a.size.y - 50.0) / 4.0
+			ci.draw_line(Vector2(x - 5.0, y - 3.0), Vector2(x + 5.0, y + 3.0), Color(INK, 0.22), 2.0)
 
 
 static func arena_floor_texture() -> Texture2D:
@@ -57,7 +57,7 @@ static func pending(ci: CanvasItem, sim: Sim) -> void:
 
 static func pending_spawn_profile(spawn: PendingSpawn) -> Dictionary:
 	var progress := 1.0 - clampf(spawn.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)
-	var color := _elite_color(spawn.elite_kind) if spawn.elite_kind != &"" else spawn.def.color
+	var color := _elite_color(spawn.elite_kind) if spawn.elite_kind != &"" else DANGER
 	var body_radius := spawn.def.radius * (Sim.ELITE_RADIUS_MULT if spawn.elite_kind != &"" else 1.0)
 	return {
 		"elite_kind": spawn.elite_kind,
@@ -69,83 +69,87 @@ static func pending_spawn_profile(spawn: PendingSpawn) -> Dictionary:
 
 
 # Wave-end beat: the just-recorded route collapses into the player.
+
+
 static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float,
 		reduced: bool = false) -> void:
 	if take.samples.is_empty():
 		return
 	var p := clampf(t, 0.0, 1.0)
-	# Stay near the full route, then pull it in at the end.
 	var collapse := p * p * (0.25 if reduced else 1.0)
 	var target := sim.player.pos
-	var pts := PackedVector2Array()
-	for i in range(0, take.samples.size(), 3):
-		pts.append(take.samples[i].lerp(target, collapse))
-	if pts.size() >= 2:
-		ci.draw_polyline(pts, Color(take.tint(), (0.4 if reduced else 0.85) * (1.0 - p)),
-				2.0 if reduced else 3.0)
-	ci.draw_arc(target, 14.0 + 34.0 * collapse, 0.0, TAU, 32,
-			Color(take.tint(), (0.35 if reduced else 0.7) * (1.0 - p)), 2.0)
+	var stride := maxi(3, ceili(float(take.samples.size()) / 36.0))
+	for i in range(0, take.samples.size() - stride, stride * 2):
+		var a := take.samples[i].lerp(target, collapse)
+		var b := take.samples[i + stride].lerp(target, collapse)
+		ci.draw_line(a, b, Color(INK, 0.45 * (1.0 - p)), 2.0)
+	# The recording becomes a small tangible paper copy before it enters the shop.
+	var paper_pos := target + Vector2(0.0, -18.0 - 28.0 * p)
+	var rect := Rect2(paper_pos - Vector2(10.0, 13.0), Vector2(20.0, 26.0))
+	ci.draw_rect(rect, Color(PAPER, 1.0 - p))
+	ci.draw_rect(rect, Color(INK, 1.0 - p), false, 2.0)
+	ci.draw_line(rect.position + Vector2(4.0, 7.0), rect.position + Vector2(15.0, 7.0),
+			Color(INK, 1.0 - p), 2.0)
 
 
-# Boss death: a white impact flash, a vertical beam and three expanding rings.
-static func victory(ci: CanvasItem, origin: Vector2, color: Color, t: float,
+static func victory(ci: CanvasItem, origin: Vector2, _color: Color, t: float,
 		reduced: bool = false) -> void:
 	var p := clampf(t, 0.0, 1.0)
 	var flash := victory_flash_alpha(p, reduced)
 	if flash > 0.0:
-		ci.draw_rect(Sim.ARENA, Color(1.0, 1.0, 1.0, flash))
-	var beam_scale := 0.35 if reduced else 1.0
-	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
-			Color(color, 0.06 * beam_scale * (1.0 - p)), 48.0 * beam_scale)
-	ci.draw_line(origin - Vector2(0.0, 320.0), origin + Vector2(0.0, 320.0),
-			Color(color, 0.12 * beam_scale * (1.0 - p)), 16.0 * beam_scale)
-	var ring_count := 1 if reduced else 3
-	var ring_distance := 180.0 if reduced else 540.0
-	for k in ring_count:
-		var q := clampf(p * 1.55 - 0.16 * float(k), 0.0, 1.0)
-		if q <= 0.0:
-			continue
-		ci.draw_arc(origin, 30.0 + ring_distance * q, 0.0, TAU, 64,
-				Color(color, (0.5 if reduced else 0.8) * (1.0 - q)), 3.0)
+		ci.draw_rect(Sim.ARENA, Color(PAPER, flash))
+	var alpha := minf(1.0, p * 8.0) * (1.0 - maxf(0.0, p - 0.6) / 0.4)
+	var stamp_scale := 1.0 if reduced else 1.0 + maxf(0.0, 1.0 - p * 6.0) * 0.4
+	var text := Loc.t("hud.boss_down")
+	var width := UiTheme.font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 22).x + 32.0
+	ci.draw_set_transform(origin, -0.09 if not reduced else 0.0, Vector2.ONE * stamp_scale)
+	var rect := Rect2(-width * 0.5, -28.0, width, 56.0)
+	ci.draw_rect(rect, Color(PAPER, alpha * 0.94))
+	ci.draw_rect(rect, Color(DANGER, alpha), false, 4.0)
+	ci.draw_rect(rect.grow(-7.0), Color(DANGER, alpha * 0.7), false, 1.0)
+	ci.draw_string(UiTheme.font(), Vector2(-width * 0.5 + 16.0, 8.0), text,
+			HORIZONTAL_ALIGNMENT_CENTER, width - 32.0, 22, Color(DANGER, alpha))
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 static func victory_flash_alpha(progress: float, reduced: bool) -> float:
-	return 0.0 if reduced else 0.55 * maxf(0.0, 1.0 - clampf(progress, 0.0, 1.0) * 2.4)
+	return 0.0 if reduced else 0.16 * maxf(0.0, 1.0 - clampf(progress, 0.0, 1.0) * 2.4)
 
 
 static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary,
 		reduced: bool = false) -> void:
-	var lifespan := maxi(1, sim.echo_lifespan())
-	for a in sim.echoes:
-		var pts: PackedVector2Array = paths.get(a, PackedVector2Array())
-		if pts.size() < 2:
-			continue
-		var tint := a.take.tint()
-		var remaining := clampi(lifespan - a.take.age, 0, lifespan)
-		var base_alpha := 0.07 + 0.15 * float(remaining) / float(lifespan)
+	for actor in sim.echoes:
+		var pts: PackedVector2Array = paths.get(actor, PackedVector2Array())
+		var shown := echo_path_window(actor, pts, float(reveal.get(actor, 1.0)))
+		var tint := paper_echo_color(actor.take.tint())
+		var alpha := 0.14 if reduced else 0.28
 		if sim.echo_silenced > 0.0:
-			base_alpha *= 0.45
-		if reduced:
-			ci.draw_polyline(pts, Color(tint, base_alpha * 0.8), 2.0)
-			continue
-		var progress := float(reveal.get(a, 1.0))
-		if progress <= 0.0:
-			ci.draw_polyline(pts, Color(tint, base_alpha * 0.6), 2.0)
-			continue
-		if progress < 1.0:
-			# Faint full route, then a bright head running along it.
-			ci.draw_polyline(pts, Color(tint, base_alpha * 0.5), 2.0)
-			var keep := clampi(int(ceil(progress * float(pts.size() - 1))) + 1, 1, pts.size())
-			var shown := pts.slice(0, keep)
-			if shown.size() >= 2:
-				ci.draw_polyline(shown, Color(tint, 0.6), 3.0)
-			var head := shown[shown.size() - 1]
-			ci.draw_circle(head, 3.5, Color(tint, 0.95))
-		else:
-			ci.draw_polyline(pts, Color(tint, base_alpha), 2.5)
+			alpha *= 0.4
+		for i in range(0, shown.size() - 1, 2):
+			var fade := 0.3 + 0.7 * float(i + 1) / float(maxi(1, shown.size()))
+			ci.draw_line(shown[i], shown[i + 1], Color(tint, alpha * fade), 2.0)
 
 
-# Faint dashed circle: makes pickup range upgrades (and the magnet) legible without text.
+# A bounded playback neighbourhood replaces the old full-screen route carpet.
+
+
+static func echo_path_window(actor: EchoActor, points: PackedVector2Array,
+		reveal_progress: float = 1.0) -> PackedVector2Array:
+	if points.size() < 2:
+		return PackedVector2Array()
+	var duration := actor.take.duration()
+	var progress := actor.take.playback_time(actor.t) / duration if duration > 0.0 else 0.0
+	if reveal_progress < 1.0:
+		progress = clampf(reveal_progress, 0.0, 1.0)
+	var head := clampi(roundi(progress * float(points.size() - 1)), 0, points.size() - 1)
+	var end := mini(points.size(), head + 2)
+	return points.slice(maxi(0, end - MAX_PATH_POINTS), end)
+
+
+static func paper_echo_color(identity: Color) -> Color:
+	return identity.lerp(Color("77755f"), 0.55).lerp(PAPER, 0.18)
+
+
 static func pickup_range(ci: CanvasItem, sim: Sim) -> void:
 	if sim.pickups.is_empty():
 		return
@@ -156,74 +160,79 @@ static func pickup_range(ci: CanvasItem, sim: Sim) -> void:
 	var step := TAU / float(segments)
 	for k in segments:
 		if k % 2 == 0:
-			ci.draw_arc(sim.player.pos, radius, float(k) * step, float(k + 1) * step, 4, Color(0.6, 0.9, 1.0, 0.1), 1.0)
+			ci.draw_arc(sim.player.pos, radius, float(k) * step, float(k + 1) * step, 4, Color(PAPER, 0.16), 1.0)
 
 
 static func rifts(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	for r in sim.rifts:
-		var color := Color(0.72, 0.45, 1.0)
-		if r.telegraph > 0.0:
-			var progress := 1.0 - clampf(r.telegraph / TemporalRift.TELEGRAPH_TIME, 0.0, 1.0)
-			ci.draw_circle(r.pos, r.radius, Color(color, 0.025 + 0.06 * progress))
-			ci.draw_arc(r.pos, r.radius, 0.0, TAU, 48, Color(color, 0.22 + 0.28 * progress), 2.0)
-			ci.draw_arc(r.pos, r.radius * (0.18 + 0.82 * progress), 0.0, TAU, 32,
-					Color(color, 0.12 + 0.25 * progress), 1.5)
-			if not reduced:
-				var spokes := 6
-				for k in spokes:
-					var a := TAU * float(k) / float(spokes) + sim.wave_time * 0.35
-					ci.draw_line(r.pos, r.pos + Vector2.from_angle(a) * r.radius,
-							Color(color, 0.08 + 0.08 * progress), 1.0)
+		var active := r.telegraph <= 0.0
+		var progress := 1.0 if active else 1.0 - clampf(r.telegraph / TemporalRift.TELEGRAPH_TIME, 0.0, 1.0)
+		ci.draw_circle(r.pos, r.radius, Color(DANGER, 0.15 if active else 0.045))
+		# The ink circle always matches the exact simulation radius, including reduced effects.
+		ci.draw_arc(r.pos, r.radius, 0.0, TAU, 48, Color(DANGER, 0.85 if active else 0.35 + progress * 0.35), 3.0)
+		var marks := 12
+		for k in marks:
+			if not active and k % 2 == 1:
+				continue
+			var direction := Vector2.from_angle(TAU * float(k) / float(marks))
+			ci.draw_line(r.pos + direction * (r.radius - 8.0), r.pos + direction * r.radius,
+					Color(INK if active else DANGER, 0.6), 2.0)
+		if active:
+			var wobble := 0.0 if reduced else sin(sim.wave_time * 3.0) * 1.2
+			var crease := PackedVector2Array([
+				r.pos + Vector2(-r.radius * 0.55, -5.0), r.pos + Vector2(-r.radius * 0.15, 7.0 + wobble),
+				r.pos + Vector2(r.radius * 0.15, -8.0), r.pos + Vector2(r.radius * 0.55, 4.0),
+			])
+			ci.draw_polyline(crease, Color(INK, 0.7), 3.0)
 		else:
-			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 6.0)
-			ci.draw_circle(r.pos, r.radius, Color(color, 0.08 + 0.05 * pulse))
-			ci.draw_arc(r.pos, r.radius, 0.0, TAU, 48, Color(color, 0.55), 2.5)
-			ci.draw_arc(r.pos, r.radius * 0.72, -sim.wave_time * 1.6,
-					-sim.wave_time * 1.6 + TAU * 0.62, 32, Color(color, 0.45), 1.5)
-			ci.draw_arc(r.pos, r.radius * 0.45, sim.wave_time * 2.1,
-					sim.wave_time * 2.1 + TAU * 0.45, 24, Color(color, 0.6), 1.5)
+			ci.draw_arc(r.pos, r.radius * progress, 0.0, TAU, 32, Color(DANGER, 0.28), 1.5)
 
 
 static func pickups(ci: CanvasItem, sim: Sim) -> void:
 	for pk in sim.pickups:
-		ci.draw_circle(pk.pos, 6.0, Color(UiTheme.COIN, 0.25))
-		ci.draw_circle(pk.pos, 3.2, UiTheme.COIN)
+		var rect := Rect2(pk.pos - Vector2(3.0, 4.0), Vector2(6.0, 8.0))
+		ci.draw_rect(rect, PAPER)
+		ci.draw_rect(rect, INK, false, 1.0)
+		ci.draw_line(rect.position + Vector2(1.5, 3.0), rect.position + Vector2(4.5, 3.0), INK, 1.0)
 
 
-static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
+static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false, visual_time: float = -1.0) -> void:
 	var target := sim.player.pos
+	var clock := sim.wave_time if visual_time < 0.0 else visual_time
 	for e in sim.enemies:
-		var col := _elite_color(e.elite_kind) if e.elite else e.def.color
+		var col := _elite_color(e.elite_kind) if e.elite else DANGER
 		if e.flash > 0.0:
 			col = Color.WHITE
 		var key := PresentationAssets.enemy_key(e.def)
-		var stride := sin(sim.wave_time * (7.5 if e.def.id == &"runner" else 4.5)
+		var stride := sin(clock * (7.5 if e.def.id == &"runner" else 4.5)
 				+ e.pos.x * 0.021 + e.pos.y * 0.013) * (REDUCED_MOTION_SCALE if reduced else 1.0)
 		var facing := (target - e.pos).normalized()
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
 		var art_size := _enemy_bounds(e.def.id) * e.radius / maxf(1.0, e.def.radius)
 		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
-		var art_tint := Color.WHITE if e.flash > 0.0 else col.lerp(Color.WHITE, 0.58)
+		var art_tint := Color(1.0, 0.76, 0.68) if e.flash > 0.0 else Color.WHITE
+		var frame := actor_frame(key, clock + float(e.uid) * 0.137, e.speed > 0.0, e.flash > 0.0, reduced)
 		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + stride * minf(1.8, e.radius * 0.08))
 		var rotation := _warden_rotation(facing) if e.def.id == &"warden" else 0.0
 		var flip := facing.x > 0.0 and e.def.id != &"warden"
+		if e.def.is_boss:
+			var boss_art := boss_art_profile(sim.boss_phase, sim.boss_shards.find(e), clock, reduced)
+			frame = int(boss_art["frame"])
+			flip = bool(boss_art["flip"])
 		if e.def.id == &"warden":
 			# The shield arc is centered on e.pos. Rotate the authored shield body around the same
 			# point; a foot pivot makes its center orbit away from the gameplay-facing arc.
-			_draw_art(ci, key, e.pos, art_size, rotation, Color(art_tint, 0.96))
+			_draw_art(ci, key, e.pos, art_size, rotation, art_tint, false, frame)
 		else:
-			_draw_art_foot(ci, key, foot, art_size, rotation, Color(art_tint, 0.96), flip)
+			_draw_art_foot(ci, key, foot, art_size, rotation, art_tint, flip, frame)
 		if e.def.is_boss:
-			var spin := sim.wave_time * 0.7
-			ci.draw_arc(e.pos, e.radius + 7.0, spin, spin + TAU * 0.75, 40, Color(col, 0.8), 3.0)
-			ci.draw_arc(e.pos, e.radius + 13.0, -spin, -spin + TAU * 0.45, 28, Color(col, 0.45), 2.0)
-			ci.draw_circle(e.pos, e.radius * 0.4, Color(0.05, 0.02, 0.1, 0.9))
+			# A torn original has an ink footprint, not a luminous mechanical halo.
+			ci.draw_arc(e.pos, e.radius + 5.0, 0.0, TAU, 28, Color(INK, 0.65), 2.0)
 			if sim.boss_phase >= 2 and sim.boss_shards.has(e):
-				ci.draw_arc(e.pos, e.radius + 19.0, -spin * 1.4, -spin * 1.4 + TAU * 0.6, 32,
-						Color(0.65, 0.8, 1.0, 0.55), 2.0)
-		elif e.def.sides < 3:
-			ci.draw_arc(e.pos, e.radius + 2.0, 0.0, TAU, 16, Color(col, 0.35), 2.0)
+				var notch := PackedVector2Array([e.pos + Vector2(-8.0, -e.radius - 7.0),
+					e.pos + Vector2(0.0, -e.radius), e.pos + Vector2(8.0, -e.radius - 7.0)])
+				ci.draw_polyline(notch, DANGER, 3.0)
 		if e.elite:
 			var rules := enemy_rule_profile(e, target, sim.wave_time, reduced)
 			var aura: Color = rules["aura_color"]
@@ -261,10 +270,11 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 			var b := alive[1]
 			var mid := (a.pos + b.pos) * 0.5
 			var pulse := 0.5 + 0.5 * sin(sim.wave_time * 5.0)
-			var link := Color(0.65, 0.8, 1.0, 0.18 + 0.16 * pulse)
+			var link := Color(INK, 0.3 + 0.12 * pulse)
 			ci.draw_line(a.pos, mid, link, 2.0)
 			ci.draw_line(mid, b.pos, link, 2.0)
-			ci.draw_circle(mid, 4.0 + pulse * 2.0, Color(0.75, 0.6, 1.0, 0.5))
+			ci.draw_rect(Rect2(mid - Vector2(5.0, 2.0), Vector2(10.0, 4.0)), PAPER)
+			ci.draw_rect(Rect2(mid - Vector2(5.0, 2.0), Vector2(10.0, 4.0)), INK, false, 1.0)
 
 
 static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: float,
@@ -306,50 +316,47 @@ static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: fl
 
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
-		recoils: Array[Dictionary] = [], reduced: bool = false) -> void:
+		recoils: Array[Dictionary] = [], reduced: bool = false, visual_time: float = -1.0) -> void:
 	var r := PlayerState.RADIUS
-	var lifespan := sim.echo_lifespan()
-	var segments := maxi(1, lifespan)
-	var step := TAU / float(segments)
-	var pulse := 0.5 + 0.5 * sin(sim.wave_time * 8.0)
-	for a in sim.echoes:
-		var c := a.take.tint()
-		var remaining := maxi(0, lifespan - a.take.age)
+	var lifespan := maxi(1, sim.echo_lifespan())
+	var clock := sim.wave_time if visual_time < 0.0 else visual_time
+	for actor in sim.echoes:
+		var c := paper_echo_color(actor.take.tint())
+		var remaining := maxi(0, lifespan - actor.take.age)
 		var muted := sim.echo_silenced > 0.0
+		var moving := actor.take.position_at(actor.t + EchoTake.SAMPLE_DT).distance_squared_to(actor.pos) > 0.01
 		var motion_scale := REDUCED_MOTION_SCALE if reduced else 1.0
-		var bob := _motion_bob(sim.wave_time, a.pos, 5.0, 1.5) * motion_scale
-		var art_alpha := 0.22 if muted else 0.48
-		var breathe := 1.0 + sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.018 * motion_scale
-		var facing := _echo_facing(a)
-		var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
+		var bob := _motion_bob(clock, actor.pos, 7.0, 1.0) * motion_scale if moving else 0.0
+		var alpha := 0.25 if muted else lerpf(0.48, 0.72, float(remaining) / float(lifespan))
+		var facing := _echo_facing(actor)
 		var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
-		var foot := a.pos + Vector2(0.0, r + bob)
-		_draw_art_foot(ci, key, foot, art_size,
-				sin(sim.wave_time * 3.0 + a.pos.x * 0.02) * 0.035 * motion_scale,
-				Color(c.lerp(Color.WHITE, 0.28), art_alpha), _horizontal_flip(facing))
-		var weapons: Array[WeaponDef] = a.take.weapons
-		if sim.live_echo:
-			weapons = sim.player.weapons
-		_draw_weapon_loadout(ci, sim, a.pos, weapons, facing, bob, art_alpha,
-				c, 0.45, 0.82, a.index, recoils)
-		ci.draw_arc(a.pos, r, 0.0, TAU, 24, Color(c, 0.3 if muted else 0.9), 2.0)
-		# One arc per wave of life left, so expiry is visible in the arena, not just in the shop.
-		for k in segments:
-			var start := -PI * 0.5 + float(k) * step
-			var col := Color(c, 0.85) if k < remaining else Color(c, 0.12)
-			ci.draw_arc(a.pos, r + 6.0, start, start + step * 0.82, 6, col, 2.0)
+		var frame := actor_frame(key, clock + float(actor.index) * 0.13, moving, false, reduced)
+		var foot := actor.pos + Vector2(0.0, r + bob)
+		var art_size := _character_bounds(character_id)
+		# A misregistered second print is a copy's silhouette, not another gameplay body.
+		_draw_art_foot(ci, key, foot + Vector2(2.0, 0.0), art_size, 0.0,
+				Color(c, alpha * 0.38), _horizontal_flip(facing), frame)
+		_draw_art_foot(ci, key, foot, art_size, 0.0,
+				Color(PAPER.lerp(c, 0.22), alpha), _horizontal_flip(facing), frame)
+		var weapons: Array[WeaponDef] = sim.player.weapons if sim.live_echo else actor.take.weapons
+		_draw_weapon_loadout(ci, sim, actor.pos, weapons, facing, bob, alpha,
+				c, 0.45, 0.82, actor.index, recoils)
+		var pips := mini(8, lifespan)
+		for k in pips:
+			var filled := float(k) / float(pips) < float(remaining) / float(lifespan)
+			var rect := Rect2(actor.pos + Vector2(-14.0 + float(k) * 28.0 / float(pips), r + 3.0),
+					Vector2(28.0 / float(pips) - 1.0, 3.0))
+			ci.draw_rect(rect, c if filled else Color(INK, 0.25))
 		if remaining <= 1:
-			ci.draw_arc(a.pos, r + 9.0, 0.0, TAU, 28, Color(UiTheme.WARN, 0.2 + 0.5 * pulse), 1.5)
+			ci.draw_line(foot + Vector2(-12.0, 1.0), foot + Vector2(12.0, 1.0), DANGER, 2.0)
 		if muted:
-			ci.draw_line(a.pos + Vector2(-5.0, -5.0), a.pos + Vector2(5.0, 5.0), Color(UiTheme.WARN, 0.9), 2.0)
-			ci.draw_line(a.pos + Vector2(5.0, -5.0), a.pos + Vector2(-5.0, 5.0), Color(UiTheme.WARN, 0.9), 2.0)
-		elif a.rewinding:
-			for dx in [-3.0, 2.0]:
-				var tip := a.pos + Vector2(dx - 2.5, 0.0)
-				var chevron := PackedVector2Array([tip + Vector2(5.0, -5.0), tip, tip + Vector2(5.0, 5.0)])
-				ci.draw_polyline(chevron, Color(c, 0.95), 2.0)
-		else:
-			ci.draw_circle(a.pos, 3.0, Color(c, 0.9))
+			ci.draw_line(actor.pos + Vector2(-6.0, -6.0), actor.pos + Vector2(6.0, 6.0), DANGER, 3.0)
+			ci.draw_line(actor.pos + Vector2(6.0, -6.0), actor.pos + Vector2(-6.0, 6.0), DANGER, 3.0)
+		elif actor.rewinding:
+			for dx in [-4.0, 2.0]:
+				var tip := actor.pos + Vector2(dx - 15.0, -6.0)
+				ci.draw_polyline(PackedVector2Array([tip + Vector2(4.0, -3.0), tip,
+					tip + Vector2(4.0, 3.0)]), Color(c, 0.8), 2.0)
 
 
 static func projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
@@ -364,15 +371,22 @@ static func projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void
 			var p := sim.projectiles[i]
 			_bullet_mesh.set_instance_transform_2d(i,
 					Transform2D(Vector2(p.radius, 0.0), Vector2(0.0, p.radius), p.pos))
-			_bullet_mesh.set_instance_color(i, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+			_bullet_mesh.set_instance_color(i, projectile_color(p))
 		ci.draw_multimesh(_bullet_mesh, _bullet_texture)
 		return
 	for p in sim.projectiles:
 		var dir := p.vel.normalized()
 		if projectile_trails_enabled(reduced, count):
 			ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos,
-					Color(p.color, 0.5), p.radius * 1.2)
-		ci.draw_circle(p.pos, p.radius, Color(1.0, 1.0, 0.6) if p.crit else p.color)
+					Color(projectile_color(p), 0.38), p.radius * 1.2)
+		ci.draw_circle(p.pos, p.radius + 1.0, INK)
+		ci.draw_circle(p.pos, p.radius, projectile_color(p))
+
+
+static func projectile_color(projectile: Projectile) -> Color:
+	if projectile.crit:
+		return Color("edc66d")
+	return projectile.color.lerp(PAPER, 0.42).lerp(INK, 0.12)
 
 
 static func projectile_trails_enabled(reduced: bool, count: int) -> bool:
@@ -382,7 +396,7 @@ static func projectile_trails_enabled(reduced: bool, count: int) -> bool:
 static func _bullet_trails(ci: CanvasItem, sim: Sim) -> void:
 	for p in sim.projectiles:
 		var dir := p.vel.normalized()
-		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(p.color, 0.5), p.radius * 1.2)
+		ci.draw_line(p.pos - dir * (p.radius * 2.4 + 6.0), p.pos, Color(projectile_color(p), 0.38), p.radius * 1.2)
 
 
 static func _ensure_bullet_resources() -> void:
@@ -394,7 +408,8 @@ static func _ensure_bullet_resources() -> void:
 	for y in size:
 		for x in size:
 			var d := Vector2(float(x) + 0.5 - c, float(y) + 0.5 - c).length()
-			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(c - d, 0.0, 1.0)))
+			var fill := Color(0.18, 0.16, 0.13) if d > c - 3.0 else Color.WHITE
+			image.set_pixel(x, y, Color(fill, clampf(c - d, 0.0, 1.0)))
 	_bullet_texture = ImageTexture.create_from_image(image)
 	var quad := QuadMesh.new()
 	quad.size = Vector2(2.0, 2.0)
@@ -411,6 +426,37 @@ static func _ensure_bullet_capacity(count: int) -> void:
 	_bullet_mesh.instance_count = _bullet_capacity
 
 
+# Walk frames share a single asset identity. Squash is a deliberately drawn fourth pose.
+
+
+static func actor_frame(key: StringName, visual_time: float, moving: bool,
+		hurt: bool = false, reduced: bool = false) -> int:
+	var count := PresentationAssets.frame_count(key)
+	if count <= 1:
+		return 0
+	if hurt:
+		return mini(3, count - 1)
+	if not moving:
+		return 0
+	var phase := posmod(int(floor(maxf(0.0, visual_time) * (5.0 if reduced else 8.0))), 4)
+	var sequence: Array[int] = [0, 1, 0, 2]
+	return mini(sequence[phase], count - 1)
+
+
+# Boss cells have authored semantics: original, roar, left half, right half.
+# Phase one must never borrow a torn half as a walk or generic hurt pose.
+static func boss_art_profile(phase: int, shard_index: int, visual_time: float,
+		reduced: bool = false) -> Dictionary:
+	var count := maxi(1, PresentationAssets.frame_count(&"enemy_paradox"))
+	var frame := 0
+	if phase >= 2:
+		frame = 2 + posmod(maxi(0, shard_index), 2)
+	elif not reduced:
+		frame = posmod(int(floor(maxf(0.0, visual_time) * 2.0)), 2)
+	# Each tear edge is already drawn on its correct side; mirroring swaps its identity.
+	return {"frame": mini(frame, count - 1), "flip": false}
+
+
 static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
 		motion: Dictionary = {}, recoils: Array[Dictionary] = []) -> void:
 	var pl := sim.player
@@ -418,7 +464,7 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	if pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
 		alpha = 0.35
 	var r := PlayerState.RADIUS
-	ci.draw_circle(pl.pos, r + 6.0, Color(PLAYER, 0.12 * alpha))
+	ci.draw_circle(pl.pos + Vector2(0.0, 5.0), r + 3.0, Color(INK, 0.22 * alpha))
 	var visual_time := float(motion.get("visual_time", sim.wave_time))
 	var move_weight := clampf(float(motion.get("amount", 0.0)), 0.0, 1.0)
 	var reduced := bool(motion.get("reduced", false))
@@ -431,8 +477,9 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
 	var foot := pl.pos + Vector2(0.0, r + bob)
+	var frame := actor_frame(key, visual_time, move_weight > 0.05, pl.iframes > 0.22, reduced)
 	_draw_art_foot(ci, key, foot, art_size, sway, Color(1.0, 1.0, 1.0, alpha),
-			_horizontal_flip(facing))
+			_horizontal_flip(facing), frame)
 	var count := pl.weapons.size()
 	# shot_fired only identifies its source actor, not the weapon or target. Keep presentation
 	# stable by aiming the mounted loadout at the nearest live enemy, then falling back to facing.
@@ -443,11 +490,17 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 
 static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
 	for s in list:
-		var t := s.life / s.max_life
+		var t := clampf(s.life / s.max_life, 0.0, 1.0)
 		if s.ring:
-			ci.draw_arc(s.pos, s.radius + (1.0 - t) * 46.0, 0.0, TAU, 28, Color(s.color, t), 2.0)
+			ci.draw_arc(s.pos, s.radius + (1.0 - t) * 46.0, 0.0, TAU, 24,
+					Color(paper_echo_color(s.color), t * 0.65), 2.0)
 		else:
-			ci.draw_circle(s.pos, 1.5 + 2.0 * t, Color(s.color, t))
+			var side := 2.0 + t * 2.5
+			ci.draw_set_transform(s.pos, s.rotation, Vector2.ONE)
+			var rect := Rect2(Vector2(-side, -side * 0.65), Vector2(side * 2.0, side * 1.3))
+			ci.draw_rect(rect, Color(PAPER.lerp(paper_echo_color(s.color), 0.2), t))
+			ci.draw_rect(rect, Color(INK, t * 0.8), false, 1.0)
+			ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Array[Dictionary],
@@ -474,6 +527,7 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 		# Event origin and direction are authoritative; this short reverse stroke is visual recoil,
 		# not a claim about which duplicate weapon slot fired.
 		var origin: Vector2 = data["origin"]
+		_ink_burst(ci, pos, length * 0.55 * t, Color(color, t), direction.angle())
 		ci.draw_line(origin, origin - direction * float(profile["recoil"]) * t,
 				Color(color, 0.45 * t), 2.0)
 		if bool(profile["evolved"]):
@@ -483,6 +537,7 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 		var pos: Vector2 = data["pos"]
 		var direction: Vector2 = data["direction"]
 		var normal := Vector2(-direction.y, direction.x)
+		_ink_burst(ci, pos, (10.0 if bool(data["crit"]) else 6.0) * t, Color(PAPER, t), direction.angle())
 		var base_color: Color = data["color"]
 		var color := base_color.lerp(Color(1.0, 1.0, 0.45), 0.8) if bool(data["crit"]) else base_color
 		if bool(data["has_direction"]):
@@ -506,7 +561,14 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 		var radius := float(data["radius"])
 		var color: Color = data["color"]
 		var pos: Vector2 = data["pos"]
-		if data["kind"] == ExplosionInfo.BOMBER:
+		if data["effect"] == &"echo_collapse":
+			var paper_size := Vector2(26.0, 32.0) * maxf(0.12, 1.0 - p * 3.0)
+			var paper := Rect2(pos - paper_size * 0.5, paper_size)
+			ci.draw_rect(paper, Color(PAPER, t))
+			ci.draw_rect(paper, Color(INK, t), false, 2.0)
+			_ink_burst(ci, pos, radius * p, Color(DANGER, t * 0.8), p * 0.3)
+			ci.draw_arc(pos, radius * p, 0.0, TAU, 40, Color(DANGER, t), 3.0)
+		elif data["kind"] == ExplosionInfo.BOMBER:
 			ci.draw_arc(pos, radius * (0.35 + 0.65 * p), 0.0, TAU, 28,
 					Color(UiTheme.WARN, 0.85 * t), 3.0)
 		else:
@@ -532,31 +594,55 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 				0.0, TAU, 12, Color(UiTheme.ACCENT, 0.65 * t), 1.5)
 
 
+static func _ink_burst(ci: CanvasItem, center: Vector2, radius: float,
+		color: Color, rotation: float = 0.0) -> void:
+	var points := ink_burst_points(radius)
+	if points.is_empty() or color.a <= 0.01 or not center.is_finite() or not is_finite(rotation):
+		return
+	# Triangulate around zero, then place the finished shape. Absolute arena coordinates
+	# caused float cancellation in Godot's ear-clipping test as the star faded below a pixel.
+	ci.draw_set_transform(center, rotation, Vector2.ONE)
+	ci.draw_colored_polygon(points, color)
+	points.append(points[0])
+	ci.draw_polyline(points, Color(INK, color.a), 1.4)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+static func ink_burst_points(radius: float) -> PackedVector2Array:
+	if not is_finite(radius) or radius < 0.75:
+		return PackedVector2Array()
+	var points := PackedVector2Array()
+	for i in 10:
+		var length := radius if i % 2 == 0 else radius * 0.4
+		points.append(Vector2.from_angle(TAU * float(i) / 10.0) * length)
+	return points
+
+
 static func weapon_feedback_profile(id: StringName) -> Dictionary:
 	var style: StringName = &"sidearm"
-	var color := Color(0.55, 0.95, 1.0)
+	var color := Color("c5a14d")
 	var length := 12.0
 	var recoil := 4.0
 	match id:
 		&"shotgun", &"flechette", &"flak_crown":
 			style = &"scatter"
-			color = Color(1.0, 0.68, 0.3)
+			color = Color("c78346")
 			length = 15.0
 			recoil = 6.0
 		&"rifle", &"longbow", &"rail_spike":
 			style = &"marksman"
-			color = Color(1.0, 0.5, 0.7)
+			color = Color("be5749")
 			length = 23.0
 			recoil = 5.0
 		&"orb", &"hex_bolt", &"nova_core":
 			style = &"arcane"
-			color = Color(0.75, 0.55, 1.0)
+			color = Color("8f7a95")
 			length = 12.0
 			recoil = 3.0
 		&"smg":
 			length = 9.0
 			recoil = 2.5
-			color = Color(0.55, 1.0, 0.6)
+			color = Color("82935e")
 		&"twin_fangs":
 			length = 14.0
 			recoil = 3.5
@@ -566,9 +652,9 @@ static func weapon_feedback_profile(id: StringName) -> Dictionary:
 
 
 static func _draw_art(ci: CanvasItem, key: StringName, center: Vector2, size: Vector2,
-		rotation: float, tint: Color, flip_x: bool = false) -> bool:
+		rotation: float, tint: Color, flip_x: bool = false, frame: int = 0) -> bool:
 	var tex := PresentationAssets.texture(key)
-	var source := PresentationAssets.region(key)
+	var source := PresentationAssets.frame_region(key, frame)
 	if tex == null or not source.has_area():
 		return false
 	var fitted := _contained_size(source.size, size)
@@ -579,9 +665,9 @@ static func _draw_art(ci: CanvasItem, key: StringName, center: Vector2, size: Ve
 
 
 static func _draw_art_foot(ci: CanvasItem, key: StringName, foot: Vector2, bounds: Vector2,
-		rotation: float, tint: Color, flip_x: bool = false) -> bool:
+		rotation: float, tint: Color, flip_x: bool = false, frame: int = 0) -> bool:
 	var tex := PresentationAssets.texture(key)
-	var source := PresentationAssets.region(key)
+	var source := PresentationAssets.frame_region(key, frame)
 	if tex == null or not source.has_area():
 		return false
 	var fitted := _contained_size(source.size, bounds)
@@ -631,21 +717,21 @@ static func _weapon_size(key: StringName) -> Vector2:
 static func _elite_color(kind: StringName) -> Color:
 	match kind:
 		&"overclocked":
-			return Color(0.35, 0.9, 1.0)
+			return Color("bf9e48")
 		&"bulwark":
-			return Color(0.55, 0.7, 1.0)
+			return Color("748894")
 		&"volatile":
-			return Color(1.0, 0.55, 0.25)
+			return DANGER
 		&"splitter":
-			return Color(0.55, 1.0, 0.45)
+			return Color("82935e")
 		_:
-			return Color(0.8, 0.5, 1.0)
+			return Color("8f7a95")
 
 
 static func _enemy_bounds(id: StringName) -> Vector2:
 	match id:
 		&"runner":
-			return Vector2(30.0, 30.0)
+			return Vector2(38.0, 38.0)
 		&"brute":
 			return Vector2(58.0, 44.0)
 		&"silencer":
@@ -657,17 +743,17 @@ static func _enemy_bounds(id: StringName) -> Vector2:
 		&"paradox":
 			return Vector2(88.0, 72.0)
 		_:
-			return Vector2(36.0, 30.0)
+			return Vector2(42.0, 40.0)
 
 
 static func _character_bounds(id: StringName) -> Vector2:
 	match id:
 		&"solo":
-			return Vector2(44.0, 56.0)
+			return Vector2(50.0, 62.0)
 		&"mirror":
-			return Vector2(48.0, 58.0)
+			return Vector2(54.0, 64.0)
 		&"conductor":
-			return Vector2(50.0, 56.0)
+			return Vector2(58.0, 64.0)
 		_:
 			return PLAYER_ART_SIZE
 
@@ -712,7 +798,7 @@ static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 		var mount := origin + aim * (slot.x - recoil) + normal * slot.y + Vector2(0.0, bob)
 		var key := PresentationAssets.weapon_key(w)
 		var size := _weapon_size(key) * crowd_scale * size_mult
-		var color := w.color.lerp(actor_tint, tint_weight).lerp(Color.WHITE, 0.35)
+		var color := Color.WHITE.lerp(actor_tint, tint_weight * 0.55)
 		_draw_art(ci, key, mount, size, aim.angle(), Color(color, alpha))
 
 

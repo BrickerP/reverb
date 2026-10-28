@@ -13,6 +13,7 @@ var last_new_tint: Color = Color.WHITE
 var reduced_effects := false
 
 var _box: VBoxContainer
+var _takes_box: VBoxContainer
 var _sim: Sim
 var _animate_new := false
 var _merge_mode := false
@@ -20,6 +21,8 @@ var _merge_first: EchoTake
 var _new_row_tween: Tween
 var _animated_strip: Control
 var _animated_info: Control
+var _merge_tween: Tween
+var _stamped_row: Control
 
 
 class TakeMeter:
@@ -33,16 +36,31 @@ class TakeMeter:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.1))
+		draw_rect(Rect2(Vector2.ZERO, size), Color(UiTheme.EDGE, 0.15))
 		draw_rect(Rect2(Vector2.ZERO, Vector2(size.x * clampf(ratio, 0.0, 1.0), size.y)), Color(tint, 0.9))
 
 
+class StapleMark:
+	extends Control
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(24.0, 14.0)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		# A physical staple remains on merged copies after the press has settled.
+		draw_line(Vector2(4.0, 11.0), Vector2(4.0, 4.0), UiTheme.EDGE, 3.0, true)
+		draw_line(Vector2(4.0, 4.0), Vector2(20.0, 4.0), UiTheme.EDGE, 3.0, true)
+		draw_line(Vector2(20.0, 4.0), Vector2(20.0, 11.0), UiTheme.EDGE, 3.0, true)
+
+
 func _init() -> void:
-	custom_minimum_size = Vector2(448.0, 0.0)
+	custom_minimum_size = Vector2(392.0, 0.0)
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var surface_source := UiTheme.surface_panel()
 	if surface_source != null:
 		var surface := surface_source.duplicate() as StyleBoxTexture
-		surface.region_rect = Rect2(32.0, 32.0, 448.0, 448.0)
+		surface.region_rect = Rect2(Vector2.ZERO, surface.texture.get_size())
 		surface.texture_margin_left = 10.0
 		surface.texture_margin_right = 10.0
 		surface.texture_margin_top = 10.0
@@ -117,17 +135,22 @@ func _render() -> void:
 	var heading := Loc.t("shop.echoes", [sim.bank.takes.size(), capacity])
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
-	var title := UiTheme.label(heading, 22, UiTheme.WARN if over > 0 else UiTheme.ECHO)
+	var title := UiTheme.section_label(heading, 21, UiTheme.WARN if over > 0 else UiTheme.ECHO)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	if capacity > 0 and not sim.bank.takes.is_empty():
 		merge_button = Button.new()
 		merge_button.text = Loc.t("shop.cancel") if _merge_mode else Loc.t("shop.merge")
-		merge_button.custom_minimum_size = Vector2(72.0, 30.0)
+		merge_button.custom_minimum_size = Vector2(80.0, 34.0)
+		merge_button.add_theme_font_size_override("font_size", 14)
+		UiTheme.stamp_button(merge_button, UiTheme.ECHO)
 		merge_button.disabled = not _merge_mode and sim.bank.takes.size() < 2
 		merge_button.pressed.connect(_on_merge_button)
 		head.add_child(merge_button)
 	_box.add_child(head)
+	var copies_hint := UiTheme.label(Loc.t("shop.copies_hint"), 13, UiTheme.DIM)
+	copies_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_box.add_child(copies_hint)
 	if _merge_mode:
 		var hint := UiTheme.label(Loc.t("shop.merge_hint"), 14, UiTheme.ACCENT)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -142,6 +165,16 @@ func _render() -> void:
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_box.add_child(hint)
 		return
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.follow_focus = true
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_box.add_child(scroll)
+	_takes_box = VBoxContainer.new()
+	_takes_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_takes_box.add_theme_constant_override("separation", 9)
+	scroll.add_child(_takes_box)
 	var lifespan := sim.echo_lifespan()
 	var best := 1.0
 	for take: EchoTake in sim.bank.takes:
@@ -154,7 +187,7 @@ func _render() -> void:
 	for take: EchoTake in newest_first:
 		var is_new := _animate_new and take.age == 0
 		var row := _row(take, sim, lifespan, best, is_new, take == _merge_first)
-		_box.add_child(row)
+		_takes_box.add_child(row)
 		if is_new:
 			new_row = row
 			last_new_row = row
@@ -181,20 +214,47 @@ func newest_tint() -> Color:
 	return last_new_tint
 
 
+func confirm_merge() -> void:
+	if reduced_effects or _takes_box == null or _takes_box.get_child_count() == 0:
+		return
+	_stamped_row = _takes_box.get_child(0) as Control
+	_stamped_row.pivot_offset = _stamped_row.size * 0.5
+	_stamped_row.scale = Vector2(0.97, 0.94)
+	_stamped_row.rotation = -0.014
+	_merge_tween = _stamped_row.create_tween().set_parallel(true)
+	_merge_tween.tween_property(_stamped_row, "scale", Vector2.ONE, 0.18) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_merge_tween.tween_property(_stamped_row, "rotation", 0.0, 0.18)
+
+
 func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, selected: bool) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	var row := PanelContainer.new()
+	var style := UiTheme.box(UiTheme.PAPER if selected else UiTheme.CARD,
+			UiTheme.ECHO if selected else UiTheme.EDGE, 3 if selected else 2, 2)
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 7.0
+	style.content_margin_bottom = 7.0
+	style.set_border_width(SIDE_BOTTOM, 4)
+	row.add_theme_stylebox_override("panel", style)
+	var sheet := VBoxContainer.new()
+	sheet.add_theme_constant_override("separation", 6)
+	row.add_child(sheet)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
+	sheet.add_child(top)
 	var strip := ColorRect.new()
-	strip.color = Color(UiTheme.ACCENT, 0.95) if selected else Color(take.tint(), 0.9)
-	strip.custom_minimum_size = Vector2(6.0 if selected else 4.0, 0.0)
+	strip.color = UiTheme.ECHO if selected else take.tint().lerp(UiTheme.INK, 0.4)
+	strip.custom_minimum_size = Vector2(4.0, 0.0)
 	strip.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_child(strip)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(strip)
 	var preview := PathPreview.new()
 	preview.setup(take, animate and not reduced_effects)
-	var cartridge := UiTheme.cartridge_icon(Vector2(30.0, 20.0))
-	cartridge.position = Vector2(76.0, 3.0)
+	var cartridge := UiTheme.cartridge_icon(Vector2(25.0, 18.0))
+	cartridge.position = Vector2(47.0, 2.0)
 	preview.add_child(cartridge)
-	row.add_child(preview)
+	top.add_child(preview)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 4)
@@ -208,37 +268,44 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.merged"), 12, UiTheme.COIN))
 	if take.age == 0:
 		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 12, UiTheme.ACCENT))
-	var dps_label := UiTheme.label(Loc.t("shop.take_dps", [dps]), 14, UiTheme.DIM)
-	meta.add_child(dps_label)
+	meta.add_child(UiTheme.label(Loc.t("shop.take_dps", [dps]), 13, UiTheme.DIM))
+	info.add_child(meta)
+	var meter := TakeMeter.new()
+	meter.tint = take.tint().lerp(UiTheme.INK, 0.4)
+	meter.ratio = float(dps) / maxf(1.0, best)
+	info.add_child(meter)
+	top.add_child(info)
+	var loadout := UiTheme.label(Loc.t("shop.live_loadout") if sim.live_echo else _loadout(take), 13, UiTheme.DIM)
+	loadout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	loadout.custom_minimum_size = Vector2(180.0, 0.0)
+	sheet.add_child(loadout)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 8)
+	sheet.add_child(actions)
 	if not _merge_mode and take.age > 0:
 		var cost := sim.shop.echo_refresh_cost(take, sim)
 		var refresh := Button.new()
 		refresh.text = Loc.t("shop.refresh", [cost])
 		refresh.disabled = sim.player.materials < cost
-		refresh.custom_minimum_size = Vector2(0.0, 28.0)
-		refresh.add_theme_font_size_override("font_size", 12)
+		refresh.custom_minimum_size = Vector2(0.0, 30.0)
+		refresh.add_theme_font_size_override("font_size", 13)
 		refresh.pressed.connect(_on_refresh.bind(take))
 		refresh_buttons.append(refresh)
-		meta.add_child(refresh)
-	info.add_child(meta)
-	var meter := TakeMeter.new()
-	meter.tint = take.tint()
-	meter.ratio = float(dps) / maxf(1.0, best)
-	info.add_child(meter)
-	var loadout := UiTheme.label(Loc.t("shop.live_loadout") if sim.live_echo else _loadout(take), 14, UiTheme.DIM)
-	loadout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.add_child(loadout)
-	row.add_child(info)
+		actions.add_child(refresh)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	actions.add_child(spacer)
 	var button := Button.new()
-	if _merge_mode:
-		button.text = Loc.t("shop.selected") if selected else Loc.t("shop.select")
-	else:
-		button.text = Loc.t("shop.discard")
-	button.custom_minimum_size = Vector2(84.0, 40.0)
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.text = (Loc.t("shop.selected") if selected else Loc.t("shop.select")) \
+			if _merge_mode else Loc.t("shop.discard")
+	button.custom_minimum_size = Vector2(88.0, 30.0)
+	button.add_theme_font_size_override("font_size", 13)
 	button.pressed.connect(_on_row.bind(take))
 	discard_buttons.append(button)
-	row.add_child(button)
+	actions.add_child(button)
+	row.set_meta(&"take_identity", strip)
+	row.set_meta(&"take_info", info)
 	return row
 
 
@@ -284,8 +351,8 @@ func _animate_new_row(row: Control) -> void:
 		return
 	# Keep the action button at full contrast (it may hold keyboard focus); only the
 	# identity strip and the take's text fade in.
-	var strip := row.get_child(0) as Control
-	var info := row.get_child(2) as Control
+	var strip := row.get_meta(&"take_identity", null) as Control
+	var info := row.get_meta(&"take_info", null) as Control
 	if strip == null or info == null:
 		return
 	strip.modulate.a = 0.25
@@ -298,6 +365,13 @@ func _animate_new_row(row: Control) -> void:
 
 
 func _finish_new_row_animation() -> void:
+	if _merge_tween != null and _merge_tween.is_valid():
+		_merge_tween.kill()
+	_merge_tween = null
+	if is_instance_valid(_stamped_row):
+		_stamped_row.scale = Vector2.ONE
+		_stamped_row.rotation = 0.0
+	_stamped_row = null
 	if _new_row_tween != null and _new_row_tween.is_valid():
 		_new_row_tween.kill()
 	_new_row_tween = null
@@ -313,17 +387,21 @@ func _title_line(take: EchoTake) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 8)
 	line.add_child(UiTheme.label(Loc.t("shop.take", [take.wave]), 16))
+	if take.merged:
+		line.add_child(StapleMark.new())
 	return line
 
 
 func _pips(remaining: int, total: int, tint: Color) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 3)
-	for k in maxi(1, total):
+	for k in clampi(total, 1, 8):
 		var pip := ColorRect.new()
 		pip.custom_minimum_size = Vector2(10.0, 6.0)
-		pip.color = Color(tint, 0.9) if k < remaining else Color(1, 1, 1, 0.14)
+		pip.color = tint.lerp(UiTheme.INK, 0.4) if k < remaining else Color(UiTheme.EDGE, 0.16)
 		line.add_child(pip)
+	if total > 8:
+		line.add_child(UiTheme.label("%d/%d" % [remaining, total], 12, UiTheme.DIM))
 	return line
 
 

@@ -35,27 +35,30 @@ func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.01, 0.01, 0.04, 0.82)
+	dim.color = Color(UiTheme.EDGE, 0.82)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(720.0, 0.0)
+	panel.custom_minimum_size = Vector2(900.0, 0.0)
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
+		margin.add_theme_constant_override("margin_" + side, 22)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 16)
+	box.add_theme_constant_override("separation", 12)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(box)
 	_title = UiTheme.label("", 40, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	_stats = UiTheme.label("", 20, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(UiTheme.label(Loc.t("end.report"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(_title)
+	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stats.custom_minimum_size = Vector2(760.0, 0.0)
 	box.add_child(_stats)
 	var seed_row := HBoxContainer.new()
 	seed_row.add_theme_constant_override("separation", 10)
@@ -79,7 +82,7 @@ func _ready() -> void:
 	_unlock = UiTheme.label("", 15, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_unlock)
 	_best_row = HBoxContainer.new()
-	_best_row.add_theme_constant_override("separation", 16)
+	_best_row.add_theme_constant_override("separation", 12)
 	_best_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_best_preview = PathPreview.new()
 	_best_row.add_child(_best_preview)
@@ -98,6 +101,7 @@ func _ready() -> void:
 	endless_button = Button.new()
 	endless_button.custom_minimum_size = Vector2(220.0, 52.0)
 	endless_button.pressed.connect(func() -> void: endless_requested.emit())
+	UiTheme.stamp_button(endless_button, UiTheme.ECHO)
 	endless_row.add_child(endless_button)
 	boss_rush_button = Button.new()
 	boss_rush_button.custom_minimum_size = Vector2(220.0, 52.0)
@@ -111,8 +115,9 @@ func _ready() -> void:
 	character_button.custom_minimum_size = Vector2(220.0, 56.0)
 	character_button.pressed.connect(_on_character)
 	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 16)
+	buttons.add_theme_constant_override("separation", 12)
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	UiTheme.stamp_button(restart_button)
 	buttons.add_child(restart_button)
 	buttons.add_child(character_button)
 	box.add_child(buttons)
@@ -155,10 +160,13 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	visible = true
 	_rebuild_focus_cycle()
 	focus_default()
+	UiTheme.animate_open(self, reduced_effects)
 
 
 func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
+	if on:
+		UiTheme.animate_open(self, true)
 	if on and _best_preview != null:
 		_best_preview.finish_immediately()
 

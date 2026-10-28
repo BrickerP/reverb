@@ -1,0 +1,470 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-28",
+  "assets": [
+    {
+      "id": "looper_front",
+      "path": "assets/presentation/player.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-6b58ecc1-514b-4b11-afa0-28251217bf99.png",
+      "prompt": "Use case: stylized-concept. Create a production PNG sprite animation strip for an original 2D top-down game. The attached image is STYLE REFERENCE ONLY, not an edit target. Use ONLY its exhausted paper-puppet characters: thick irregular near-black ink contour, flat recycled-paper cream and muted tobacco-yellow fills, one cel-shadow maximum, funny heavy-lidded eyes and tiny resigned mouth. Four equal-width cells in ONE horizontal row, transparent RGBA canvas, a wide 3:1 image. NO cell borders or labels. Exactly FOUR complete copies of the SAME character, one per quarter at x=12.5%,37.5%,62.5%,87.5%. Same body size and foot baseline at 87% height, each confined inside its quarter with 10% side clearance. Frame 0 neutral idle, frame 1 left foot steps forward with body weight left, frame 2 right foot steps forward with body weight right, frame 3 briefly squashed/creased from a hit. Feet and arms visibly change, but the identity stays identical. Full body all four cells, no clipping. Camera slightly elevated three-quarter view, front-facing toward down-right. NO weapons, guns, props held in hands, ground, cast shadow, glow, text, metallic armor, robots or photorealism. Genuine transparent background, not a checkerboard drawn into the image. SUBJECT: Looper, the ordinary tired rectangular creased paper doll from the left side of the reference. One bent top-right corner, asymmetrical folded square head/body, deadpan half-lidded eyes, little paper arms and short black stub feet. A tiny blank worn identification tag hangs on its chest. A small folded paper-feed satchel is visible at one side, not larger than its body. Pale cream dominates. Keep exactly the same face in all four frames.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "f294f469610b585a26b0aea3447a6c4668f7b3bed714f6e7e71030c5e2d5d446",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          68,
+          110,
+          489,
+          626
+        ],
+        [
+          69,
+          110,
+          485,
+          631
+        ],
+        [
+          70,
+          111,
+          485,
+          619
+        ],
+        [
+          71,
+          176,
+          492,
+          619
+        ]
+      ],
+      "frame_union_ltrb": [
+        68,
+        110,
+        492,
+        631
+      ],
+      "bounds_ltrb": [
+        68,
+        110,
+        2121,
+        631
+      ]
+    },
+    {
+      "id": "solo_front",
+      "path": "assets/presentation/characters/solo_front.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-cf2471fc-f1d5-4849-9c4a-1b4ff9371a9a.png",
+      "prompt": "Use case: stylized-concept. Create a production PNG sprite animation strip for an original 2D top-down game. The attached image is STYLE REFERENCE ONLY, not an edit target. Use ONLY its exhausted paper-puppet characters: thick irregular near-black ink contour, flat recycled-paper cream and muted tobacco-yellow fills, one cel-shadow maximum, funny heavy-lidded eyes and tiny resigned mouth. Four equal-width cells in ONE horizontal row, transparent RGBA canvas, a wide 3:1 image. NO cell borders or labels. Exactly FOUR complete copies of the SAME character, one per quarter at x=12.5%,37.5%,62.5%,87.5%. Same body size and foot baseline at 87% height, each confined inside its quarter with 10% side clearance. Frame 0 neutral idle, frame 1 left foot steps forward with body weight left, frame 2 right foot steps forward with body weight right, frame 3 briefly squashed/creased from a hit. Feet and arms visibly change, but the identity stays identical. Full body all four cells, no clipping. Camera slightly elevated three-quarter view, front-facing toward down-right. NO weapons, guns, props held in hands, ground, cast shadow, glow, text, metallic armor, robots or photorealism. Genuine transparent background, not a checkerboard drawn into the image. SUBJECT: Soloist, the triangular paper-tape poncho character in the reference. A compact exhausted paper-doll face peeks out of a tall triangular mustard-yellow patched tape poncho with a slightly bent pointed top. Two short dark stub feet and little paper hands. Strong triangular silhouette, three large tape patch shapes maximum. NO stamp club or any other weapon. Clearly different from the square Looper while sharing its face and paper-world design.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "ec1bcee782c1a19b5a264588e636de13484e6663210723bcad1a35e475d48df8",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          65,
+          70,
+          500,
+          629
+        ],
+        [
+          65,
+          78,
+          507,
+          645
+        ],
+        [
+          72,
+          71,
+          499,
+          645
+        ],
+        [
+          74,
+          164,
+          499,
+          629
+        ]
+      ],
+      "frame_union_ltrb": [
+        65,
+        70,
+        507,
+        645
+      ],
+      "bounds_ltrb": [
+        65,
+        70,
+        2128,
+        645
+      ]
+    },
+    {
+      "id": "mirror_front",
+      "path": "assets/presentation/characters/mirror_front.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-d80bd630-38ae-49fb-8831-93609ec715e6.png",
+      "prompt": "Use case: stylized-concept. Production PNG animation strip for an original 2D arena roguelite. Attached board is STYLE REFERENCE ONLY. Four equal-width cells in ONE horizontal row on a genuine transparent RGBA 3:1 canvas, no drawn checkerboard. Exactly FOUR complete copies of the SAME character, centered one per quarter at x=12.5%,37.5%,62.5%,87.5%. Identical body proportions and same foot baseline at 87% height; each stays within its quarter with 10% side clearance. Frame 0 neutral idle; frame 1 left foot stepping with body weight left; frame 2 right foot stepping with body weight right; frame 3 squashed and visibly creased by a hit. Distinct feet/arm posture, not four identical poses. Full body, no clipping. Slightly elevated front-right/down-right three-quarter view. Thick slightly irregular near-black ink outlines; very simple clean flat paper fills, one cel-shadow only. Exhausted half-lidded eyes, tiny resigned mouth, short stub legs, funny grim deadpan paper doll, readable at 64px. NO weapons in body, no firearms, no floor/cast shadow, scene, text, labels, cells borders, glow, metallic armor or robots. SUBJECT: Mirror / Misprint, an exhausted pale cream paper doll with an asymmetrical rectangular folded head and body and one bent upper-right corner. The face is a double-printed offset face: a tiny bruised-purple duplicate contour beside the real black eyes and mouth, not two heads. Torn offset paper edges at one side and a small double folded-paper roll backpack. A few muted purple patches distinguish this character; cream still dominates. Blank rectangular chest tag. Keep the same mismatched face across all four frames. It should match the reference board's MISPRINT character.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "0576260f4b4625f0dd7444437fd5969cca1b7da356f0bd91cb82b819bcc34e9b",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          90,
+          146,
+          450,
+          609
+        ],
+        [
+          84,
+          138,
+          460,
+          612
+        ],
+        [
+          74,
+          143,
+          445,
+          621
+        ],
+        [
+          39,
+          218,
+          503,
+          606
+        ]
+      ],
+      "frame_union_ltrb": [
+        39,
+        138,
+        503,
+        621
+      ],
+      "bounds_ltrb": [
+        90,
+        138,
+        2132,
+        621
+      ]
+    },
+    {
+      "id": "conductor_front",
+      "path": "assets/presentation/characters/conductor_front.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-d3d4ab62-7a06-404d-aaf8-6984e712a4ca.png",
+      "prompt": "Use case: stylized-concept. Production PNG animation strip for an original 2D arena roguelite. Attached board is STYLE REFERENCE ONLY. Four equal-width cells in ONE horizontal row on a genuine transparent RGBA 3:1 canvas, no drawn checkerboard. Exactly FOUR complete copies of the SAME character, centered one per quarter at x=12.5%,37.5%,62.5%,87.5%. Identical body proportions and same foot baseline at 87% height; each stays within its quarter with 10% side clearance. Frame 0 neutral idle; frame 1 left foot stepping with body weight left; frame 2 right foot stepping with body weight right; frame 3 squashed and visibly creased by a hit. Distinct feet/arm posture, not four identical poses. Full body, no clipping. Slightly elevated front-right/down-right three-quarter view. Thick slightly irregular near-black ink outlines; very simple clean flat paper fills, one cel-shadow only. Exhausted half-lidded eyes, tiny resigned mouth, short stub legs, funny grim deadpan paper doll, readable at 64px. NO weapons in body, no firearms, no floor/cast shadow, scene, text, labels, cells borders, glow, metallic armor or robots. SUBJECT: Conductor, an exhausted broad-shouldered paper foreman puppet in the same universe. Compact square pale-cream face, eyes half-lidded with one crooked eyebrow, tiny downturned mouth. Wide paper shoulder pads form a flat broad silhouette; small folded paper collar like a theatrical conductor's cape, NO business suit or tie. A wide rectangular tobacco-yellow paper backpack has FOUR large vertical folded compartments visible around the shoulders; four blank index-card tips poke out. Short legs, little empty hands. Main accent muted sage green, simple cream folds, chunky black edges. Clearly a wider silhouette than the base paper doll and triangular tape poncho. No helmet, metal, baton, stamp or weapon.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "fdc44190da4eb1dec829b24072a3348ec58339e475729fa7c8ed868434babe10",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          32,
+          120,
+          492,
+          604
+        ],
+        [
+          24,
+          121,
+          495,
+          607
+        ],
+        [
+          60,
+          127,
+          491,
+          616
+        ],
+        [
+          33,
+          173,
+          509,
+          613
+        ]
+      ],
+      "frame_union_ltrb": [
+        24,
+        120,
+        509,
+        616
+      ],
+      "bounds_ltrb": [
+        32,
+        120,
+        2138,
+        616
+      ]
+    },
+    {
+      "id": "looper_back",
+      "path": "assets/presentation/characters/looper_back.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-665abcb3-53fe-4813-94d1-561e1e246fa8.png",
+      "prompt": "Use case: identity-preserve. Create the BACK-VIEW matching animation strip for the character in image 1. Image 1 is the exact identity/proportions/4-frame layout reference, image 2 is the style reference. Rotate the same character to face diagonally UP-RIGHT, seen from a slightly elevated REAR three-quarter camera; never show eyes, nose or mouth on the back of its head. Preserve its recognizable silhouette, proportions, clothing, palette and paper construction. This is a separate production game sprite strip: genuine transparent RGBA background, 3:1 canvas, FOUR equal-width cells in ONE horizontal row. Exactly one full body per quarter, centered at 12.5%,37.5%,62.5%,87.5%, same body size and foot baseline at 87% canvas height. Pose0 neutral standing, pose1 left foot steps with weight left, pose2 right foot steps with weight right, pose3 hurt/squashed with creased shoulders/head. Make feet and arms truly change. Keep each inside its quarter with 10% empty side clearance. Very thick clean black ink outline, flat cream/mustard fills, one shadow. Short black stub feet. NO weapons or props held in hands, no text, labels, cell lines, floor, shadow, light glow, robot, realistic metal or extra objects. The Looper is the square creased cream paper doll with one bent corner and a small rectangular olive-paper satchel/feeding pack. On the back, show that simple folded paper pack centered below the big plain head; a few flat paper tabs emerge from its paper slot. The back of the cream head has one large diagonal fold only, NO printed facial features. Simple broad shapes.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "4cd5cf072e4a531119b22b98b940bb8135cf027435405b8d65d732242206ce40",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          84,
+          104,
+          467,
+          607
+        ],
+        [
+          98,
+          106,
+          486,
+          612
+        ],
+        [
+          96,
+          106,
+          483,
+          611
+        ],
+        [
+          70,
+          152,
+          470,
+          604
+        ]
+      ],
+      "frame_union_ltrb": [
+        70,
+        104,
+        486,
+        612
+      ],
+      "bounds_ltrb": [
+        84,
+        104,
+        2099,
+        612
+      ]
+    },
+    {
+      "id": "solo_back",
+      "path": "assets/presentation/characters/solo_back.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-cb834b37-8cf5-407b-bf4c-7df181c453ea.png",
+      "prompt": "Use case: identity-preserve. Create the BACK-VIEW matching animation strip for the character in image 1. Image 1 is the exact identity/proportions/4-frame layout reference, image 2 is the style reference. Rotate the same character to face diagonally UP-RIGHT, seen from a slightly elevated REAR three-quarter camera; never show eyes, nose or mouth on the back of its head. Preserve its recognizable silhouette, proportions, clothing, palette and paper construction. This is a separate production game sprite strip: genuine transparent RGBA background, 3:1 canvas, FOUR equal-width cells in ONE horizontal row. Exactly one full body per quarter, centered at 12.5%,37.5%,62.5%,87.5%, same body size and foot baseline at 87% canvas height. Pose0 neutral standing, pose1 left foot steps with weight left, pose2 right foot steps with weight right, pose3 hurt/squashed with creased shoulders/head. Make feet and arms truly change. Keep each inside its quarter with 10% empty side clearance. Very thick clean black ink outline, flat cream/mustard fills, one shadow. Short black stub feet. NO weapons or props held in hands, no text, labels, cell lines, floor, shadow, light glow, robot, realistic metal or extra objects. The Soloist is the tall TRIANGULAR patched tobacco-yellow paper-tape poncho. From the rear show one large plain triangular cape surface with at most three broad brown tape patches, a bent pointed top and a short split hem. No face visible. Preserve the tall triangular silhouette and short dark feet visible below the hem. The cape shifts slightly with the alternating feet; hurt pose folds the point lower.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "ce5771eec25702305fdbb0046d990d83a9e3a69d9a44212708b256c7292435eb",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          63,
+          71,
+          490,
+          614
+        ],
+        [
+          64,
+          84,
+          496,
+          620
+        ],
+        [
+          81,
+          87,
+          490,
+          618
+        ],
+        [
+          90,
+          191,
+          482,
+          614
+        ]
+      ],
+      "frame_union_ltrb": [
+        63,
+        71,
+        496,
+        620
+      ],
+      "bounds_ltrb": [
+        63,
+        71,
+        2111,
+        620
+      ]
+    },
+    {
+      "id": "mirror_back",
+      "path": "assets/presentation/characters/mirror_back.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-35588097-a42f-4494-92d3-b4c4efe174e4.png",
+      "prompt": "Use case: identity-preserve. Create a matching BACK VIEW of the exact paper character in image 1; image 2 is only the broader style reference. Keep its same proportions, clothes, identity and palette but face diagonally UP-RIGHT from an elevated REAR three-quarter camera. NO eyes, face or mouth on its back. Production sprite animation strip: genuine transparent RGBA, wide 3:1 canvas, FOUR equal-width cells, one complete character centered in each quarter at 12.5%,37.5%,62.5%,87.5% width. Same camera and character size all frames, feet on same baseline at 87% height, 10% clearance each quarter. Frame0 neutral standing, frame1 left step/weight left, frame2 right step/weight right, frame3 squashed/creased hurt. Keep full body in all frames without clipping. Bold irregular black contour, flat fills, one cel-shadow only, no floor, cast shadow, cell borders, labels, text, weapons, helmets, metal, glow or scenery. Four true pose changes including feet and hands. The character is Mirror/Misprint: a pale cream crumpled square paper head with a bent top corner, bruised-purple offset-print stain patches, a tiny double folded-paper roll backpack and short dark stub feet. Show the back of its head as cream paper with one large purple registration-offset stripe, a few misaligned folded edges and the two simple paper rolls. No face visible. Retain the same asymmetric silhouette and dusty purple identification as the front reference.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "5dff9f3bf31c74963db2e6c1d01a471dcd94ef1a2787593a288d47633c549643",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          92,
+          137,
+          438,
+          592
+        ],
+        [
+          92,
+          137,
+          452,
+          605
+        ],
+        [
+          79,
+          135,
+          438,
+          589
+        ],
+        [
+          57,
+          180,
+          435,
+          590
+        ]
+      ],
+      "frame_union_ltrb": [
+        57,
+        135,
+        452,
+        605
+      ],
+      "bounds_ltrb": [
+        92,
+        135,
+        2064,
+        605
+      ]
+    },
+    {
+      "id": "conductor_back",
+      "path": "assets/presentation/characters/conductor_back.png",
+      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-4433ea1b-d1ab-4964-9290-10fa0eeb51b3.png",
+      "prompt": "Use case: identity-preserve. Create a matching BACK VIEW of the exact paper character in image 1; image 2 is only the broader style reference. Keep its same proportions, clothes, identity and palette but face diagonally UP-RIGHT from an elevated REAR three-quarter camera. NO eyes, face or mouth on its back. Production sprite animation strip: genuine transparent RGBA, wide 3:1 canvas, FOUR equal-width cells, one complete character centered in each quarter at 12.5%,37.5%,62.5%,87.5% width. Same camera and character size all frames, feet on same baseline at 87% height, 10% clearance each quarter. Frame0 neutral standing, frame1 left step/weight left, frame2 right step/weight right, frame3 squashed/creased hurt. Keep full body in all frames without clipping. Bold irregular black contour, flat fills, one cel-shadow only, no floor, cast shadow, cell borders, labels, text, weapons, helmets, metal, glow or scenery. Four true pose changes including feet and hands. The character is Conductor: broad compact paper foreman with wide muted-sage paper shoulder collar and a large rectangular tobacco-yellow backpack. From the back the backpack clearly has EXACTLY FOUR broad vertical folder compartments, four equal blank cream index-card tips protruding at the top. Preserve the squat broad silhouette, cream head, sage-green cape/collar and short dark feet. NO suit, tie, baton, weapon, helmet or facial features on the rear. Four folder/card columns must be countable in each frame, as this character leads four paper copies.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "frame_width": 543,
+      "frame_height": 724,
+      "sha256": "702224de47379d7d93eb747b4cdbd7057bc19498d5801a1f8cdcf206739a4ec1",
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "alpha_range": [
+        0,
+        255
+      ],
+      "frame_bounds_ltrb": [
+        [
+          53,
+          150,
+          490,
+          584
+        ],
+        [
+          46,
+          143,
+          505,
+          590
+        ],
+        [
+          47,
+          152,
+          506,
+          590
+        ],
+        [
+          49,
+          210,
+          498,
+          589
+        ]
+      ],
+      "frame_union_ltrb": [
+        46,
+        143,
+        506,
+        590
+      ],
+      "bounds_ltrb": [
+        53,
+        143,
+        2127,
+        590
+      ]
+    }
+  ]
+}

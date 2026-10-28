@@ -10,20 +10,21 @@ var replay_buttons: Array[Button] = []
 var _grid: GridContainer
 var _empty: Label
 var _row_count := 0
+var archive_scroll: ScrollContainer
 
 
 func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.01, 0.01, 0.04, 0.86)
+	dim.color = Color(UiTheme.EDGE, 0.86)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(840.0, 0.0)
+	panel.custom_minimum_size = Vector2(1040.0, 0.0)
 	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
 	center.add_child(panel)
 	var margin := MarginContainer.new()
@@ -38,9 +39,16 @@ func _ready() -> void:
 	box.add_child(_empty)
 	_grid = GridContainer.new()
 	_grid.columns = 7
-	_grid.add_theme_constant_override("h_separation", 28)
-	_grid.add_theme_constant_override("v_separation", 8)
-	box.add_child(_grid)
+	_grid.add_theme_constant_override("h_separation", 20)
+	_grid.add_theme_constant_override("v_separation", 16)
+	archive_scroll = ScrollContainer.new()
+	archive_scroll.name = "ArchiveScroll"
+	archive_scroll.custom_minimum_size = Vector2(0.0, 380.0)
+	archive_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	archive_scroll.follow_focus = true
+	box.add_child(archive_scroll)
+	_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	archive_scroll.add_child(_grid)
 	close_button = Button.new()
 	close_button.text = Loc.t("settings.close")
 	close_button.custom_minimum_size = Vector2(160.0, 44.0)
@@ -56,6 +64,7 @@ func open(run_log: RunLog) -> void:
 	var runs := run_log.recent(8)
 	_empty.visible = runs.is_empty()
 	_grid.visible = not runs.is_empty()
+	archive_scroll.visible = not runs.is_empty()
 	if runs.is_empty():
 		visible = true
 		UiFocus.cycle([close_button])
@@ -89,7 +98,7 @@ func open(run_log: RunLog) -> void:
 			replay.tooltip_text = Loc.t("history.replay_seed_hint")
 		replay.accessibility_name = "%s · %s · %s" % [
 				replay.text, Loc.character_name(char), str(seed_value)]
-		replay.custom_minimum_size = Vector2(104.0, 30.0)
+		replay.custom_minimum_size = Vector2(120.0, 38.0)
 		replay.pressed.connect(_on_replay.bind(seed_value, char, daily_modifier))
 		_grid.add_child(replay)
 		replay_buttons.append(replay)

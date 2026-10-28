@@ -1,0 +1,278 @@
+[
+  {
+    "id": "flak_crown",
+    "path": "assets/presentation/weapons/flak_crown.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-a676e68a-9850-49e7-9caa-b8c6fd452c14.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      25,
+      67,
+      1518,
+      872
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "90d7e30d5ad6d7656feade08aceded04ad312b1c892e0788c577e3264f84cf25",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An evolved SHREDDER FLAK SHOTGUN: a bulky cream paper-box cannon with a gaping right-facing rectangular mouth lined with thick black paper-cutting teeth, four jagged crown-like paper spikes above the mouth, a charcoal lower grip, smoke-yellow tape drum. Humorous monstrous shotgun, right-facing, no monster legs/eyes. One complete prop."
+  },
+  {
+    "id": "flechette",
+    "path": "assets/presentation/weapons/flechette.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-eca47de0-fd12-449b-89d9-659b23fca227.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      198,
+      192,
+      1352,
+      866
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "478fdfb8308e1cc8cf7ccf6a91ca93255d75bbec10bdc336b5cf7f42d56f8f94",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A compact vicious PAPER-DART CANISTER LAUNCHER: a short charcoal tube with a smoke-yellow folded-paper canister, three sharp cream triangular paper darts visibly stacked in its right-facing mouth, a small lower grip. Clear spiky rapid-dart weapon silhouette, not a futuristic gun. Single complete object."
+  },
+  {
+    "id": "hex_bolt",
+    "path": "assets/presentation/weapons/hex_bolt.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-8ebae5bf-c996-4f51-aee8-da13ce72498c.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      32,
+      208,
+      1510,
+      816
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "7ad93cfa4a432cfbb0df2a94a4a3e4096def0f3b3da7b90bd3a1dc14b7397850",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A cursed INK-STAMP WAND: short crooked charcoal rod held horizontal with a handle on left, large broken smoke-yellow rubber-stamp head at right bearing a simple angry ink blot FACE made of two slits and frown (no lettering), cream paper strips bound around the neck. Comically ominous magical weapon, no aura, no separate particles, no glow. Single complete prop."
+  },
+  {
+    "id": "longbow",
+    "path": "assets/presentation/weapons/longbow.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-1395f0c6-0106-4537-a30a-3fda9321ccec.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      341,
+      18,
+      1261,
+      1002
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "b53ae7fadd6674fbe0d492f5f57a67041aedf919eb03bbb66d5c6ee03de4f59e",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An absurd tall RULER-AND-RUBBER-BAND LONG BOW: bent cream wooden-ruler-shaped limbs (without any numbers or text), thick charcoal rubber band string, small coral tape binding at the center, one sharpened paper arrow pointing RIGHT. Longbow is held vertically, broad crescent silhouette, clear weapon not a rectangular ruler. Single complete object."
+  },
+  {
+    "id": "nova_core",
+    "path": "assets/presentation/weapons/nova_core.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-d5c4244c-a392-42e8-86a5-74e46c6f7cb4.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      277,
+      64,
+      1257,
+      961
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "ef5cccf476c217cc2811f58a5368504267786ce10526450650385ea3f436d234",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An evolved NOVA BINDING CORE: one round burst-open cream paper reel held together by thick charcoal binding cord, the reel unfolding into five large ragged paper petals like a furious star; compact smoke-yellow center with a tiny dirty coral ink seal, black outline. A clearly stronger magical sibling of a thread orb, visually a spherical explosive paper core. No aura, glow, rays, particles or external ring. ONE complete centered object, no writing."
+  },
+  {
+    "id": "orb",
+    "path": "assets/presentation/weapon_orb.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-6e07f9fc-ba27-4166-b5fd-cd846d855c37.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      292,
+      140,
+      1266,
+      863
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "ee62b51ecf5ba692cc922ad8e22005aa4380910b7b6193f65e0cb8282bfcffee",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A magical BINDING-THREAD ORB: one compact floating tangled spool of charcoal binding string holding 3 pale folded paper teeth, an asymmetrically ragged cream paper shell, smoke-yellow center. A comical cursed office relic, easily readable round magical weapon silhouette. No aura, glow, particles or magic ring. Single complete object."
+  },
+  {
+    "id": "pistol",
+    "path": "assets/presentation/weapon_pistol.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-43a9ff94-7fd9-48ee-b70f-6546ea03b4c4.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      191,
+      50,
+      1356,
+      964
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "2adbfcd53e9da02278f628cdf2c232a1741dd3842f939a0f4169ac3eb0de9932",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A comically chunky STAPLE PISTOL, short snout on right and simple downturned grip, stapler top forming its barrel; cream folded-paper housing, charcoal mechanism. It reads as a tiny handgun made from a battered stapler. Single object."
+  },
+  {
+    "id": "rail_spike",
+    "path": "assets/presentation/weapons/rail_spike.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-e3ce61d4-88ab-49c5-ba20-c26761a9d90d.png",
+    "width": 2175,
+    "height": 723,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      21,
+      152,
+      2157,
+      562
+    ],
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "sha256": "d968818cc7c42030c1f49dc5eedba1eac818f04704f24e531bff99b4683616fd",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An evolved absurdly LONG FILING-SPIKE RAIL RIFLE: tiny cream folder stock and a large stapled paper collar at left, a very long broad charcoal spike barrel ending in a giant triangular nail point on the RIGHT, smoke-yellow crude ruler sight, tiny coral trigger. Strong exaggerated long slender sniper silhouette, more powerful than ordinary rifle. Single complete prop."
+  },
+  {
+    "id": "rifle",
+    "path": "assets/presentation/weapons/rifle.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-ed0dd5aa-aed0-4229-bf95-bab448e0ad8c.png",
+    "width": 1774,
+    "height": 887,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      48,
+      269,
+      1733,
+      643
+    ],
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "sha256": "7fa2f7eee409e6b6239859f66ae44736e20b52c0b8051b7dd9c025317379bbf8",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A long accurate FILE-NAIL RIFLE, elongated cream folder casing with one comically long narrow dark filing-spike barrel pointing right, small stock at left, one simple grip and a punched-file tab as a crude sight. Clear slender precision rifle silhouette. Single complete weapon."
+  },
+  {
+    "id": "shotgun",
+    "path": "assets/presentation/weapon_shotgun.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-79a702b4-408b-424e-8423-13f57db30f64.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      124,
+      194,
+      1412,
+      840
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "613d9891e5c15b7905b27d5d8c05803caae5e7e649ba3e5c96849e13022c5877",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A stubby DOUBLE-MOUTH TAPE SHOTGUN, two huge open circular tape-roll mouths at the right muzzle, thick dark handle, compact folded cream paper body with a dirty coral binding band. The two oversized mouths clearly communicate shotgun spread. Horizontal right-facing. Single complete weapon."
+  },
+  {
+    "id": "smg",
+    "path": "assets/presentation/weapons/smg.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-99fba868-ed9c-418c-8fb1-316cd3ed5f9a.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      202,
+      34,
+      1344,
+      978
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "4e75b52402c75ccc528f24a21ba9f6657bd2fb0c4e89e1f609a569998723e1f4",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: A compact rapid-fire HOLE-PUNCH SUBMACHINE GUN. Boxy smoke-yellow paper casing, short right-facing punched-hole barrel, unmistakable magazine and little grip. Like a vicious office hole-punch repurposed as a submachine gun. Single object."
+  },
+  {
+    "id": "twin_fangs",
+    "path": "assets/presentation/weapons/twin_fangs.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a182e0-d4d0-7901-bd50-edd7276a8aff/exec-ca5b90e7-3f35-490e-aa68-c7caaac710ac.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "bounds_ltrb": [
+      155,
+      86,
+      1387,
+      937
+    ],
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "sha256": "09eb28a05279ab7b205ee760514ee9f4970ee7c0f415d213723812311b51d1d2",
+    "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An evolved DOUBLE-JAW STAPLER PISTOL: two large black stapler jaws stacked like snarling crocodile fangs at the right-facing muzzle, a single chunky cream paper grip at left, smoke-yellow tape binding, one coral pressure lever. Clearly an upgraded twin-barrel stapler handgun with two aggressive distinct fangs. One integrated weapon, not two separate guns."
+  }
+]

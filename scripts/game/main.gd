@@ -315,6 +315,8 @@ func _apply_display() -> void:
 func _apply_reduced_effects() -> void:
 	if settings == null:
 		return
+	if hud != null:
+		hud.set_reduced_effects(settings.reduced_effects)
 	if _view != null:
 		_view.set_reduced_effects(settings.reduced_effects)
 	if shop_ui != null:

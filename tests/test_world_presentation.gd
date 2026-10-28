@@ -57,11 +57,11 @@ func test_special_shapes_have_calibrated_boxes(c: Check) -> void:
 	var longbow := ArenaPainter._weapon_size(&"weapon_longbow")
 	c.ok(longbow.y > longbow.x, "longbow keeps a tall mounted shape")
 	c.ok(ArenaPainter._enemy_bounds(&"silencer").y >= 50.0,
-			"silencer reserves height for antenna and readable body")
+			"silencer reserves height for a readable shredder body")
 	c.ok(ArenaPainter._character_bounds(&"mirror").y > ArenaPainter.PLAYER_ART_SIZE.y,
-			"mirror antenna receives extra character height")
+			"misprinted mirror keeps its distinct paper silhouette")
 	c.ok(ArenaPainter._character_bounds(&"conductor").x > ArenaPainter.PLAYER_ART_SIZE.x,
-			"conductor back equipment receives extra width")
+			"conductor paper-feed equipment receives extra width")
 	var slot := Rect2(0.0, 0.0, Hud.SLOT_W, Hud.SLOT_H)
 	var thumb := Hud._weapon_thumbnail_rect(slot, Vector2(654.0, 964.0))
 	c.ok(slot.encloses(thumb), "tall HUD weapon thumbnail stays within its slot")

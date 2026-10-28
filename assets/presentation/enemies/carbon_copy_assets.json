@@ -1,0 +1,551 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-28",
+  "style": "Carbon Copy Purgatory",
+  "reference": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-1e58b345-a0ae-40f8-b50a-bbb74b7a6c00.png",
+  "assets": [
+    {
+      "id": "grunt",
+      "file": "assets/presentation/enemy_grunt.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-14c8421f-d6c3-44e5-a758-6e12eb9dd5b8.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nMonster: a squat discarded rubber-eraser creature, round arched broad gray-sage body like a worn eraser, tiny stub legs, cream chipped corner, huge exhausted crooked grin with 3 uneven black teeth and one drooping eye. Darkly humorous stubborn little scrap monster. Only 3 major shapes; thick matte body. It is alive, not a robot and not a potato. Subtle brick-red old stamp smudge on forehead with NO letters.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "c2ab1e55242475379311ba6a6917117d831a6e71cc3fdf6fc5ab80e1c0c08ed1",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        54,
+        174,
+        2121,
+        561
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          54,
+          199,
+          484,
+          548
+        ],
+        [
+          45,
+          204,
+          522,
+          561
+        ],
+        [
+          60,
+          208,
+          494,
+          554
+        ],
+        [
+          59,
+          174,
+          492,
+          548
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          548
+        ],
+        [
+          271,
+          561
+        ],
+        [
+          271,
+          554
+        ],
+        [
+          271,
+          548
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "runner",
+      "file": "assets/presentation/enemy_runner.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-be588c37-8aa5-4ba1-b8a6-33ae2cc42f51.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nMonster: an original vicious binder-clip bug, sharp V-shaped black metal clip JAW as its body, two thin tall black spring handles, long spindly bent legs with tiny feet, a red mouth and 3 cream uneven teeth. Its silhouette is a wicked open clip with eyes, like the CLIP BUG in the reference. Flat cartoon charcoal-black, cream edges and tiny brick-red mouth, not shiny or realistic. Its walk frames must visibly alternate long legs and the clip-jaw bite opens/closes.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "eef3846194f0f32e7c52d7c6d5ac02e4dfb0b57f9d8d74ecb6456e753b15eb80",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        74,
+        93,
+        2136,
+        609
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          74,
+          106,
+          472,
+          592
+        ],
+        [
+          55,
+          93,
+          517,
+          609
+        ],
+        [
+          49,
+          111,
+          496,
+          595
+        ],
+        [
+          64,
+          185,
+          507,
+          591
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          592
+        ],
+        [
+          271,
+          609
+        ],
+        [
+          271,
+          595
+        ],
+        [
+          271,
+          591
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "brute",
+      "file": "assets/presentation/enemies/brute.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-f43a7087-6a6e-48e7-9660-9339bb79c092.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nCRITICAL GRID SPACING: Each monster silhouette must fit ENTIRELY within the CENTER 70% WIDTH of its own exact quarter, with at least 15% fully transparent padding at BOTH the left and right side of EVERY CELL. Do not let feet, antennae or reaction marks touch a cell boundary. Consistent baseline across four cells. Do not draw any extra flying marks in the hurt frame.\nMonster: a fat low rectangular SHREDDER BEAST. Broad dull charcoal-gray rounded box with a huge horizontal open black tooth-slot mouth, 6 big uneven cream teeth, two tiny beady angry eyes, squat short cream claw feet. A bent folded sheet pokes from the top paper slot. It eats discarded paper versions of people. Same chunky cartoon shredder-monster identity as the reference. Its four poses alternate heavy feet, show mouth chewing and a compressed hurt reaction. One simple gray shadow only; it must not look like a realistic office appliance.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "initial_source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-988c75ae-f42b-49f9-9c2f-f91614ceb022.png",
+      "refinement": "Remove detached red shouting marks from Boss frame 1; remove baked ground ellipses from brute. Other poses and placement preserved.",
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "47bb14732840986836c17075c43a3a021f67c44d82419de6d36f976eeaa36400",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        27,
+        135,
+        2136,
+        559
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          27,
+          135,
+          517,
+          556
+        ],
+        [
+          47,
+          145,
+          519,
+          557
+        ],
+        [
+          32,
+          171,
+          513,
+          559
+        ],
+        [
+          36,
+          174,
+          507,
+          556
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          556
+        ],
+        [
+          271,
+          557
+        ],
+        [
+          271,
+          559
+        ],
+        [
+          271,
+          556
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "silencer",
+      "file": "assets/presentation/enemies/silencer.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-629d6289-84f2-4744-bc67-86bddffe054b.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nCRITICAL GRID SPACING: Each monster silhouette must fit ENTIRELY within the CENTER 70% WIDTH of its own exact quarter, with at least 15% fully transparent padding at BOTH the left and right side of EVERY CELL. Do not let feet, antennae or reaction marks touch a cell boundary. Consistent baseline across four cells. Do not draw any extra flying marks in the hurt frame.\nMonster: a sinister living INK BOTTLE SILENCER with a narrow tall black/dark-bruised-purple bottle body, slouchy shoulders, tiny cream eyes and a mouth visibly SEALED WITH A LARGE CREAM TAPE X. The bottle cap tilts like a miserable hat. Two bent thin cream paper legs. The big light tape X on the dark bottle is the identifying feature, legible at 64px. 3 major shapes only. In moving poses it tiptoes; hurt pose compresses and crumples, tape still attached. The ink bottle is a living ugly-cute creature, not a robot, no modern tech, no extra instruments.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "3c72d1929cddbde63629f1e6db14ec364baa3713f20a04f6fde055fe2e220ad8",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        136,
+        96,
+        2049,
+        632
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          136,
+          96,
+          487,
+          629
+        ],
+        [
+          115,
+          124,
+          493,
+          632
+        ],
+        [
+          101,
+          143,
+          458,
+          631
+        ],
+        [
+          92,
+          180,
+          420,
+          629
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          629
+        ],
+        [
+          271,
+          632
+        ],
+        [
+          271,
+          631
+        ],
+        [
+          271,
+          629
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "bomber",
+      "file": "assets/presentation/enemies/bomber.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-f7a51aeb-50ef-4fbc-89b5-46dce878f070.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nCRITICAL SPACING: FOUR small individual poses widely separated on transparency. Each body must be no more than 60% of the width of its quarter. Use generous empty transparent gaps between monsters. Absolutely no marks or cast shadows outside the body. Feet share one horizontal baseline.\nMonster: an inflated discarded PAPER SACK GOBLIN about to burst. Round puffed-up warm recycled-paper beige bag with folded top tied by a thick brick-red drawstring bow, two absurdly tiny feet, crooked eyes and a clenched miserable tooth. A large plain brick-red stamp SHAPE (no letters, no words) marks its swollen belly. Its silhouette is almost a round balloon of paper with a little cinched top and tiny legs. No explosive effect, no active flames, no warning circle. 4 poses show alternate feet and bag bulging/squashing, last pose tightly crumpled and scrunched. Ugly-cute darkly funny.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "36768da86920edfabb9be4ed89699694ceb19d148311f362ccb076b0166d6b07",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        38,
+        99,
+        2134,
+        636
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          38,
+          99,
+          481,
+          635
+        ],
+        [
+          26,
+          116,
+          523,
+          636
+        ],
+        [
+          42,
+          161,
+          498,
+          635
+        ],
+        [
+          89,
+          178,
+          505,
+          635
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          635
+        ],
+        [
+          271,
+          636
+        ],
+        [
+          271,
+          635
+        ],
+        [
+          271,
+          635
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "warden",
+      "file": "assets/presentation/enemies/warden.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-66aa4d44-cbdf-421e-bfa8-2c85b715a2f7.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nMonster: a living RETURNTSTAMP GOBLIN guarding itself behind an oversized heavy FOLDED FILE-FOLDER SHIELD. Top-heavy red rubber-stamp cap, squinting cream paper face, two tiny stub legs. Its thick charcoal-bordered cream file shield covers the FRONT facing bottom-right, visibly thick and physically connected in front; rear body and feet remain exposed. Shield must be clearly readable at 64px as a broad flat paper barricade, no magic shield or aura. Flat brick-red stamp cap, paper cream shield, smoke-yellow little body. Four poses alternate small feet, tilt the file shield to brace and squash on hurt; keep the shield facing bottom-right in all frames. EXTRA IMPORTANT: SHRINK each monster to 60% of its quarter width, leave huge empty transparent gaps between poses, align bottoms at 80% of canvas height. No lettering, no cast shadows.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "d59c102ec5b70d47e17ce62deaf33cce7cc07a8faa143879a7d689124533bc55",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        128,
+        174,
+        2107,
+        595
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          128,
+          174,
+          483,
+          593
+        ],
+        [
+          123,
+          177,
+          508,
+          593
+        ],
+        [
+          121,
+          194,
+          487,
+          595
+        ],
+        [
+          119,
+          195,
+          478,
+          590
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          593
+        ],
+        [
+          271,
+          593
+        ],
+        [
+          271,
+          595
+        ],
+        [
+          271,
+          590
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    },
+    {
+      "id": "paradox",
+      "file": "assets/presentation/enemies/paradox.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-0e9eef0e-9b09-46d7-b6eb-9281e84e12fe.png",
+      "prompt": "Use case: stylized-concept. Asset type: production 2D game animation strip with true transparent background. The input image is STYLE AND WORLD reference only, not an edit target. Match its thick imperfect charcoal-black ink outlines, flat fills, one simple cel shadow, darkly funny ugly-cute recycled-paper world, muted cream/sage/yellow/brick-red palette. No photorealism, metal rendering, glossy shading, bloom, neon, writing, text, labels, UI, floor, cast shadow or frame borders.\nCanvas: ideally 1536x512 (3:1), exactly FOUR EQUAL WIDTH CELLS IN ONE HORIZONTAL ROW. Each cell contains ONE full-body pose of the SAME monster, centered in its own quarter. No cell lines. Keep same character size and baseline in all cells, feet at 88% of canvas height, about 10% breathing margin around each silhouette. This is an animation sprite sheet, not a concept sheet. Strong readable silhouettes at 64px. Left-to-right poses: 0 neutral idle, 1 left foot forward with body leaning forward, 2 right foot forward and compressed body, 3 crushed/creased hurt reaction with both feet still on the common baseline. These are real pose and silhouette changes, not four identical copies. Face toward bottom-right in slightly elevated top-down three-quarter view.\nMonster: THE ORIGINAL, an imposing, arrogant, pristine CREAM PAPER DOLL boss. Folded rectangular head with a swept folded corner, big heavy-lidded smug eyes, stiff high collar made of paper, thick dark outline and one smoke-yellow shadow, two little black boots. One absurd giant charcoal staple passes through its body across the center. Use the smug torn paper boss from the reference, NOT a humanoid office worker and NOT any robot. Four animation cells, OVERRIDE the earlier generic pose list: frame0=complete intact arrogant boss; frame1=complete boss bellowing and creasing down the center, mouth open in outrage; frame2=only LEFT torn-half body with its own angry eye and one little foot, torn zigzag edge on its right; frame3=only RIGHT torn-half body with its own angry eye and one little foot, torn zigzag edge on its left. Each half is still a complete centered independent monster in its own quarter, not two halves sharing one cell. Match the same full boss scale and same baseline for all four cells. Visible torn zigzag edges and giant staple strongly identify the split. NO connecting line between cells, NO floating effects or cast shadows. Keep wide transparent gutters between all poses.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "initial_source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-5fa415d8-d48a-499d-ab39-a3cc41f77307.png",
+      "refinement": "Remove detached red shouting marks from Boss frame 1; remove baked ground ellipses from brute. Other poses and placement preserved.",
+      "width": 2172,
+      "height": 724,
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "sha256": "a20d4d23c889df1429518a5d1a73efe017abd82179d487b3c3e6d4e7831555be",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        69,
+        70,
+        2062,
+        643
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "frame_cell_size": [
+        543,
+        724
+      ],
+      "frame_bounds_ltrb": [
+        [
+          69,
+          72,
+          461,
+          634
+        ],
+        [
+          62,
+          70,
+          521,
+          643
+        ],
+        [
+          163,
+          80,
+          471,
+          640
+        ],
+        [
+          145,
+          80,
+          433,
+          631
+        ]
+      ],
+      "frame_pivots": [
+        [
+          271,
+          634
+        ],
+        [
+          271,
+          643
+        ],
+        [
+          271,
+          640
+        ],
+        [
+          271,
+          631
+        ]
+      ],
+      "visible_cell_boundaries_clear": true
+    }
+  ]
+}

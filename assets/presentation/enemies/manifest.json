@@ -1,52 +1,262 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-23",
-  "visible_alpha_min": 20,
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
-      "id": "brute",
-      "file": "brute.png",
-      "source_file": "exec-f286a18a-8244-455d-8ebd-8edf6a48bdf8.png",
-      "sha256": "e621dfd2fa4932d17be26c97387ee67f62057fd96a7231a0042702c36a2b4160",
-      "size": [1402, 1122],
-      "mode": "RGBA",
-      "bounds_ltrb": [77, 111, 1356, 1048]
-    },
-    {
-      "id": "silencer",
-      "file": "silencer.png",
-      "source_file": "exec-d5404e39-9f9a-4025-8da9-8839ed83a72a.png",
-      "sha256": "d2220b6d38ac3519d065801771ea322131d98c5c404d52d141a286751556aeed",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [302, 36, 1052, 1186]
-    },
-    {
-      "id": "bomber",
       "file": "bomber.png",
-      "source_file": "exec-1d352aad-9ad8-4af0-9df2-879938c645ae.png",
-      "sha256": "b74ecaa4a62190463d3fe691022bc160b36a60c8e21e982122a4879529ec388b",
-      "size": [1254, 1254],
+      "sha256": "36768da86920edfabb9be4ed89699694ceb19d148311f362ccb076b0166d6b07",
+      "size": [
+        2172,
+        724
+      ],
       "mode": "RGBA",
-      "bounds_ltrb": [145, 252, 1134, 1098]
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        38,
+        99,
+        2134,
+        636
+      ],
+      "frame_union_ltrb": [
+        26,
+        99,
+        523,
+        636
+      ],
+      "frame_bounds_ltrb": [
+        [
+          38,
+          99,
+          481,
+          635
+        ],
+        [
+          26,
+          116,
+          523,
+          636
+        ],
+        [
+          42,
+          161,
+          498,
+          635
+        ],
+        [
+          89,
+          178,
+          505,
+          635
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
     },
     {
-      "id": "warden",
-      "file": "warden.png",
-      "source_file": "exec-c696e748-99fa-4a54-80e6-974e43208f8b.png",
-      "sha256": "3dea99300c1b8121ec03f73c4bd1617231f6f42699f9d8027387e0b97c8b4345",
-      "size": [1254, 1254],
+      "file": "brute.png",
+      "sha256": "47bb14732840986836c17075c43a3a021f67c44d82419de6d36f976eeaa36400",
+      "size": [
+        2172,
+        724
+      ],
       "mode": "RGBA",
-      "bounds_ltrb": [120, 233, 1192, 1097]
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        27,
+        135,
+        2136,
+        559
+      ],
+      "frame_union_ltrb": [
+        27,
+        135,
+        519,
+        559
+      ],
+      "frame_bounds_ltrb": [
+        [
+          27,
+          135,
+          517,
+          556
+        ],
+        [
+          47,
+          145,
+          519,
+          557
+        ],
+        [
+          32,
+          171,
+          513,
+          559
+        ],
+        [
+          36,
+          174,
+          507,
+          556
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
     },
     {
-      "id": "paradox",
       "file": "paradox.png",
-      "source_file": "exec-fd1a26f8-d05b-4a12-a8fc-7b6670d8b482.png",
-      "sha256": "910eb3f5a7617fdeff606721005f69315894307c736d1a5ed0b2f11a5b3a7459",
-      "size": [1254, 1254],
+      "sha256": "a20d4d23c889df1429518a5d1a73efe017abd82179d487b3c3e6d4e7831555be",
+      "size": [
+        2172,
+        724
+      ],
       "mode": "RGBA",
-      "bounds_ltrb": [23, 131, 1247, 1158]
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        69,
+        70,
+        2062,
+        643
+      ],
+      "frame_union_ltrb": [
+        62,
+        70,
+        521,
+        643
+      ],
+      "frame_bounds_ltrb": [
+        [
+          69,
+          72,
+          461,
+          634
+        ],
+        [
+          62,
+          70,
+          521,
+          643
+        ],
+        [
+          163,
+          80,
+          471,
+          640
+        ],
+        [
+          145,
+          80,
+          433,
+          631
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "silencer.png",
+      "sha256": "3c72d1929cddbde63629f1e6db14ec364baa3713f20a04f6fde055fe2e220ad8",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        136,
+        96,
+        2049,
+        632
+      ],
+      "frame_union_ltrb": [
+        92,
+        96,
+        493,
+        632
+      ],
+      "frame_bounds_ltrb": [
+        [
+          136,
+          96,
+          487,
+          629
+        ],
+        [
+          115,
+          124,
+          493,
+          632
+        ],
+        [
+          101,
+          143,
+          458,
+          631
+        ],
+        [
+          92,
+          180,
+          420,
+          629
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "warden.png",
+      "sha256": "d59c102ec5b70d47e17ce62deaf33cce7cc07a8faa143879a7d689124533bc55",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        128,
+        174,
+        2107,
+        595
+      ],
+      "frame_union_ltrb": [
+        119,
+        174,
+        508,
+        595
+      ],
+      "frame_bounds_ltrb": [
+        [
+          128,
+          174,
+          483,
+          593
+        ],
+        [
+          123,
+          177,
+          508,
+          593
+        ],
+        [
+          121,
+          194,
+          487,
+          595
+        ],
+        [
+          119,
+          195,
+          478,
+          590
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
     }
   ]
 }

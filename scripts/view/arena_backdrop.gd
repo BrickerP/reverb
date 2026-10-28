@@ -1,7 +1,7 @@
 class_name ArenaBackdrop
 extends Node2D
 
-# Static parts of the arena (fill, grid, border). Drawn once and left alone; ArenaView only
+# Static parts of the arena (quiet paper-yard floor and ink perimeter). Drawn once and left alone; ArenaView only
 # redraws the moving actors on top of it.
 
 

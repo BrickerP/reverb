@@ -1,0 +1,92 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
+  "reference": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-1e58b345-a0ae-40f8-b50a-bbb74b7a6c00.png",
+  "assets": [
+    {
+      "id": "arena_floor",
+      "file": "assets/presentation/surfaces/arena_floor.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-2ba3b03b-51c3-4e5c-97a6-434ba367126d.png",
+      "prompt": "Use case: style-transfer. Asset: a 2D top-down arena floor texture. Image 1 is the EDIT TARGET, existing arena floor; image 2 is STYLE reference only, approved Carbon Copy Purgatory cartoon concept. Preserve the exact 2:1 wide rectangular aspect ratio and rectangular playable field footprint of image 1. Completely replace the metallic sci-fi floor and frame with a darkly funny recycled-paper scrap yard: thick imperfect charcoal ink outlines, flat muted gray-moldy-sage center floor (#777E68 roughly), no grid, no metal panels or cables, no glow, no photorealism. The entire central 88% area is calm, almost uniform, very low contrast flat sage with only a handful of extremely faint tiny scuffs. Thin outer border ONLY contains sparse cartoon collapsed cardboard boxes, a few folded scraps and short low wire-mesh fence segments, all pushed right to the OUTER EDGE. Keep all border decoration within a narrow 5% border, never protruding far into the playable floor. This is an empty game background, NOT an illustration scene. No people, monsters, weapons, letters, numbers, stamps, logos, hazard marks, shadows, UI or obstacles in center. No new collision obstacles. Opaque background fills entire canvas. Bold flat 2D ink cartoon compatible with small cream paper characters.",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "width": 1774,
+      "height": 887,
+      "size": [
+        1774,
+        887
+      ],
+      "mode": "RGB",
+      "sha256": "fab4147d598f77650f49ed1ed8a6f67d5aaa0263c2e871f8b756b27f8c414bed",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        0,
+        0,
+        1774,
+        887
+      ],
+      "alpha_extrema": [
+        255,
+        255
+      ]
+    },
+    {
+      "id": "panel_skin",
+      "file": "assets/presentation/surfaces/panel_skin.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-6fca1dda-2cd4-4768-815d-17417a890aac.png",
+      "prompt": "Use case: stylized-concept. Production asset for original 2D dark-comedy paper-copy roguelite Take Stack. Use supplied image ONLY as art-direction reference: thick irregular charcoal ink contours, clean flat cream/smoke-yellow fills, one simple cel shadow, ugly-cute exhausted paper world. No realistic rendering, shiny metal, blue sci-fi, neon, glow, text, logos, numbers, scene, cast shadow or grunge overlay.\nCreate ONE square opaque nine-patch UI PAPER PANEL SKIN. Full canvas is a solid pale warm recycled-paper cream (#E5D8B8), not transparency. The entire large CENTER must be quiet clean uniform flat pale paper color with only barely visible fine grain. A thin slightly imperfect charcoal-black hand-inked outline runs just INSIDE all four canvas edges. Small paper folds and one tiny dog-ear are confined strictly within 32 pixels of outer edges on a 1024px canvas, so borders can be nine-sliced. Keep corners roughly square, gently irregular, not rounded game loot cards. NO heavy shadow, no tape, no staples, no holes or black frame, no decorative marks in the center, no lettering. This texture must stretch cleanly across many differently sized Godot UI panels.",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "width": 1254,
+      "height": 1254,
+      "size": [
+        1254,
+        1254
+      ],
+      "mode": "RGB",
+      "sha256": "b1016a5131a03895f8af504a156f07979af009f91fa0822664064bb2185add14",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "alpha_extrema": [
+        255,
+        255
+      ]
+    },
+    {
+      "id": "recording_cartridge",
+      "file": "assets/presentation/surfaces/recording_cartridge.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-56a9bc9f-b17d-4275-8942-351524ee3d94.png",
+      "prompt": "Use case: stylized-concept. Production asset for original 2D dark-comedy paper-copy roguelite Take Stack. Use supplied image ONLY as art-direction reference: thick irregular charcoal ink contours, clean flat cream/smoke-yellow fills, one simple cel shadow, ugly-cute exhausted paper world. No realistic rendering, shiny metal, blue sci-fi, neon, glow, text, logos, numbers, scene, cast shadow or grunge overlay.\nCreate ONE isolated wide 3:2-proportioned inventory icon of TWO OLD PAPER COPIES stacked slightly offset, held together by ONE absurdly oversized dark gray staple at the top. Each cream folded paper has a very simple dead-tired face (heavy half-lidded black eyes, tiny resigned mouth); the rear face is slightly paler and misregistered muted sage. Paper has thick black irregular contour, one warm beige cel shadow, a small folded corner and a chipped edge. The stack fills the central 80% with generous transparent margin, all silhouette in frame. The object reads as a used-up paper duplicate, not a cassette tape or a modern device. Front/three-quarter slight view, flat production icon. Genuine transparent background, no shadow beneath it, no letters or labels.",
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "width": 1536,
+      "height": 1024,
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "c9189170a61c4557c9554c201a8b5627a8a77c8f6432f8b94c7edd54b2bf215a",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        226,
+        29,
+        1342,
+        996
+      ],
+      "alpha_extrema": [
+        0,
+        254
+      ]
+    }
+  ]
+}

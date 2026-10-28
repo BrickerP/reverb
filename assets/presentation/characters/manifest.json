@@ -1,70 +1,364 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-23",
-  "visible_alpha_min": 20,
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
-      "id": "looper_back",
-      "file": "looper_back.png",
-      "source_file": "exec-7720b07a-12d7-4078-9d59-7a3b2b56515b.png",
-      "sha256": "f3b5224bb40b350171816a1cf6b0d838a949b462b1f45ce6521df98e803f7796",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [386, 233, 903, 1065]
-    },
-    {
-      "id": "solo_front",
-      "file": "solo_front.png",
-      "source_file": "exec-92f9d898-026f-4be1-9093-e06b85994128.png",
-      "sha256": "93fa880295c89230fb2c8231fd0b864731f7babb6d1c51b85adc9a6b44fb8de6",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [395, 169, 933, 1141]
-    },
-    {
-      "id": "solo_back",
-      "file": "solo_back.png",
-      "source_file": "exec-1e91c0a8-87ff-4116-bc52-74047c1ea98b.png",
-      "sha256": "5e0d4bb9728dd147314e773641549fbef2af10688b9d9eba5ac00e85430f4671",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [385, 152, 891, 1153]
-    },
-    {
-      "id": "mirror_front",
-      "file": "mirror_front.png",
-      "source_file": "exec-5a91d0d6-5b4f-4cc1-8da3-e26c8e16647c.png",
-      "sha256": "fcd9cefd566daa60ad0015418d6fb65c8635b834900ce9e71bf4ed10df7a6e20",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [333, 162, 969, 1152]
-    },
-    {
-      "id": "mirror_back",
-      "file": "mirror_back.png",
-      "source_file": "exec-14a1d45f-76cc-4510-aa5e-2e2196a63459.png",
-      "sha256": "0b237e77125d00f181de2a7ab43df5c1f8a4f663bcc0e8fd83dab129cbfe24ab",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [330, 177, 939, 1148]
-    },
-    {
-      "id": "conductor_front",
-      "file": "conductor_front.png",
-      "source_file": "exec-7b60cd6e-7dfb-4887-9db9-3814fc9dc688.png",
-      "sha256": "378c2eb56e4223a6aaa98bda536b2409d9ddaaa44536d328bd0cd8efa7696362",
-      "size": [1254, 1254],
-      "mode": "RGBA",
-      "bounds_ltrb": [292, 148, 1051, 1143]
-    },
-    {
-      "id": "conductor_back",
       "file": "conductor_back.png",
-      "source_file": "exec-93e80b83-8021-4942-bc95-65c28705ea6c.png",
-      "sha256": "efbbfdeaf662f5a02faf40a45e595f863b00cea665a3a1e19b290a51aa0f6d3e",
-      "size": [1254, 1254],
+      "sha256": "702224de47379d7d93eb747b4cdbd7057bc19498d5801a1f8cdcf206739a4ec1",
+      "size": [
+        2172,
+        724
+      ],
       "mode": "RGBA",
-      "bounds_ltrb": [241, 86, 1038, 1178]
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        53,
+        143,
+        2127,
+        590
+      ],
+      "frame_union_ltrb": [
+        46,
+        143,
+        506,
+        590
+      ],
+      "frame_bounds_ltrb": [
+        [
+          53,
+          150,
+          490,
+          584
+        ],
+        [
+          46,
+          143,
+          505,
+          590
+        ],
+        [
+          47,
+          152,
+          506,
+          590
+        ],
+        [
+          49,
+          210,
+          498,
+          589
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "conductor_front.png",
+      "sha256": "fdc44190da4eb1dec829b24072a3348ec58339e475729fa7c8ed868434babe10",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        32,
+        120,
+        2138,
+        616
+      ],
+      "frame_union_ltrb": [
+        24,
+        120,
+        509,
+        616
+      ],
+      "frame_bounds_ltrb": [
+        [
+          32,
+          120,
+          492,
+          604
+        ],
+        [
+          24,
+          121,
+          495,
+          607
+        ],
+        [
+          60,
+          127,
+          491,
+          616
+        ],
+        [
+          33,
+          173,
+          509,
+          613
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "looper_back.png",
+      "sha256": "4cd5cf072e4a531119b22b98b940bb8135cf027435405b8d65d732242206ce40",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        84,
+        104,
+        2099,
+        612
+      ],
+      "frame_union_ltrb": [
+        70,
+        104,
+        486,
+        612
+      ],
+      "frame_bounds_ltrb": [
+        [
+          84,
+          104,
+          467,
+          607
+        ],
+        [
+          98,
+          106,
+          486,
+          612
+        ],
+        [
+          96,
+          106,
+          483,
+          611
+        ],
+        [
+          70,
+          152,
+          470,
+          604
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "mirror_back.png",
+      "sha256": "5dff9f3bf31c74963db2e6c1d01a471dcd94ef1a2787593a288d47633c549643",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        92,
+        135,
+        2064,
+        605
+      ],
+      "frame_union_ltrb": [
+        57,
+        135,
+        452,
+        605
+      ],
+      "frame_bounds_ltrb": [
+        [
+          92,
+          137,
+          438,
+          592
+        ],
+        [
+          92,
+          137,
+          452,
+          605
+        ],
+        [
+          79,
+          135,
+          438,
+          589
+        ],
+        [
+          57,
+          180,
+          435,
+          590
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "mirror_front.png",
+      "sha256": "0576260f4b4625f0dd7444437fd5969cca1b7da356f0bd91cb82b819bcc34e9b",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        90,
+        138,
+        2132,
+        621
+      ],
+      "frame_union_ltrb": [
+        39,
+        138,
+        503,
+        621
+      ],
+      "frame_bounds_ltrb": [
+        [
+          90,
+          146,
+          450,
+          609
+        ],
+        [
+          84,
+          138,
+          460,
+          612
+        ],
+        [
+          74,
+          143,
+          445,
+          621
+        ],
+        [
+          39,
+          218,
+          503,
+          606
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "solo_back.png",
+      "sha256": "ce5771eec25702305fdbb0046d990d83a9e3a69d9a44212708b256c7292435eb",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        63,
+        71,
+        2111,
+        620
+      ],
+      "frame_union_ltrb": [
+        63,
+        71,
+        496,
+        620
+      ],
+      "frame_bounds_ltrb": [
+        [
+          63,
+          71,
+          490,
+          614
+        ],
+        [
+          64,
+          84,
+          496,
+          620
+        ],
+        [
+          81,
+          87,
+          490,
+          618
+        ],
+        [
+          90,
+          191,
+          482,
+          614
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
+    },
+    {
+      "file": "solo_front.png",
+      "sha256": "ec1bcee782c1a19b5a264588e636de13484e6663210723bcad1a35e475d48df8",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        65,
+        70,
+        2128,
+        645
+      ],
+      "frame_union_ltrb": [
+        65,
+        70,
+        507,
+        645
+      ],
+      "frame_bounds_ltrb": [
+        [
+          65,
+          70,
+          500,
+          629
+        ],
+        [
+          65,
+          78,
+          507,
+          645
+        ],
+        [
+          72,
+          71,
+          499,
+          645
+        ],
+        [
+          74,
+          164,
+          499,
+          629
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
+      "rows": 1
     }
   ]
 }

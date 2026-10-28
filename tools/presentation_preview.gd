@@ -1,18 +1,18 @@
 extends SceneTree
-# Deterministic presentation fixture for a 12-16 second --write-movie capture.
+# Deterministic presentation fixture for a roughly 20 second --write-movie capture.
 # It stages real Main/Sim/UI behavior for visual review only; its durability,
 # materials, wave duration and offer lineup are not balance evidence.
 # Usage: godot --path . --fixed-fps 60 --disable-vsync \
 #   --write-movie res://shots/presentation.avi \
 #   --script res://tools/presentation_preview.gd
 
-enum Stage { SELECT, PLAY, SHOP, REPLACE, PURCHASED, FINISH }
+enum Stage { SELECT, PLAY, SHOP, REPLACE, PURCHASED, BOSS, FINISH }
 
 const SEED := 20261023
 const SELECT_SHOT_FRAME := 45
 const SELECT_FRAMES := 60
 const WAVE_SECONDS := 8.0
-const SHOP_HOLD_FRAMES := 45
+const SHOP_HOLD_FRAMES := 90
 
 var _main: Node
 var _stage := Stage.SELECT
@@ -26,6 +26,7 @@ func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://presentation_preview_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://presentation_preview_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://presentation_preview_settings.json")
+	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
 	_clear_fixture_files()
 	_shots_dir = ProjectSettings.globalize_path("res://shots")
 	DirAccess.make_dir_recursive_absolute(_shots_dir)
@@ -48,6 +49,8 @@ func _process(_delta: float) -> bool:
 			_replace_stage()
 		Stage.PURCHASED:
 			_purchased_stage()
+		Stage.BOSS:
+			_boss_stage()
 		Stage.FINISH:
 			_release()
 			if _frame >= 8:
@@ -74,6 +77,10 @@ func _play_stage() -> void:
 	_drive(_movement_for(_frame))
 	if _frame == 150:
 		_save("combat")
+	elif _frame == 240:
+		sim.collapse_oldest_echo()
+	elif _frame == 244:
+		_save("collapse")
 	elif _frame == 360:
 		_save("echoes")
 	if sim.phase == Sim.Phase.SHOP:
@@ -111,9 +118,38 @@ func _purchased_stage() -> void:
 	if _frame < SHOP_HOLD_FRAMES:
 		return
 	_save("purchased")
-	_main.audio.stop_all()
+	_release()
+	_main.new_run(SEED)
+	var sim: Sim = _main.sim
+	sim.player.stats.add(Stats.MAX_HP, 500.0)
+	sim.player.hp = sim.player.max_hp()
+	_add_echo_take(sim, 1, 0.0)
+	_add_echo_take(sim, 2, PI)
+	sim.start_wave(WaveDirector.FINAL_WAVE)
 	_frame = 0
-	_stage = Stage.FINISH
+	_stage = Stage.BOSS
+
+
+func _boss_stage() -> void:
+	var sim: Sim = _main.sim
+	_drive(_movement_for(_frame))
+	if _frame == 90:
+		_save("boss")
+	if _frame == 150 and sim.boss != null:
+		sim.boss.hp = sim.boss.max_hp * 0.51
+		sim.damage_enemy(sim.boss, sim.boss.max_hp * 0.02, Vector2.ZERO, false, -1)
+	if _frame == 210:
+		_save("boss_phase2")
+	if _frame == 300:
+		for shard in sim.boss_shards:
+			if not shard.dead:
+				sim.damage_enemy(shard, 1000000.0, Vector2.ZERO, false, -1)
+	if _frame >= 420:
+		_release()
+		_save("victory")
+		_main.audio.stop_all()
+		_frame = 0
+		_stage = Stage.FINISH
 
 
 func _setup_presentation_fixture() -> void:
@@ -140,6 +176,8 @@ func _setup_presentation_fixture() -> void:
 	_spawn_enemy(sim, &"grunt", Vector2(270.0, 105.0))
 	_spawn_enemy(sim, &"runner", Vector2(-300.0, 120.0))
 	_spawn_enemy(sim, &"runner", Vector2(160.0, -205.0))
+	_spawn_enemy(sim, &"brute", Vector2(-110.0, -150.0))
+	_spawn_enemy(sim, &"brute", Vector2(240.0, -90.0))
 
 
 func _add_echo_take(sim: Sim, wave: int, phase: float) -> void:
@@ -264,9 +302,8 @@ func _check_shop_layout() -> void:
 	for card: PanelContainer in ui.build_panel._cards:
 		if card.get_global_rect().end.x > right + 0.5:
 			push_error("Presentation preview: build card is clipped horizontally")
-	var last := ui.offers_box.get_child(ui.offers_box.get_child_count() - 1) as OfferCard
-	if last.get_global_rect().end.y > ui.reroll_button.global_position.y:
-		push_error("Presentation preview: offer overlaps shop actions")
+	if ui._offers_scroll.get_global_rect().end.y > ui.reroll_button.global_position.y:
+		push_error("Presentation preview: scrolling stock overlaps fixed shop actions")
 	print("presentation layout: full build and four offers checked")
 
 

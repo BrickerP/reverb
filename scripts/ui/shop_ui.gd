@@ -35,28 +35,29 @@ var reduced_effects := false
 var last_feedback: Dictionary = {}
 var material_feedback_runs := 0
 var _material_feedback_tween: Tween
+var _offers_scroll: ScrollContainer
 
 
 func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.01, 0.01, 0.04, 0.93)
+	dim.color = Color(UiTheme.EDGE, 0.98)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	margin.add_theme_constant_override("margin_left", 24)
+	margin.add_theme_constant_override("margin_right", 24)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_bottom", 16)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 12)
+	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 	root.add_child(_build_header())
 	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 24)
+	columns.add_theme_constant_override("separation", 14)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(columns)
 	columns.add_child(_build_left())
@@ -94,6 +95,7 @@ func open(s: Sim) -> void:
 	material_feedback_runs = 0
 	last_feedback.clear()
 	visible = true
+	UiTheme.animate_open(self, reduced_effects)
 	_replacing = null
 	_replacing_index = -1
 	refresh(true)
@@ -136,6 +138,7 @@ func refresh(animate_echo: bool = false) -> void:
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
 		offers_box.add_child(card)
+		card.reduced_effects = reduced_effects
 		card.setup(o, sim, o == _replacing, drag_payload_for, clear_drop_hint)
 		card.pressed.connect(_on_offer.bind(o, card))
 		card.replacement_requested.connect(_begin_replace)
@@ -168,9 +171,26 @@ func refresh(animate_echo: bool = false) -> void:
 
 
 func _build_footer() -> Control:
-	_footer = UiTheme.label(Loc.t("shop.keys"), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	var tray := PanelContainer.new()
+	tray.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	tray.add_child(box)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	box.add_child(actions)
+	_warning = UiTheme.label("", 15, UiTheme.WARN)
+	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_warning.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	actions.add_child(_warning)
+	for button: Button in [reroll_button, undo_button, start_button]:
+		actions.add_child(button)
+	_footer = UiTheme.label(Loc.t("shop.keys"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	return _footer
+	_footer.custom_minimum_size = Vector2(0.0, 19.0)
+	box.add_child(_footer)
+	return tray
 
 
 func _on_weapon_detail(text: String) -> void:
@@ -181,67 +201,74 @@ func _on_weapon_detail(text: String) -> void:
 
 
 func _build_header() -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
 	var row := HBoxContainer.new()
-	_title = UiTheme.label("", 30)
-	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(_title)
+	row.add_theme_constant_override("separation", 18)
+	panel.add_child(row)
+	var identity := VBoxContainer.new()
+	identity.add_theme_constant_override("separation", 1)
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(identity)
+	_title = UiTheme.section_label("", 28)
+	identity.add_child(_title)
+	identity.add_child(UiTheme.label(Loc.t("shop.paper_task"), 13, UiTheme.DIM))
 	var right := VBoxContainer.new()
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_theme_constant_override("separation", 0)
 	_materials = UiTheme.label("", 26, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
-	_interest = UiTheme.label("", 12, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
+	_interest = UiTheme.label("", 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_RIGHT)
 	right.add_child(_materials)
 	right.add_child(_interest)
 	row.add_child(right)
-	return row
+	return panel
 
 
 func _build_left() -> Control:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(400.0, 0.0)
+	column.custom_minimum_size = Vector2(376.0, 0.0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 8)
+	column.add_child(UiTheme.section_label(Loc.t("shop.offers"), 20, UiTheme.PAPER))
+	_offers_scroll = ScrollContainer.new()
+	_offers_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_offers_scroll.follow_focus = true
+	_offers_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(_offers_scroll)
 	offers_box = VBoxContainer.new()
-	offers_box.add_theme_constant_override("separation", 6)
-	column.add_child(offers_box)
+	offers_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	offers_box.add_theme_constant_override("separation", 8)
+	_offers_scroll.add_child(offers_box)
 	_contract_panel = _build_contract_panel()
 	column.add_child(_contract_panel)
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 10)
 	reroll_button = Button.new()
-	reroll_button.custom_minimum_size = Vector2(126.0, 48.0)
+	reroll_button.custom_minimum_size = Vector2(132.0, 42.0)
 	reroll_button.pressed.connect(_on_reroll)
-	buttons.add_child(reroll_button)
 	undo_button = Button.new()
-	undo_button.custom_minimum_size = Vector2(92.0, 48.0)
+	undo_button.custom_minimum_size = Vector2(104.0, 42.0)
 	undo_button.tooltip_text = Loc.t("shop.undo_hint")
 	undo_button.pressed.connect(_on_undo)
-	buttons.add_child(undo_button)
 	start_button = Button.new()
-	start_button.custom_minimum_size = Vector2(0.0, 48.0)
-	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	start_button.custom_minimum_size = Vector2(206.0, 42.0)
+	UiTheme.stamp_button(start_button)
 	start_button.pressed.connect(_on_start)
-	buttons.add_child(start_button)
-	column.add_child(buttons)
-	_warning = UiTheme.label("", 16, UiTheme.WARN)
-	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	column.add_child(_warning)
 	return column
 
 
 func _build_contract_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel",
-			UiTheme.box(Color(0.05, 0.07, 0.1, 0.92), Color(UiTheme.ACCENT, 0.35), 1, 5))
+	panel.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	panel.add_child(row)
-	_contract_label = UiTheme.label("", 11, UiTheme.DIM)
+	_contract_label = UiTheme.label("", 13, UiTheme.INK)
 	_contract_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_contract_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	row.add_child(_contract_label)
 	_contract_button = Button.new()
-	_contract_button.custom_minimum_size = Vector2(64.0, 28.0)
-	_contract_button.add_theme_font_size_override("font_size", 10)
+	_contract_button.custom_minimum_size = Vector2(68.0, 34.0)
+	_contract_button.add_theme_font_size_override("font_size", 12)
 	_contract_button.pressed.connect(_on_accept_contract)
 	row.add_child(_contract_button)
 	panel.visible = false
@@ -446,9 +473,17 @@ func _on_history_changed(can_undo: bool) -> void:
 
 func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
+	if offers_box != null:
+		for child in offers_box.get_children():
+			var card := child as OfferCard
+			if card != null:
+				card.reduced_effects = on
+				if on:
+					card._release_paper()
 	if echo_panel != null:
 		echo_panel.set_reduced_effects(on)
 	if on:
+		UiTheme.animate_open(self, true)
 		reset_feedback()
 		if _overlay != null:
 			UiTheme.clear(_overlay)
@@ -551,7 +586,7 @@ func _pulse_materials(reverse: bool) -> void:
 		_material_feedback_tween.kill()
 	material_feedback_runs += 1
 	_materials.pivot_offset = _materials.size * 0.5
-	_materials.modulate = Color(1.0, 0.65, 0.9) if reverse else UiTheme.COIN
+	_materials.modulate = Color(0.88, 0.78, 0.92) if reverse else Color(1.0, 0.86, 0.62)
 	_materials.scale = Vector2.ONE if reduced_effects else Vector2(0.96, 0.96)
 	_material_feedback_tween = create_tween().set_parallel(true)
 	_material_feedback_tween.tween_property(_materials, "modulate", Color.WHITE, 0.2)
@@ -716,6 +751,7 @@ func _on_merge(a: EchoTake, b: EchoTake) -> void:
 	if not result.ok:
 		return
 	refresh()
+	echo_panel.confirm_merge()
 	if sim.can_start_wave():
 		start_button.grab_focus()
 	else:
@@ -753,6 +789,9 @@ func _focus_card(from: int) -> void:
 
 
 func focus_default() -> void:
+	if sim != null and sim.bank.overflow(sim.echo_capacity()) > 0 \
+			and echo_panel.focus_first_discard():
+		return
 	_focus_card(0)
 
 
@@ -766,18 +805,33 @@ func _fly_take_token() -> void:
 	await get_tree().process_frame
 	if reduced_effects or session_epoch != _feedback_epoch or not visible or sim == null:
 		return
-	var target := echo_panel.arrival_point()
-	if target == Vector2.ZERO:
+	var arrival := echo_panel.arrival_point()
+	if arrival == Vector2.ZERO:
 		return
-	var token := ColorRect.new()
-	token.color = Color(echo_panel.newest_tint(), 0.95)
-	token.size = Vector2(10.0, 10.0)
-	token.rotation = PI * 0.25
+	var target := _overlay.get_global_transform().affine_inverse() * arrival
+	var token := UiTheme.cartridge_icon(Vector2(34.0, 27.0))
+	token.size = Vector2(34.0, 27.0)
+	token.rotation = -0.14
 	token.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	token.position = Vector2(640.0, 380.0) - token.size * 0.5
+	token.position = _arrival_origin() - token.size * 0.5
 	_overlay.add_child(token)
 	var tween := token.create_tween()
 	tween.tween_property(token, "position", target - token.size * 0.5, 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(token, "scale", Vector2(0.6, 0.6), 0.55)
+	tween.parallel().tween_property(token, "rotation", 0.0, 0.55)
 	tween.chain().tween_property(token, "modulate:a", 0.0, 0.12)
 	tween.tween_callback(token.queue_free)
+
+
+func _arrival_origin() -> Vector2:
+	# Shop and ArenaView share their canvas, but not necessarily their transforms.
+	# Convert the simulated arena centre through the actual scene transforms.
+	var ancestor: Node = get_parent()
+	while ancestor != null:
+		for child in ancestor.get_children():
+			if child is ArenaView:
+				return _overlay.get_global_transform_with_canvas().affine_inverse() \
+						* ((child as ArenaView).get_global_transform_with_canvas() * Sim.ARENA.get_center())
+		ancestor = ancestor.get_parent()
+	return _overlay.get_global_transform_with_canvas().affine_inverse() \
+			* (get_global_transform_with_canvas() * Sim.ARENA.get_center())

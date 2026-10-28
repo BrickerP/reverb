@@ -1,36 +1,106 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-23",
-  "visible_alpha_min": 20,
+  "date": "2026-10-28",
+  "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
-      "id": "arena_floor",
       "file": "arena_floor.png",
-      "source": "exec-c1a760be-a4c8-42da-9837-55cc325e85eb.png",
-      "sha256": "f72d090a13930730e58e67753e60fd1f511da1b84aa6d026b0a74707c5bc8fc2",
-      "size": [1774, 887],
+      "sha256": "fab4147d598f77650f49ed1ed8a6f67d5aaa0263c2e871f8b756b27f8c414bed",
+      "size": [
+        1774,
+        887
+      ],
       "mode": "RGB",
-      "bounds_ltrb": [0, 0, 1774, 887]
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        0,
+        0,
+        1774,
+        887
+      ],
+      "frame_union_ltrb": [
+        0,
+        0,
+        1774,
+        887
+      ],
+      "frame_bounds_ltrb": [
+        [
+          0,
+          0,
+          1774,
+          887
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
     },
     {
-      "id": "recording_cartridge",
-      "file": "recording_cartridge.png",
-      "source": "exec-5737e085-83f8-424b-a3ce-f6b57f138eb5.png",
-      "sha256": "d29b3f368c5ce7ce6db468a09633305a2f4f5674edf350c638ab645534496c9f",
-      "size": [1536, 1024],
-      "mode": "RGBA",
-      "bounds_ltrb": [45, 141, 1491, 847]
-    },
-    {
-      "id": "panel_skin",
       "file": "panel_skin.png",
-      "source": "exec-b971844e-5e78-48d9-870c-489aeadfa773.png",
-      "sha256": "4e9c32d414ff0876828b778f1fd68f3e4cbdd87b2d06039fe335975675d36ab7",
-      "size": [1254, 1254],
+      "sha256": "b1016a5131a03895f8af504a156f07979af009f91fa0822664064bb2185add14",
+      "size": [
+        1254,
+        1254
+      ],
       "mode": "RGB",
-      "bounds_ltrb": [0, 0, 1254, 1254],
-      "nine_patch_margin_recommendation": [80, 80, 80, 80],
-      "recommendation_status": "observed_only_not_runtime_validated"
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "frame_union_ltrb": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "frame_bounds_ltrb": [
+        [
+          0,
+          0,
+          1254,
+          1254
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
+    },
+    {
+      "file": "recording_cartridge.png",
+      "sha256": "c9189170a61c4557c9554c201a8b5627a8a77c8f6432f8b94c7edd54b2bf215a",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        226,
+        29,
+        1342,
+        996
+      ],
+      "frame_union_ltrb": [
+        226,
+        29,
+        1342,
+        996
+      ],
+      "frame_bounds_ltrb": [
+        [
+          226,
+          29,
+          1342,
+          996
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1
     }
   ]
 }

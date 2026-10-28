@@ -35,6 +35,7 @@ const CHARACTER_BACK_KEYS := {
 }
 
 const PATHS := {
+	&"recording_cartridge": "res://assets/presentation/surfaces/recording_cartridge.png",
 	&"character_looper_front": "res://assets/presentation/player.png",
 	&"character_looper_back": "res://assets/presentation/characters/looper_back.png",
 	&"character_solo_front": "res://assets/presentation/characters/solo_front.png",
@@ -78,44 +79,63 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
-	&"character_looper_front": {"size": Vector2(1254, 1254), "region": Rect2(379, 247, 525, 816)},
-	&"character_looper_back": {"size": Vector2(1254, 1254), "region": Rect2(386, 233, 517, 832)},
-	&"character_solo_front": {"size": Vector2(1254, 1254), "region": Rect2(395, 169, 538, 972)},
-	&"character_solo_back": {"size": Vector2(1254, 1254), "region": Rect2(385, 152, 506, 1001)},
-	&"character_mirror_front": {"size": Vector2(1254, 1254), "region": Rect2(333, 162, 636, 990)},
-	&"character_mirror_back": {"size": Vector2(1254, 1254), "region": Rect2(330, 177, 609, 971)},
-	&"character_conductor_front": {"size": Vector2(1254, 1254), "region": Rect2(292, 148, 759, 995)},
-	&"character_conductor_back": {"size": Vector2(1254, 1254), "region": Rect2(241, 86, 797, 1092)},
-	&"enemy_grunt": {"size": Vector2(1254, 1254), "region": Rect2(184, 273, 906, 723)},
-	&"enemy_runner": {"size": Vector2(1254, 1254), "region": Rect2(289, 207, 785, 840)},
-	&"enemy_brute": {"size": Vector2(1402, 1122), "region": Rect2(77, 111, 1279, 937)},
-	&"enemy_silencer": {"size": Vector2(1254, 1254), "region": Rect2(302, 36, 750, 1150)},
-	&"enemy_bomber": {"size": Vector2(1254, 1254), "region": Rect2(145, 252, 989, 846)},
-	&"enemy_warden": {"size": Vector2(1254, 1254), "region": Rect2(120, 233, 1072, 864)},
-	&"enemy_paradox": {"size": Vector2(1254, 1254), "region": Rect2(23, 131, 1224, 1027)},
-	&"weapon_pistol": {"size": Vector2(1254, 1254), "region": Rect2(145, 329, 1046, 639)},
-	&"weapon_smg": {"size": Vector2(1536, 1024), "region": Rect2(38, 219, 1468, 625)},
-	&"weapon_shotgun": {"size": Vector2(1254, 1254), "region": Rect2(74, 403, 1144, 476)},
-	&"weapon_rifle": {"size": Vector2(1881, 836), "region": Rect2(22, 176, 1838, 505)},
-	&"weapon_orb": {"size": Vector2(1254, 1254), "region": Rect2(82, 318, 1125, 604)},
-	&"weapon_flechette": {"size": Vector2(1536, 1024), "region": Rect2(178, 201, 1287, 665)},
-	&"weapon_longbow": {"size": Vector2(1536, 1024), "region": Rect2(559, 31, 654, 964)},
-	&"weapon_hex_bolt": {"size": Vector2(1536, 1024), "region": Rect2(132, 220, 1321, 631)},
-	&"weapon_twin_fangs": {"size": Vector2(1536, 1024), "region": Rect2(119, 149, 1317, 776)},
-	&"weapon_flak_crown": {"size": Vector2(1536, 1024), "region": Rect2(16, 117, 1507, 741)},
-	&"weapon_rail_spike": {"size": Vector2(1942, 809), "region": Rect2(27, 167, 1888, 482)},
-	&"weapon_nova_core": {"size": Vector2(1619, 971), "region": Rect2(49, 125, 1537, 719)},
-	&"item_iron_heart": {"size": Vector2(1254, 1254), "region": Rect2(68, 97, 1130, 1054)},
-	&"item_sneakers": {"size": Vector2(1254, 1254), "region": Rect2(10, 125, 1236, 1004)},
-	&"item_sharp_edge": {"size": Vector2(1254, 1254), "region": Rect2(59, 176, 1171, 895)},
-	&"item_quick_trigger": {"size": Vector2(1254, 1254), "region": Rect2(60, 81, 1155, 1052)},
-	&"item_long_barrel": {"size": Vector2(1254, 1254), "region": Rect2(11, 202, 1232, 822)},
-	&"item_lucky_coin": {"size": Vector2(1254, 1254), "region": Rect2(118, 139, 1027, 970)},
-	&"item_magnet": {"size": Vector2(1254, 1254), "region": Rect2(69, 67, 1117, 1134)},
-	&"item_regen_patch": {"size": Vector2(1254, 1254), "region": Rect2(152, 116, 955, 1058)},
-	&"item_spare_deck": {"size": Vector2(1254, 1254), "region": Rect2(46, 61, 1167, 1144)},
-	&"item_long_play": {"size": Vector2(1254, 1254), "region": Rect2(20, 113, 1213, 1021)},
-	&"item_loud_speaker": {"size": Vector2(1254, 1254), "region": Rect2(112, 84, 1037, 1104)},
+	&"recording_cartridge": {"size": Vector2(1536, 1024), "region": Rect2(226, 29, 1116, 967)},
+	&"character_looper_front": {"size": Vector2(2172, 724), "region": Rect2(68, 110, 424, 521)},
+	&"character_looper_back": {"size": Vector2(2172, 724), "region": Rect2(70, 104, 416, 508)},
+	&"character_solo_front": {"size": Vector2(2172, 724), "region": Rect2(65, 70, 442, 575)},
+	&"character_solo_back": {"size": Vector2(2172, 724), "region": Rect2(63, 71, 433, 549)},
+	&"character_mirror_front": {"size": Vector2(2172, 724), "region": Rect2(39, 138, 464, 483)},
+	&"character_mirror_back": {"size": Vector2(2172, 724), "region": Rect2(57, 135, 395, 470)},
+	&"character_conductor_front": {"size": Vector2(2172, 724), "region": Rect2(24, 120, 485, 496)},
+	&"character_conductor_back": {"size": Vector2(2172, 724), "region": Rect2(46, 143, 460, 447)},
+	&"enemy_grunt": {"size": Vector2(2172, 724), "region": Rect2(45, 174, 477, 387)},
+	&"enemy_runner": {"size": Vector2(2172, 724), "region": Rect2(49, 93, 468, 516)},
+	&"enemy_brute": {"size": Vector2(2172, 724), "region": Rect2(27, 135, 492, 424)},
+	&"enemy_silencer": {"size": Vector2(2172, 724), "region": Rect2(92, 96, 401, 536)},
+	&"enemy_bomber": {"size": Vector2(2172, 724), "region": Rect2(26, 99, 497, 537)},
+	&"enemy_warden": {"size": Vector2(2172, 724), "region": Rect2(119, 174, 389, 421)},
+	&"enemy_paradox": {"size": Vector2(2172, 724), "region": Rect2(62, 70, 459, 573)},
+	&"weapon_pistol": {"size": Vector2(1536, 1024), "region": Rect2(191, 50, 1165, 914)},
+	&"weapon_smg": {"size": Vector2(1536, 1024), "region": Rect2(202, 34, 1142, 944)},
+	&"weapon_shotgun": {"size": Vector2(1536, 1024), "region": Rect2(124, 194, 1288, 646)},
+	&"weapon_rifle": {"size": Vector2(1774, 887), "region": Rect2(48, 269, 1685, 374)},
+	&"weapon_orb": {"size": Vector2(1536, 1024), "region": Rect2(292, 140, 974, 723)},
+	&"weapon_flechette": {"size": Vector2(1536, 1024), "region": Rect2(198, 192, 1154, 674)},
+	&"weapon_longbow": {"size": Vector2(1536, 1024), "region": Rect2(341, 18, 920, 984)},
+	&"weapon_hex_bolt": {"size": Vector2(1536, 1024), "region": Rect2(32, 208, 1478, 608)},
+	&"weapon_twin_fangs": {"size": Vector2(1536, 1024), "region": Rect2(155, 86, 1232, 851)},
+	&"weapon_flak_crown": {"size": Vector2(1536, 1024), "region": Rect2(25, 67, 1493, 805)},
+	&"weapon_rail_spike": {"size": Vector2(2175, 723), "region": Rect2(21, 152, 2136, 410)},
+	&"weapon_nova_core": {"size": Vector2(1536, 1024), "region": Rect2(277, 64, 980, 897)},
+	&"item_iron_heart": {"size": Vector2(1312, 1199), "region": Rect2(86, 125, 1148, 971)},
+	&"item_sneakers": {"size": Vector2(1536, 1024), "region": Rect2(65, 37, 1423, 957)},
+	&"item_sharp_edge": {"size": Vector2(1293, 1216), "region": Rect2(91, 162, 1150, 917)},
+	&"item_quick_trigger": {"size": Vector2(1312, 1199), "region": Rect2(104, 96, 1164, 1019)},
+	&"item_long_barrel": {"size": Vector2(1312, 1199), "region": Rect2(13, 228, 1290, 726)},
+	&"item_lucky_coin": {"size": Vector2(1312, 1199), "region": Rect2(146, 92, 1045, 1030)},
+	&"item_magnet": {"size": Vector2(1312, 1199), "region": Rect2(133, 80, 1070, 1037)},
+	&"item_regen_patch": {"size": Vector2(1312, 1199), "region": Rect2(42, 128, 1243, 954)},
+	&"item_spare_deck": {"size": Vector2(1312, 1199), "region": Rect2(126, 75, 1051, 1035)},
+	&"item_long_play": {"size": Vector2(1312, 1199), "region": Rect2(93, 51, 1176, 1104)},
+	&"item_loud_speaker": {"size": Vector2(1312, 1199), "region": Rect2(52, 83, 1212, 1033)},
+}
+
+const FRAME_COUNTS := {
+	&"character_looper_front": 4,
+	&"character_looper_back": 4,
+	&"character_solo_front": 4,
+	&"character_solo_back": 4,
+	&"character_mirror_front": 4,
+	&"character_mirror_back": 4,
+	&"character_conductor_front": 4,
+	&"character_conductor_back": 4,
+	&"enemy_grunt": 4,
+	&"enemy_runner": 4,
+	&"enemy_brute": 4,
+	&"enemy_silencer": 4,
+	&"enemy_bomber": 4,
+	&"enemy_warden": 4,
+	&"enemy_paradox": 4,
 }
 
 static var _textures: Dictionary = {}
@@ -159,6 +179,22 @@ static func weapon_key(w: WeaponDef) -> StringName:
 		return &"weapon_pistol"
 	var key: StringName = WEAPON_KEYS.get(w.id, &"weapon_pistol")
 	return key
+
+
+static func frame_count(key: StringName) -> int:
+	if not PATHS.has(key):
+		return 0
+	return int(FRAME_COUNTS.get(key, 1))
+
+
+static func frame_region(key: StringName, index: int) -> Rect2:
+	var first := region(key)
+	var count := frame_count(key)
+	if count <= 1 or not first.has_area():
+		return first
+	var tex := texture(key)
+	var frame := clampi(index, 0, count - 1)
+	return Rect2(first.position + Vector2(float(frame) * tex.get_width() / float(count), 0.0), first.size)
 
 
 static func item_key(item: ItemDef) -> StringName:
