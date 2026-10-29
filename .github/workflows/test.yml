@@ -52,10 +52,10 @@ jobs:
           GODOT: ${{ matrix.godot_bin }}
         run: ./tools/checked.sh --headless --path . --fixed-fps 60 --script res://tools/smoke.gd
 
-      - name: Python report tests
+      - name: Python tooling tests
         if: runner.os == 'Linux'
         shell: bash
-        run: python3 -m unittest tests/test_runs_report.py tests/test_package_release.py
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
 
   export-linux:
     needs: test
