@@ -155,7 +155,8 @@ func test_poor_cards_stay_pressable_and_flash_materials(c: Check) -> void:
 	var before := s.player.materials
 	first.pressed.emit()
 	c.eq(s.player.materials, before, "a blocked card buys nothing")
-	c.ok(first.modulate.g < 0.9, "the clicked card flashes red")
+	c.ok(first.price_tag.modulate.g < 0.9, "the loose price tag flashes red")
+	c.eq(first.scale, Vector2.ONE, "the failed purchase keeps its interaction rectangle fixed")
 	c.ok(ui._materials.modulate != Color.WHITE, "the materials counter flashes")
 	ui.free()
 

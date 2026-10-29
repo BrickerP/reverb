@@ -18,6 +18,7 @@ var language_lock_hint: Label
 var close_button: Button
 
 var _syncing := false
+var _aside: Label
 
 
 func _ready() -> void:
@@ -31,17 +32,24 @@ func _ready() -> void:
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
+	panel.custom_minimum_size = Vector2(680.0, 0.0)
+	var sheet := UiTheme.surface_panel().duplicate() as InkStyleBox
+	sheet.shape = InkStyleBox.Shape.PAPER
+	sheet.softness = 64.0
+	sheet.variant = 22
+	panel.add_theme_stylebox_override("panel", sheet)
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 28)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 18)
+	box.add_theme_constant_override("separation", 14)
 	margin.add_child(box)
-	box.add_child(UiTheme.label(Loc.t("settings.title"), 34, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(UiTheme.label(Loc.t("settings.title"), 44, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER))
+
+	_aside = UiTheme.label(Loc.t("settings.aside"), 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_aside)
 
 	var volume_row := HBoxContainer.new()
 	volume_row.add_theme_constant_override("separation", 12)
@@ -60,6 +68,7 @@ func _ready() -> void:
 	volume_row.add_child(volume_value)
 	box.add_child(volume_row)
 
+	box.add_child(UiTheme.label(Loc.t("settings.motion_group"), 22, UiTheme.INK))
 	shake_check = CheckButton.new()
 	shake_check.text = Loc.t("settings.shake")
 	shake_check.flat = true
@@ -113,6 +122,7 @@ func _ready() -> void:
 
 
 func open(settings: Settings, language_enabled: bool = true) -> void:
+	_aside.text = Loc.t("settings.aside")
 	_syncing = true
 	volume_slider.value = settings.volume
 	volume_value.text = "%d%%" % int(round(settings.volume * 100.0))
@@ -141,24 +151,29 @@ func close() -> void:
 func _on_volume(value: float) -> void:
 	volume_value.text = "%d%%" % int(round(value * 100.0))
 	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
 		volume_changed.emit(value)
 
 
 func _on_shake(on: bool) -> void:
 	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
 		shake_changed.emit(on)
 
 
 func _on_reduced_effects(on: bool) -> void:
 	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
 		reduced_effects_changed.emit(on)
 
 
 func _on_fullscreen(on: bool) -> void:
 	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
 		fullscreen_changed.emit(on)
 
 
 func _on_language(index: int) -> void:
 	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
 		language_changed.emit(str(language_option.get_item_metadata(index)))

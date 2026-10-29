@@ -1,6 +1,5 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-28",
   "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
@@ -30,39 +29,6 @@
           0,
           1774,
           887
-        ]
-      ],
-      "frame_count": 1,
-      "columns": 1,
-      "rows": 1
-    },
-    {
-      "file": "panel_skin.png",
-      "sha256": "b1016a5131a03895f8af504a156f07979af009f91fa0822664064bb2185add14",
-      "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGB",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        0,
-        0,
-        1254,
-        1254
-      ],
-      "frame_union_ltrb": [
-        0,
-        0,
-        1254,
-        1254
-      ],
-      "frame_bounds_ltrb": [
-        [
-          0,
-          0,
-          1254,
-          1254
         ]
       ],
       "frame_count": 1,
@@ -100,6 +66,57 @@
       ],
       "frame_count": 1,
       "columns": 1,
+      "rows": 1
+    },
+    {
+      "file": "shopkeeper.png",
+      "sha256": "2fe786957b2838e2017dc6edd61535f975686ffb9f43ba9521fb37a3cc7dca8a",
+      "size": [
+        2172,
+        724
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        87,
+        123,
+        2077,
+        617
+      ],
+      "frame_union_ltrb": [
+        50,
+        123,
+        469,
+        617
+      ],
+      "frame_bounds_ltrb": [
+        [
+          87,
+          124,
+          434,
+          617
+        ],
+        [
+          72,
+          130,
+          426,
+          617
+        ],
+        [
+          50,
+          126,
+          469,
+          616
+        ],
+        [
+          85,
+          123,
+          448,
+          617
+        ]
+      ],
+      "frame_count": 4,
+      "columns": 4,
       "rows": 1
     }
   ]

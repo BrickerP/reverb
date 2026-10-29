@@ -35,6 +35,7 @@ const CHARACTER_BACK_KEYS := {
 }
 
 const PATHS := {
+	&"shopkeeper": "res://assets/presentation/surfaces/shopkeeper.png",
 	&"recording_cartridge": "res://assets/presentation/surfaces/recording_cartridge.png",
 	&"character_looper_front": "res://assets/presentation/player.png",
 	&"character_looper_back": "res://assets/presentation/characters/looper_back.png",
@@ -79,6 +80,7 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
+	&"shopkeeper": {"size": Vector2(2172, 724), "region": Rect2(50, 123, 419, 494)},
 	&"recording_cartridge": {"size": Vector2(1536, 1024), "region": Rect2(226, 29, 1116, 967)},
 	&"character_looper_front": {"size": Vector2(2172, 724), "region": Rect2(68, 110, 424, 521)},
 	&"character_looper_back": {"size": Vector2(2172, 724), "region": Rect2(70, 104, 416, 508)},
@@ -121,6 +123,7 @@ const SOURCE_METADATA := {
 }
 
 const FRAME_COUNTS := {
+	&"shopkeeper": 4,
 	&"character_looper_front": 4,
 	&"character_looper_back": 4,
 	&"character_solo_front": 4,

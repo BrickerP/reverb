@@ -8,7 +8,9 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、4 个角色、叠录、本地解锁记录和程序音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
 
-开发版本 **0.11.0-dev** 现采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。全部角色、敌人、武器、道具和场景已统一重绘，角色与敌人使用真实四帧图集；制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
+开发版本 **0.11.1-dev** 现采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。全部角色、敌人、武器、道具和场景已统一重绘，角色与敌人使用真实四帧图集；制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
+
+0.11.1 的界面改为有机手墨轮廓：开放纸偶舞台、供货摊与副本卷宗、会对实际交易作出反应的小商贩，以及卷轴/材料袋 HUD。鼠标和键盘焦点共用同一套手绘提示，减弱特效会直接落到最终状态。
 
 ![wave](docs/wave.png)
 ![shop](docs/shop.png)

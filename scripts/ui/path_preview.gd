@@ -47,8 +47,6 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var frame := Rect2(Vector2.ZERO, PREVIEW_SIZE)
-	draw_rect(frame, UiTheme.PAPER)
 	if _points.size() >= 2:
 		if _progress < 1.0:
 			# Faint full route, then the tape draws itself in.
@@ -62,4 +60,3 @@ func _draw() -> void:
 			draw_polyline(_points, Color(_tint, 0.9), 1.5, true)
 	if not _points.is_empty():
 		draw_circle(_points[0], 3.0, UiTheme.INK)
-	draw_rect(frame, UiTheme.EDGE, false, 2.0)

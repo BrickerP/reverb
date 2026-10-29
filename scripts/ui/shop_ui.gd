@@ -5,9 +5,11 @@ signal start_requested
 
 const MAX_PENDING_FEEDBACK := 8
 const FEEDBACK_EXPIRY_MSEC := 800
+const ON_DARK := Color("dbceab")
+const ERROR_ON_DARK := Color("efb08f")
 
 var sim: Sim
-var offers_box: VBoxContainer
+var offers_box: GridContainer
 var reroll_button: Button
 var undo_button: Button
 var start_button: Button
@@ -36,6 +38,12 @@ var last_feedback: Dictionary = {}
 var material_feedback_runs := 0
 var _material_feedback_tween: Tween
 var _offers_scroll: ScrollContainer
+var _vendor_art: TextureRect
+var _vendor_line: Label
+var _vendor_tween: Tween
+var _vendor_receipt: Control
+var vendor_feedback_runs := 0
+var last_vendor_reaction: StringName = &"idle"
 
 
 func _ready() -> void:
@@ -57,22 +65,31 @@ func _ready() -> void:
 	margin.add_child(root)
 	root.add_child(_build_header())
 	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 14)
+	columns.add_theme_constant_override("separation", 20)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(columns)
 	columns.add_child(_build_left())
+	var dossier := VBoxContainer.new()
+	dossier.custom_minimum_size = Vector2(444.0, 0.0)
+	dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dossier.add_theme_constant_override("separation", 14)
+	columns.add_child(dossier)
 	build_panel = BuildPanel.new()
+	build_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	build_panel.size_flags_stretch_ratio = 1.0
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
 	build_panel.sell_requested.connect(_on_sell_weapon)
 	build_panel.detail_changed.connect(_on_weapon_detail)
-	columns.add_child(build_panel)
+	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
+	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
 	echo_panel.merge_requested.connect(_on_merge)
 	echo_panel.refresh_requested.connect(_on_refresh_echo)
-	columns.add_child(echo_panel)
+	dossier.add_child(echo_panel)
 	root.add_child(_build_footer())
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -93,6 +110,10 @@ func open(s: Sim) -> void:
 	_connected_sim = sim
 	_connected_sim.weapon_changed.connect(_on_weapon_changed)
 	material_feedback_runs = 0
+	vendor_feedback_runs = 0
+	last_vendor_reaction = &"idle"
+	_vendor_line.text = Loc.t("shop.vendor_idle")
+	_vendor_line.add_theme_color_override("font_color", ON_DARK)
 	last_feedback.clear()
 	visible = true
 	UiTheme.animate_open(self, reduced_effects)
@@ -151,6 +172,9 @@ func refresh(animate_echo: bool = false) -> void:
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
+	# Give the currently blocking copy decision more room than the equipment archive.
+	echo_panel.size_flags_stretch_ratio = 1.6 if over > 0 else 1.15
+	build_panel.size_flags_stretch_ratio = 0.8 if over > 0 else 1.0
 	var notices: Array[String] = []
 	if over > 0:
 		notices.append(Loc.t("shop.over", [over]))
@@ -172,21 +196,26 @@ func refresh(animate_echo: bool = false) -> void:
 
 func _build_footer() -> Control:
 	var tray := PanelContainer.new()
-	tray.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
+	var clear := StyleBoxEmpty.new()
+	clear.content_margin_left = 12.0
+	clear.content_margin_right = 12.0
+	clear.content_margin_top = 8.0
+	clear.content_margin_bottom = 8.0
+	tray.add_theme_stylebox_override("panel", clear)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	tray.add_child(box)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	box.add_child(actions)
-	_warning = UiTheme.label("", 15, UiTheme.WARN)
+	_warning = UiTheme.label("", 15, ERROR_ON_DARK)
 	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_warning.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	actions.add_child(_warning)
 	for button: Button in [reroll_button, undo_button, start_button]:
 		actions.add_child(button)
-	_footer = UiTheme.label(Loc.t("shop.keys"), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	_footer = UiTheme.label(Loc.t("shop.keys"), 13, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_footer.custom_minimum_size = Vector2(0.0, 19.0)
 	box.add_child(_footer)
@@ -202,7 +231,12 @@ func _on_weapon_detail(text: String) -> void:
 
 func _build_header() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
+	var clear := StyleBoxEmpty.new()
+	clear.content_margin_left = 12.0
+	clear.content_margin_right = 12.0
+	clear.content_margin_top = 8.0
+	clear.content_margin_bottom = 8.0
+	panel.add_theme_stylebox_override("panel", clear)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	panel.add_child(row)
@@ -210,15 +244,25 @@ func _build_header() -> Control:
 	identity.add_theme_constant_override("separation", 1)
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(identity)
-	_title = UiTheme.section_label("", 28)
+	_title = UiTheme.section_label("", 34, UiTheme.PAPER)
 	identity.add_child(_title)
-	identity.add_child(UiTheme.label(Loc.t("shop.paper_task"), 13, UiTheme.DIM))
+	identity.add_child(UiTheme.label(Loc.t("shop.paper_task"), 13, ON_DARK))
 	var right := VBoxContainer.new()
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_theme_constant_override("separation", 0)
-	_materials = UiTheme.label("", 26, UiTheme.COIN, HORIZONTAL_ALIGNMENT_RIGHT)
-	_interest = UiTheme.label("", 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_RIGHT)
-	right.add_child(_materials)
+	var tag := PanelContainer.new()
+	tag.size_flags_horizontal = Control.SIZE_SHRINK_END
+	var paper := UiTheme.paper_panel(UiTheme.PAPER)
+	paper.shape = InkStyleBox.Shape.OVAL
+	paper.content_margin_left = 22.0
+	paper.content_margin_right = 22.0
+	paper.content_margin_top = 8.0
+	paper.content_margin_bottom = 8.0
+	tag.add_theme_stylebox_override("panel", paper)
+	_materials = UiTheme.label("", 25, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	tag.add_child(_materials)
+	_interest = UiTheme.label("", 13, ON_DARK, HORIZONTAL_ALIGNMENT_RIGHT)
+	right.add_child(tag)
 	right.add_child(_interest)
 	row.add_child(right)
 	return panel
@@ -226,19 +270,22 @@ func _build_header() -> Control:
 
 func _build_left() -> Control:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(376.0, 0.0)
+	column.custom_minimum_size = Vector2(610.0, 0.0)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.add_theme_constant_override("separation", 8)
-	column.add_child(UiTheme.section_label(Loc.t("shop.offers"), 20, UiTheme.PAPER))
+	column.size_flags_stretch_ratio = 1.55
+	column.add_theme_constant_override("separation", 10)
+	column.add_child(_build_supplier())
 	_offers_scroll = ScrollContainer.new()
 	_offers_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_offers_scroll.follow_focus = true
 	_offers_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_offers_scroll)
-	offers_box = VBoxContainer.new()
+	offers_box = GridContainer.new()
+	offers_box.columns = 2
 	offers_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	offers_box.add_theme_constant_override("separation", 8)
+	offers_box.add_theme_constant_override("h_separation", 12)
+	offers_box.add_theme_constant_override("v_separation", 12)
 	_offers_scroll.add_child(offers_box)
 	_contract_panel = _build_contract_panel()
 	column.add_child(_contract_panel)
@@ -254,6 +301,24 @@ func _build_left() -> Control:
 	UiTheme.stamp_button(start_button)
 	start_button.pressed.connect(_on_start)
 	return column
+
+
+func _build_supplier() -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_vendor_art = UiTheme.art_icon(&"shopkeeper", Vector2(122.0, 110.0))
+	_vendor_art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_vendor_art)
+	var words := VBoxContainer.new()
+	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	words.add_theme_constant_override("separation", 1)
+	row.add_child(words)
+	words.add_child(UiTheme.section_label(Loc.t("shop.offers"), 20, UiTheme.PAPER))
+	_vendor_line = UiTheme.label(Loc.t("shop.vendor_idle"), 15, ON_DARK)
+	_vendor_line.custom_minimum_size = Vector2(330.0, 0.0)
+	_vendor_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.add_child(_vendor_line)
+	return row
 
 
 func _build_contract_panel() -> PanelContainer:
@@ -429,13 +494,18 @@ func _on_sell_weapon(index: int) -> void:
 func _flash_block(reason: StringName) -> void:
 	match reason:
 		&"poor":
-			UiTheme.flash(_materials)
+			_react_vendor(&"poor")
+			_footer.text = Loc.t("shop.drop_poor")
+			_reject_materials()
 		&"full":
-			build_panel.flash_slots()
+			_footer.text = Loc.t("shop.full_reason")
+			build_panel.flash_slots(reduced_effects)
 		&"maxed":
-			build_panel.flash_items()
+			_footer.text = Loc.t("shop.maxed")
+			build_panel.flash_items(reduced_effects)
 		&"last":
-			build_panel.flash_slots()
+			_footer.text = Loc.t("shop.sell_last_reason")
+			build_panel.flash_slots(reduced_effects)
 
 
 func _on_reroll() -> void:
@@ -500,6 +570,7 @@ func flush_feedback() -> void:
 func reset_feedback() -> void:
 	_pending_feedback.clear()
 	last_feedback.clear()
+	_reset_vendor_motion()
 	if build_panel != null:
 		build_panel.reset_feedback()
 	if _material_feedback_tween != null and _material_feedback_tween.is_valid():
@@ -526,6 +597,17 @@ func _on_weapon_changed(info: WeaponChangeInfo) -> void:
 func _on_shop_action_resolved(result: ShopResult) -> void:
 	if result == null or not result.ok:
 		return
+	# This is the committed transaction signal, never a pointer-down or drag preview.
+	if visible and sim != null and sim == _connected_sim:
+		match result.action:
+			ShopResult.REROLL: _react_vendor(&"reroll", result)
+			ShopResult.UNDO: _react_vendor(&"undo", result)
+			ShopResult.SELL: _react_vendor(&"sell", result)
+			ShopResult.ECHO_MERGE: _react_vendor(&"merge", result)
+			ShopResult.ECHO_DISCARD: _react_vendor(&"discard", result)
+			ShopResult.ECHO_REFRESH: _react_vendor(&"refresh", result)
+			ShopResult.BUY, ShopResult.REPLACE, ShopResult.UPGRADE, ShopResult.EVOLVE:
+				_react_vendor(&"buy", result)
 	var reverse := result.action == ShopResult.UNDO
 	if result.before_state != null and result.after_state != null:
 		if result.before_state.items != result.after_state.items:
@@ -544,6 +626,152 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 			"kind": &"materials", "index": -1, "reverse": false,
 			"action": result.action,
 		})
+
+
+func _react_vendor(kind: StringName, result: ShopResult = null) -> void:
+	if not visible or sim == null or _vendor_line == null:
+		return
+	_reset_vendor_motion()
+	last_vendor_reaction = kind
+	vendor_feedback_runs += 1
+	_vendor_line.text = _vendor_text(kind)
+	_vendor_line.add_theme_color_override("font_color", ERROR_ON_DARK if kind == &"poor" else ON_DARK)
+	if reduced_effects:
+		return
+	# Only decorative art and the non-interactive speech react. Hit rectangles stay put.
+	_set_vendor_pose(2 if kind == &"poor" else (3 if kind == &"buy" else 1))
+	_vendor_art.pivot_offset = _vendor_art.size * 0.5
+	_vendor_art.scale = Vector2(0.90, 0.94) if kind == &"poor" else Vector2(1.06, 0.94)
+	_vendor_tween = create_tween()
+	_vendor_tween.tween_property(_vendor_art, "scale", Vector2.ONE, 0.22) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_vendor_tween.tween_interval(0.35)
+	_vendor_tween.tween_callback(_set_vendor_pose.bind(0))
+	if result != null and result.ok:
+		_fly_receipt(result)
+
+
+func _vendor_text(kind: StringName) -> String:
+	match kind:
+		&"buy": return Loc.t("shop.vendor_buy")
+		&"poor": return Loc.t("shop.vendor_poor")
+		&"reroll": return Loc.t("shop.vendor_reroll")
+		&"undo": return Loc.t("shop.vendor_undo")
+		&"sell": return Loc.t("shop.vendor_sell")
+		&"merge": return Loc.t("shop.vendor_merge")
+		&"discard": return Loc.t("shop.vendor_discard")
+		&"refresh": return Loc.t("shop.vendor_refresh")
+	return Loc.t("shop.vendor_idle")
+
+
+func _reset_vendor_motion() -> void:
+	if _vendor_tween != null and _vendor_tween.is_valid():
+		_vendor_tween.kill()
+	_vendor_tween = null
+	if is_instance_valid(_vendor_art):
+		_vendor_art.scale = Vector2.ONE
+		_set_vendor_pose(0)
+	if is_instance_valid(_vendor_receipt):
+		_vendor_receipt.get_parent().remove_child(_vendor_receipt)
+		_vendor_receipt.queue_free()
+	_vendor_receipt = null
+
+
+func _set_vendor_pose(index: int) -> void:
+	if _vendor_art == null or not (_vendor_art.texture is AtlasTexture):
+		return
+	var atlas := _vendor_art.texture as AtlasTexture
+	atlas.region = PresentationAssets.frame_region(&"shopkeeper", index)
+
+
+func _fly_receipt(result: ShopResult) -> void:
+	if _overlay == null or _vendor_art == null or not is_inside_tree():
+		return
+	var delta := -result.cost
+	if result.before_state != null and result.after_state != null:
+		delta = result.after_state.materials - result.before_state.materials
+	var reverse := delta > 0
+	var from_control: Control = _vendor_art if reverse else _materials
+	var to_control: Control = _materials if reverse else _vendor_art
+	var object_key: StringName = &""
+	if result.action == ShopResult.UNDO and result.before_state != null and result.after_state != null:
+		var before := result.before_state
+		var after := result.after_state
+		if before.echoes != after.echoes:
+			object_key = &"recording_cartridge"
+			from_control = _vendor_art
+			to_control = echo_panel
+		elif before.weapons != after.weapons or before.weapon_levels != after.weapon_levels:
+			object_key = _changed_weapon_key(before, after)
+			var restoring := after.weapons.size() >= before.weapons.size()
+			from_control = _vendor_art if restoring else build_panel
+			to_control = build_panel if restoring else _vendor_art
+		elif before.items != after.items:
+			for id: StringName in after.items.keys() + before.items.keys():
+				var old_count := int(before.items.get(id, 0))
+				var new_count := int(after.items.get(id, 0))
+				if old_count != new_count:
+					object_key = PresentationAssets.item_key(Content.item(id))
+					from_control = _vendor_art if new_count > old_count else build_panel
+					to_control = build_panel if new_count > old_count else _vendor_art
+					break
+		else:
+			from_control = _vendor_art if delta > 0 else _materials
+			to_control = _materials if delta > 0 else _vendor_art
+	if result.action == ShopResult.ECHO_DISCARD or result.action == ShopResult.ECHO_MERGE:
+		from_control = echo_panel
+	if result.action != ShopResult.UNDO and not reverse and result.offer_id != &"":
+		for child in offers_box.get_children():
+			var card := child as OfferCard
+			if card != null and card.offer != null and card.offer.id() == result.offer_id:
+				from_control = card.price_tag
+				break
+	var convert := _overlay.get_global_transform().affine_inverse()
+	var origin := convert * from_control.get_global_rect().get_center()
+	var destination := convert * to_control.get_global_rect().get_center()
+	var receipt := PanelContainer.new()
+	receipt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := UiTheme.paper_panel(UiTheme.PAPER)
+	style.shape = InkStyleBox.Shape.TAG
+	style.variant = 4
+	style.content_margin_left = 10.0
+	style.content_margin_right = 10.0
+	style.content_margin_top = 3.0
+	style.content_margin_bottom = 3.0
+	receipt.add_theme_stylebox_override("panel", style)
+	if object_key != &"":
+		receipt.add_child(UiTheme.art_icon(object_key, Vector2(34.0, 26.0)))
+	elif delta != 0:
+		var label := UiTheme.label(("+" if delta > 0 else "−") + str(absi(delta)), 19, UiTheme.INK)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		receipt.add_child(label)
+	else:
+		receipt.add_child(UiTheme.cartridge_icon(Vector2(30.0, 22.0)))
+	receipt.position = origin - Vector2(24.0, 16.0)
+	receipt.size = Vector2(48.0, 32.0)
+	receipt.pivot_offset = receipt.size * 0.5
+	_overlay.add_child(receipt)
+	receipt.set_meta(&"shop_receipt_source", from_control)
+	receipt.set_meta(&"shop_receipt_target", to_control)
+	receipt.set_meta(&"shop_receipt_object", object_key)
+	_vendor_receipt = receipt
+	var travel := receipt.create_tween().set_parallel(true)
+	travel.tween_property(receipt, "position", destination - Vector2(24.0, 16.0), 0.22) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	travel.tween_property(receipt, "scale", Vector2(0.25, 0.25), 0.22)
+	travel.tween_property(receipt, "modulate:a", 0.0, 0.18).set_delay(0.04)
+	travel.chain().tween_callback(receipt.queue_free)
+
+
+func _changed_weapon_key(before: ShopState, after: ShopState) -> StringName:
+	for index in maxi(before.weapons.size(), after.weapons.size()):
+		var old_id := before.weapons[index] if index < before.weapons.size() else &""
+		var new_id := after.weapons[index] if index < after.weapons.size() else &""
+		var old_level := before.weapon_levels[index] if index < before.weapon_levels.size() else -1
+		var new_level := after.weapon_levels[index] if index < after.weapon_levels.size() else -1
+		if old_id != new_id or old_level != new_level:
+			return PresentationAssets.weapon_key(Content.weapon(new_id if new_id != &"" else old_id))
+	return &""
 
 
 func _queue_feedback(key: StringName, data: Dictionary) -> void:
@@ -585,6 +813,10 @@ func _pulse_materials(reverse: bool) -> void:
 	if _material_feedback_tween != null and _material_feedback_tween.is_valid():
 		_material_feedback_tween.kill()
 	material_feedback_runs += 1
+	if reduced_effects:
+		_materials.scale = Vector2.ONE
+		_materials.modulate = Color.WHITE
+		return
 	_materials.pivot_offset = _materials.size * 0.5
 	_materials.modulate = Color(0.88, 0.78, 0.92) if reverse else Color(1.0, 0.86, 0.62)
 	_materials.scale = Vector2.ONE if reduced_effects else Vector2(0.96, 0.96)
@@ -593,6 +825,18 @@ func _pulse_materials(reverse: bool) -> void:
 	if not reduced_effects:
 		_material_feedback_tween.tween_property(_materials, "scale", Vector2.ONE, 0.2) \
 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _reject_materials() -> void:
+	if _material_feedback_tween != null and _material_feedback_tween.is_valid():
+		_material_feedback_tween.kill()
+	_material_feedback_tween = null
+	_materials.modulate = Color.WHITE
+	if reduced_effects:
+		return
+	_materials.modulate = Color(1.0, 0.74, 0.63)
+	_material_feedback_tween = create_tween()
+	_material_feedback_tween.tween_property(_materials, "modulate", Color.WHITE, 0.2)
 
 
 func drag_payload_for(o: Offer) -> Variant:

@@ -26,6 +26,7 @@ var cancel_button: Button
 var open_log_button: Button
 var status_label: Label
 var notice_label: Label
+var status_ribbon: PanelContainer
 
 var _run_id := ""
 var _can_submit := false
@@ -43,58 +44,98 @@ func _ready() -> void:
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(620.0, 0.0)
-	panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
+	panel.custom_minimum_size = Vector2(960.0, 0.0)
+	var cover := UiTheme.paper_panel(UiTheme.PAPER)
+	cover.shape = InkStyleBox.Shape.PAPER
+	cover.variant = 31
+	panel.add_theme_stylebox_override("panel", cover)
 	center.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
+		margin.add_theme_constant_override("margin_" + side, 20)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
 	margin.add_child(box)
-	box.add_child(UiTheme.label(Loc.t("feedback.title"), 30, UiTheme.INK,
+	box.add_child(UiTheme.label(Loc.t("feedback.title"), 44, UiTheme.INK,
 			HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UiTheme.label(Loc.t("feedback.subtitle"), 14, UiTheme.DIM,
 			HORIZONTAL_ALIGNMENT_CENTER))
-
-	category_option = _option_row(box, "feedback.category", CATEGORIES, CATEGORY_LABEL_KEYS)
-	rating_option = _option_row(box, "feedback.feeling", RATINGS, RATING_LABEL_KEYS)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 34)
+	box.add_child(columns)
+	var aside := VBoxContainer.new()
+	aside.name = "IncidentAside"
+	aside.custom_minimum_size = Vector2(206.0, 0.0)
+	aside.add_theme_constant_override("separation", 16)
+	columns.add_child(aside)
+	var portrait_back := PanelContainer.new()
+	portrait_back.custom_minimum_size = Vector2(190.0, 146.0)
+	portrait_back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var shadow := UiTheme.paper_panel(UiTheme.INK)
+	shadow.shape = InkStyleBox.Shape.BLOB
+	shadow.variant = 12
+	shadow.border_color = UiTheme.INK
+	shadow.content_margin_left = 24.0
+	shadow.content_margin_right = 24.0
+	shadow.content_margin_top = 14.0
+	shadow.content_margin_bottom = 14.0
+	portrait_back.add_theme_stylebox_override("panel", shadow)
+	var portrait := UiTheme.cartridge_icon(Vector2(136.0, 116.0))
+	portrait_back.add_child(portrait)
+	aside.add_child(portrait_back)
+	var aside_note := UiTheme.label(Loc.t("feedback.aside"), 17, UiTheme.INK)
+	aside_note.custom_minimum_size = Vector2(206.0, 0.0)
+	aside_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	aside.add_child(aside_note)
+	notice_label = UiTheme.label(Loc.t("feedback.local_only"), 13, UiTheme.DIM)
+	notice_label.custom_minimum_size = Vector2(206.0, 0.0)
+	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	aside.add_child(notice_label)
+	var form := VBoxContainer.new()
+	form.name = "IncidentForm"
+	form.custom_minimum_size = Vector2(520.0, 0.0)
+	form.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	form.add_theme_constant_override("separation", 12)
+	columns.add_child(form)
+	category_option = _option_row(form, "feedback.category", CATEGORIES, CATEGORY_LABEL_KEYS)
+	rating_option = _option_row(form, "feedback.feeling", RATINGS, RATING_LABEL_KEYS)
 	category_option.select(0)
 	rating_option.select(1)
-
 	var note_header := HBoxContainer.new()
 	note_header.add_child(UiTheme.label(Loc.t("feedback.note"), 16, UiTheme.DIM))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	note_header.add_child(spacer)
-	var limit := UiTheme.label(Loc.t("feedback.note_limit", [MAX_NOTE_LENGTH]), 12, UiTheme.DIM)
-	note_header.add_child(limit)
-	box.add_child(note_header)
+	note_header.add_child(UiTheme.label(Loc.t("feedback.note_limit", [MAX_NOTE_LENGTH]), 12, UiTheme.DIM))
+	form.add_child(note_header)
 	note_edit = TextEdit.new()
-	note_edit.custom_minimum_size = Vector2(0.0, 116.0)
+	note_edit.custom_minimum_size = Vector2(0.0, 148.0)
 	note_edit.placeholder_text = Loc.t("feedback.note_hint")
 	note_edit.tab_input_mode = false
 	note_edit.accessibility_name = Loc.t("feedback.note")
-	note_edit.add_theme_stylebox_override("normal",
-			UiTheme.box(UiTheme.CARD, UiTheme.EDGE, 2, 2))
-	note_edit.add_theme_stylebox_override("focus",
-			UiTheme.box(UiTheme.CARD, UiTheme.WARN, 3, 2))
+	var note_paper := UiTheme.box(UiTheme.CARD, UiTheme.EDGE, 2, 2)
+	note_paper.shape = InkStyleBox.Shape.PAPER
+	note_paper.variant = 15
+	note_edit.add_theme_stylebox_override("normal", note_paper)
+	var focus_paper := UiTheme.box(UiTheme.CARD, UiTheme.WARN, 3, 2)
+	focus_paper.shape = InkStyleBox.Shape.PAPER
+	focus_paper.variant = 15
+	note_edit.add_theme_stylebox_override("focus", focus_paper)
 	note_edit.text_changed.connect(_on_note_changed)
-	box.add_child(note_edit)
-
-	notice_label = UiTheme.label(Loc.t("feedback.local_only"), 13, UiTheme.DIM,
-			HORIZONTAL_ALIGNMENT_CENTER)
-	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(notice_label)
-	status_label = UiTheme.label("", 14, UiTheme.WARN, HORIZONTAL_ALIGNMENT_CENTER)
+	form.add_child(note_edit)
+	status_ribbon = PanelContainer.new()
+	status_ribbon.name = "SubmissionRibbon"
+	status_ribbon.visible = false
+	form.add_child(status_ribbon)
+	status_label = UiTheme.label("", 14, UiTheme.WARN)
+	status_label.custom_minimum_size = Vector2(460.0, 0.0)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.visible = false
-	box.add_child(status_label)
-
+	status_ribbon.add_child(status_label)
 	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 12)
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 14)
+	buttons.alignment = BoxContainer.ALIGNMENT_END
 	save_button = _button(Loc.t("feedback.save"))
 	save_button.pressed.connect(_submit)
 	UiTheme.stamp_button(save_button)
@@ -251,7 +292,14 @@ func _set_form_editable(editable: bool) -> void:
 func _show_status(text: String, success: bool) -> void:
 	status_label.text = text
 	status_label.visible = text != ""
+	status_ribbon.visible = status_label.visible
 	status_label.add_theme_color_override("font_color", UiTheme.ACCENT if success else UiTheme.WARN)
+	if status_ribbon.visible:
+		var ink := UiTheme.paper_panel(UiTheme.CARD)
+		ink.shape = InkStyleBox.Shape.TAG
+		ink.variant = 5 if success else 9
+		ink.border_color = UiTheme.ACCENT if success else UiTheme.WARN
+		status_ribbon.add_theme_stylebox_override("panel", ink)
 	_update_save_state()
 
 

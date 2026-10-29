@@ -51,7 +51,7 @@ def main() -> None:
     for key, relative in pairs:
         path = ROOT / relative
         with Image.open(path) as image:
-            animated = (key.startswith("character_") or key.startswith("enemy_")) and image.width >= image.height * 2.8
+            animated = (key.startswith("character_") or key.startswith("enemy_") or key == "shopkeeper") and image.width >= image.height * 2.8
         count = 4 if animated else 1
         record = measure(path, count)
         records[path] = record
@@ -68,7 +68,7 @@ def main() -> None:
         assets = []
         for path in sorted(folder.glob("*.png")):
             assets.append(records.get(path) or measure(path))
-        (folder / "manifest.json").write_text(json.dumps({"tool": "built-in imagegen", "date": "2026-10-28", "art_direction": "Carbon Copy Purgatory", "assets": assets}, indent=2) + "\n")
+        (folder / "manifest.json").write_text(json.dumps({"tool": "built-in imagegen", "art_direction": "Carbon Copy Purgatory", "assets": assets}, indent=2) + "\n")
     count = len(list(ART.rglob("*.png")))
     print(f"catalog: {len(pairs)} identities, {len(frames)} animation strips; {count} PNG provenance measured")
 

@@ -1,19 +1,16 @@
-# Carbon Copy Purgatory surface artwork
+# World and UI illustration sources
 
-Generated with the built-in image generation tool on 2026-10-28. Selected PNGs are
-unchanged copies of original outputs. The approved Take Stack concept board was
-used as the sole style reference. Complete prompts, source paths, dimensions,
-alpha bounds and SHA-256 hashes are in `carbon_copy_assets.json` and `manifest.json`.
+`arena_floor.png` and `recording_cartridge.png` retain the original approved
+Carbon Copy Purgatory production artwork. `shopkeeper.png` adds a soft,
+hand-inked scrap merchant with four event-driven expressions: tired, payment,
+empty hands and a round bite mouth.
 
-- `arena_floor.png`: an edit of the former arena, preserving its 2:1 footprint and
-  replacing the metal sci-fi grid with a quiet gray-sage scrap-yard floor. Thin
-  perimeter decoration remains visual only; the center is clear of obstacles.
-- `panel_skin.png`: opaque square warm paper with a thin irregular black border
-  and restrained corner folds, intended for nine-patch UI scaling.
-- `recording_cartridge.png`: a transparent pair of tired paper copies held by an
-  oversized staple. This replaces the former cassette artwork while keeping the
-  existing resource identity. The UI uses its measured alpha bounds.
+The merchant was generated and spacing-refined with the built-in image tool
+on 2026-10-29. Each frame is complete inside its own horizontal quarter; the
+final transparent PNG was copied without programmatic repainting. Exact
+prompts, source paths, dimensions, alpha bounds and SHA256 are in
+`carbon_copy_assets.json`; authoritative measured bounds are in `manifest.json`.
 
-The flat ink-cartoon treatment uses the same paper cream, sage, smoke yellow,
-brick red and charcoal palette as the characters and enemies. No labels or UI
-text are baked into these images.
+The previous `panel_skin.png` is removed. All interface surfaces now use the
+native `InkStyleBox` curves, so no old rectangular raster skin is retained as
+a second styling path.

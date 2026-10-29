@@ -1,0 +1,28 @@
+{
+  "assets": [
+    {
+      "file": "AmaticSC-Bold.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/amaticsc/AmaticSC-Bold.ttf",
+      "sha256": "d367beadee66efbb657d24d3d8f30f3b60633e9d5c8ded7385541cf775cabb4d",
+      "bytes": 156180
+    },
+    {
+      "file": "AmaticSC-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/amaticsc/OFL.txt",
+      "sha256": "301f77908df2b00141b4dcea50cc1a586c3afcee78843bd811088e8263623f9d",
+      "bytes": 4390
+    },
+    {
+      "file": "ZCOOLKuaiLe-Regular.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf",
+      "sha256": "812a6fc1fe54b6d73a419245c32dfeba8aa33104d5be90d1cf6af082007cb71d",
+      "bytes": 1514968
+    },
+    {
+      "file": "ZCOOLKuaiLe-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/zcoolkuaile/OFL.txt",
+      "sha256": "538078469839b4a2e7ad22bef4ebe41681a4e53749bb2a072144024f1d6d703d",
+      "bytes": 4398
+    }
+  ]
+}

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dctdks11vycxp"
-path="res://.godot/imported/panel_skin.png-7fad1228396d90394f5ea5b2e3e98680.ctex"
+uid="uid://cctmfdhu2kwk0"
+path="res://.godot/imported/shopkeeper.png-a8ae33681d8c60bc7363d586306f6ba1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/presentation/surfaces/panel_skin.png"
-dest_files=["res://.godot/imported/panel_skin.png-7fad1228396d90394f5ea5b2e3e98680.ctex"]
+source_file="res://assets/presentation/surfaces/shopkeeper.png"
+dest_files=["res://.godot/imported/shopkeeper.png-a8ae33681d8c60bc7363d586306f6ba1.ctex"]
 
 [params]
 

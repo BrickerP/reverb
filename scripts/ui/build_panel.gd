@@ -27,19 +27,15 @@ var _selected := 0
 var _quote_drop := Callable()
 var _apply_drop := Callable()
 var _clear_drop := Callable()
+var _section_feedback: Tween
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(344.0, 0.0)
+	custom_minimum_size = Vector2(0.0, 0.0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var surface_source := UiTheme.surface_panel()
 	if surface_source != null:
-		var surface := surface_source.duplicate() as StyleBoxTexture
-		surface.region_rect = Rect2(Vector2.ZERO, surface.texture.get_size())
-		surface.texture_margin_left = 10.0
-		surface.texture_margin_right = 10.0
-		surface.texture_margin_top = 10.0
-		surface.texture_margin_bottom = 10.0
+		var surface := surface_source.duplicate() as InkStyleBox
 		surface.content_margin_left = 12.0
 		surface.content_margin_right = 12.0
 		surface.content_margin_top = 8.0
@@ -153,14 +149,32 @@ func focus_upgrade(index: int) -> bool:
 	return true
 
 
-func flash_slots() -> void:
-	UiTheme.flash(weapons_label)
-	UiTheme.flash(_weapons_row)
+func flash_slots(reduced: bool = false) -> void:
+	_reject_section(weapons_label, _weapons_row, reduced)
 
 
-func flash_items() -> void:
-	UiTheme.flash(items_label)
-	UiTheme.flash(_items_row)
+func flash_items(reduced: bool = false) -> void:
+	_reject_section(items_label, _items_row, reduced)
+
+
+func _reject_section(title: Control, contents: Control, reduced: bool) -> void:
+	_reset_section_feedback()
+	if reduced:
+		return
+	_section_feedback = create_tween().set_parallel(true)
+	for control: Control in [title, contents]:
+		if is_instance_valid(control):
+			control.modulate = Color(1.0, 0.74, 0.63)
+			_section_feedback.tween_property(control, "modulate", Color.WHITE, 0.22)
+
+
+func _reset_section_feedback() -> void:
+	if _section_feedback != null and _section_feedback.is_valid():
+		_section_feedback.kill()
+	_section_feedback = null
+	for control: Control in [weapons_label, items_label, _weapons_row, _items_row]:
+		if is_instance_valid(control):
+			control.modulate = Color.WHITE
 
 
 func _flow() -> HFlowContainer:
@@ -190,7 +204,7 @@ func _slot_flow(pl: PlayerState, on_choose: Callable) -> Control:
 
 func _weapon_chips(pl: PlayerState, sim: Sim) -> Control:
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	if pl.weapons.is_empty():
@@ -207,7 +221,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	card.accessibility_name = Loc.weapon_name(w.id)
 	card.accessibility_description = _detail_text_for(w, level)
 	# Leave room for the vertical scrollbar inside the fixed-width build panel.
-	card.custom_minimum_size = Vector2(146.0, 116.0)
+	card.custom_minimum_size = Vector2(126.0, 116.0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var box := VBoxContainer.new()
@@ -289,7 +303,8 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
 	target.accessibility_name = text
 	target.custom_minimum_size = Vector2(0.0, 36.0)
-	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.55), 2, 2)
+	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.35), 1, 18)
+	style.shape = InkStyleBox.Shape.TAG
 	target.add_theme_stylebox_override("panel", style)
 	var label := UiTheme.label(text, 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -333,6 +348,7 @@ func pulse_items(reverse: bool = false, reduced: bool = false) -> bool:
 
 
 func reset_feedback() -> void:
+	_reset_section_feedback()
 	for target in slot_drop_targets:
 		target.reset_feedback()
 	if empty_drop_target != null:
@@ -351,9 +367,10 @@ func clear_drop_highlights() -> void:
 
 
 func _apply_card_style(card: PanelContainer, _w: WeaponDef, selected: bool) -> void:
-	var style := UiTheme.box(UiTheme.PAPER if selected else UiTheme.CARD,
-			UiTheme.ACCENT if selected else UiTheme.EDGE, 3 if selected else 2, 2)
-	style.set_border_width(SIDE_BOTTOM, 4)
+	var style := UiTheme.box(UiTheme.PAPER if selected else Color(UiTheme.CARD, 0.55),
+			UiTheme.ACCENT if selected else Color(UiTheme.EDGE, 0.0), 1 if selected else 0, 20)
+	style.shape = InkStyleBox.Shape.PAPER
+	style.variant = _card_variant(_w.id)
 	style.content_margin_left = 7.0
 	style.content_margin_right = 7.0
 	style.content_margin_top = 5.0
@@ -500,3 +517,7 @@ func _add_stat(grid: GridContainer, name: String, value: String) -> void:
 
 func _counted(label: String, n: int) -> String:
 	return "%s ×%d" % [label, n] if n > 1 else label
+
+
+func _card_variant(id: StringName) -> int:
+	return absi(String(id).hash()) % 7

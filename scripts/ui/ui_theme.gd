@@ -6,8 +6,8 @@ extends RefCounted
 # PingFang SC is deliberately late in the list: the engine loads the first face of PingFang.ttc
 # on macOS, which is the Hong Kong one and lacks simplified-only glyphs such as 杀.
 const BUNDLED_FONT := "res://assets/fonts/NotoSansCJKsc-Regular.otf"
-const SURFACE_PANEL_PATH := "res://assets/presentation/surfaces/panel_skin.png"
-const SURFACE_PANEL_TEXTURE_MARGIN := 32.0
+const TITLE_EN := "res://assets/fonts/AmaticSC-Bold.ttf"
+const TITLE_ZH := "res://assets/fonts/ZCOOLKuaiLe-Regular.ttf"
 const FONT_NAMES: Array[String] = [
 	"Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei",
 	"WenQuanYi Micro Hei", "PingFang SC", "sans-serif",
@@ -25,7 +25,8 @@ const EDGE := Color("28261f")
 
 static var _font: Font
 static var _title_font: FontVariation
-static var _surface_panel: StyleBoxTexture
+static var _title_zh_font: FontVariation
+static var _control_icons: Dictionary = {}
 
 
 static func font() -> Font:
@@ -41,14 +42,30 @@ static func font() -> Font:
 	return _font
 
 
-static func title_font() -> FontVariation:
-	if _title_font == null:
-		_title_font = FontVariation.new()
-		_title_font.base_font = font()
-		_title_font.variation_embolden = 1.15
-		_title_font.spacing_glyph = 1
-	return _title_font
-
+static func title_font(text: String = "") -> FontVariation:
+	var use_chinese := Loc.lang == "zh"
+	if not text.is_empty():
+		use_chinese = false
+		for index in text.length():
+			var code := text.unicode_at(index)
+			if code >= 0x2e80 and code <= 0x9fff:
+				use_chinese = true
+				break
+	var cached := _title_zh_font if use_chinese else _title_font
+	if cached != null:
+		return cached
+	var title := FontVariation.new()
+	title.base_font = load(TITLE_ZH if use_chinese else TITLE_EN) as Font
+	var alternate := load(TITLE_EN if use_chinese else TITLE_ZH) as Font
+	var alternatives: Array[Font] = [alternate, font()]
+	title.fallbacks = alternatives
+	title.variation_embolden = 0.0 if use_chinese else 0.35
+	title.spacing_glyph = 0 if use_chinese else 1
+	if use_chinese:
+		_title_zh_font = title
+	else:
+		_title_font = title
+	return title
 
 static func label(text: String, size: int = 18, color: Color = INK,
 		align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
@@ -57,7 +74,7 @@ static func label(text: String, size: int = 18, color: Color = INK,
 	l.horizontal_alignment = align
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if size >= 28:
-		l.add_theme_font_override("font", title_font())
+		l.add_theme_font_override("font", title_font(text))
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	return l
@@ -103,69 +120,58 @@ static func cartridge_icon(icon_size: Vector2 = Vector2(72.0, 48.0)) -> TextureR
 	return art_icon(&"recording_cartridge", icon_size)
 
 
-static func surface_panel() -> StyleBoxTexture:
-	if _surface_panel != null:
-		return _surface_panel
-	var texture := load(SURFACE_PANEL_PATH) as Texture2D
-	if texture == null:
-		return null
-	var style := StyleBoxTexture.new()
-	style.texture = texture
-	style.texture_margin_left = SURFACE_PANEL_TEXTURE_MARGIN
-	style.texture_margin_top = SURFACE_PANEL_TEXTURE_MARGIN
-	style.texture_margin_right = SURFACE_PANEL_TEXTURE_MARGIN
-	style.texture_margin_bottom = SURFACE_PANEL_TEXTURE_MARGIN
-	style.content_margin_left = 14.0
-	style.content_margin_top = 12.0
-	style.content_margin_right = 14.0
-	style.content_margin_bottom = 12.0
-	_surface_panel = style
-	return _surface_panel
+static func surface_panel() -> InkStyleBox:
+	# A screen owns its sheet; changing its silhouette cannot change another modal.
+	var style := paper_panel(PAPER)
+	style.softness = 34.0
+	style.set_border_width_all(3.0)
+	style.variant = 3
+	style.sketch = true
+	style.content_margin_left = 16.0
+	style.content_margin_top = 14.0
+	style.content_margin_right = 16.0
+	style.content_margin_bottom = 14.0
+	return style
 
-
-# Briefly tint a control and fade back: used when a shop action is blocked.
-static func flash(control: Control) -> void:
-	if control == null:
-		return
-	var alpha := control.modulate.a
-	control.modulate = Color(WARN.r, WARN.g, WARN.b, alpha)
-	var tween := control.create_tween()
-	tween.tween_property(control, "modulate", Color(1, 1, 1, alpha), 0.45).set_ease(Tween.EASE_OUT)
-
-
-static func box(fill: Color, border: Color, border_width: int = 2, radius: int = 6) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = fill
-	sb.border_color = border
-	sb.set_border_width_all(border_width)
-	sb.set_corner_radius_all(radius)
-	sb.content_margin_left = 12.0
-	sb.content_margin_right = 12.0
-	sb.content_margin_top = 8.0
-	sb.content_margin_bottom = 8.0
-	return sb
-
-
-# Reusable paper stock: heavy ink edges and a small offset shadow, like a pasted form.
-static func paper_panel(fill: Color = CARD) -> StyleBoxFlat:
-	var style := box(fill, EDGE, 3, 3)
-	style.set_border_width(SIDE_BOTTOM, 5)
-	style.shadow_color = Color(EDGE, 0.24)
-	style.shadow_size = 1
-	style.shadow_offset = Vector2(3.0, 4.0)
+static func box(fill: Color, border: Color, border_width: int = 2, radius: int = 6) -> InkStyleBox:
+	var style := InkStyleBox.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.softness = clampf(14.0 + float(radius) * 0.9, 14.0, 30.0)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
 	return style
 
 
+static func paper_panel(fill: Color = CARD) -> InkStyleBox:
+	var style := box(fill, EDGE, 2, 18)
+	style.shadow_color = Color(EDGE, 0.14)
+	style.shadow_offset = Vector2(1.5, 2.0)
+	return style
+
 static func section_label(text: String, size: int = 20, color: Color = INK) -> Label:
 	var title := label(text, size, color)
+	title.add_theme_font_override("font", title_font(text))
 	title.add_theme_constant_override("outline_size", 0)
 	return title
 
 
 static func stamp_button(button: Button, color: Color = ACCENT) -> void:
-	button.add_theme_stylebox_override("normal", paper_panel(color))
-	button.add_theme_stylebox_override("hover", paper_panel(color.lightened(0.10)))
-	button.add_theme_stylebox_override("pressed", box(color.darkened(0.12), EDGE, 3, 2))
+	var normal := paper_panel(color)
+	normal.shape = InkStyleBox.Shape.TAG
+	normal.variant = 4
+	var hover := paper_panel(color.lightened(0.07))
+	hover.shape = InkStyleBox.Shape.TAG
+	hover.variant = 5
+	var pressed := box(color.darkened(0.12), EDGE, 3, 16)
+	pressed.shape = InkStyleBox.Shape.TAG
+	pressed.variant = 6
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
 	button.add_theme_color_override("font_color", CARD)
 	button.add_theme_color_override("font_hover_color", CARD)
 	button.add_theme_color_override("font_pressed_color", CARD)
@@ -196,17 +202,73 @@ static func animate_open(control: Control, reduced: bool = false) -> void:
 	tween.tween_property(control, "modulate:a", 1.0, 0.16).set_ease(Tween.EASE_OUT)
 
 
+static func _control_icon(kind: StringName, tint: Color = Color.WHITE) -> Texture2D:
+	var key := StringName("%s:%s" % [kind, tint.to_html()])
+	if _control_icons.has(key):
+		return _control_icons[key] as Texture2D
+	var body := ""
+	var size := Vector2i(24, 24)
+	match kind:
+		&"arrow":
+			size = Vector2i(20, 20)
+			body = '<path d="M4 7 Q10 16 16 7" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>'
+		&"checked", &"unchecked":
+			body = '<path d="M5 4 C12 1 21 3 21 10 L20 19 Q12 23 4 20 Q1 12 5 4Z" fill="none" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>'
+			if kind == &"checked":
+				body += '<path d="M6 11 Q9 18 17 7" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>'
+		&"radio_checked", &"radio_unchecked":
+			body = '<path d="M12 3 C6 2 2 7 3 14 C4 22 17 24 21 16 C25 8 18 2 12 3Z" fill="none" stroke="white" stroke-width="2.1" stroke-linecap="round"/>'
+			if kind == &"radio_checked":
+				body += '<ellipse cx="12.2" cy="12.4" rx="3.5" ry="3.8" fill="white"/>'
+		&"submenu", &"submenu_mirrored":
+			size = Vector2i(20, 20)
+			var curve := "M7 4 C10 6 13 7 13 10 C13 13 10 14 7 16"
+			if kind == &"submenu_mirrored":
+				curve = "M13 4 C10 6 7 7 7 10 C7 13 10 14 13 16"
+			body = '<path d="%s" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>' % curve
+		&"toggle_on", &"toggle_off":
+			size = Vector2i(42, 24)
+			body = '<path d="M13 4 C4 2 1 12 5 18 C10 23 30 22 37 18 C43 12 38 3 29 3Z" fill="none" stroke="white" stroke-width="2"/>'
+			var centre := 29 if kind == &"toggle_on" else 12
+			body += '<ellipse cx="%d" cy="12" rx="6" ry="6.5" fill="white"/>' % centre
+		&"grabber", &"grabber_focus":
+			size = Vector2i(22, 26)
+			var ink := (WARN if kind == &"grabber_focus" else INK).to_html(false)
+			body = '<path d="M8 3 C18 0 22 10 18 20 Q10 28 4 20 C0 14 1 6 8 3Z" fill="#%s" stroke="#%s" stroke-width="2.1"/><path d="M8 9 Q12 12 8 17 M12 8 Q15 12 12 17" fill="none" stroke="#%s" stroke-width="1.2" stroke-linecap="round"/>' % [CARD.to_html(false), ink, ink]
+		_:
+			return null
+	body = body.replace("white", "#" + tint.to_html(false))
+	var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" viewBox="0 0 %d %d">%s</svg>' % [size.x, size.y, size.x, size.y, body]
+	var image := Image.new()
+	if image.load_svg_from_string(svg) != OK:
+		push_error("Cannot load built-in ink control mark: %s" % kind)
+		return null
+	var texture := ImageTexture.create_from_image(image)
+	_control_icons[key] = texture
+	return texture
+
+
 static func build() -> Theme:
 	var th := Theme.new()
 	th.default_font = font()
 	th.default_font_size = 18
-	th.set_stylebox("normal", "Button", paper_panel(CARD))
-	th.set_stylebox("hover", "Button", paper_panel(PAPER.lightened(0.08)))
-	th.set_stylebox("pressed", "Button", box(SURFACE, EDGE, 3, 2))
-	th.set_stylebox("disabled", "Button", box(SURFACE, DIM, 2, 3))
+	var normal := paper_panel(CARD)
+	normal.shape = InkStyleBox.Shape.TAG
+	var hover := paper_panel(PAPER.lightened(0.05))
+	hover.shape = InkStyleBox.Shape.TAG
+	hover.variant = 2
+	var pressed := box(SURFACE, EDGE, 3, 16)
+	pressed.shape = InkStyleBox.Shape.TAG
+	var disabled := box(SURFACE, DIM, 1, 16)
+	disabled.shape = InkStyleBox.Shape.TAG
+	th.set_stylebox("normal", "Button", normal)
+	th.set_stylebox("hover", "Button", hover)
+	th.set_stylebox("pressed", "Button", pressed)
+	th.set_stylebox("disabled", "Button", disabled)
 	var focus := box(Color(0, 0, 0, 0), WARN, 3, 3)
 	focus.draw_center = false
-	focus.set_expand_margin_all(3.0)
+	focus.focus_marks = true
+	focus.expand_margin = 3.0
 	th.set_stylebox("focus", "Button", focus)
 	for type_name in ["Button", "Label", "CheckButton", "CheckBox", "OptionButton"]:
 		th.set_color("font_color", type_name, INK)
@@ -215,6 +277,25 @@ static func build() -> Theme:
 		th.set_color("font_focus_color", type_name, INK)
 		th.set_color("font_hover_pressed_color", type_name, INK)
 		th.set_color("font_disabled_color", type_name, DIM)
+		th.set_color("icon_normal_color", type_name, INK)
+		th.set_color("icon_hover_color", type_name, INK)
+		th.set_color("icon_focus_color", type_name, INK)
+		th.set_color("icon_pressed_color", type_name, INK)
+		th.set_color("icon_disabled_color", type_name, DIM)
+	th.set_icon("arrow", "OptionButton", _control_icon(&"arrow"))
+	th.set_constant("modulate_arrow", "OptionButton", 1)
+	th.set_constant("arrow_margin", "OptionButton", 9)
+	for state in ["checked", "unchecked"]:
+		var mark := _control_icon(StringName(state))
+		th.set_icon(state, "CheckBox", mark)
+		th.set_icon(state + "_disabled", "CheckBox", mark)
+		var toggle := _control_icon(&"toggle_on" if state == "checked" else &"toggle_off")
+		th.set_icon(state, "CheckButton", toggle)
+		th.set_icon(state + "_disabled", "CheckButton", toggle)
+		th.set_icon(state + "_mirrored", "CheckButton", toggle)
+		th.set_icon(state + "_disabled_mirrored", "CheckButton", toggle)
+	th.set_color("button_checked_color", "CheckButton", INK)
+	th.set_color("button_unchecked_color", "CheckButton", DIM)
 	th.set_stylebox("panel", "PanelContainer", paper_panel())
 	th.set_stylebox("normal", "LineEdit", box(CARD, EDGE, 2, 2))
 	th.set_stylebox("focus", "LineEdit", focus)
@@ -235,14 +316,33 @@ static func build() -> Theme:
 	th.set_color("font_color", "PopupMenu", INK)
 	th.set_color("font_hover_color", "PopupMenu", INK)
 	th.set_color("font_disabled_color", "PopupMenu", DIM)
+	# PopupMenu draws its own check/radio textures, separate from the closed option.
+	# These are already ink-coloured because popup marks have no icon-colour theme field.
+	for state in ["checked", "unchecked", "radio_checked", "radio_unchecked"]:
+		th.set_icon(state, "PopupMenu", _control_icon(StringName(state), INK))
+		th.set_icon(state + "_disabled", "PopupMenu", _control_icon(StringName(state), DIM))
+	th.set_icon("submenu", "PopupMenu", _control_icon(&"submenu", INK))
+	th.set_icon("submenu_mirrored", "PopupMenu", _control_icon(&"submenu_mirrored", INK))
 	for type_name in ["VScrollBar", "HScrollBar"]:
-		th.set_stylebox("scroll", type_name, box(SURFACE, EDGE, 1, 1))
-		th.set_stylebox("grabber", type_name, box(DIM, EDGE, 1, 1))
-		th.set_stylebox("grabber_highlight", type_name, box(ACCENT, EDGE, 1, 1))
-		th.set_stylebox("grabber_pressed", type_name, box(WARN, EDGE, 1, 1))
+		# The full native bar remains the drag target; the visible mark is a small ink scrap.
+		var track := box(Color.TRANSPARENT, Color.TRANSPARENT, 0, 1)
+		track.draw_center = false
+		track.shadow_color = Color.TRANSPARENT
+		th.set_stylebox("scroll", type_name, track)
+		for state in ["grabber", "grabber_highlight", "grabber_pressed"]:
+			var colour := ACCENT if state == "grabber_highlight" else INK
+			var grip := box(colour, Color.TRANSPARENT, 0, 12)
+			grip.shape = InkStyleBox.Shape.BLOB
+			grip.variant = 7
+			grip.grip_mark = true
+			grip.shadow_color = Color.TRANSPARENT
+			th.set_stylebox(state, type_name, grip)
 	th.set_stylebox("slider", "HSlider", box(SURFACE, EDGE, 2, 2))
 	th.set_stylebox("grabber_area", "HSlider", box(ACCENT, EDGE, 1, 2))
 	th.set_stylebox("grabber_area_highlight", "HSlider", box(COIN, EDGE, 1, 2))
+	th.set_icon("grabber", "HSlider", _control_icon(&"grabber"))
+	th.set_icon("grabber_highlight", "HSlider", _control_icon(&"grabber_focus"))
+	th.set_icon("grabber_disabled", "HSlider", _control_icon(&"grabber"))
 	th.set_stylebox("background", "ProgressBar", box(SURFACE, EDGE, 2, 2))
 	th.set_stylebox("fill", "ProgressBar", box(ACCENT, EDGE, 1, 2))
 	th.set_color("font_color", "ProgressBar", INK)

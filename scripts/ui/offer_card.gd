@@ -4,12 +4,14 @@ extends Button
 signal replacement_requested(offer: Offer)
 signal lock_toggled(offer: Offer)
 
-const HEIGHT := 116.0
+const HEIGHT := 166.0
 
 var offer: Offer
 var blocked_reason: StringName = &""
 var swap_button: Button
 var lock_button: Button
+var price_tag: PanelContainer
+var _art: TextureRect
 var _drag_payload := Callable()
 var _clear_drag_hint := Callable()
 var _suppress_next_pressed := false
@@ -80,6 +82,8 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	# Preserve contrast for unaffordable/full cards: the stamped state explains why.
 	modulate.a = 0.64 if reason == &"sold" else 1.0
 	var normal := UiTheme.paper_panel(UiTheme.PAPER if selected else UiTheme.CARD)
+	normal.shape = InkStyleBox.Shape.PAPER
+	normal.variant = absi(String(o.id()).hash()) % 7
 	if selected or o.locked:
 		normal.border_color = UiTheme.ACCENT
 	add_theme_stylebox_override("normal", normal)
@@ -186,16 +190,17 @@ func _drag_preview() -> Control:
 
 
 func reject(reduced: bool = false) -> void:
-	UiTheme.flash(self)
 	if _press_tween != null and _press_tween.is_valid():
 		_press_tween.kill()
-	scale = Vector2.ONE
-	if reduced:
+	_reset_visual_pose()
+	if reduced or price_tag == null:
 		return
-	pivot_offset = size * 0.5
-	_press_tween = create_tween()
-	_press_tween.tween_property(self, "scale", Vector2(1.02, 1.02), 0.05).set_trans(Tween.TRANS_SINE)
-	_press_tween.tween_property(self, "scale", Vector2.ONE, 0.15).set_trans(Tween.TRANS_SINE)
+	price_tag.pivot_offset = price_tag.size * 0.5
+	price_tag.scale = Vector2(0.88, 0.90)
+	price_tag.modulate = Color(1.0, 0.74, 0.63)
+	_press_tween = create_tween().set_parallel(true)
+	_press_tween.tween_property(price_tag, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_press_tween.tween_property(price_tag, "modulate", Color.WHITE, 0.2)
 
 
 func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -> Control:
@@ -203,9 +208,11 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 9)
 	if o.is_weapon():
-		row.add_child(UiTheme.weapon_icon(o.weapon, Vector2(48.0, 37.0)))
+		_art = UiTheme.weapon_icon(o.weapon, Vector2(88.0, 72.0))
+		row.add_child(_art)
 	else:
-		row.add_child(UiTheme.item_icon(o.item, Vector2(44.0, 40.0)))
+		_art = UiTheme.item_icon(o.item, Vector2(74.0, 76.0))
+		row.add_child(_art)
 	var identity := VBoxContainer.new()
 	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -226,7 +233,20 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 				_rarity_color(o.weapon.rarity)))
 	elif o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
-	row.add_child(_price_label(o, reason, selected))
+	price_tag = PanelContainer.new()
+	price_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	price_tag.custom_minimum_size = Vector2(52.0, 42.0)
+	price_tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var tag := UiTheme.paper_panel(UiTheme.SURFACE if reason == &"sold" else UiTheme.PAPER)
+	tag.shape = InkStyleBox.Shape.OVAL
+	tag.variant = 2
+	tag.content_margin_left = 8.0
+	tag.content_margin_right = 8.0
+	tag.content_margin_top = 6.0
+	tag.content_margin_bottom = 6.0
+	price_tag.add_theme_stylebox_override("panel", tag)
+	price_tag.add_child(_price_label(o, reason, selected))
+	row.add_child(price_tag)
 	return row
 
 
@@ -269,22 +289,37 @@ func _actions_row(o: Offer, reason: StringName, can_swap: bool) -> Control:
 
 
 func _press_paper() -> void:
-	if disabled or reduced_effects:
+	if disabled or reduced_effects or _art == null:
 		return
 	if _press_tween != null and _press_tween.is_valid():
 		_press_tween.kill()
-	pivot_offset = size * 0.5
-	scale = Vector2(0.99, 0.97)
+	_reset_visual_pose()
+	_art.pivot_offset = _art.size * 0.5
+	_art.scale = Vector2(1.04, 0.96)
 
 
 func _release_paper() -> void:
 	if _press_tween != null and _press_tween.is_valid():
 		_press_tween.kill()
+	scale = Vector2.ONE
 	if reduced_effects:
-		scale = Vector2.ONE
+		_reset_visual_pose()
 		return
-	_press_tween = create_tween()
-	_press_tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_press_tween = create_tween().set_parallel(true)
+	if _art != null:
+		_press_tween.tween_property(_art, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if price_tag != null:
+		_press_tween.tween_property(price_tag, "scale", Vector2.ONE, 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func _reset_visual_pose() -> void:
+	# Preserve the interaction rectangle; only the merchandise and loose tag can move.
+	scale = Vector2.ONE
+	if _art != null:
+		_art.scale = Vector2.ONE
+	if price_tag != null:
+		price_tag.scale = Vector2.ONE
+		price_tag.modulate = Color.WHITE
 
 
 func _on_swap_pressed() -> void:

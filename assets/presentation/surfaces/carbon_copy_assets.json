@@ -33,34 +33,6 @@
       ]
     },
     {
-      "id": "panel_skin",
-      "file": "assets/presentation/surfaces/panel_skin.png",
-      "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-6fca1dda-2cd4-4768-815d-17417a890aac.png",
-      "prompt": "Use case: stylized-concept. Production asset for original 2D dark-comedy paper-copy roguelite Take Stack. Use supplied image ONLY as art-direction reference: thick irregular charcoal ink contours, clean flat cream/smoke-yellow fills, one simple cel shadow, ugly-cute exhausted paper world. No realistic rendering, shiny metal, blue sci-fi, neon, glow, text, logos, numbers, scene, cast shadow or grunge overlay.\nCreate ONE square opaque nine-patch UI PAPER PANEL SKIN. Full canvas is a solid pale warm recycled-paper cream (#E5D8B8), not transparency. The entire large CENTER must be quiet clean uniform flat pale paper color with only barely visible fine grain. A thin slightly imperfect charcoal-black hand-inked outline runs just INSIDE all four canvas edges. Small paper folds and one tiny dog-ear are confined strictly within 32 pixels of outer edges on a 1024px canvas, so borders can be nine-sliced. Keep corners roughly square, gently irregular, not rounded game loot cards. NO heavy shadow, no tape, no staples, no holes or black frame, no decorative marks in the center, no lettering. This texture must stretch cleanly across many differently sized Godot UI panels.",
-      "columns": 1,
-      "rows": 1,
-      "frame_count": 1,
-      "width": 1254,
-      "height": 1254,
-      "size": [
-        1254,
-        1254
-      ],
-      "mode": "RGB",
-      "sha256": "b1016a5131a03895f8af504a156f07979af009f91fa0822664064bb2185add14",
-      "visible_alpha_min": 20,
-      "bounds_ltrb": [
-        0,
-        0,
-        1254,
-        1254
-      ],
-      "alpha_extrema": [
-        255,
-        255
-      ]
-    },
-    {
       "id": "recording_cartridge",
       "file": "assets/presentation/surfaces/recording_cartridge.png",
       "source_file": "/Users/yupeng/.codex/generated_images/01a182e0-0e1c-7ae3-8dc0-0abc39d0794f/exec-56a9bc9f-b17d-4275-8942-351524ee3d94.png",
@@ -87,6 +59,53 @@
         0,
         254
       ]
+    },
+    {
+      "id": "shopkeeper",
+      "file": "assets/presentation/surfaces/shopkeeper.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-4a33ee3a-1ff7-4bdf-97f0-14a47f01628d.png",
+      "prompt": "Use case: stylized-concept. Production 2D UI character animation strip for the ORIGINAL game TAKE STACK, Carbon Copy Purgatory. The supplied board is a world/palette reference ONLY. Design a new darkly funny SCRAP MERCHANT with SOFT rounded, irregular, hand-inked storybook shapes: a small slouching wad of old cream paper, broad pear-shaped head, drooping asymmetrical eyelids, one blunt tooth, floppy receipt ears, round little belly and loose dark sage waistcoat. A curled blank receipt bends like a hat. He looks hungry, patient and faintly dishonest. Expressive, grotesque but endearing. Loosely drawn double ink contours with occasional controlled crosshatching, flat muted bone/gray-sage/tobacco/coral fills, one shadow; drawn with a scratchy pen, NOT a polished vector logo, NOT 3D, NOT a sharp folded rectangular robot. The black comedy is in his expressions and the ridiculous fact he trades discarded versions of people. Do not copy any existing game's characters or logos. Exactly FOUR equal cells in one horizontal 3:1 animation strip, genuine transparent RGBA background. Same character, identical scale, same center and foot baseline in every cell with safe empty margins. Frame0 tired neutral closed mouth, frame1 small sly grin and one palm open for payment, frame2 embarrassed shrug with raised empty palms, frame3 comically wide round bite-mouth as though eating a price tag (no actual tag/object). Complete character in each cell, no cell borders, no words or letters, no UI, no scene, no ground or cast shadow, no glow, no extra objects. Readable at 70 pixels. Keep round flowing contours rather than pointed torn corners.",
+      "columns": 4,
+      "rows": 1,
+      "frame_count": 4,
+      "date": "2026-10-29",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "sha256": "2fe786957b2838e2017dc6edd61535f975686ffb9f43ba9521fb37a3cc7dca8a",
+      "refinement_prompt": "Edit only the spacing and scale in this four-frame transparent merchant animation strip. Preserve the EXACT existing original character, drawing style, colors, four expressions and frame order. Keep exactly FOUR equal-width cells in one horizontal 3:1 sheet and genuine RGBA transparency. Each character must fit FULLY inside its own quarter with at least 12% transparent LEFT and RIGHT margins within that cell, including outstretched hands, paper ears and sleeves. Currently poses 1 and 2 have hands touching/crossing the cell boundaries; make the entire character in ALL FOUR cells about 78% of its current size and center it consistently at x=12.5%,37.5%,62.5%,87.5% of the canvas. Align the feet to one shared baseline at 84% canvas height. Do not crop, cut off, merge or redraw hands between neighbors. All four silhouettes must be complete and isolated with transparent vertical gaps at the 25%,50%,75% divisions. Keep pose0 tired neutral, pose1 sly payment grin and open palm, pose2 embarrassed empty-palms shrug, pose3 big round bite-mouth. No text, borders, marks, ground or added objects. This is production-safe cell spacing cleanup, all other art stays identical.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-32f19a76-d66f-4e89-9dc7-3a68c8296eea.png",
+      "frame_bounds_ltrb": [
+        [
+          87,
+          124,
+          434,
+          617
+        ],
+        [
+          72,
+          130,
+          426,
+          617
+        ],
+        [
+          50,
+          126,
+          469,
+          616
+        ],
+        [
+          85,
+          123,
+          448,
+          617
+        ]
+      ]
     }
-  ]
+  ],
+  "updated_at": "2026-10-29"
 }

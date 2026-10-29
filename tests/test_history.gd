@@ -35,10 +35,7 @@ func test_history_lists_recent_runs(c: Check) -> void:
 		got[0] = seed_value
 		got[1] = char
 		got[2] = daily)
-	for child in ui._grid.get_children():
-		if child is Button:
-			(child as Button).pressed.emit()
-			break
+	ui.replay_buttons[0].pressed.emit()
 	c.eq(got[0], 1, "replay carries the seed")
 	c.eq(got[1], &"looper", "replay carries the character")
 	c.eq(got[2], &"", "normal replay has no daily modifier")
@@ -63,7 +60,8 @@ func test_history_shows_mode_labels(c: Check) -> void:
 	ui.theme = UiTheme.build()
 	(Engine.get_main_loop() as SceneTree).root.add_child(ui)
 	ui.open(log)
-	c.eq(ui._grid.columns, 7, "history has a mode column")
+	c.eq(ui.row_count(), 1, "history keeps the recorded run")
+	c.eq(ui.record_panels.size(), 1, "one readable record carries the mode and replay action")
 	c.ok(ui._grid.find_children("*", "Label", true, false).any(
 			func(node: Node) -> bool: return (node as Label).text == Loc.t("history.mode_boss_rush")),
 			"boss rush appears in history")

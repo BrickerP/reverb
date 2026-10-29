@@ -30,6 +30,9 @@ PROVENANCE_FILES = [
     "LICENSE",
     "THIRD_PARTY.md",
     "assets/fonts/OFL.txt",
+    "assets/fonts/AmaticSC-OFL.txt",
+    "assets/fonts/ZCOOLKuaiLe-OFL.txt",
+    "assets/fonts/SOURCES.json",
     "assets/presentation/SOURCES.md",
     "assets/presentation/manifest.json",
     "assets/presentation/app_icon/SOURCES.md",
@@ -47,6 +50,7 @@ PROVENANCE_FILES = [
     "audio/presentation/SOURCES.md",
 ]
 FORBIDDEN_PATHS = [
+    "assets/presentation/surfaces/panel_skin.png",
     "shots/",
     "tests/",
     "tools/",
@@ -172,7 +176,9 @@ def expected_inventory(stage: Path) -> dict[str, Any]:
     if missing_provenance:
         raise RuntimeError(f"missing provenance sources: {missing_provenance}")
     resources = [f"res://{path}" for path in pngs]
-    resources.append("res://assets/fonts/NotoSansCJKsc-Regular.otf")
+    fonts = ["assets/fonts/NotoSansCJKsc-Regular.otf", "assets/fonts/AmaticSC-Bold.ttf",
+             "assets/fonts/ZCOOLKuaiLe-Regular.ttf"]
+    resources.extend(f"res://{path}" for path in fonts)
     resources.extend(f"res://{path}" for path in cues)
     resources.append("res://audio/ambient.wav")
     return {
@@ -181,7 +187,7 @@ def expected_inventory(stage: Path) -> dict[str, Any]:
         "forbidden_prefixes": FORBIDDEN_PATHS,
         "counts": {
             "presentation_png": len(pngs),
-            "font": 1,
+            "font": len(fonts),
             "runtime_cues": len(cues),
             "ambient": 1,
             "provenance": len(PROVENANCE_FILES),

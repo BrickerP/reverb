@@ -36,8 +36,17 @@ class TakeMeter:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(UiTheme.EDGE, 0.15))
-		draw_rect(Rect2(Vector2.ZERO, Vector2(size.x * clampf(ratio, 0.0, 1.0), size.y)), Color(tint, 0.9))
+		var radius := size.y * 0.5
+		var a := Vector2(radius, radius)
+		var b := Vector2(maxf(radius, size.x - radius), radius)
+		draw_line(a, b, Color(UiTheme.EDGE, 0.15), size.y, true)
+		draw_circle(a, radius, Color(UiTheme.EDGE, 0.15))
+		draw_circle(b, radius, Color(UiTheme.EDGE, 0.15))
+		if ratio > 0.0:
+			var filled := Vector2(maxf(radius, (size.x - radius) * clampf(ratio, 0.0, 1.0)), radius)
+			draw_line(a, filled, Color(tint, 0.9), size.y, true)
+			draw_circle(a, radius, Color(tint, 0.9))
+			draw_circle(filled, radius, Color(tint, 0.9))
 
 
 class StapleMark:
@@ -55,16 +64,11 @@ class StapleMark:
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(392.0, 0.0)
+	custom_minimum_size = Vector2(0.0, 0.0)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var surface_source := UiTheme.surface_panel()
 	if surface_source != null:
-		var surface := surface_source.duplicate() as StyleBoxTexture
-		surface.region_rect = Rect2(Vector2.ZERO, surface.texture.get_size())
-		surface.texture_margin_left = 10.0
-		surface.texture_margin_right = 10.0
-		surface.texture_margin_top = 10.0
-		surface.texture_margin_bottom = 10.0
+		var surface := surface_source.duplicate() as InkStyleBox
 		surface.content_margin_left = 12.0
 		surface.content_margin_right = 12.0
 		surface.content_margin_top = 8.0
@@ -217,25 +221,26 @@ func newest_tint() -> Color:
 func confirm_merge() -> void:
 	if reduced_effects or _takes_box == null or _takes_box.get_child_count() == 0:
 		return
-	_stamped_row = _takes_box.get_child(0) as Control
+	_stamped_row = _takes_box.get_child(0).find_child("StapleMark", true, false) as Control
+	if _stamped_row == null:
+		return
 	_stamped_row.pivot_offset = _stamped_row.size * 0.5
-	_stamped_row.scale = Vector2(0.97, 0.94)
-	_stamped_row.rotation = -0.014
+	_stamped_row.scale = Vector2(1.3, 0.65)
 	_merge_tween = _stamped_row.create_tween().set_parallel(true)
 	_merge_tween.tween_property(_stamped_row, "scale", Vector2.ONE, 0.18) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_merge_tween.tween_property(_stamped_row, "rotation", 0.0, 0.18)
 
 
 func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, selected: bool) -> Control:
 	var row := PanelContainer.new()
 	var style := UiTheme.box(UiTheme.PAPER if selected else UiTheme.CARD,
-			UiTheme.ECHO if selected else UiTheme.EDGE, 3 if selected else 2, 2)
+			UiTheme.ECHO if selected else Color(UiTheme.EDGE, 0.0), 2 if selected else 0, 20)
 	style.content_margin_left = 8.0
 	style.content_margin_right = 8.0
 	style.content_margin_top = 7.0
 	style.content_margin_bottom = 7.0
-	style.set_border_width(SIDE_BOTTOM, 4)
+	style.shape = InkStyleBox.Shape.PAPER
+	style.variant = take.wave % 7
 	row.add_theme_stylebox_override("panel", style)
 	var sheet := VBoxContainer.new()
 	sheet.add_theme_constant_override("separation", 6)
@@ -388,7 +393,9 @@ func _title_line(take: EchoTake) -> Control:
 	line.add_theme_constant_override("separation", 8)
 	line.add_child(UiTheme.label(Loc.t("shop.take", [take.wave]), 16))
 	if take.merged:
-		line.add_child(StapleMark.new())
+		var staple := StapleMark.new()
+		staple.name = "StapleMark"
+		line.add_child(staple)
 	return line
 
 
@@ -396,9 +403,17 @@ func _pips(remaining: int, total: int, tint: Color) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 3)
 	for k in clampi(total, 1, 8):
-		var pip := ColorRect.new()
+		var pip := PanelContainer.new()
 		pip.custom_minimum_size = Vector2(10.0, 6.0)
-		pip.color = tint.lerp(UiTheme.INK, 0.4) if k < remaining else Color(UiTheme.EDGE, 0.16)
+		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var fill := tint.lerp(UiTheme.INK, 0.4) if k < remaining else Color(UiTheme.EDGE, 0.16)
+		var dot := UiTheme.box(fill, Color.TRANSPARENT, 0, 8)
+		dot.shape = InkStyleBox.Shape.OVAL
+		dot.content_margin_left = 0.0
+		dot.content_margin_right = 0.0
+		dot.content_margin_top = 0.0
+		dot.content_margin_bottom = 0.0
+		pip.add_theme_stylebox_override("panel", dot)
 		line.add_child(pip)
 	if total > 8:
 		line.add_child(UiTheme.label("%d/%d" % [remaining, total], 12, UiTheme.DIM))

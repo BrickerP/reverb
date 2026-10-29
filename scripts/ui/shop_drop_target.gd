@@ -10,6 +10,12 @@ var _quote_drop := Callable()
 var _apply_drop := Callable()
 var _clear_drop := Callable()
 var _feedback_tween: Tween
+var _stamp_visible := false
+var _stamp_rejected := false
+var _stamp_impact := 0.0:
+	set(value):
+		_stamp_impact = value
+		queue_redraw()
 
 
 func configure(kind: StringName, index: int, quote_drop: Callable, apply_drop: Callable,
@@ -56,16 +62,14 @@ func feedback(reverse: bool = false, reduced: bool = false) -> void:
 	reset_feedback()
 	feedback_runs += 1
 	last_feedback_reverse = reverse
-	pivot_offset = size * 0.5
-	var tint := Color(0.90, 0.81, 0.95) if reverse else Color(1.0, 0.92, 0.72)
-	modulate = tint
+	_stamp_visible = true
+	_stamp_rejected = false
+	_stamp_impact = 0.0 if reduced else 1.0
 	if not reduced:
-		scale = Vector2(0.94, 0.94) if reverse else Vector2(1.04, 1.04)
-	_feedback_tween = create_tween().set_parallel(true)
-	_feedback_tween.tween_property(self, "modulate", Color.WHITE, 0.2).set_trans(Tween.TRANS_SINE)
-	if not reduced:
-		_feedback_tween.tween_property(self, "scale", Vector2.ONE, 0.2) \
+		_feedback_tween = create_tween()
+		_feedback_tween.tween_property(self, "_stamp_impact", 0.0, 0.2) \
 				.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	queue_redraw()
 
 
 func reset_feedback() -> void:
@@ -75,17 +79,40 @@ func reset_feedback() -> void:
 	highlighted = false
 	scale = Vector2.ONE
 	modulate = Color.WHITE
+	_stamp_visible = false
+	_stamp_impact = 0.0
 
 
 func reject(reduced: bool = false) -> void:
 	reset_feedback()
-	UiTheme.flash(self)
+	_stamp_visible = true
+	_stamp_rejected = true
 	if reduced:
+		queue_redraw()
 		return
-	pivot_offset = size * 0.5
-	_feedback_tween = create_tween()
-	_feedback_tween.tween_property(self, "scale", Vector2(0.98, 0.98), 0.06)
-	_feedback_tween.tween_property(self, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
+	_stamp_impact = 1.0
+	modulate = Color(1.0, 0.74, 0.63)
+	_feedback_tween = create_tween().set_parallel(true)
+	_feedback_tween.tween_property(self, "_stamp_impact", 0.0, 0.2).set_trans(Tween.TRANS_QUAD)
+	_feedback_tween.tween_property(self, "modulate", Color.WHITE, 0.2)
+
+
+func _draw() -> void:
+	if not _stamp_visible:
+		return
+	var center := Vector2(maxf(16.0, size.x - 15.0), 15.0)
+	var radius := 9.0 + _stamp_impact * 3.0
+	var ink := UiTheme.WARN if _stamp_rejected else (UiTheme.ECHO if last_feedback_reverse else UiTheme.ACCENT)
+	draw_arc(center, radius, -0.2, TAU - 0.5, 20, ink, 2.0, true)
+	if _stamp_rejected:
+		draw_line(center + Vector2(-3.0, -3.0), center + Vector2(3.0, 3.0), ink, 2.0, true)
+		draw_line(center + Vector2(3.0, -3.0), center + Vector2(-3.0, 3.0), ink, 2.0, true)
+	elif last_feedback_reverse:
+		draw_line(center + Vector2(4.0, 0.0), center + Vector2(-4.0, 0.0), ink, 2.0, true)
+		draw_line(center + Vector2(-4.0, 0.0), center + Vector2(0.0, -4.0), ink, 2.0, true)
+	else:
+		draw_line(center + Vector2(-4.0, 0.0), center + Vector2(-1.0, 3.0), ink, 2.0, true)
+		draw_line(center + Vector2(-1.0, 3.0), center + Vector2(5.0, -4.0), ink, 2.0, true)
 
 
 func clear_highlight() -> void:

@@ -26,3 +26,12 @@ bundled font cannot be loaded.
 ## Godot Engine
 
 Built with [Godot Engine](https://godotengine.org/), MIT licensed.
+
+## Hand-drawn display fonts
+
+Amatic SC Bold (`assets/fonts/AmaticSC-Bold.ttf`) and ZCOOL KuaiLe
+(`assets/fonts/ZCOOLKuaiLe-Regular.ttf`) are bundled under the SIL Open Font
+License 1.1. Full licenses are `assets/fonts/AmaticSC-OFL.txt` and
+`assets/fonts/ZCOOLKuaiLe-OFL.txt`; original URLs and byte hashes are recorded
+in `assets/fonts/SOURCES.json`. These notices and licenses are included in
+each audited export. Noto Sans CJK SC remains the body font.
