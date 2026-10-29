@@ -65,7 +65,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 [Releases](https://github.com/BrickerP/reverb/releases) 当前 Latest 为 **v0.10.0-rc.1**（macOS / Windows / Linux），同时保留 v0.2.0 构建。该 RC 被明确标记为 Latest，但版本号仍是候选；正式发布前请以 [RELEASE_NOTES.md](RELEASE_NOTES.md) 的验证与限制为准。
 
-- **macOS**：`TakeStack-macos.zip` → 解压 → 右键 `Take Stack.app` → 打开。构建未签名，若提示“已损坏”，执行 `xattr -dr com.apple.quarantine "Take Stack.app"`。
+- **macOS**：解压后把 `Take Stack.app` 移至 Applications。开发预览采用本地签名并检查完整性，尚未经过 Apple 公证；首次启动被拦截时，在“系统设置 → 隐私与安全性”中为这个应用选择“仍要打开”。签名完整性检查失败的包应更新，不能只移除下载隔离标记。
 - **Windows**：`TakeStack-windows.zip` → 解压 → 运行 `TakeStack.exe`。SmartScreen 选“更多信息 → 仍要运行”。
 - **Linux**：`TakeStack-linux.zip` → 解压 → `chmod +x TakeStack.x86_64` → 运行。
 - **校验**：同页 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt`（macOS 用 `shasum -a 256 -c`）。

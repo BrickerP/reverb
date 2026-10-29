@@ -263,6 +263,54 @@ def extract_macos(zip_path: Path, smoke_dir: Path, logs: Path) -> dict[str, Path
     return {"app": applications[0], "executable": executables[0], "pack": packs[0]}
 
 
+def verify_macos_signature(
+    app: Path, logs: Path, expected_identifier: str,
+) -> dict[str, Any]:
+    """Check the delivered bundle before launch, without repairing it in place.
+
+    A direct executable launch can succeed with a stale template signature.
+    Strict bundle verification checks the code, Info.plist and resource seal of
+    the freshly extracted ZIP. An ad-hoc signature is not Apple notarization.
+    """
+    codesign = shutil.which("codesign")
+    if codesign is None:
+        raise RuntimeError("macOS export audit requires Apple's codesign verifier")
+    verify_log = logs / "macos-signature-verify.log"
+    run_checked(
+        [codesign, "--verify", "--deep", "--strict", "--all-architectures", "--verbose=2", str(app)],
+        app.parent, verify_log, timeout=60,
+    )
+    display_log = logs / "macos-signature-display.log"
+    display = run_checked(
+        [codesign, "--display", "--verbose=2", str(app)],
+        app.parent, display_log, timeout=60,
+    )
+    metadata = display.stdout + display.stderr
+    if f"Identifier={expected_identifier}" not in metadata.splitlines():
+        raise RuntimeError(f"macOS signature has the wrong bundle identifier; see {display_log}")
+    resources = app / "Contents/_CodeSignature/CodeResources"
+    if (not resources.is_file() or "Sealed Resources=none" in metadata
+            or "Info.plist=not bound" in metadata):
+        raise RuntimeError(f"macOS signature does not seal its bundle resources; see {display_log}")
+    ad_hoc = "Signature=adhoc" in metadata.splitlines()
+    authorities = [line.removeprefix("Authority=") for line in metadata.splitlines()
+                   if line.startswith("Authority=")]
+    if not ad_hoc and not authorities:
+        raise RuntimeError(f"macOS signing identity was not reported; see {display_log}")
+    return {
+        "valid": True,
+        "identifier": expected_identifier,
+        "kind": "ad-hoc" if ad_hoc else "certificate",
+        "authorities": authorities,
+        "all_architectures_verified": True,
+        "resource_seal": artifact_record(resources),
+        "verify_log": str(verify_log),
+        "display_log": str(display_log),
+        "gatekeeper_acceptance": "not_tested",
+        "notarization": "not_verified",
+    }
+
+
 def macos_smoke(
     macos: dict[str, Path], smoke_dir: Path, logs: Path, custom_name: str,
 ) -> dict[str, Any]:
@@ -365,6 +413,7 @@ def main() -> None:
 
     smoke_dir = audit_dir / "macos-smoke"
     macos = extract_macos(artifacts / "macos" / PRESETS["macOS"], smoke_dir, logs)
+    signature = verify_macos_signature(macos["app"], logs, "com.brickerp.takestack")
     delivered_packs = {
         "macOS": macos["pack"],
         "Windows": one_pack(artifacts / "windows", "Windows"),
@@ -399,6 +448,7 @@ def main() -> None:
         "expected": expected,
         "exports": exported,
         "macos_smoke": smoke,
+        "macos_signature": signature,
         "user_data_isolation": {
             "macOS": "runtime_verified",
             "Windows": "compiled_from_staging_overlay_not_runtime_verified_on_macos",
