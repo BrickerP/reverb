@@ -16,7 +16,7 @@ const ALL: Array[StringName] = [
 ]
 
 const ECHO_BONUS := 0.15
-const RIFT_WAVE := 8
+const RIFT_WAVE := 3
 const RIFT_INTERVAL := 14.0
 const FORTUNE_DROP_MULT := 1.5
 const RIFTSTORM_INTERVAL := 8.0

@@ -9,6 +9,7 @@ var shield: float = 0.0
 var stats: Stats = Stats.new()
 var weapons: Array[WeaponDef] = []
 var weapon_levels: Array[int] = []
+var weapon_investments: Array[int] = []
 var cooldowns: Array[float] = []
 var items: Dictionary = {}
 var set_bonus_applied: Dictionary = {}
@@ -31,6 +32,11 @@ func add_weapon(w: WeaponDef) -> void:
 		weapon_levels.append(0)
 	if weapon_levels.size() > weapons.size():
 		weapon_levels.resize(weapons.size())
+	while weapon_investments.size() < weapons.size():
+		weapon_investments.append(0)
+	if weapon_investments.size() > weapons.size():
+		weapon_investments.resize(weapons.size())
+	weapon_investments.append(0)
 	weapons.append(w)
 	weapon_levels.append(0)
 	cooldowns.append(0.0)

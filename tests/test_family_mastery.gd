@@ -91,12 +91,16 @@ func test_build_panel_explains_the_active_mastery(c: Check) -> void:
 	s.player.cooldowns.clear()
 	for i in 4:
 		s.player.add_weapon(Content.weapon(&"pistol"))
-	var panel := BuildPanel.new()
-	_root().add_child(panel)
-	panel.refresh(s)
-	c.ok(_find_label(panel, Loc.t("shop.family_mastery_sidearm")),
-			"the build panel shows the active family rule")
-	panel.free()
+	s.phase = Sim.Phase.SHOP
+	var ui := ShopUi.new()
+	_root().add_child(ui)
+	ui.open(s)
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui.workshop.choice_buttons[4].pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
+	c.ok(_find_label(ui.workshop, Loc.t("shop.family_mastery_sidearm")),
+			"the workbench shows the active family rule")
+	ui.free()
 
 
 func _root() -> Window:

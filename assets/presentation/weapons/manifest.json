@@ -3,6 +3,263 @@
   "art_direction": "Carbon Copy Purgatory",
   "assets": [
     {
+      "file": "expedition_arsenal.png",
+      "sha256": "f44bd32489334c2829a3bec5f44db7e387412d4d6b0b7d0133ec7c5ca888f5bb",
+      "size": [
+        1448,
+        1086
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        27,
+        45,
+        1422,
+        1049
+      ],
+      "frame_union_ltrb": [
+        27,
+        45,
+        1422,
+        1049
+      ],
+      "frame_bounds_ltrb": [
+        [
+          27,
+          45,
+          1422,
+          1049
+        ]
+      ],
+      "frame_pivots": [
+        [
+          697.0,
+          1004
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1,
+      "regions": {
+        "weapon_binding_writ": {
+          "source_rect_xywh": [
+            30,
+            115,
+            332,
+            224
+          ],
+          "bounds_ltrb": [
+            30,
+            115,
+            362,
+            339
+          ],
+          "pivot": [
+            166.0,
+            224
+          ]
+        },
+        "weapon_saw_swarm": {
+          "source_rect_xywh": [
+            362,
+            101,
+            362,
+            254
+          ],
+          "bounds_ltrb": [
+            362,
+            101,
+            724,
+            355
+          ],
+          "pivot": [
+            181.0,
+            254
+          ]
+        },
+        "weapon_surveyor_lance": {
+          "source_rect_xywh": [
+            724,
+            100,
+            362,
+            262
+          ],
+          "bounds_ltrb": [
+            724,
+            100,
+            1086,
+            362
+          ],
+          "pivot": [
+            181.0,
+            262
+          ]
+        },
+        "weapon_ink_tempest": {
+          "source_rect_xywh": [
+            1086,
+            45,
+            336,
+            317
+          ],
+          "bounds_ltrb": [
+            1086,
+            45,
+            1422,
+            362
+          ],
+          "pivot": [
+            168.0,
+            317
+          ]
+        },
+        "weapon_folding_guillotine": {
+          "source_rect_xywh": [
+            51,
+            384,
+            294,
+            315
+          ],
+          "bounds_ltrb": [
+            51,
+            384,
+            345,
+            699
+          ],
+          "pivot": [
+            147.0,
+            315
+          ]
+        },
+        "weapon_binding_atlas": {
+          "source_rect_xywh": [
+            410,
+            395,
+            297,
+            329
+          ],
+          "bounds_ltrb": [
+            410,
+            395,
+            707,
+            724
+          ],
+          "pivot": [
+            148.5,
+            329
+          ]
+        },
+        "weapon_paper_hound": {
+          "source_rect_xywh": [
+            763,
+            362,
+            311,
+            362
+          ],
+          "bounds_ltrb": [
+            763,
+            362,
+            1074,
+            724
+          ],
+          "pivot": [
+            155.5,
+            362
+          ]
+        },
+        "weapon_debt_sentry": {
+          "source_rect_xywh": [
+            1129,
+            362,
+            287,
+            355
+          ],
+          "bounds_ltrb": [
+            1129,
+            362,
+            1416,
+            717
+          ],
+          "pivot": [
+            143.5,
+            355
+          ]
+        },
+        "weapon_repair_kit": {
+          "source_rect_xywh": [
+            27,
+            748,
+            335,
+            271
+          ],
+          "bounds_ltrb": [
+            27,
+            748,
+            362,
+            1019
+          ],
+          "pivot": [
+            167.5,
+            271
+          ]
+        },
+        "weapon_paper_seed": {
+          "source_rect_xywh": [
+            362,
+            724,
+            353,
+            325
+          ],
+          "bounds_ltrb": [
+            362,
+            724,
+            715,
+            1049
+          ],
+          "pivot": [
+            176.5,
+            325
+          ]
+        },
+        "weapon_guard_decoy": {
+          "source_rect_xywh": [
+            787,
+            724,
+            261,
+            319
+          ],
+          "bounds_ltrb": [
+            787,
+            724,
+            1048,
+            1043
+          ],
+          "pivot": [
+            130.5,
+            319
+          ]
+        },
+        "mission_letter": {
+          "source_rect_xywh": [
+            1110,
+            765,
+            308,
+            263
+          ],
+          "bounds_ltrb": [
+            1110,
+            765,
+            1418,
+            1028
+          ],
+          "pivot": [
+            154.0,
+            263
+          ]
+        }
+      }
+    },
+    {
       "file": "flak_crown.png",
       "sha256": "90d7e30d5ad6d7656feade08aceded04ad312b1c892e0788c577e3264f84cf25",
       "size": [

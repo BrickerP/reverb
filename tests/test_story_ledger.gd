@@ -7,7 +7,8 @@ func test_milestones_and_choices_recover_distinct_clues_without_rng(c: Check) ->
 	sim.start_run()
 	var state: int = sim.rng.state
 	var hazard: int = sim.hazard_rng.state
-	for wave in [2, 4, 7, 10, 15]:
+	sim.expedition.clear()
+	for wave in [2, 4, 6, 8, 10]:
 		sim.wave = wave
 		StoryLedger.on_wave(sim)
 	c.eq(StoryLedger.discovered(sim).size(), 5, "five wave fragments")
@@ -31,8 +32,10 @@ func test_milestones_and_choices_recover_distinct_clues_without_rng(c: Check) ->
 	c.eq(StoryLedger.discovered(sim).size(), 8, "dismiss never loses clues")
 
 
-func test_boss_discovery_and_final_receipt_follow_real_choices(c: Check) -> void:
-	for repair_count in [0, 2]:
+func test_boss_discovery_and_final_receipt_follow_expedition_decisions(c: Check) -> void:
+	var routes: Array[StringName] = [&"compliance", &"solidarity", &"profit"]
+	var endings: Array[StringName] = [&"released", &"collective", &"indebted"]
+	for i in routes.size():
 		var sim := Sim.new(5)
 		sim.start_wave(WaveDirector.FINAL_WAVE)
 		var boss := EnemyState.new()
@@ -41,11 +44,24 @@ func test_boss_discovery_and_final_receipt_follow_real_choices(c: Check) -> void
 		boss.dead = true
 		sim.boss = boss
 		sim.boss_shards.append(boss)
-		for i in repair_count:
-			StoryLedger.on_repair(sim, 40.0)
+		sim.expedition["route"] = routes[i]
+		sim.expedition["ending"] = endings[i]
+		sim.expedition["completed_orders"] = [&"rescue", &"recruit"]
+		sim.expedition["recruited_bosses"] = [&"foreman"]
 		StoryLedger.on_wave(sim)
-		c.ok(StoryLedger.discovered(sim).has(&"signature"), "defeated boss reveals sixth main fragment")
-		c.eq(StoryLedger.receipt(sim).id, &"appeal" if repair_count > 0 else &"consent", "ending reflects actual repair/retire balance")
+		var clues := StoryLedger.discovered(sim)
+		c.ok(clues.has(&"signature"), "defeated boss reveals real encounter clue")
+		c.ok(clues.has(StringName("route_%s" % routes[i])), "actual expedition route is archived")
+		c.ok(clues.has(&"order_rescue") and clues.has(&"order_recruit"), "completed work orders have consequences")
+		c.ok(clues.has(&"recruited_foreman"), "actual recruited boss has authored story")
+		c.eq(StoryLedger.receipt(sim).id, StringName("ending_%s" % endings[i]), "three endings follow actual expedition outcome")
+
+
+func test_unfinished_orders_and_unknown_endings_do_not_invent_story(c: Check) -> void:
+	var sim := Sim.new(13)
+	sim.expedition = {"route": &"unknown", "ending": &"unknown", "failed_orders": [&"recruit"], "recruited_bosses": []}
+	StoryLedger.sync_expedition(sim)
+	c.ok(StoryLedger.discovered(sim).is_empty(), "failed recruit and unknown outcomes cannot grant discoveries")
 
 
 func test_archive_persists_only_known_clues_in_existing_meta_file(c: Check) -> void:

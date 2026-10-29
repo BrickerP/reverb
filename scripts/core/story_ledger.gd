@@ -5,9 +5,13 @@ extends RefCounted
 # kept in Meta. Reading/dismissing a receipt never alters combat or either RNG.
 const ALL: Array[StringName] = [
 	&"carbon", &"repair", &"retire", &"exhausted", &"handwriting", &"duplicate",
-	&"audit", &"tomorrow", &"signature", &"appeal", &"consent",
+	&"audit", &"tomorrow", &"signature",
+	&"route_compliance", &"route_solidarity", &"route_profit",
+	&"order_salvage", &"order_audit", &"order_repair", &"order_rescue", &"order_recruit", &"order_credit",
+	&"recruited_foreman", &"recruited_collector", &"recruited_paradox",
+	&"ending_released", &"ending_collective", &"ending_indebted",
 ]
-const WAVES := {2: &"carbon", 4: &"handwriting", 7: &"duplicate", 10: &"audit", 15: &"tomorrow"}
+const WAVES := {2: &"carbon", 4: &"handwriting", 6: &"duplicate", 8: &"audit", 10: &"tomorrow"}
 
 
 static func on_wave(sim: Sim) -> void:
@@ -20,7 +24,26 @@ static func on_wave(sim: Sim) -> void:
 		_discover(sim, WAVES[sim.wave])
 	if sim.is_boss_wave() and sim.boss != null and sim.boss_alive_count() == 0:
 		_discover(sim, &"signature")
-		_discover(sim, &"appeal" if int(progress.get("repairs", 0)) > int(progress.get("retirements", 0)) else &"consent")
+	sync_expedition(sim)
+
+
+static func sync_expedition(sim: Sim) -> void:
+	if sim == null:
+		return
+	var route := StringName(str(sim.expedition.get("route", "")))
+	if route in [&"compliance", &"solidarity", &"profit"]:
+		_discover(sim, StringName("route_%s" % route))
+	for order: Variant in sim.expedition.get("completed_orders", []):
+		var id := StringName("order_%s" % str(order))
+		if ALL.has(id):
+			_discover(sim, id)
+	for boss: Variant in sim.expedition.get("recruited_bosses", []):
+		var id := StringName("recruited_%s" % str(boss))
+		if ALL.has(id):
+			_discover(sim, id)
+	var ending := StringName("ending_%s" % str(sim.expedition.get("ending", "")))
+	if ALL.has(ending):
+		_discover(sim, ending)
 
 
 static func on_retire(sim: Sim, info: EchoRetirementInfo) -> void:

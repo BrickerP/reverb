@@ -13,15 +13,28 @@ static func note_event(event: InputEvent) -> void:
 
 
 static func retire_label() -> String:
-	return "RB" if using_gamepad else "SPACE"
+	return action_label(&"retire_echo")
+
+
+static func skill_label() -> String:
+	return action_label(&"character_skill")
+
+
+static func interact_label() -> String:
+	return action_label(&"interact")
 
 
 static func move_label() -> String:
-	return "LS" if using_gamepad else "WASD"
+	if using_gamepad:
+		return action_label(&"move_up", true)
+	var names := PackedStringArray()
+	for action: StringName in [&"move_up", &"move_left", &"move_down", &"move_right"]:
+		names.append(action_label(action))
+	return "".join(names) if names[0].length() == 1 and names[1].length() == 1 and names[2].length() == 1 and names[3].length() == 1 else " / ".join(names)
 
 
 static func pause_label() -> String:
-	return "MENU" if using_gamepad else "P"
+	return action_label(&"pause")
 
 
 static func register() -> void:
@@ -39,6 +52,8 @@ static func register() -> void:
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
 	_bind(&"debug", [_key(KEY_F3), _button(JOY_BUTTON_BACK)])
+	_bind(&"character_skill", [_key(KEY_SHIFT), _button(JOY_BUTTON_LEFT_SHOULDER)])
+	_bind(&"interact", [_key(KEY_E), _button(JOY_BUTTON_X)])
 	_bind(&"retire_echo", [_key(KEY_SPACE), _button(JOY_BUTTON_RIGHT_SHOULDER)])
 
 
@@ -87,3 +102,34 @@ static func _button(index: JoyButton) -> InputEventJoypadButton:
 	var ev := InputEventJoypadButton.new()
 	ev.button_index = index
 	return ev
+
+
+static func action_label(action: StringName, movement: bool = false) -> String:
+	var events: Array[InputEvent] = []
+	if InputMap.has_action(action):
+		events = InputMap.action_get_events(action)
+	if using_gamepad:
+		if movement:
+			for event in events:
+				if event is InputEventJoypadMotion:
+					return "LS" if event.axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y] else "RS"
+		var labels := {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y",
+			JOY_BUTTON_LEFT_SHOULDER: "LB", JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_START: "MENU",
+			JOY_BUTTON_BACK: "VIEW", JOY_BUTTON_DPAD_UP: "DPAD ↑", JOY_BUTTON_DPAD_DOWN: "DPAD ↓",
+			JOY_BUTTON_DPAD_LEFT: "DPAD ←", JOY_BUTTON_DPAD_RIGHT: "DPAD →"}
+		for event in events:
+			if event is InputEventJoypadButton:
+				return labels.get(event.button_index, event.as_text())
+	else:
+		var names := PackedStringArray()
+		for event in events:
+			if event is InputEventKey:
+				var code: Key = event.physical_keycode if event.physical_keycode != 0 else event.keycode
+				var label := OS.get_keycode_string(code).to_upper()
+				if not names.has(label):
+					names.append(label)
+				if not movement:
+					return label
+		if movement and not names.is_empty():
+			return " / ".join(names)
+	return Loc.t("controls.unbound")

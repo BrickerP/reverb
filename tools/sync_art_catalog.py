@@ -76,10 +76,24 @@ def authored_layouts() -> dict[Path, tuple[int, int]]:
     return layouts
 
 
+def authored_visible_rects() -> dict[Path, dict[int, list[list[int]]]]:
+    """Optional source slices suppress disconnected neighboring-cell fragments."""
+    visible = {}
+    for group in ("characters", "enemies", "surfaces"):
+        data = json.loads((ART / group / "carbon_copy_assets.json").read_text())
+        for asset in data["assets"]:
+            frames = asset.get("frame_visible_rects", {})
+            if frames:
+                visible[ROOT / asset["file"]] = {int(frame): rects for frame, rects in frames.items()}
+    return visible
+
+
 def authored_regions() -> dict[str, tuple[Path, tuple[int, int, int, int]]]:
     """Static atlas regions are authored source-pixel XYWH rectangles per key."""
     regions = {}
-    assets = json.loads((ART / "weapons" / "carbon_copy_assets.json").read_text())
+    assets = []
+    for group in ("weapons", "supports"):
+        assets.extend(json.loads((ART / group / "carbon_copy_assets.json").read_text()))
     for asset in assets:
         for key, rect in asset.get("regions", {}).items():
             if key in regions or len(rect) != 4 or any(type(value) is not int for value in rect):
@@ -94,6 +108,7 @@ def main() -> None:
     pairs = re.findall(r'&"([^"]+)": "res://([^"]+)"', paths_block)
     layouts = authored_layouts()
     regions = authored_regions()
+    visible_rects = authored_visible_rects()
     if set(regions) - {key for key, _ in pairs}:
         raise ValueError("authored static regions have no runtime identity")
     region_paths = {path for path, _ in regions.values()}
@@ -121,14 +136,28 @@ def main() -> None:
         left, top, right, bottom = record["frame_union_ltrb"]
         il, it, ir, ib = record["frame_bounds_ltrb"][0]
         pivots = ", ".join(f"Vector2({x}, {y})" for x, y in record["frame_pivots"])
-        metadata.append(f'\t&"{key}": {{"size": Vector2({width}, {height}), "region": Rect2({left}, {top}, {right-left}, {bottom-top}), "idle": Rect2({il}, {it}, {ir-il}, {ib-it}), "pivots": [{pivots}]}},')
+        extra = ""
+        if path in visible_rects:
+            frame_records = []
+            for frame, rects in visible_rects[path].items():
+                if not 0 <= frame < columns * rows or not 1 <= len(rects) <= 8:
+                    raise ValueError(f"invalid visibility slice budget: {key}")
+                for x, y, rw, rh in rects:
+                    cell_x, cell_y = frame % columns * width // columns, frame // columns * height // rows
+                    if rw <= 0 or rh <= 0 or x < cell_x or y < cell_y or x + rw > cell_x + width // columns or y + rh > cell_y + height // rows:
+                        raise ValueError(f"visibility slice leaves its own frame: {key}")
+                values = ", ".join("Rect2(%s)" % ", ".join(map(str, rect)) for rect in rects)
+                frame_records.append(f"{frame}: [{values}]")
+            extra = ', "visible_rects": {' + ", ".join(frame_records) + '}'
+            records[path]["frame_visible_rects"] = visible_rects[path]
+        metadata.append(f'\t&"{key}": {{"size": Vector2({width}, {height}), "region": Rect2({left}, {top}, {right-left}, {bottom-top}), "idle": Rect2({il}, {it}, {ir-il}, {ib-it}), "pivots": [{pivots}]{extra}}},')
         if columns * rows > 1:
             frames.append(f'\t&"{key}": Vector2i({columns}, {rows}),')
     replacement = "const SOURCE_METADATA := {\n" + "\n".join(metadata) + "\n}\n\nconst ATLAS_LAYOUTS := {\n" + "\n".join(frames) + "\n}\n\n"
     start = source.index("const SOURCE_METADATA := {")
     end = source.index("static var _textures", start)
     CATALOG.write_text(source[:start] + replacement + source[end:])
-    for folder in [ART, ART / "characters", ART / "enemies", ART / "items", ART / "weapons", ART / "surfaces", ART / "app_icon"]:
+    for folder in [ART, ART / "characters", ART / "enemies", ART / "items", ART / "weapons", ART / "supports", ART / "surfaces", ART / "app_icon"]:
         assets = []
         for path in sorted(folder.glob("*.png")):
             assets.append(records.get(path) or measure(path))

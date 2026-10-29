@@ -13,7 +13,10 @@ const MAX_BLAST_MARKS := 12
 const IDS: Array[StringName] = [&"pistol", &"smg", &"shotgun", &"rifle", &"orb",
 	&"flechette", &"longbow", &"hex_bolt", &"twin_fangs", &"flak_crown", &"rail_spike", &"nova_core", &"stapler", &"paper_saw", &"hole_punch", &"ink_bottle",
 	&"stamp", &"mallet", &"cutter", &"tape_spool", &"rubber_band", &"paper_plane",
-	&"hydraulic_press", &"redaction_engine"]
+	&"hydraulic_press", &"redaction_engine",
+	&"binding_writ", &"saw_swarm", &"surveyor_lance", &"ink_tempest", &"folding_guillotine", &"binding_atlas", &"paper_hound", &"debt_sentry", &"repair_kit", &"paper_seed", &"guard_decoy"]
+
+const EXPEDITION_IDS: Array[StringName] = [&"binding_writ", &"saw_swarm", &"surveyor_lance", &"ink_tempest", &"folding_guillotine", &"binding_atlas", &"paper_hound", &"debt_sentry", &"repair_kit", &"paper_seed", &"guard_decoy"]
 
 static var _batches: Dictionary = {}
 static var _last_render: Dictionary = {"projectiles": 0, "groups": 0, "draw_calls": 0, "trails": 0}
@@ -95,6 +98,28 @@ static func profile(id: StringName) -> Dictionary:
 		&"redaction_engine":
 			result.merge({"style": &"salvage", "color": Color("729585"), "length": 22.0, "recoil": 5.0, "evolved": true,
 				"glyph": &"redact", "muzzle": &"redact", "impact": &"redact"}, true)
+		&"binding_writ":
+			result.merge({"style": &"sidearm", "color": Color("82a3a1"), "length": 18.0, "recoil": 4.0, "evolved": true, "glyph": &"binding_writ", "muzzle": &"binding_writ", "impact": &"binding_writ"}, true)
+		&"saw_swarm":
+			result.merge({"style": &"scatter", "color": Color("c78346"), "length": 21.0, "recoil": 5.0, "evolved": true, "glyph": &"saw_swarm", "muzzle": &"saw_swarm", "impact": &"saw_swarm"}, true)
+		&"surveyor_lance":
+			result.merge({"style": &"marksman", "color": Color("be5749"), "length": 31.0, "recoil": 6.0, "evolved": true, "glyph": &"surveyor_lance", "muzzle": &"surveyor_lance", "impact": &"surveyor_lance"}, true)
+		&"ink_tempest":
+			result.merge({"style": &"arcane", "color": Color("8f7a95"), "length": 19.0, "recoil": 3.0, "evolved": true, "glyph": &"ink_tempest", "muzzle": &"ink_tempest", "impact": &"ink_tempest"}, true)
+		&"folding_guillotine":
+			result.merge({"style": &"press", "color": Color("b75b45"), "length": 25.0, "recoil": 5.0, "evolved": true, "glyph": &"folding_guillotine", "muzzle": &"folding_guillotine", "impact": &"folding_guillotine"}, true)
+		&"binding_atlas":
+			result.merge({"style": &"salvage", "color": Color("729585"), "length": 20.0, "recoil": 3.0, "evolved": true, "glyph": &"binding_atlas", "muzzle": &"binding_atlas", "impact": &"binding_atlas"}, true)
+		&"paper_hound":
+			result.merge({"style": &"salvage", "color": Color("9a835d"), "length": 19.0, "recoil": 2.0, "evolved": false, "glyph": &"paper_hound", "muzzle": &"paper_hound", "impact": &"paper_hound"}, true)
+		&"debt_sentry":
+			result.merge({"style": &"marksman", "color": Color("a7784c"), "length": 22.0, "recoil": 5.0, "evolved": false, "glyph": &"debt_sentry", "muzzle": &"debt_sentry", "impact": &"debt_sentry"}, true)
+		&"repair_kit":
+			result.merge({"style": &"salvage", "color": Color("82a36a"), "length": 18.0, "recoil": 2.0, "evolved": false, "glyph": &"repair_kit", "muzzle": &"repair_kit", "impact": &"repair_kit"}, true)
+		&"paper_seed":
+			result.merge({"style": &"arcane", "color": Color("729585"), "length": 18.0, "recoil": 2.0, "evolved": false, "glyph": &"paper_seed", "muzzle": &"paper_seed", "impact": &"paper_seed"}, true)
+		&"guard_decoy":
+			result.merge({"style": &"press", "color": Color("748894"), "length": 21.0, "recoil": 3.0, "evolved": false, "glyph": &"guard_decoy", "muzzle": &"guard_decoy", "impact": &"guard_decoy"}, true)
 	return result
 
 
@@ -102,6 +127,28 @@ static func profile(id: StringName) -> Dictionary:
 # into a fictitious piercing beam or a larger damaging area.
 static func glyph_outline(id: StringName) -> PackedVector2Array:
 	match id:
+		&"binding_writ":
+			return PackedVector2Array([Vector2(-0.8,-0.55), Vector2(0.35,-0.55), Vector2(0.85,0), Vector2(0.35,0.55), Vector2(-0.8,0.55), Vector2(-0.45,0)])
+		&"saw_swarm":
+			return PackedVector2Array([Vector2(0.92,0), Vector2(0.52,0.2), Vector2(0.45,0.76), Vector2(0,0.45), Vector2(-0.75,0.55), Vector2(-0.5,0), Vector2(-0.75,-0.55), Vector2(0,-0.45), Vector2(0.45,-0.76), Vector2(0.52,-0.2)])
+		&"surveyor_lance":
+			return PackedVector2Array([Vector2(0.98,0), Vector2(0.4,0.25), Vector2(0.4,0.1), Vector2(-0.8,0.1), Vector2(-0.8,-0.1), Vector2(0.4,-0.1), Vector2(0.4,-0.25)])
+		&"ink_tempest":
+			return PackedVector2Array([Vector2(0,-0.95), Vector2(0.45,-0.4), Vector2(0.2,-0.1), Vector2(0.8,0.2), Vector2(0.1,0.86), Vector2(-0.45,0.3), Vector2(-0.2,0), Vector2(-0.7,-0.35)])
+		&"folding_guillotine":
+			return PackedVector2Array([Vector2(-0.65,-0.65), Vector2(0.65,-0.65), Vector2(0.4,0.65), Vector2(-0.65,0.65), Vector2(0.25,-0.35), Vector2(-0.65,-0.35)])
+		&"binding_atlas":
+			return PackedVector2Array([Vector2(-0.7,-0.65), Vector2(0.15,-0.65), Vector2(0.15,-0.45), Vector2(0.7,-0.45), Vector2(0.7,0.65), Vector2(-0.15,0.65), Vector2(-0.15,0.45), Vector2(-0.7,0.45)])
+		&"paper_hound":
+			return PackedVector2Array([Vector2(-0.8,-0.4), Vector2(-0.3,-0.65), Vector2(0,-0.2), Vector2(0.7,-0.45), Vector2(0.85,0), Vector2(0.4,0.35), Vector2(0.15,0.7), Vector2(-0.3,0.4), Vector2(-0.8,0.6)])
+		&"debt_sentry":
+			return PackedVector2Array([Vector2(-0.75,-0.4), Vector2(0.6,-0.4), Vector2(0.9,-0.1), Vector2(0.3,0.1), Vector2(0.65,0.65), Vector2(-0.6,0.65), Vector2(-0.3,0.1), Vector2(-0.75,0.1)])
+		&"repair_kit":
+			return PackedVector2Array([Vector2(-0.65,-0.2), Vector2(-0.2,-0.2), Vector2(-0.2,-0.65), Vector2(0.2,-0.65), Vector2(0.2,-0.2), Vector2(0.65,-0.2), Vector2(0.65,0.2), Vector2(0.2,0.2), Vector2(0.2,0.65), Vector2(-0.2,0.65), Vector2(-0.2,0.2), Vector2(-0.65,0.2)])
+		&"paper_seed":
+			return PackedVector2Array([Vector2(0,-0.9), Vector2(0.2,-0.2), Vector2(0.65,-0.45), Vector2(0.45,0.1), Vector2(0.8,0.35), Vector2(0.2,0.35), Vector2(0.2,0.8), Vector2(-0.2,0.8), Vector2(-0.2,0.3), Vector2(-0.7,0.15), Vector2(-0.35,-0.15), Vector2(-0.5,-0.6)])
+		&"guard_decoy":
+			return PackedVector2Array([Vector2(-0.65,-0.65), Vector2(0.6,-0.65), Vector2(0.8,-0.25), Vector2(0.6,0.6), Vector2(0,0.9), Vector2(-0.6,0.6), Vector2(-0.8,-0.25)])
 		&"pistol":
 			return PackedVector2Array([Vector2(-0.65, -0.65), Vector2(0.55, -0.65), Vector2(0.55, -0.25), Vector2(-0.2, -0.25), Vector2(-0.2, 0.25), Vector2(0.55, 0.25), Vector2(0.55, 0.65), Vector2(-0.65, 0.65)])
 		&"smg":
@@ -348,6 +395,12 @@ static func _draw_muzzle(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Di
 	var color := Color(p["color"], t * 0.85)
 	var small := maxf(1.0, length * 0.36 * t)
 	var normal := Vector2(-direction.y, direction.x)
+	if EXPEDITION_IDS.has(StringName(p["weapon_id"])):
+		var outline := glyph_outline(StringName(p["weapon_id"]))
+		direction = Vector2.RIGHT if direction == Vector2.ZERO else direction
+		outline.append(outline[0])
+		_polyline(ci, pos, direction, outline, small * 1.5, color, 1.8)
+		return
 	match p["muzzle"]:
 		&"clamp", &"stamp", &"mallet", &"hydraulic":
 			var height := 0.5 if p["muzzle"] == &"clamp" else (0.9 if p["muzzle"] == &"hydraulic" else 0.7)
@@ -410,6 +463,14 @@ static func _draw_hit(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Dicti
 		t: float, crit: bool, shielded: bool, reduced: bool) -> void:
 	var color := Color(GOLD if crit else PAPER, t)
 	var size := hit_mark_size(p["impact"], t, reduced) * (1.25 if crit else 1.0)
+	if EXPEDITION_IDS.has(StringName(p["weapon_id"])):
+		var outline := glyph_outline(StringName(p["weapon_id"]))
+		direction = Vector2.RIGHT if direction == Vector2.ZERO else direction
+		outline.append(outline[0])
+		_polyline(ci, pos, direction, outline, size, color, 2.0)
+		if shielded:
+			ci.draw_arc(pos, 10.0, direction.angle() - 0.65, direction.angle() + 0.65, 12, Color(PAPER, t * 0.9), 2.5, true)
+		return
 	if p["impact"] in [&"stamp", &"mallet", &"hydraulic"]:
 		# A floor imprint is legible even when the authoritative hit has no vector.
 		direction = Vector2.RIGHT

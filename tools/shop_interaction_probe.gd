@@ -212,7 +212,7 @@ func _run() -> void:
 	var keyboard_quote: ShopResult = ui.quote_drop(keyboard_payload, &"weapon_slot", 0)
 	if not _require(keyboard_quote.ok, "keyboard replacement has a valid mechanics quote"):
 		return
-	var expected_trade_in: int = Shop.resale_total(sim.player.weapons[0], sim.player.level_at(0))
+	var expected_trade_in: int = Shop.resale_for(sim, 0)
 	if not _require(keyboard_quote.cost == keyboard_card.offer.price - expected_trade_in,
 			"replacement quote refunds the upgraded weapon trade-in"):
 		return

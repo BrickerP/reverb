@@ -21,11 +21,13 @@ var build_panel: BuildPanel
 var _title: Label
 var _materials: Label
 var _interest: Label
+var _prep_status: Label
 var _footer: Label
 var _warning: Label
-var _contract_panel: PanelContainer
-var _contract_label: Label
-var _contract_button: Button
+var workshop: WorkshopUi
+var _workshop_slot := 0
+var _workshop_origin := &"weapon"
+var _last_focus: Control
 var _overlay: Control
 var _replacing: Offer
 var _replacing_index: int = -1
@@ -56,25 +58,26 @@ func _ready() -> void:
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_top", 16)
-	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
+	root.add_theme_constant_override("separation", 6)
 	margin.add_child(root)
 	root.add_child(_build_header())
 	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 20)
+	columns.add_theme_constant_override("separation", 10)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(columns)
 	columns.add_child(_build_left())
 	var dossier := VBoxContainer.new()
-	dossier.custom_minimum_size = Vector2(444.0, 0.0)
+	dossier.custom_minimum_size = Vector2(0.0, 0.0)
+	dossier.size_flags_stretch_ratio = 1.0
 	dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	dossier.add_theme_constant_override("separation", 14)
+	dossier.add_theme_constant_override("separation", 6)
 	columns.add_child(dossier)
 	build_panel = BuildPanel.new()
 	build_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -82,17 +85,22 @@ func _ready() -> void:
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
-	build_panel.sell_requested.connect(_on_sell_weapon)
 	build_panel.detail_changed.connect(_on_weapon_detail)
+	build_panel.workshop_requested.connect(_open_weapon_workshop)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
-	echo_panel.merge_requested.connect(_on_merge)
+	echo_panel.merge_workbench_requested.connect(_open_merge_hosts)
+	echo_panel.detail_requested.connect(_open_echo_detail)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	root.add_child(_build_footer())
+	workshop = WorkshopUi.new()
+	workshop.z_index = 10
+	add_child(workshop)
+	workshop.closed.connect(_on_workshop_closed)
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
@@ -105,6 +113,9 @@ func _exit_tree() -> void:
 
 func open(s: Sim) -> void:
 	_disconnect_shop()
+	workshop.reset()
+	_workshop_origin = &"weapon"
+	_last_focus = null
 	sim = s
 	_connected_shop = sim.shop
 	_connected_shop.shop_history_changed.connect(_on_history_changed)
@@ -132,6 +143,10 @@ func open(s: Sim) -> void:
 func close_session() -> void:
 	_disconnect_shop()
 	visible = false
+	if workshop != null:
+		workshop.reset()
+	_workshop_origin = &"weapon"
+	_last_focus = null
 	sim = null
 	_replacing = null
 	_replacing_index = -1
@@ -159,6 +174,11 @@ func refresh(animate_echo: bool = false) -> void:
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
 	_interest.text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
 			Sim.interest_for(sim.player.materials)])
+	var expedition := Expedition.status(sim)
+	_prep_status.text = Loc.t(str(expedition.objective))
+	if int(expedition.debt) > 0:
+		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
+	_prep_status.tooltip_text = _prep_status.text + " · " + Loc.t(str(expedition.route))
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -169,24 +189,23 @@ func refresh(animate_echo: bool = false) -> void:
 		card.replacement_requested.connect(_begin_replace)
 		card.lock_toggled.connect(_on_lock_offer)
 	var cost := sim.shop.reroll_cost(sim.wave)
-	reroll_button.text = Loc.t("shop.reroll", [cost])
+	reroll_button.text = Loc.t("workshop.reroll_prices", [cost, sim.shop.next_reroll_cost(sim.wave)])
 	reroll_button.disabled = sim.player.materials < cost
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
-	# Give the currently blocking copy decision more room than the equipment archive.
-	echo_panel.size_flags_stretch_ratio = 1.6 if over > 0 else 1.15
-	build_panel.size_flags_stretch_ratio = 0.8 if over > 0 else 1.0
+	echo_panel.size_flags_stretch_ratio = 1.0
+	build_panel.size_flags_stretch_ratio = 1.0
 	var notices: Array[String] = []
 	if over > 0:
 		notices.append(Loc.t("shop.over", [over]))
 	if sim.last_contract_done:
 		notices.append(Loc.t("contract.result_success", [sim.last_contract_reward])
 				if sim.last_contract_success else Loc.t("contract.result_fail"))
-	_warning.text = "\n".join(notices)
-	_refresh_contract()
+	_warning.text = " · ".join(notices)
+	_warning.tooltip_text = _warning.text
 	refresh_receipt()
 	var replace_with := ""
 	var chooser := Callable()
@@ -196,6 +215,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_footer.text = Loc.t("shop.keys")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
+	_rebuild_focus()
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
 
 
@@ -204,8 +224,8 @@ func _build_footer() -> Control:
 	var clear := StyleBoxEmpty.new()
 	clear.content_margin_left = 12.0
 	clear.content_margin_right = 12.0
-	clear.content_margin_top = 8.0
-	clear.content_margin_bottom = 8.0
+	clear.content_margin_top = 2.0
+	clear.content_margin_bottom = 2.0
 	tray.add_theme_stylebox_override("panel", clear)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -214,7 +234,7 @@ func _build_footer() -> Control:
 	actions.add_theme_constant_override("separation", 10)
 	box.add_child(actions)
 	_warning = UiTheme.label("", 15, ERROR_ON_DARK)
-	_warning.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_warning.clip_text = true
 	_warning.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	actions.add_child(_warning)
@@ -224,9 +244,11 @@ func _build_footer() -> Control:
 	receipt_button.pressed.connect(func() -> void: receipt_requested.emit())
 	actions.add_child(receipt_button)
 	for button: Button in [reroll_button, undo_button, start_button]:
+		WorkshopUi.fit_button(button, 16, 34.0)
 		actions.add_child(button)
 	_footer = UiTheme.label(Loc.t("shop.keys"), 13, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
-	_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_footer.clip_text = true
+	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_footer.custom_minimum_size = Vector2(0.0, 19.0)
 	box.add_child(_footer)
 	return tray
@@ -235,8 +257,8 @@ func _build_footer() -> Control:
 func _on_weapon_detail(text: String) -> void:
 	if _footer == null:
 		return
-	_weapon_detail = text
-	_footer.text = text if text != "" else Loc.t("shop.keys")
+	_weapon_detail = text.replace("\n", " · ")
+	_footer.text = _weapon_detail if text != "" else Loc.t("shop.keys")
 
 
 func _build_header() -> Control:
@@ -244,8 +266,8 @@ func _build_header() -> Control:
 	var clear := StyleBoxEmpty.new()
 	clear.content_margin_left = 12.0
 	clear.content_margin_right = 12.0
-	clear.content_margin_top = 8.0
-	clear.content_margin_bottom = 8.0
+	clear.content_margin_top = 2.0
+	clear.content_margin_bottom = 2.0
 	panel.add_theme_stylebox_override("panel", clear)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
@@ -254,9 +276,12 @@ func _build_header() -> Control:
 	identity.add_theme_constant_override("separation", 1)
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(identity)
-	_title = UiTheme.section_label("", 34, UiTheme.PAPER)
+	_title = UiTheme.section_label("", 28, UiTheme.PAPER)
 	identity.add_child(_title)
-	identity.add_child(UiTheme.label(Loc.t("shop.paper_task"), 13, ON_DARK))
+	_prep_status = UiTheme.label("", 14, ON_DARK)
+	_prep_status.clip_text = true
+	identity.add_child(_prep_status)
+
 	var right := VBoxContainer.new()
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_theme_constant_override("separation", 0)
@@ -269,7 +294,7 @@ func _build_header() -> Control:
 	paper.content_margin_top = 8.0
 	paper.content_margin_bottom = 8.0
 	tag.add_theme_stylebox_override("panel", paper)
-	_materials = UiTheme.label("", 25, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	_materials = UiTheme.label("", 21, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
 	tag.add_child(_materials)
 	_interest = UiTheme.label("", 13, ON_DARK, HORIZONTAL_ALIGNMENT_RIGHT)
 	right.add_child(tag)
@@ -280,34 +305,32 @@ func _build_header() -> Control:
 
 func _build_left() -> Control:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(610.0, 0.0)
+	column.custom_minimum_size = Vector2(0.0, 0.0)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.size_flags_stretch_ratio = 1.55
-	column.add_theme_constant_override("separation", 10)
+	column.size_flags_stretch_ratio = 1.15
+	column.add_theme_constant_override("separation", 4)
 	column.add_child(_build_supplier())
 	_offers_scroll = ScrollContainer.new()
 	_offers_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_offers_scroll.follow_focus = true
 	_offers_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_offers_scroll)
 	offers_box = GridContainer.new()
 	offers_box.columns = 2
 	offers_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	offers_box.add_theme_constant_override("h_separation", 12)
-	offers_box.add_theme_constant_override("v_separation", 12)
+	offers_box.add_theme_constant_override("h_separation", 6)
+	offers_box.add_theme_constant_override("v_separation", 6)
 	_offers_scroll.add_child(offers_box)
-	_contract_panel = _build_contract_panel()
-	column.add_child(_contract_panel)
 	reroll_button = Button.new()
-	reroll_button.custom_minimum_size = Vector2(132.0, 42.0)
+	reroll_button.custom_minimum_size = Vector2(0.0, 34.0)
 	reroll_button.pressed.connect(_on_reroll)
 	undo_button = Button.new()
-	undo_button.custom_minimum_size = Vector2(104.0, 42.0)
+	undo_button.custom_minimum_size = Vector2(0.0, 34.0)
 	undo_button.tooltip_text = Loc.t("shop.undo_hint")
 	undo_button.pressed.connect(_on_undo)
 	start_button = Button.new()
-	start_button.custom_minimum_size = Vector2(206.0, 42.0)
+	start_button.custom_minimum_size = Vector2(0.0, 34.0)
 	UiTheme.stamp_button(start_button)
 	start_button.pressed.connect(_on_start)
 	return column
@@ -316,81 +339,26 @@ func _build_left() -> Control:
 func _build_supplier() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	_vendor_art = UiTheme.art_icon(&"shopkeeper", Vector2(122.0, 110.0))
+	_vendor_art = UiTheme.art_icon(&"shopkeeper", Vector2(42.0, 30.0))
 	_vendor_art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_vendor_art)
 	var words := VBoxContainer.new()
 	words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	words.add_theme_constant_override("separation", 1)
 	row.add_child(words)
-	words.add_child(UiTheme.section_label(Loc.t("shop.offers"), 20, UiTheme.PAPER))
+
 	_vendor_line = UiTheme.label(Loc.t("shop.vendor_idle"), 15, ON_DARK)
-	_vendor_line.custom_minimum_size = Vector2(330.0, 0.0)
-	_vendor_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_vendor_line.custom_minimum_size = Vector2(0.0, 0.0)
+	_vendor_line.clip_text = true
+	_vendor_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	words.add_child(_vendor_line)
 	return row
 
 
-func _build_contract_panel() -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	panel.add_child(row)
-	_contract_label = UiTheme.label("", 13, UiTheme.INK)
-	_contract_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_contract_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	row.add_child(_contract_label)
-	_contract_button = Button.new()
-	_contract_button.custom_minimum_size = Vector2(68.0, 34.0)
-	_contract_button.add_theme_font_size_override("font_size", 12)
-	_contract_button.pressed.connect(_on_accept_contract)
-	row.add_child(_contract_button)
-	panel.visible = false
-	return panel
-
-
-func _refresh_contract() -> void:
-	if _contract_panel == null:
-		return
-	var contract := sim.shop.contract
-	if contract == null:
-		_contract_panel.visible = false
-		return
-	var text := Loc.t("contract.title") + " · "
-	match contract.kind:
-		AnomalyContract.CLEAN:
-			text += Loc.t("contract.clean", [contract.deposit, contract.reward])
-		AnomalyContract.CLEAR:
-			text += Loc.t("contract.clear", [contract.target, contract.deposit, contract.reward])
-		AnomalyContract.HUNT:
-			text += Loc.t("contract.hunt", [contract.deposit, contract.reward])
-		AnomalyContract.RETIRE:
-			text += Loc.t("contract.retire", [contract.deposit, contract.reward])
-	var active := contract.accepted or sim.active_contract == contract
-	if active:
-		text += " · " + Loc.t("contract.active")
-	_contract_label.text = text
-	_contract_panel.visible = true
-	if active:
-		_contract_button.text = Loc.t("contract.active")
-		_contract_button.disabled = true
-	elif sim.player.materials < contract.deposit:
-		_contract_button.text = Loc.t("contract.poor", [contract.deposit])
-		_contract_button.disabled = true
-	else:
-		_contract_button.text = Loc.t("contract.accept")
-		_contract_button.disabled = false
-
-
-func _on_accept_contract() -> void:
-	if sim == null or not sim.shop.accept_contract(sim):
-		return
-	refresh()
-	_focus_card(0)
-
-
 func _on_offer(o: Offer, card: OfferCard) -> void:
+	if sim == null or not visible:
+		return
 	if card.consume_drag_click():
 		return
 	var reason := sim.shop.block_reason(sim, o)
@@ -399,6 +367,9 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 			_cancel_replace()
 		else:
 			_begin_replace(o)
+		return
+	if reason == &"order_active" and o.is_contract():
+		_confirm_order_replace(o)
 		return
 	if reason != &"":
 		card.reject(reduced_effects)
@@ -459,17 +430,27 @@ func _cancel_replace() -> void:
 func _on_replace_slot(index: int) -> void:
 	if _replacing == null:
 		return
-	var result := sim.shop.apply(ShopResult.REPLACE, sim, _replacing, index)
-	if not result.ok:
-		_flash_block(result.reason)
+	var offer := _replacing
+	var quote := sim.shop.quote(ShopResult.REPLACE, sim, offer, index)
+	if not quote.ok:
+		_flash_block(quote.reason)
 		return
-	_replacing = null
-	_replacing_index = -1
-	refresh()
-	_focus_card(0)
+	_workshop_slot = index
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_replace", [quote.cost]), "value": index}]
+	workshop.show_choices(Loc.t("shop.replace_action"), Loc.t("workshop.replace_preview", [Loc.weapon_name(sim.player.weapons[index].id), Loc.weapon_name(offer.id()), quote.cost]), choices, func(value: Variant) -> void:
+		var result := sim.shop.apply(ShopResult.REPLACE, sim, offer, int(value))
+		if result.ok:
+			_replacing = null
+			_replacing_index = -1
+			refresh()
+			workshop.close()
+		else:
+			_flash_block(result.reason))
 
 
 func _on_upgrade_weapon(index: int) -> void:
+	if sim == null or not visible:
+		return
 	var result := sim.shop.apply(ShopResult.UPGRADE, sim, null, index)
 	if result.ok:
 		refresh()
@@ -480,19 +461,44 @@ func _on_upgrade_weapon(index: int) -> void:
 
 
 func _on_evolve_weapon(index: int) -> void:
-	var result := sim.shop.apply(ShopResult.EVOLVE, sim, null, index)
-	if result.ok:
-		refresh()
-		if not build_panel.focus_upgrade(index):
-			undo_button.grab_focus()
-	else:
-		_flash_block(result.reason)
+	if sim == null or not visible:
+		return
+	_workshop_origin = &"weapon"
+	_workshop_slot = index
+	build_panel._select(index)
+	var choices: Array[Dictionary] = []
+	var blocked := &""
+	for target in sim.shop.evolution_choices(sim, index):
+		var quote := sim.shop.quote_evolution(sim, index, target)
+		blocked = quote.reason
+		var final_weapon := Content.weapon(target)
+		var weapons := sim.player.weapons.duplicate()
+		var levels := sim.player.weapon_levels.duplicate()
+		weapons[index] = final_weapon
+		levels[index] = WeaponDef.MAX_LEVEL
+		var dps := int(round(OfferCard.list_dps(weapons, levels, sim.player.stats)))
+		choices.append({"text": "%s · %s · %d · %s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), quote.cost, Loc.t("shop.take_dps", [dps])], "value": target,
+			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + _drop_reason_text(quote.reason) if not quote.ok else Loc.weapon_desc(target)})
+	var weapon := sim.player.weapons[index]
+	var body := Loc.t("workshop.evolve_hint") + "\n" + Loc.t("workshop.evolve_tradeoff") + "\n" + Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
+	if blocked != &"":
+		body += "\n" + _drop_reason_text(blocked)
+	workshop.show_choices(Loc.t("workshop.evolve"), body, choices, func(value: Variant) -> void:
+		var result := sim.shop.evolve_choice(sim, index, StringName(value))
+		if result.ok:
+			refresh()
+			workshop.close()
+		else:
+			_flash_block(result.reason))
 
 
 func _on_sell_weapon(index: int) -> void:
+	if sim == null or not visible:
+		return
 	var result := sim.shop.apply(ShopResult.SELL, sim, null, index)
 	if result.ok:
 		var next := mini(index, sim.player.weapons.size() - 1)
+		_workshop_slot = next
 		refresh()
 		if not build_panel.focus_upgrade(next):
 			undo_button.grab_focus()
@@ -516,9 +522,13 @@ func _flash_block(reason: StringName) -> void:
 		&"last":
 			_footer.text = Loc.t("shop.sell_last_reason")
 			build_panel.flash_slots(reduced_effects)
+		_:
+			_footer.text = _drop_reason_text(reason)
 
 
 func _on_reroll() -> void:
+	if sim == null or not visible:
+		return
 	_replacing = null
 	_replacing_index = -1
 	var result := sim.shop.apply(ShopResult.REROLL, sim)
@@ -616,7 +626,7 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 			ShopResult.ECHO_MERGE: _react_vendor(&"merge", result)
 			ShopResult.ECHO_DISCARD: _react_vendor(&"discard", result)
 			ShopResult.ECHO_REPAIR: _react_vendor(&"repair", result)
-			ShopResult.BUY, ShopResult.REPLACE, ShopResult.UPGRADE, ShopResult.EVOLVE:
+			ShopResult.BUY, ShopResult.REPLACE, ShopResult.REPLACE_ORDER, ShopResult.COMBINE, ShopResult.UPGRADE, ShopResult.EVOLVE:
 				_react_vendor(&"buy", result)
 	var reverse := result.action == ShopResult.UNDO
 	if result.before_state != null and result.after_state != null:
@@ -889,7 +899,7 @@ func quote_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 			else:
 				result = sim.shop.quote(ShopResult.BUY, sim, o)
 		&"items":
-			if o.is_weapon():
+			if o.item == null:
 				result = ShopResult.failure(ShopResult.BUY, &"invalid")
 			else:
 				result = sim.shop.quote(ShopResult.BUY, sim, o)
@@ -923,6 +933,14 @@ func _show_drop_quote(result: ShopResult) -> void:
 
 func _drop_reason_text(reason: StringName) -> String:
 	match reason:
+		&"debt", &"duplicate", &"trait", &"level":
+			return Loc.t("workshop.reason_" + String(reason))
+		&"family":
+			return Loc.t("shop.evolve_need", [Shop.EVOLVE_FAMILY_COUNT])
+		&"choice", &"branch":
+			return Loc.t("workshop.evolve_hint")
+		&"order_active":
+			return Loc.t("workshop.replace_order")
 		&"poor":
 			return Loc.t("shop.drop_poor")
 		&"full":
@@ -979,6 +997,8 @@ func _disconnect_shop() -> void:
 
 
 func _on_discard(take: EchoTake) -> void:
+	if sim == null or not visible:
+		return
 	var result := sim.shop.discard_echo(sim, take)
 	if not result.ok:
 		return
@@ -990,18 +1010,20 @@ func _on_discard(take: EchoTake) -> void:
 
 
 func _on_repair_echo(take: EchoTake) -> void:
+	if sim == null or not visible:
+		return
 	var result := sim.shop.repair_echo(sim, take)
 	if not result.ok:
 		return
 	refresh()
-	if sim.can_start_wave():
-		start_button.grab_focus()
-	else:
+	if not echo_panel.focus_take(take.uid):
 		echo_panel.focus_first_discard()
 
 
-func _on_merge(a: EchoTake, b: EchoTake) -> void:
-	var result := sim.shop.merge_echoes(sim, a, b)
+func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> void:
+	if sim == null or not visible:
+		return
+	var result := sim.shop.merge_echoes(sim, a, b, merge_trait)
 	if not result.ok:
 		return
 	refresh()
@@ -1013,6 +1035,10 @@ func _on_merge(a: EchoTake, b: EchoTake) -> void:
 
 
 func _on_start() -> void:
+	if sim == null or not visible:
+		return
+	if workshop != null and workshop.visible:
+		return
 	if sim.can_start_wave():
 		_replacing = null
 		_replacing_index = -1
@@ -1021,6 +1047,8 @@ func _on_start() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if workshop != null and workshop.visible:
+		return
 	if _replacing != null and event.is_action_pressed(&"ui_cancel"):
 		_cancel_replace()
 		accept_event()
@@ -1043,9 +1071,16 @@ func _focus_card(from: int) -> void:
 
 
 func focus_default() -> void:
+	if workshop != null and workshop.visible:
+		workshop.focus_default()
+		return
 	if sim != null and sim.bank.overflow(sim.echo_capacity()) > 0 \
 			and echo_panel.focus_first_discard():
 		return
+	if is_instance_valid(_last_focus) and _last_focus.is_visible_in_tree():
+		if not (_last_focus is BaseButton) or not (_last_focus as BaseButton).disabled:
+			_last_focus.grab_focus()
+			return
 	_focus_card(0)
 
 
@@ -1111,3 +1146,263 @@ func refresh_receipt() -> void:
 	receipt_button.tooltip_text = body
 	receipt_button.accessibility_name = title
 	receipt_button.accessibility_description = body
+
+
+func _rebuild_focus() -> void:
+	var active: Array = []
+	for node in find_children("*", "BaseButton", true, false):
+		var button := node as BaseButton
+		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button):
+			active.append(button)
+			var remember := _remember_focus.bind(button)
+			if not button.focus_entered.is_connected(remember):
+				button.focus_entered.connect(remember)
+	UiFocus.cycle(active)
+	for i in active.size():
+		var current := active[i] as Control
+		current.focus_neighbor_left = current.get_path_to(active[(i - 1 + active.size()) % active.size()])
+		current.focus_neighbor_right = current.get_path_to(active[(i + 1) % active.size()])
+
+
+func _on_workshop_closed() -> void:
+	if sim == null:
+		return
+	if echo_panel.is_merging():
+		echo_panel.cancel_merge()
+	if _replacing != null:
+		_replacing = null
+		_replacing_index = -1
+		refresh()
+	_rebuild_focus()
+	if _workshop_origin == &"echo" and echo_panel.merge_button != null:
+		echo_panel.merge_button.grab_focus()
+		return
+	if not build_panel.focus_upgrade(_workshop_slot) and not build_panel.focus_slot(_workshop_slot):
+		_focus_card(0)
+
+
+func _open_weapon_workshop(index: int) -> void:
+	if sim == null or index < 0 or index >= sim.player.weapons.size():
+		return
+	_workshop_origin = &"weapon"
+	_workshop_slot = index
+	var weapon := sim.player.weapons[index]
+	var level := sim.player.level_at(index)
+	var choices: Array[Dictionary] = []
+	var refit := sim.shop.quote(ShopResult.UPGRADE, sim, null, index)
+	choices.append({"text": Loc.t("shop.upgrade", [refit.cost]), "value": &"refit", "disabled": not refit.ok})
+	var combine_available := false
+	var combine_price := 0
+	for donor in sim.player.weapons.size():
+		var combine_quote := sim.shop.combine_quote(sim, index, donor)
+		if combine_quote.ok or combine_quote.reason == &"poor":
+			combine_available = true
+			combine_price = combine_quote.cost
+	var combine_text := Loc.t("workshop.combine") + (" · %d" % combine_price if combine_available else "")
+	choices.append({"text": combine_text, "value": &"combine", "disabled": not combine_available, "hint": Loc.t("workshop.reason_duplicate")})
+	choices.append({"text": Loc.t("workshop.evolve"), "value": &"evolve", "disabled": sim.shop.evolution_choices(sim, index).is_empty()})
+	var sell := sim.shop.quote(ShopResult.SELL, sim, null, index)
+	choices.append({"text": Loc.t("shop.sell", [absi(sell.cost)]), "value": &"sell", "disabled": not sell.ok, "hint": Loc.t("shop.sell_last_reason") if not sell.ok else Loc.t("shop.sell_hint")})
+	choices.append({"text": Loc.t("shop.core"), "value": &"stats"})
+	choices.append({"text": Loc.t("shop.items"), "value": &"passives"})
+	workshop.show_choices(Loc.weapon_name(weapon.id), build_panel._detail_text_for(weapon, level), choices, _on_weapon_workshop_action.bind(index))
+
+
+func _on_weapon_workshop_action(value: Variant, index: int) -> void:
+	match StringName(value):
+		&"refit":
+			_on_upgrade_weapon(index)
+			_open_weapon_workshop(index)
+		&"combine": _open_combine_donors(index)
+		&"evolve": _on_evolve_weapon(index)
+		&"sell":
+			_on_sell_weapon(index)
+			workshop.close()
+		&"stats": _open_build_stats(index)
+		&"passives": _open_build_passives(index)
+
+
+func _open_build_stats(index: int, page: int = 0) -> void:
+	var lines: Array[String] = [Loc.t("shop.take_dps", [int(round(OfferCard.total_dps(sim.player)))])]
+	lines.append(Loc.t("shop.echo_value", [sim.echo_capacity(), int(round(sim.echo_power() * 100.0))]))
+	for stat in Stats.ORDER:
+		lines.append("%s · %s" % [Loc.stat_name(stat), Loc.stat_value(stat, sim.player.stats.get_stat(stat), false)])
+	var choices: Array[Dictionary] = [{"text": Loc.t("shop.family"), "value": &"family"}]
+	if page > 0:
+		choices.append({"text": Loc.t("workshop.previous"), "value": page - 1})
+	if (page + 1) * 7 < lines.size():
+		choices.append({"text": Loc.t("workshop.next"), "value": page + 1})
+	choices.append({"text": Loc.t("workshop.back_build"), "value": &"back"})
+	workshop.show_choices(Loc.t("shop.core") + " · " + Loc.t("workshop.page", [page + 1, ceili(float(lines.size()) / 7.0)]), "\n".join(lines.slice(page * 7, (page + 1) * 7)), choices, func(value: Variant) -> void:
+		if value is int:
+			_open_build_stats(index, int(value))
+		elif StringName(value) == &"family":
+			_open_family_stats(index)
+		else:
+			_open_weapon_workshop(index))
+
+
+func _open_family_stats(index: int, page: int = 0) -> void:
+	var lines: Array[String] = []
+	var counts: Dictionary = {}
+	for weapon in sim.player.weapons:
+		counts[weapon.family] = int(counts.get(weapon.family, 0)) + 1
+	for family: StringName in counts:
+		var count := int(counts[family])
+		var text := "%s ×%d" % [Loc.weapon_family(family), count]
+		if count >= 2:
+			text += " · " + Loc.t("shop.family_damage")
+		if count >= 4:
+			text += " · " + Loc.t("shop.family_mastery_" + String(family))
+		if count >= 6:
+			text += " · " + Loc.t("shop.family_master")
+		lines.append(text)
+	for profile in Combat.combo_profile(sim.player.weapons):
+		lines.append(Loc.combo_line(profile))
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.back_build"), "value": -1}]
+	if page > 0:
+		choices.append({"text": Loc.t("workshop.previous"), "value": page - 1})
+	if (page + 1) * 6 < lines.size():
+		choices.append({"text": Loc.t("workshop.next"), "value": page + 1})
+	workshop.show_choices(Loc.t("shop.family"), "\n".join(lines.slice(page * 6, (page + 1) * 6)), choices, func(value: Variant) -> void:
+		if int(value) < 0:
+			_open_weapon_workshop(index)
+		else:
+			_open_family_stats(index, int(value)))
+
+
+func _open_build_passives(index: int) -> void:
+	var lines: Array[String] = []
+	for id: StringName in sim.player.items:
+		lines.append("%s ×%d · %s" % [Loc.item_name(id), sim.player.item_count(id), Loc.item_desc(Content.item(id))])
+	for set_id: StringName in Content.item_sets():
+		var data: Dictionary = Content.item_sets()[set_id]
+		var count := 0
+		for member: StringName in data.get("members", []):
+			count += sim.player.item_count(member)
+		if count <= 0:
+			continue
+		var required := int(data.get("required", 3))
+		var text := "%s · %d/%d" % [Loc.t(str(data.get("name", ""))), mini(count, required), required]
+		if count >= required:
+			text += " · " + Loc.t("set." + String(set_id) + "_bonus")
+		lines.append(text)
+	if lines.is_empty():
+		lines.append(Loc.t("shop.none"))
+	# A passive page is intentionally bounded; further pages replace this sheet.
+	_open_passive_page(index, lines, 0)
+
+
+func _open_passive_page(index: int, lines: Array[String], page: int) -> void:
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.back_build"), "value": -1}]
+	if page > 0:
+		choices.append({"text": Loc.t("workshop.previous"), "value": page - 1})
+	if (page + 1) * 3 < lines.size():
+		choices.append({"text": Loc.t("workshop.next"), "value": page + 1})
+	workshop.show_choices(Loc.t("shop.items"), "\n".join(lines.slice(page * 3, (page + 1) * 3)), choices, func(value: Variant) -> void:
+		if int(value) < 0:
+			_open_weapon_workshop(index)
+		else:
+			_open_passive_page(index, lines, int(value)))
+
+
+func _open_combine_donors(host: int) -> void:
+	var choices: Array[Dictionary] = []
+	for donor in sim.player.weapons.size():
+		if donor == host:
+			continue
+		var quote := sim.shop.combine_quote(sim, host, donor)
+		choices.append({"text": Loc.t("workshop.donor_weapon", [donor + 1, Loc.weapon_name(sim.player.weapons[donor].id), sim.player.level_at(donor) + 1, quote.cost]), "value": donor, "disabled": not quote.ok, "hint": _drop_reason_text(quote.reason) if not quote.ok else Loc.t("workshop.combine")})
+	workshop.show_choices(Loc.t("workshop.combine"), Loc.t("workshop.combine_hint", [host + 1, Loc.weapon_name(sim.player.weapons[host].id)]), choices, func(value: Variant) -> void:
+		var donor := int(value)
+		var quote := sim.shop.combine_quote(sim, host, donor)
+		var confirms: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_combine", [quote.cost]), "value": donor, "disabled": not quote.ok}]
+		workshop.show_choices(Loc.t("workshop.combine"), Loc.t("workshop.combine_result", [host + 1, donor + 1, sim.player.level_at(host) + 2]), confirms, func(selected: Variant) -> void:
+			var result := sim.shop.combine_weapons(sim, host, int(selected))
+			if result.ok:
+				_workshop_slot = result.index
+				refresh()
+				workshop.close()
+			else:
+				_flash_block(result.reason)))
+
+
+func _confirm_order_replace(offer: Offer) -> void:
+	var quote := sim.shop.quote(ShopResult.REPLACE_ORDER, sim, offer)
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_order", [quote.cost]), "value": offer, "disabled": not quote.ok}]
+	workshop.show_choices(Loc.t("workshop.replace_order"), Loc.t("workshop.order_replace_hint", [Loc.t("order.%s.name" % sim.active_contract.kind), Loc.t("order.%s.name" % offer.contract.kind), quote.cost]), choices, func(value: Variant) -> void:
+		var result := sim.shop.apply(ShopResult.REPLACE_ORDER, sim, value as Offer)
+		if result.ok:
+			refresh()
+			workshop.close()
+		else:
+			_flash_block(result.reason))
+
+
+func _open_merge_hosts() -> void:
+	_workshop_origin = &"echo"
+	var choices: Array[Dictionary] = []
+	for take: EchoTake in sim.bank.takes:
+		choices.append({"text": Loc.t("workshop.echo_choice", [take.uid, take.wave, int(ceil(take.condition))]), "value": take})
+	workshop.show_choices(Loc.t("workshop.merge_host"), Loc.t("workshop.merge_host_hint"), choices, func(value: Variant) -> void: _open_merge_donors(value as EchoTake))
+
+
+func _open_merge_donors(host: EchoTake) -> void:
+	var choices: Array[Dictionary] = []
+	for take: EchoTake in sim.bank.takes:
+		if take != host:
+			choices.append({"text": Loc.t("workshop.echo_choice", [take.uid, take.wave, int(ceil(take.condition))]), "value": take})
+	workshop.show_choices(Loc.t("workshop.merge_donor"), Loc.t("workshop.merge_donor_hint", [host.uid]), choices, func(value: Variant) -> void: _open_merge_traits(host, value as EchoTake))
+
+
+func _open_merge_traits(host: EchoTake, donor: EchoTake) -> void:
+	var choices: Array[Dictionary] = []
+	for merge_trait: StringName in [&"skill", &"repair", &"power"]:
+		var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
+		choices.append({"text": Loc.t("workshop.trait_" + String(merge_trait)) + " · %d" % quote.cost, "value": merge_trait, "disabled": not quote.ok,
+			"hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
+	workshop.show_choices(Loc.t("workshop.merge_trait"), Loc.t("workshop.merge_body_loss", [host.uid, donor.uid]), choices, func(value: Variant) -> void: _open_merge_preview(host, donor, StringName(value)))
+
+
+func _open_merge_preview(host: EchoTake, donor: EchoTake, merge_trait: StringName) -> void:
+	var result := sim.bank.preview_merge(host, donor, merge_trait)
+	var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
+	if result == null:
+		return
+	var text := Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])
+	text += "\n" + Loc.t("workshop.trait_" + String(merge_trait) + "_desc")
+	text += "\n" + Loc.echo_profile(EchoSystem.skill_profile(result, sim))
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_merge", [quote.cost]), "value": merge_trait, "disabled": not quote.ok}]
+	workshop.show_choices(Loc.t("workshop.merge_result"), text, choices, func(value: Variant) -> void:
+		_on_merge(host, donor, StringName(value))
+		workshop.close())
+	workshop.add_result_visual(_merge_route_visual(host, donor, result))
+
+
+func _open_echo_detail(take: EchoTake) -> void:
+	_workshop_origin = &"echo"
+	var text := echo_panel._loadout(take) + "\n" + Loc.echo_profile(EchoSystem.skill_profile(take, sim), true)
+	text += "\n" + Loc.t("echo.condition", [int(ceil(take.condition)), ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))])
+	var choices: Array[Dictionary] = [{"text": Loc.t("shop.merge"), "value": &"merge", "disabled": sim.bank.takes.size() < 2}]
+	workshop.show_choices(Loc.t("echo.identity", [take.uid, take.wave]), text, choices, func(_value: Variant) -> void: _open_merge_donors(take))
+
+
+func _merge_route_visual(host: EchoTake, donor: EchoTake, result: EchoTake) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 20)
+	for take: EchoTake in [host, donor, result]:
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var label := UiTheme.label(Loc.t("workshop.merge_result") if take == result else Loc.t("echo.identity", [take.uid, take.wave]), 13, UiTheme.DIM)
+		label.clip_text = true
+		column.add_child(label)
+		var preview := PathPreview.new()
+		preview.setup(take, false, Vector2(120.0, 60.0))
+		preview.consumed = take == donor
+		column.add_child(preview)
+		row.add_child(column)
+	return row
+
+
+func _remember_focus(control: Control) -> void:
+	_last_focus = control

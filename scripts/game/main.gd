@@ -10,6 +10,7 @@ var shop_ui: ShopUi
 var end_ui: EndUi
 var feedback_ui: FeedbackUi
 var boon_ui: BoonUi
+var echo_archive_ui: EchoArchiveUi
 var character_select: CharacterSelectUi
 var pause_ui: PauseUi
 var settings_ui: SettingsUi
@@ -74,11 +75,14 @@ func _ready() -> void:
 	add_child(_arena_clip)
 	_view.set_cropped(true)
 	_arena_clip.add_child(_view)
+	get_viewport().size_changed.connect(_resize_battlefield)
+	_resize_battlefield()
 	hud = Hud.new()
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
 	feedback_ui = FeedbackUi.new()
 	boon_ui = BoonUi.new()
+	echo_archive_ui = EchoArchiveUi.new()
 	character_select = CharacterSelectUi.new()
 	pause_ui = PauseUi.new()
 	settings_ui = SettingsUi.new()
@@ -94,6 +98,10 @@ func _ready() -> void:
 	_add_layer(5, settings_ui, theme)
 	_add_layer(6, history_ui, theme)
 	_add_layer(7, codex_ui, theme)
+	_add_layer(12, echo_archive_ui, theme)
+	echo_archive_ui.closed.connect(_restore_underlay_focus)
+	character_select.archive_requested.connect(open_echo_archive)
+	end_ui.archive_requested.connect(_on_archive_echo)
 	echo_wheel = EchoSelectionWheel.new()
 	story_ui = StoryArchiveUi.new()
 	receipt_ui = StoryReceipt.new()
@@ -190,6 +198,9 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	var def := Content.character(character_id)
 	if def != null:
 		def.apply(sim)
+	var inherited := EchoArchive.load(meta, character_id, sim)
+	if inherited != null:
+		sim.bank.add(inherited)
 	_view.bind(sim, character_id)
 	_view.visible = true
 	hud.bind(sim)
@@ -373,6 +384,7 @@ func _apply_audio() -> void:
 func _apply_display() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
+	get_window().min_size = Vector2i(960, 540)
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	DisplayServer.window_set_mode(mode)
 
@@ -420,6 +432,8 @@ func show_select() -> void:
 func _detach_presentation_session() -> void:
 	_retire_pressed = false
 	_retire_hold = 0.0
+	if echo_archive_ui != null:
+		echo_archive_ui.close()
 	if echo_wheel != null:
 		echo_wheel.close()
 	if receipt_ui != null:
@@ -452,7 +466,7 @@ func toggle_pause() -> void:
 func _physics_process(delta: float) -> void:
 	_update_retirement_hold(delta)
 	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible \
-			or feedback_ui.visible or boon_ui.visible or story_ui.visible or receipt_ui.visible:
+			or feedback_ui.visible or boon_ui.visible or story_ui.visible or receipt_ui.visible or echo_archive_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -468,6 +482,11 @@ func _physics_process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	Controls.note_event(event)
+	if echo_archive_ui.visible:
+		if event.is_action_pressed(&"ui_cancel"):
+			echo_archive_ui.close()
+			get_viewport().set_input_as_handled()
+		return
 	if echo_wheel.visible:
 		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
 			_cancel_retirement_selection()
@@ -515,6 +534,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"history") and (character_select.visible or end_ui.visible):
 		open_history()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"character_skill") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
+		if sim.activate_character_skill():
+			audio.play(&"echo", -2.0, 1.05)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"interact") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
+		if sim.interact():
+			audio.play(&"equipment_apply", -3.0, 0.95)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"retire_echo") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
 		_retire_pressed = true
@@ -725,7 +752,7 @@ func _on_story_wave(_wave: int) -> void:
 
 func _persist_story() -> void:
 	if sim != null and meta != null:
-		if not meta.discover_story(StoryLedger.discovered(sim)) and pause_ui.visible:
+		if not meta.discover_story(StoryLedger.discovered(sim)) and meta.last_error != "" and pause_ui.visible:
 			pause_ui.show_error(Loc.t("story.save_failed"))
 
 
@@ -939,3 +966,38 @@ func _valid_main_envelope(value: Dictionary) -> bool:
 		if not is_finite(float(value[key])) or float(value[key]) < 0.0 or float(value[key]) > 20.0:
 			return false
 	return true
+
+
+func open_echo_archive(id: StringName = &"looper") -> void:
+	if echo_archive_ui == null or meta == null:
+		return
+	echo_archive_ui.open(meta, id)
+
+
+func _on_archive_echo(take: EchoTake) -> void:
+	if sim == null or _daily_run or sim.daily_modifier != &"" or take == null or not EchoArchive.eligible(character_id) or sim.phase not in [Sim.Phase.LOST, Sim.Phase.WON] or not sim.bank.takes.has(take):
+		return
+	if int(sim.expedition.get("debt", 0)) > 0:
+		end_ui.set_archive_result(false, "archive.debt")
+		return
+	var previous := EchoArchive.peek(meta, character_id)
+	if previous != null and previous.power() >= take.power():
+		end_ui.set_archive_result(false, "archive.weaker_kept")
+		return
+	var saved := EchoArchive.store(meta, character_id, take)
+	end_ui.set_archive_result(saved, meta.last_error)
+
+
+func _resize_battlefield() -> void:
+	if _arena_clip == null or _view == null:
+		return
+	if DisplayServer.get_name() != "headless":
+		var window := get_window()
+		var desired := Vector2i(mini(1280, maxi(640, window.size.x)), mini(720, maxi(480, window.size.y)))
+		if window.content_scale_size != desired:
+			window.content_scale_size = desired
+	var viewport_size := get_viewport().get_visible_rect().size
+	var rect := WorldArena.display_viewport(viewport_size)
+	_arena_clip.position = rect.position
+	_arena_clip.size = rect.size
+	_view.set_display_rect(rect)

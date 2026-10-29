@@ -5,7 +5,13 @@ extends Resource
 @export var family: StringName = &"sidearm"
 @export var rarity: StringName = &"common"
 @export var drop_weight: float = 1.0
-@export var evolves_to: StringName
+@export var evolution_options: Array[StringName] = []
+@export var carrier: StringName = &"hand"
+@export var role: StringName = &"damage"
+@export var cost: StringName = &"scrap"
+@export var school: StringName = &"ranged"
+@export var target_mode: StringName = &"single"
+@export var support_kind: StringName = &""
 @export var drops: bool = true
 @export var attack_style: StringName = &"projectile"
 @export var damage: float = 5.0
@@ -38,10 +44,16 @@ extends Resource
 @export var orbit_radius: float = 0.0
 
 const MAX_LEVEL := 3
-const DAMAGE_PER_LEVEL := 0.15
+const GRADE_MULTIPLIERS := [1.0, 1.8, 3.2, 5.5]
 
 
 func dps() -> float:
+	# Support output is limited by one living unit per owner/kind. Production
+	# and repair are utility, never fictional damage added to the build score.
+	if support_kind in [&"repair_station", &"paper_tree", &"decoy"]:
+		return 0.0
+	if support_kind != &"":
+		return damage / (0.7 if support_kind == &"hound" else 1.0)
 	var hits := float(maxi(1, pellets))
 	match attack_style:
 		&"burst":
@@ -49,14 +61,14 @@ func dps() -> float:
 		&"line", &"ink", &"tape", &"orbit":
 			hits = float(maxi(1, floori(field_duration / maxf(0.01, tick_interval))))
 		&"boomerang":
-			hits = 2.0
+			hits *= 2.0
 		&"cone":
 			hits = 1.0
 	return damage * hits / maxf(0.01, cooldown)
 
 
 func level_mult(level: int) -> float:
-	return 1.0 + DAMAGE_PER_LEVEL * float(clampi(level, 0, MAX_LEVEL))
+	return GRADE_MULTIPLIERS[clampi(level, 0, MAX_LEVEL)]
 
 
 func level_dps(level: int) -> float:

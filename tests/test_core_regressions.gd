@@ -9,8 +9,8 @@ func test_existing_progress_unlocks_new_roles_without_another_run(c: Check) -> v
 			"unlocked": {"looper": true, "solo": true, "mirror": true, "conductor": true}}))
 		file.close()
 		var meta := Meta.new(path)
-		c.eq(meta.is_unlocked(&"mender"), wave >= 5, "loaded progress grants earned Mender")
-		c.eq(meta.is_unlocked(&"overloader"), wave >= 12, "loaded progress grants earned Overloader")
+		c.eq(meta.is_unlocked(&"mender"), wave >= Content.character(&"mender").unlock_wave, "loaded progress grants earned Mender")
+		c.eq(meta.is_unlocked(&"overloader"), wave >= Content.character(&"overloader").unlock_wave, "loaded progress grants earned Overloader")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 

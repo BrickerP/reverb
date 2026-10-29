@@ -83,15 +83,16 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 			continue
 		var w := weapons[i]
 		var target := nearest_enemy(sim.enemies, origin, w.reach * stats.range_mult())
-		if target == null:
+		if target == null and w.support_kind == &"":
 			cooldowns[i] = 0.0
 			continue
 		cooldowns[i] += w.cooldown * stats.cooldown_mult() * family_cooldown_mult(weapons, w.family) * extra_cooldown
 		var level := levels[i] if i < levels.size() else 0
 		var mult := family_damage_mult(weapons, w.family) * extra_damage
-		mult *= family_mastery_damage(weapons, w.family, origin.distance_to(target.pos))
+		mult *= family_mastery_damage(weapons, w.family, origin.distance_to(target.pos) if target != null else 0.0)
 		var force_crit := source < 0 and bool(sim.player.set_bonus_applied.get(&"gunsmith", false)) and (sim.player_shots + 1) % 6 == 0
-		var executed := fire(sim, origin, target.pos, w, level, mult, stats, power_mult, source, tint,
+		var target_pos := target.pos if target != null else origin + Vector2.RIGHT * 44.0
+		var executed := fire(sim, origin, target_pos, w, level, mult, stats, power_mult, source, tint,
 			family_mastery_pierce(weapons, w.family), force_crit, actor_token,
 			family_count(weapons, w.family) >= 4)
 		if not executed:
@@ -105,8 +106,8 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		info.source_tint = tint
 		info.weapon_id = w.id
 		info.origin = origin
-		info.direction = (target.pos - origin).normalized()
-		info.target = target.pos
+		info.direction = (target_pos - origin).normalized()
+		info.target = target_pos
 		info.count = maxi(1, w.pellets)
 		info.level = level
 		info.sequence = sim.shot_sequence
@@ -149,6 +150,13 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 	f.orbit_speed = w.orbit_speed
 	f.orbit_radius = w.orbit_radius * stats.range_mult()
 	var executed := false
+	if w.support_kind != &"":
+		var placement := origin + f.direction * (36.0 if w.support_kind == &"hound" else 58.0)
+		executed = SupportSystem.spawn_weapon(sim, w, placement, f.damage, source, actor_token, tint, level,
+			stats.cooldown_mult(), stats.range_mult())
+		if executed:
+			sim.shot_fired.emit(source)
+		return executed
 	match w.attack_style:
 		&"projectile", &"pin", &"boomerang":
 			executed = _projectile_volley(sim, f, w, bonus_pierce) > 0

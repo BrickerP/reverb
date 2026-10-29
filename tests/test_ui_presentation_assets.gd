@@ -146,23 +146,22 @@ func test_item_offer_and_drag_preview_use_the_same_art(c: Check) -> void:
 	card.free()
 
 
-func test_build_panel_item_chips_keep_icons_inside_the_item_target(c: Check) -> void:
-	var sim := Sim.new(32)
+func test_passives_are_available_in_separate_workbench(c: Check) -> void:
+	var sim := Sim.new(314)
 	sim.start_run()
 	sim.phase = Sim.Phase.SHOP
-	for item: ItemDef in Content.items().values():
-		sim.player.items[item.id] = 1
-	var panel := BuildPanel.new()
-	panel.theme = UiTheme.build()
-	_root().add_child(panel)
-	panel.refresh(sim)
-	var icons := panel._items_row.find_children("*", "TextureRect", true, false)
-	c.eq(icons.size(), Content.items().size(), "every equipped item has an icon")
-	for icon: TextureRect in icons:
-		c.eq(icon.mouse_filter, Control.MOUSE_FILTER_IGNORE,
-				"equipped item icons leave the drop target usable")
-	c.ok(panel.items_drop_target != null, "the item drop target remains available")
-	panel.free()
+	sim.player.add_item(Content.item(&"iron_heart"))
+	var ui := ShopUi.new()
+	_root().add_child(ui)
+	ui.open(sim)
+	ui._open_build_passives(0)
+	c.ok(ui.workshop.visible, "passives have a separate bounded workbench page")
+	var found := false
+	for label: Label in ui.workshop.find_children("*", "Label", true, false):
+		if label.text.contains(Loc.item_name(&"iron_heart")):
+			found = true
+	c.ok(found, "passive detail page names the real equipped item")
+	ui.free()
 
 
 func test_character_cards_and_codex_show_all_content_art(c: Check) -> void:

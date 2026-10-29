@@ -1,0 +1,191 @@
+{
+  "tool": "built-in imagegen",
+  "art_direction": "Carbon Copy Purgatory",
+  "assets": [
+    {
+      "file": "crew.png",
+      "sha256": "97b6c0f75b86b1e743c2cb5b3dc8c485199aaafa6947165b80cbe1f2410729ea",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        20,
+        124,
+        1521,
+        954
+      ],
+      "frame_union_ltrb": [
+        20,
+        124,
+        1521,
+        954
+      ],
+      "frame_bounds_ltrb": [
+        [
+          20,
+          124,
+          1521,
+          954
+        ]
+      ],
+      "frame_pivots": [
+        [
+          748.0,
+          830
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1,
+      "regions": {
+        "support_hound_idle": {
+          "source_rect_xywh": [
+            20,
+            130,
+            338,
+            305
+          ],
+          "bounds_ltrb": [
+            20,
+            130,
+            358,
+            435
+          ],
+          "pivot": [
+            169.0,
+            305
+          ]
+        },
+        "support_hound_attack": {
+          "source_rect_xywh": [
+            386,
+            143,
+            382,
+            296
+          ],
+          "bounds_ltrb": [
+            386,
+            143,
+            768,
+            439
+          ],
+          "pivot": [
+            191.0,
+            296
+          ]
+        },
+        "support_turret_idle": {
+          "source_rect_xywh": [
+            780,
+            120,
+            360,
+            330
+          ],
+          "bounds_ltrb": [
+            781,
+            124,
+            1104,
+            438
+          ],
+          "pivot": [
+            179.0,
+            314
+          ]
+        },
+        "support_turret_fire": {
+          "source_rect_xywh": [
+            1152,
+            144,
+            369,
+            296
+          ],
+          "bounds_ltrb": [
+            1152,
+            144,
+            1521,
+            440
+          ],
+          "pivot": [
+            184.5,
+            296
+          ]
+        },
+        "support_repair_station": {
+          "source_rect_xywh": [
+            30,
+            571,
+            353,
+            369
+          ],
+          "bounds_ltrb": [
+            30,
+            571,
+            383,
+            940
+          ],
+          "pivot": [
+            176.5,
+            369
+          ]
+        },
+        "support_paper_tree_early": {
+          "source_rect_xywh": [
+            478,
+            558,
+            290,
+            390
+          ],
+          "bounds_ltrb": [
+            478,
+            558,
+            768,
+            948
+          ],
+          "pivot": [
+            145.0,
+            390
+          ]
+        },
+        "support_paper_tree_grown": {
+          "source_rect_xywh": [
+            768,
+            512,
+            384,
+            442
+          ],
+          "bounds_ltrb": [
+            768,
+            512,
+            1152,
+            954
+          ],
+          "pivot": [
+            192.0,
+            442
+          ]
+        },
+        "support_decoy": {
+          "source_rect_xywh": [
+            1193,
+            556,
+            319,
+            382
+          ],
+          "bounds_ltrb": [
+            1193,
+            556,
+            1512,
+            938
+          ],
+          "pivot": [
+            159.5,
+            382
+          ]
+        }
+      }
+    }
+  ]
+}

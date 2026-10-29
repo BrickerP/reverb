@@ -1,0 +1,358 @@
+class_name ExpeditionInk
+extends RefCounted
+
+# Presentation reads authoritative units, mission targets and locked warnings.
+# No clocks, charges, positions, health or random state are advanced here.
+const INK := Color("292720")
+const PAPER := Color("e5d8b8")
+const FRIEND := Color("729585")
+const DANGER := Color("be5749")
+const MAX_TARGETS := 24
+const MAX_BOSS_WARNINGS := 4
+const TARGET_KINDS: Array[StringName] = [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate"]
+
+static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
+
+
+static func snapshot(sim: Sim, clock: float = 0.0, reduced: bool = false,
+		display_rect: Rect2 = WorldArena.VIEWPORT) -> Dictionary:
+	var result := {"supports": [], "targets": [], "warnings": [], "skill": {"visible": false}}
+	if sim == null:
+		return result
+	var safe := WorldArena.camera_rect(sim.player.pos, display_rect)
+	var view := safe.grow(ArenaPainter.CULL_SHAKE_MARGIN)
+	var choice := Expedition.interaction(sim)
+	result["skill"] = skill_profile(sim, reduced)
+	for index in mini(SupportSystem.MAX_UNITS, sim.support_units.size()):
+		var profile := support_profile(sim.support_units[index], clock, reduced)
+		if bool(profile["visible"]) and ArenaPainter.body_in_view(profile["pos"], view):
+			result["supports"].append(profile)
+	for index in mini(MAX_TARGETS, sim.interactables.size()):
+		var profile := target_profile(sim, sim.interactables[index], safe, choice)
+		if bool(profile["visible"]):
+			result["targets"].append(profile)
+	for enemy: EnemyState in sim.enemies:
+		if enemy.def == null or not enemy.def.is_boss:
+			continue
+		var warning := boss_warning_profile(enemy)
+		if bool(warning["visible"]) and (warning["bounds"] as Rect2).intersects(view):
+			result["warnings"].append(warning)
+			if result["warnings"].size() >= MAX_BOSS_WARNINGS:
+				break
+	return result
+
+
+static func support_profile(unit: Dictionary, clock: float = 0.0, reduced: bool = false) -> Dictionary:
+	var kind := StringName(unit.get("kind", &""))
+	var pos: Vector2 = unit.get("pos", Vector2.ZERO)
+	var hp := float(unit.get("hp", 0.0))
+	var maximum := float(unit.get("max_hp", 0.0))
+	var life := float(unit.get("life", 0.0))
+	var interval := float(unit.get("interval", 1.0))
+	var cooldown := float(unit.get("cooldown", 0.0))
+	var valid := SupportSystem.PROFILES.has(kind) and pos.is_finite() and is_finite(hp) \
+		and is_finite(maximum) and maximum > 0.0 and is_finite(life) and is_finite(cooldown) and is_finite(interval) and interval > 0.0
+	var active := valid and cooldown > interval * 0.6
+	if kind == &"paper_tree":
+		active = int(unit.get("charges", 4)) < 4
+	var companion := SupportSystem.COMPANIONS.has(kind)
+	var size := Vector2(44, 44)
+	match kind:
+		&"hound": size = Vector2(47, 40)
+		&"turret": size = Vector2(44, 48)
+		&"repair_station": size = Vector2(44, 48)
+		&"paper_tree": size = Vector2(48, 58)
+		&"decoy": size = Vector2(42, 52)
+	if companion:
+		size = Vector2(70, 66)
+	var time := clock if is_finite(clock) else 0.0
+	var bob := sin(time * 7.0 + float(int(unit.get("uid", 0)))) * 1.1 if kind == &"hound" and not reduced else 0.0
+	var key := PresentationAssets.support_key(kind, active)
+	var frame := (2 + int(floor(time * 5.0)) % 2) if companion and active and not reduced else 0
+	if kind == &"recruited_paradox" and active:
+		frame = 1
+	return {"visible": valid and hp > 0.0 and life > 0.0, "uid": int(unit.get("uid", 0)),
+		"kind": kind, "key": key, "pos": pos, "foot": pos + Vector2(0, 11.0 + bob),
+		"size": size, "active": active, "companion": companion,
+		"frame": frame,
+		"hp_ratio": clampf(hp / maximum, 0.0, 1.0) if maximum > 0.0 else 0.0,
+		"charges": maxi(0, int(unit.get("charges", 0))), "actor_token": int(unit.get("actor_token", -1))}
+
+
+static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dictionary = {}) -> Dictionary:
+	var kind := StringName(item.get("kind", &""))
+	var pos: Vector2 = item.get("pos", Vector2.ZERO)
+	var valid := TARGET_KINDS.has(kind) and pos.is_finite() and not bool(item.get("used", false))
+	var cooldown := maxf(0.0, float(item.get("cooldown", 0.0)))
+	var warning := maxf(0.0, float(item.get("warning", 0.0)))
+	var active := maxf(0.0, float(item.get("active", 0.0)))
+	var near := valid and sim.player.pos.distance_to(pos) <= float(item.get("range", Expedition.INTERACTION_RANGE))
+	var selected: bool = near and choice.get("id", &"") == item.get("id", &"")
+	var danger_radius := 100.0 if kind == &"press" and (warning > 0.0 or active > 0.0) else (105.0 if kind == &"conveyor" and active > 0.0 else 0.0)
+	var bounds := Rect2(pos - Vector2.ONE * maxf(38.0, danger_radius), Vector2.ONE * maxf(76.0, danger_radius * 2.0))
+	var label := Rect2(pos + Vector2(-98, -92), Vector2(196, 42))
+	label.position = label.position.clamp(view.position + Vector2(8, 8), view.end - label.size - Vector2(8, 8))
+	return {"visible": valid and bounds.intersects(view), "id": item.get("id", &""), "kind": kind,
+		"pos": pos, "near": near, "selected": selected, "label": label,
+		"cost": maxi(0, int(item.get("cost", 0))), "cooldown": cooldown,
+		"available": cooldown <= 0.0 and sim.player.materials >= int(item.get("cost", 0)) and warning <= 0.0,
+		"warning": warning, "active": active, "radius": danger_radius,
+		"progress": 1.0 - clampf(warning / 1.1, 0.0, 1.0),
+		"direction": item.get("direction", Vector2.RIGHT),
+		"negotiation": maxf(0.0, float(sim.expedition.get("negotiation", {}).get("remaining", 0.0))),
+		"protected_hp": clampf(float(sim.expedition.get("mission", {}).get("protected_hp", 0.0)) / 45.0, 0.0, 1.0)}
+
+
+static func boss_warning_profile(enemy: EnemyState) -> Dictionary:
+	var result := {"visible": false, "bounds": Rect2()}
+	if enemy == null or enemy.def == null or not enemy.def.is_boss or enemy.dead or not enemy.pos.is_finite():
+		return result
+	var profile := EnemyBrain.attack_profile(enemy)
+	if not bool(profile.get("visible", false)):
+		return result
+	var kind := StringName(profile["kind"])
+	var center: Vector2 = profile["target"] if kind in [&"press", &"cross"] else profile["origin"]
+	var direction: Vector2 = profile["direction"]
+	var radius := float(profile["radius"])
+	var reach := float(profile["reach"])
+	if not center.is_finite() or not direction.is_finite() or not is_finite(radius) or not is_finite(reach):
+		return result
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	var end := WorldArena.move_straight(center, direction * reach, enemy.radius) if kind == &"dash" else center
+	var bounds := Rect2(center - Vector2.ONE * radius, Vector2.ONE * radius * 2.0)
+	var regions: Array[Rect2] = []
+	var polygon := PackedVector2Array()
+	if kind == &"cross":
+		regions = [Rect2(center - Vector2(reach, radius), Vector2(reach * 2.0, radius * 2.0)),
+			Rect2(center - Vector2(radius, reach), Vector2(radius * 2.0, reach * 2.0))]
+		bounds = Rect2(center - Vector2.ONE * reach, Vector2.ONE * reach * 2.0)
+	elif kind == &"dash":
+		var normal := Vector2(-direction.y, direction.x) * radius
+		polygon = PackedVector2Array([center + normal, end + normal, end - normal, center - normal])
+		var low := Vector2(minf(center.x, end.x), minf(center.y, end.y))
+		var high := Vector2(maxf(center.x, end.x), maxf(center.y, end.y))
+		bounds = Rect2(low, high - low).grow(radius)
+	return {"visible": true, "kind": kind, "center": center, "end": end, "direction": direction,
+		"radius": radius, "reach": reach, "bounds": bounds, "regions": regions, "polygon": polygon,
+		"active": bool(profile["active"]), "progress": clampf(float(profile["progress"]), 0.0, 1.0)}
+
+
+static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false) -> void:
+	_last_stats = {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
+	if ci == null or sim == null:
+		return
+	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size))
+	for warning: Dictionary in data["warnings"]:
+		_draw_warning(ci, warning, reduced)
+		_last_stats["warnings"] += 1
+	for target: Dictionary in data["targets"]:
+		_draw_target(ci, target, reduced)
+		_last_stats["targets"] += 1
+	for support: Dictionary in data["supports"]:
+		_draw_support(ci, support)
+		_last_stats["supports"] += 1
+	if bool(data["skill"]["visible"]):
+		_draw_skill(ci, data["skill"])
+		_last_stats["skills"] = 1
+
+
+static func draw_stats() -> Dictionary:
+	return _last_stats.duplicate(true)
+
+
+static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
+	var pos: Vector2 = p["pos"]
+	var kind: StringName = p["kind"]
+	var key: StringName = p["key"]
+	var tex := PresentationAssets.support_texture(kind, bool(p["active"]))
+	var source := PresentationAssets.support_region(kind, bool(p["active"]), int(p["frame"]))
+	if tex == null or not source.has_area():
+		return
+	var factor := ArenaPainter.art_pixel_scale(key, p["size"])
+	var pivot := PresentationAssets.frame_pivot(key, int(p["frame"]))
+	var foot: Vector2 = p["foot"]
+	var seal := 18.0 if bool(p["companion"]) else 13.0
+	ci.draw_arc(pos, seal, 0.0, TAU, 20, Color(PAPER, 0.9), 3.5, true)
+	ci.draw_arc(pos, seal, 0.0, TAU, 20, FRIEND, 1.5, true)
+	for visible: Rect2 in PresentationAssets.frame_visible_regions(key, int(p["frame"])):
+		var offset := (visible.position - source.position) * factor
+		ci.draw_texture_rect_region(tex, Rect2(foot - pivot * factor + offset, visible.size * factor), visible)
+	var badge := pos + Vector2(seal, 5)
+	ci.draw_circle(badge, 5.5, PAPER)
+	ci.draw_polyline(PackedVector2Array([badge + Vector2(-3, 0), badge + Vector2(-1, 2), badge + Vector2(3, -3)]), FRIEND, 2.0, true)
+	var width := 36.0 if bool(p["companion"]) else 28.0
+	var bar := Rect2(foot + Vector2(-width * 0.5, -float((p["size"] as Vector2).y) - 6.0), Vector2(width, 4.0))
+	ci.draw_rect(bar.grow(1), PAPER)
+	ci.draw_rect(bar, INK)
+	ci.draw_rect(Rect2(bar.position, Vector2(width * float(p["hp_ratio"]), 4)), FRIEND)
+	if kind in [&"paper_tree", &"repair_station"]:
+		for charge in mini(6, int(p["charges"])):
+			ci.draw_circle(bar.position + Vector2(float(charge) * 5.0 + 2.0, -4.0), 1.5, FRIEND)
+
+
+static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
+	var pos: Vector2 = p["pos"]
+	var kind: StringName = p["kind"]
+	var machine := kind in [&"press", &"conveyor", &"recycler"]
+	var color := DANGER if float(p["warning"]) > 0.0 else FRIEND
+	if machine and float(p["radius"]) > 0.0:
+		var radius := float(p["radius"])
+		ci.draw_circle(pos, radius, Color(color, 0.10 if float(p["active"]) > 0.0 else 0.04))
+		ci.draw_arc(pos, radius, 0, TAU, 28 if reduced else 40, Color(color, 0.8), 2.0, true)
+		if kind == &"conveyor":
+			var direction: Vector2 = p["direction"]
+			for index in 3:
+				var anchor := pos + direction * float(index - 1) * 40.0
+				var normal := Vector2(-direction.y, direction.x) * 7.0
+				ci.draw_polyline(PackedVector2Array([anchor - direction * 10 + normal, anchor, anchor - direction * 10 - normal]), INK, 2.0, true)
+	if kind in [&"part", &"terminal", &"negotiate"]:
+		ArenaPainter._draw_art(ci, &"mission_letter", pos - Vector2(0, 12), Vector2(34, 32), 0.0, Color.WHITE)
+	elif kind == &"repair":
+		ArenaPainter._draw_art_foot(ci, &"support_repair_station", pos + Vector2(0, 12), Vector2(42, 46), 0, Color.WHITE)
+	elif kind == &"rescue":
+		ArenaPainter._draw_art_foot(ci, &"support_decoy", pos + Vector2(0, 12), Vector2(42, 50), 0, Color.WHITE)
+		var bar := Rect2(pos + Vector2(-20, -47), Vector2(40, 4))
+		ci.draw_rect(bar, INK)
+		ci.draw_rect(Rect2(bar.position, Vector2(40.0 * float(p["protected_hp"]), 4)), DANGER)
+	else:
+		ci.draw_circle(pos, 16, PAPER)
+		ci.draw_arc(pos, 16, 0, TAU, 16, INK, 2, true)
+		_glyph(ci, kind, pos, color)
+	if bool(p["selected"]):
+		var label: Rect2 = p["label"]
+		ci.draw_rect(label, Color(PAPER, 0.97))
+		ci.draw_rect(label, INK, false, 1.5)
+		var name := Loc.t("interaction." + String(kind))
+		var text := Loc.t("world.interact", [Controls.interact_label(), name])
+		ci.draw_string(UiTheme.font(), label.position + Vector2(7, 18), text, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 16,
+			INK if bool(p["available"]) else Color("806d59"))
+		var detail := ""
+		if kind == &"negotiate":
+			detail = Loc.t("world.negotiate", [ceili(float(p["negotiation"]))])
+		elif float(p["cooldown"]) > 0.0:
+			detail = Loc.t("world.wait", [ceili(float(p["cooldown"]))])
+		elif int(p["cost"]) > 0:
+			detail = Loc.t("world.cost", [int(p["cost"])])
+		ci.draw_string(UiTheme.font(), label.position + Vector2(7, 35), detail, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 13, color)
+
+
+static func _draw_warning(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
+	var active := bool(p["active"])
+	var edge := Color(DANGER, 0.95 if active else 0.5 + float(p["progress"]) * 0.35)
+	var fill := Color(DANGER, 0.16 if active else 0.055)
+	var center: Vector2 = p["center"]
+	match p["kind"]:
+		&"press":
+			ci.draw_circle(center, float(p["radius"]), fill)
+			ci.draw_arc(center, float(p["radius"]), 0, TAU, 32 if reduced else 48, edge, 2.5, true)
+			_glyph(ci, &"press", center, edge)
+		&"cross":
+			for rect: Rect2 in p["regions"]:
+				ci.draw_rect(rect, fill)
+				ci.draw_rect(rect, edge, false, 2)
+			_glyph(ci, &"cross", center, edge)
+		&"dash":
+			var polygon: PackedVector2Array = p["polygon"]
+			if center.distance_squared_to(p["end"]) > 0.5:
+				ci.draw_colored_polygon(polygon, fill)
+				polygon.append(polygon[0])
+				ci.draw_polyline(polygon, edge, 2.0, true)
+			ci.draw_arc(p["end"], float(p["radius"]), 0, TAU, 20, edge, 1.5, true)
+			_glyph(ci, &"dash", center.lerp(p["end"], 0.6), edge, p["direction"])
+
+
+static func _glyph(ci: CanvasItem, kind: StringName, pos: Vector2, color: Color, direction: Vector2 = Vector2.RIGHT) -> void:
+	var points := PackedVector2Array()
+	match kind:
+		&"press":
+			points = PackedVector2Array([Vector2(-9, -9), Vector2(9, -9), Vector2(-9, -9), Vector2(-9, -3), Vector2(9, -9), Vector2(9, -3), Vector2(0, -2), Vector2(0, 9), Vector2(-5, 4), Vector2(0, 9), Vector2(5, 4), Vector2(0, 9)])
+		&"dash", &"conveyor":
+			points = PackedVector2Array([Vector2(-9, -8), Vector2(-1, 0), Vector2(-1, 0), Vector2(-9, 8), Vector2(0, -8), Vector2(8, 0), Vector2(8, 0), Vector2(0, 8)])
+		&"cross":
+			points = PackedVector2Array([Vector2(-9, -9), Vector2(9, 9), Vector2(-9, 9), Vector2(9, -9)])
+		&"recycler":
+			points = PackedVector2Array([Vector2(-9, 3), Vector2(0, -9), Vector2(0, -9), Vector2(9, 3), Vector2(9, 3), Vector2(-9, 3), Vector2(-4, 8), Vector2(4, 8)])
+	for index in points.size():
+		points[index] = points[index].rotated(direction.angle()) + pos
+	if not points.is_empty():
+		ci.draw_multiline(points, color, 2.4, true)
+
+
+# These are small activation emblems above the original, never damage zones.
+# Links mark the two real bodies involved in swap/relay; their rules remain in Sim.
+static func skill_profile(sim: Sim, reduced: bool = false) -> Dictionary:
+	if sim == null:
+		return {"visible": false}
+	var kind := StringName(sim.role_effects.get("ability_kind", &""))
+	var flash := float(sim.role_effects.get("ability_flash", 0.0))
+	var anchor_left := float(sim.role_effects.get("anchor_left", 0.0))
+	var relay := kind == &"conductor" and is_finite(anchor_left) and anchor_left > 0.0 and int(sim.role_effects.get("relay_pulses", 0)) > 0
+	if not Content.characters().has(kind) or not is_finite(flash) or (flash <= 0.0 and not relay) or not sim.player.pos.is_finite():
+		return {"visible": false}
+	var pos := sim.player.pos + Vector2(0, -62)
+	var facing := sim.player.facing.normalized() if sim.player.facing.is_finite() else Vector2.RIGHT
+	if facing == Vector2.ZERO:
+		facing = Vector2.RIGHT
+	var alpha := clampf(flash / 0.65, 0.0, 1.0)
+	var glyphs := skill_segments(kind)
+	var scale := 1.0 if reduced else 1.0 + (1.0 - alpha) * 0.12
+	for index in glyphs.size():
+		glyphs[index] = glyphs[index] * scale + pos
+	var anchor := Vector2.ZERO
+	var has_anchor := false
+	if kind in [&"mirror", &"conductor"]:
+		var uid := int(sim.role_effects.get("anchor_uid", 0))
+		for index in mini(Sim.MAX_ECHO_CAPACITY, sim.echoes.size()):
+			var actor: EchoActor = sim.echoes[index]
+			if actor.take.uid == uid and actor.pos.is_finite():
+				anchor = actor.pos
+				has_anchor = true
+				break
+	if flash <= 0.0 and not has_anchor:
+		return {"visible": false}
+	var view := ArenaPainter.render_view(sim)
+	return {"visible": view.grow(32.0).has_point(pos), "kind": kind, "pos": pos,
+		"body": sim.player.pos, "segments": glyphs, "alpha": maxf(0.35 if relay else 0.0, alpha),
+		"color": DANGER if kind == &"overloader" else FRIEND,
+		"has_anchor": has_anchor, "anchor": anchor, "facing": facing, "reduced": reduced}
+
+
+static func skill_segments(kind: StringName) -> PackedVector2Array:
+	match kind:
+		&"looper":
+			return PackedVector2Array([Vector2(-14, 0), Vector2(-3, -9), Vector2(-14, 0), Vector2(-3, 9),
+				Vector2(-3, 0), Vector2(8, -9), Vector2(-3, 0), Vector2(8, 9), Vector2(9, -13), Vector2(14, -13), Vector2(14, -13), Vector2(14, 13)])
+		&"solo":
+			return PackedVector2Array([Vector2(-15, -7), Vector2(13, 0), Vector2(13, 0), Vector2(-15, 7),
+				Vector2(-15, 7), Vector2(-7, 0), Vector2(-7, 0), Vector2(-15, -7), Vector2(-19, -3), Vector2(-13, -3), Vector2(-19, 3), Vector2(-13, 3)])
+		&"mirror":
+			return PackedVector2Array([Vector2(-14, -10), Vector2(3, -10), Vector2(3, -10), Vector2(3, 6),
+				Vector2(-14, -10), Vector2(-14, 6), Vector2(-14, 6), Vector2(3, 6), Vector2(-3, -6), Vector2(14, -6), Vector2(14, -6), Vector2(14, 10), Vector2(-3, 10), Vector2(14, 10)])
+		&"conductor":
+			return PackedVector2Array([Vector2(-14, -8), Vector2(-14, 8), Vector2(-14, 0), Vector2(14, 0),
+				Vector2(14, -8), Vector2(14, 8), Vector2(-6, -12), Vector2(0, -6), Vector2(0, -6), Vector2(6, -12), Vector2(-6, 12), Vector2(0, 6), Vector2(0, 6), Vector2(6, 12)])
+		&"mender":
+			return PackedVector2Array([Vector2(-13, -5), Vector2(-5, -5), Vector2(-5, -5), Vector2(-5, -13),
+				Vector2(-5, -13), Vector2(5, -13), Vector2(5, -13), Vector2(5, -5), Vector2(5, -5), Vector2(13, -5), Vector2(13, -5), Vector2(13, 5), Vector2(13, 5), Vector2(5, 5), Vector2(5, 5), Vector2(5, 13), Vector2(5, 13), Vector2(-5, 13), Vector2(-5, 13), Vector2(-5, 5), Vector2(-5, 5), Vector2(-13, 5), Vector2(-13, 5), Vector2(-13, -5)])
+		&"overloader":
+			return PackedVector2Array([Vector2(-15, -8), Vector2(-6, -4), Vector2(-6, -4), Vector2(-9, 4),
+				Vector2(-9, 4), Vector2(0, 13), Vector2(0, 13), Vector2(5, 5), Vector2(5, 5), Vector2(15, 8), Vector2(15, 8), Vector2(9, 0), Vector2(9, 0), Vector2(15, -8), Vector2(15, -8), Vector2(4, -5), Vector2(4, -5), Vector2(0, -14), Vector2(0, -14), Vector2(-5, -5), Vector2(-5, -5), Vector2(-15, -8)])
+	return PackedVector2Array()
+
+
+static func _draw_skill(ci: CanvasItem, p: Dictionary) -> void:
+	var pos: Vector2 = p["pos"]
+	var segments: PackedVector2Array = p["segments"]
+	var alpha := float(p["alpha"])
+	ci.draw_rect(Rect2(pos - Vector2(23, 18), Vector2(46, 36)), Color(PAPER, alpha * 0.9))
+	ci.draw_multiline(segments, Color(p["color"], alpha), 2.3, true)
+	if bool(p["has_anchor"]):
+		var anchor: Vector2 = p["anchor"]
+		# Sparse registration stitches communicate the real link without drawing
+		# a solid projectile, attack corridor or imaginary damage radius.
+		for index in (2 if bool(p["reduced"]) else 4):
+			var fraction := 0.2 + float(index) * 0.18
+			var center := (p["body"] as Vector2).lerp(anchor, fraction)
+			ci.draw_line(center - Vector2(3, 3), center + Vector2(3, 3), Color(FRIEND, alpha * 0.55), 1.5, true)
+		ci.draw_polyline(PackedVector2Array([anchor + Vector2(-6, -20), anchor + Vector2(0, -26), anchor + Vector2(6, -20)]), Color(FRIEND, alpha), 2, true)

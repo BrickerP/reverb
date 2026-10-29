@@ -113,10 +113,10 @@ func _spend_on_weapons(sim: Sim) -> void:
 	# Evolve first: it is the biggest jump and resets the weapon to level 1.
 	for i in sim.player.weapons.size():
 		var w := sim.player.weapons[i]
-		if w.evolves_to == &"" or sim.shop.evolution_block_reason(sim, i) != &"":
+		if w.evolution_options.is_empty() or sim.shop.evolution_choices(sim, i).is_empty():
 			continue
 		if sim.player.materials >= Shop.evolution_cost(w) + reserve:
-			if sim.shop.evolve_weapon(sim, i):
+			if sim.shop.evolve_choice(sim, i, w.evolution_options[0]).ok:
 				evolutions += 1
 	# Then spend spare materials on the best marginal DPS per material.
 	if style == &"family":
@@ -174,6 +174,8 @@ func _score(o: Offer, sim: Sim) -> float:
 			_:
 				score = (120.0 if owned_weapons < 4 else 45.0) + o.weapon.dps()
 		return score
+	if o.is_contract():
+		return -2.0
 	var rank: int = _priority().find(o.item.id)
 	return 100.0 - 5.0 * float(rank) if rank >= 0 else 10.0
 

@@ -27,6 +27,50 @@ func _is_content_key(key: String) -> bool:
 	var parts := key.split(".", true, 1)
 	var id := StringName(parts[1])
 	match parts[0]:
+		"school", "carrier", "role", "cost", "target":
+			var property := "target_mode" if parts[0] == "target" else parts[0]
+			for weapon: WeaponDef in Content.weapons().values():
+				if String(weapon.get(property)) == String(id):
+					return true
+			return false
+		"ability":
+			for character: StringName in Content.characters():
+				if parts[1] in [String(character) + ".name", String(character) + ".desc"]:
+					return true
+			return false
+		"order":
+			if parts[1] in ["survive.objective", "survive.short"]:
+				return true
+			for kind: StringName in AnomalyContract.KINDS:
+				if parts[1] in [String(kind) + ".name", String(kind) + ".desc", String(kind) + ".objective", String(kind) + ".short"]:
+					return true
+			return false
+		"interaction":
+			for kind: String in ["press", "conveyor", "recycler", "part", "terminal", "repair", "rescue", "negotiate"]:
+				if parts[1] in [kind, kind + ".desc"]:
+					return true
+			return false
+		"expedition":
+			for value: String in ["compliance", "solidarity", "profit"]:
+				if parts[1] == "route." + value:
+					return true
+			for value: String in ["released", "collective", "indebted"]:
+				if parts[1] in ["ending." + value, "outcome." + value]:
+					return true
+			return false
+		"workshop":
+			if parts[1] in ["reason_debt", "reason_duplicate", "reason_trait", "reason_level"]:
+				return true
+			for value: String in ["skill", "repair", "power"]:
+				if parts[1] in ["trait_" + value, "trait_" + value + "_desc"]:
+					return true
+			return false
+		"shop":
+			if parts[1].begins_with("family_mastery_"):
+				for weapon: WeaponDef in Content.weapons().values():
+					if parts[1] == "family_mastery_" + String(weapon.family):
+						return true
+			return false
 		"weapon":
 			if parts[1].begins_with("desc."):
 				return Content.weapons().has(StringName(parts[1].trim_prefix("desc.")))
@@ -58,6 +102,8 @@ func _is_content_key(key: String) -> bool:
 				if parts[1] in [String(clue) + "_name", String(clue) + "_body"]:
 					return true
 			return false
+		"set":
+			return parts[1].ends_with("_bonus") and Content.item_sets().has(StringName(parts[1].trim_suffix("_bonus")))
 		"stat":
 			return id == &"seconds" or Stats.ORDER.has(id)
 	return false
@@ -126,10 +172,10 @@ func test_ui_font_can_draw_every_zh_character(c: Check) -> void:
 func test_lookup_falls_back_to_english_then_the_key(c: Check) -> void:
 	var prev := Loc.lang
 	Loc.lang = "zh"
-	c.eq(Loc.t("hud.wave", [3, 20]), "第 3 / 20 波", "zh lookup with arguments")
+	c.eq(Loc.t("hud.act", [1, 3]), "第1幕 · 第3场", "zh lookup with arguments")
 	c.eq(Loc.t("no.such.key"), "no.such.key", "unknown keys come back as the key")
 	Loc.lang = "en"
-	c.eq(Loc.t("hud.wave", [3, 20]), "Wave 3 / 20", "en lookup with arguments")
+	c.eq(Loc.t("hud.act", [1, 3]), "ACT 1 · Encounter 3", "en lookup with arguments")
 	Loc.lang = prev
 
 

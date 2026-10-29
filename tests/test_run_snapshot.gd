@@ -111,8 +111,12 @@ func test_shop_roundtrip_preserves_locks_contract_alias_and_exact_undo(c: Check)
 	sim.shop.roll(sim)
 	sim.shop.toggle_lock(sim, sim.shop.offers[0])
 	sim.shop.repair_echo(sim, take)
-	if sim.shop.contract != null:
-		sim.shop.accept_contract(sim)
+	var order_offer: Offer
+	for offer: Offer in sim.shop.offers:
+		if offer.is_contract():
+			order_offer = offer
+			break
+	c.ok(order_offer != null and sim.shop.apply(ShopResult.BUY, sim, order_offer).ok, "work order purchases through actual offer")
 	var before := RunSnapshot.capture(sim)
 	var restored := RunSnapshot.restore(_json_roundtrip(before))
 	c.ok(restored != null, "shop restores: %s" % RunSnapshot.last_error)
@@ -122,7 +126,10 @@ func test_shop_roundtrip_preserves_locks_contract_alias_and_exact_undo(c: Check)
 	c.ok(restored.shop.can_undo(), "history remains undoable")
 	c.ok(restored.shop.locked_offer() != null, "offer lock persists")
 	if sim.active_contract != null:
-		c.ok(restored.active_contract == restored.shop.contract, "accepted contract aliases shop contract")
+		var active_found := false
+		for offer: Offer in restored.shop.offers:
+			active_found = active_found or offer.contract == restored.active_contract
+		c.ok(active_found, "accepted work order aliases its actual offer")
 	c.eq(restored.shop.undo(restored).ok, sim.shop.undo(sim).ok, "same undo result")
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "undo restores same state")
 	sim.shop.reroll(sim)
@@ -305,7 +312,12 @@ func test_corrupt_contract_economics_and_undo_phase_cannot_change_live_state(c: 
 	damaged = before.duplicate(true)
 	damaged.objects[0].fields.daily_modifier = {"n": "unknown_anomaly"}
 	c.eq(RunSnapshot.restore(damaged), null, "unknown daily anomaly rejected")
-	c.ok(sim.shop.accept_contract(sim), "real contract accepted")
+	var actual_order: Offer
+	for offer: Offer in sim.shop.offers:
+		if offer.is_contract():
+			actual_order = offer
+			break
+	c.ok(actual_order != null and sim.shop.apply(ShopResult.BUY, sim, actual_order).ok, "real work order purchased")
 	damaged = RunSnapshot.capture(sim)
 	for row: Dictionary in damaged.objects:
 		if row.type == "AnomalyContract":
@@ -314,3 +326,236 @@ func test_corrupt_contract_economics_and_undo_phase_cannot_change_live_state(c: 
 			damaged.objects.append(different)
 			break
 	c.eq(RunSnapshot.restore(damaged), null, "accepted contract must retain its real shop alias")
+
+
+func _expedition_sim(role: StringName = &"looper", stage: int = 2) -> Sim:
+	var sim := Sim.new(8642)
+	Content.character(role).apply(sim)
+	sim.start_run()
+	var take := _take(sim)
+	take.wave = 1
+	take.inherited_skill = &"arc"
+	take.merge_trait = &"skill"
+	take.archived = true
+	sim.start_wave(stage)
+	sim._plan.clear()
+	sim.player.materials = 500
+	return sim
+
+
+func _buy_order(sim: Sim, kind: StringName) -> ShopResult:
+	sim.phase = Sim.Phase.SHOP
+	var offer := Offer.new()
+	offer.contract = AnomalyContract.create(kind, sim.next_wave_number())
+	offer.price = offer.contract.deposit
+	sim.shop.offers.clear()
+	sim.shop.offers.append(offer)
+	return sim.shop.apply(ShopResult.BUY, sim, offer)
+
+
+func _encoded(value: Variant) -> Variant:
+	return RunSnapshot.encode_envelope({"value": value}).d[0][1]
+
+
+func test_v2_active_role_support_loan_and_echo_metadata_continue_exactly(c: Check) -> void:
+	var sim := _expedition_sim(&"conductor")
+	c.ok(_buy_order(sim, &"credit").ok, "actual loan order purchases")
+	sim.start_wave(3)
+	sim._plan.clear()
+	c.ok(sim.activate_character_skill(), "actual relay starts before save")
+	c.ok(SupportSystem.spawn(sim, &"hound", sim.player.pos, sim.bank.takes[0].uid), "Echo-owned pet uses actual stable source")
+	c.ok(SupportSystem.spawn(sim, &"paper_tree", sim.player.pos), "production unit is actual bounded state")
+	sim.player.weapon_investments[0] = 27
+	var before := RunSnapshot.capture(sim)
+	c.eq(before.version, 2, "new schema has a clean version break")
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "role/support/credit state resumes: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "all role/support/Echo/loan fields roundtrip exactly")
+	c.eq(restored.character_id, &"conductor", "role identity survives")
+	c.eq(restored.character_energy, 0.0, "spent 100 energy is not refunded by resume")
+	c.eq(restored.role_effects.relay_pulses, 3, "finite relay budget survives")
+	c.eq(restored.support_units[0].actor_token, restored.bank.takes[0].uid, "pet retains stable Echo source")
+	c.eq(restored.expedition.debt, 40, "unpaid credit remains real debt")
+	c.ok(restored.bank.takes[0].archived, "archive provenance survives")
+	c.eq(restored.bank.takes[0].inherited_skill, &"arc", "donor retirement trait survives")
+	c.eq(restored.player.weapon_investments, [27], "paid investment survives")
+	for _frame in 30:
+		sim.step(0.02, Vector2.LEFT)
+		restored.step(0.02, Vector2.LEFT)
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "actual resumed relay/pet/production/loan battle remains deterministic")
+
+
+func test_v2_shop_graded_offer_assembly_and_two_undos_preserve_economy(c: Check) -> void:
+	var sim := _expedition_sim()
+	sim.phase = Sim.Phase.SHOP
+	sim.player.weapon_levels[0] = 2
+	sim.player.weapon_investments[0] = 14
+	var offer := Offer.new()
+	offer.weapon = Content.weapon(&"pistol")
+	offer.weapon_level = 2
+	offer.price = 35
+	sim.shop.offers = [offer]
+	c.ok(sim.shop.toggle_lock(sim, offer), "graded offer can be held")
+	c.ok(sim.shop.apply(ShopResult.BUY, sim, offer).ok, "graded weapon really purchases")
+	c.ok(sim.shop.combine_weapons(sim, 0, 1).ok, "same-grade duplicate really combines")
+	var restored := RunSnapshot.restore(_json_roundtrip(RunSnapshot.capture(sim)))
+	c.ok(restored != null, "graded assembly shop resumes: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(restored.player.weapon_levels, [3], "assembled level is retained")
+	c.eq(restored.shop.offers[0].weapon_level, 2, "offer grade is retained independently")
+	for _undo in 2:
+		c.ok(sim.shop.undo(sim).ok and restored.shop.undo(restored).ok, "saved assembly and purchase undo")
+		c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "undo restores exact graded inventory and paid ledger")
+	c.eq(restored.player.materials, 500, "two undos neither mint nor lose purchase cash")
+	c.eq(restored.player.weapon_investments, [14], "two undos restore original paid ledger")
+
+
+func test_v2_loan_purchase_alias_and_full_undo_survive_resume(c: Check) -> void:
+	var sim := _expedition_sim()
+	c.ok(_buy_order(sim, &"credit").ok, "credit purchases through actual offer transaction")
+	c.ok(sim.shop.apply(ShopResult.UPGRADE, sim, null, 0).ok, "equipment purchase follows loan")
+	var restored := RunSnapshot.restore(_json_roundtrip(RunSnapshot.capture(sim)))
+	c.ok(restored != null, "credit undo history resumes: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.ok(restored.active_contract == restored.shop.offers[0].contract, "active order retains real Offer object alias")
+	for _undo in 2:
+		c.ok(sim.shop.undo(sim).ok and restored.shop.undo(restored).ok, "saved credit and refit undo")
+		c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "credit undo restores exact order alias, debt and cash")
+	c.eq(restored.player.materials, 500, "loan cash is removed when purchase is undone")
+	c.eq(restored.expedition.debt, 0, "loan debt is removed in the same undo")
+	c.eq(restored.expedition.credit_taken, 0, "loan counter is removed in the same undo")
+	c.eq(restored.active_contract, null, "loan undo does not leave accepted work behind")
+
+
+func test_v2_boss_negotiation_resumes_into_actual_recruitment_and_story(c: Check) -> void:
+	var sim := _expedition_sim(&"looper", 3)
+	c.ok(_buy_order(sim, &"recruit").ok, "recruitment work order purchases")
+	sim.start_wave(4)
+	sim._plan.clear()
+	var spawn := PendingSpawn.new()
+	spawn.def = Content.enemy(&"foreman")
+	spawn.pos = WorldArena.move_body(sim.player.pos, Vector2(180, 0), 48.0)
+	sim._materialize(spawn)
+	sim.damage_enemy(sim.boss, 100000.0, Vector2.ZERO, false)
+	c.ok(Expedition.is_negotiating(sim), "actual lethal victory opens negotiation")
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "defeated boss decision resumes: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "negotiation timer/body/interactable/order aliases are exact")
+	for candidate: Sim in [sim, restored]:
+		candidate.player.pos = candidate.boss.pos
+		c.ok(candidate.interact(), "resumed local interaction really recruits boss")
+		candidate.step(0.01, Vector2.ZERO)
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "post-negotiation companion/order/story settlement matches")
+	c.eq(restored.support_units[0].kind, &"recruited_foreman", "recruited companion remains authoritative")
+	c.ok(StoryLedger.discovered(restored).has(&"recruited_foreman"), "actual recruitment yields persistent story clue")
+	c.ok(StoryLedger.discovered(restored).has(&"order_recruit"), "actual recruit work order has story consequence")
+
+
+func test_v2_each_role_effect_can_resume_without_extra_energy_or_bodies(c: Check) -> void:
+	for role: StringName in Content.characters():
+		var sim := _expedition_sim(role)
+		if role == &"solo":
+			sim.bank.takes.clear()
+			sim.echoes.clear()
+			sim.selected_echo_uid = 0
+		c.ok(sim.activate_character_skill(), "%s actual role ability activates" % role)
+		var before := RunSnapshot.capture(sim)
+		var restored := RunSnapshot.restore(_json_roundtrip(before))
+		c.ok(restored != null, "%s actual ability state resumes: %s" % [role, RunSnapshot.last_error])
+		if restored == null:
+			continue
+		c.eq(RunSnapshot.capture(restored), before, "%s exact active effect/energy/cooldown" % role)
+		for _frame in 10:
+			sim.step(0.02, Vector2.RIGHT)
+			restored.step(0.02, Vector2.RIGHT)
+		c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "%s continued ability matches without duplicating effects" % role)
+
+
+func test_v2_rejects_bad_roles_units_orders_ledgers_and_new_state_versions(c: Check) -> void:
+	var sim := _expedition_sim(&"conductor")
+	c.ok(sim.activate_character_skill(), "valid effect fixture activates")
+	c.ok(SupportSystem.spawn(sim, &"hound", sim.player.pos), "valid support fixture spawns")
+	var before := RunSnapshot.capture(sim)
+	var damaged := before.duplicate(true)
+	damaged.version = 1
+	c.eq(RunSnapshot.restore(damaged), null, "old schema is rejected instead of maintaining legacy state")
+	for energy in [-1.0, 101.0]:
+		damaged = before.duplicate(true)
+		damaged.objects[0].fields.character_energy = _encoded(energy)
+		c.eq(RunSnapshot.restore(damaged), null, "out-of-range energy rejected")
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.character_id = {"n": "unknown_role"}
+	c.eq(RunSnapshot.restore(damaged), null, "unknown character cannot dispatch an ability")
+	var effects := sim.role_effects.duplicate(true)
+	effects.relay_pulses = 100
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.role_effects = _encoded(effects)
+	c.eq(RunSnapshot.restore(damaged), null, "relay cannot gain unbounded extra pulses")
+	var units := sim.support_units.duplicate(true)
+	units[0].kind = &"unknown_support"
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.support_units = _encoded(units)
+	c.eq(RunSnapshot.restore(damaged), null, "noncanonical support kind rejected")
+	units = sim.support_units.duplicate(true)
+	units[0].charges = 99
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.support_units = _encoded(units)
+	c.eq(RunSnapshot.restore(damaged), null, "support production charges cannot be minted")
+	var expedition := sim.expedition.duplicate(true)
+	expedition.debt = 201
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.expedition = _encoded(expedition)
+	c.eq(RunSnapshot.restore(damaged), null, "unbounded debt rejected")
+	for investments in [[], [-1]]:
+		damaged = before.duplicate(true)
+		for row: Dictionary in damaged.objects:
+			if row.type == "PlayerState":
+				row.fields.weapon_investments = _encoded(investments)
+		c.eq(RunSnapshot.restore(damaged), null, "misaligned or negative paid ledger rejected")
+	var items := sim.interactables.duplicate(true)
+	items[0].cost = -100
+	damaged = before.duplicate(true)
+	damaged.objects[0].fields.interactables = _encoded(items)
+	c.eq(RunSnapshot.restore(damaged), null, "world interaction cannot mint cash through negative cost")
+	c.eq(RunSnapshot.capture(sim), before, "all malformed restores leave authoritative run untouched")
+
+
+func test_v2_rejects_bad_grade_and_plain_undo_order_metadata(c: Check) -> void:
+	var sim := _expedition_sim()
+	c.ok(_buy_order(sim, &"credit").ok, "valid work-order undo fixture")
+	c.ok(sim.shop.apply(ShopResult.UPGRADE, sim, null, 0).ok, "valid equipment undo fixture")
+	var before := RunSnapshot.capture(sim)
+	var damaged := before.duplicate(true)
+	for row: Dictionary in damaged.objects:
+		if row.type == "Offer":
+			row.fields.weapon_level = {"i": "4"}
+	c.eq(RunSnapshot.restore(damaged), null, "offer grade cannot exceed authored maximum")
+	damaged = before.duplicate(true)
+	for row: Dictionary in damaged.objects:
+		if row.type == "ShopState":
+			row.fields.weapon_investments = _encoded([-3])
+	c.eq(RunSnapshot.restore(damaged), null, "undo ledger cannot restore negative investments")
+	damaged = before.duplicate(true)
+	for row: Dictionary in damaged.objects:
+		if row.type == "ShopState":
+			row.fields.active_order = _encoded({"kind": "credit", "deposit": 0, "reward": 0, "target": 8, "accepted": false})
+	c.eq(RunSnapshot.restore(damaged), null, "undo cannot reactivate unaccepted work order")
+
+
+func test_v2_missing_echo_levels_keep_existing_level_zero_semantics(c: Check) -> void:
+	var sim := _expedition_sim()
+	sim.bank.takes[0].levels.clear()
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "manual recording fixture can omit levels: %s" % RunSnapshot.last_error)
+	if restored != null:
+		c.eq(restored.bank.takes[0].levels.size(), 0, "missing levels remain exact rather than invented")
+		c.eq(restored.bank.takes[0].level_at(0), 0, "omitted level retains existing zero fallback")
+		c.eq(RunSnapshot.capture(restored), before, "fixture semantics preserve exact serialized state")

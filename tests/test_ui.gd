@@ -44,6 +44,8 @@ func test_build_panel_can_evolve_a_maxed_weapon(c: Check) -> void:
 	s.player.materials = Shop.evolution_cost(s.player.weapons[0])
 	var ui := _open_shop(s)
 	ui.build_panel._upgrade_buttons[0].pressed.emit()
+	c.ok(ui.workshop.visible, "evolution opens a branch choice")
+	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.player.weapons[0].id, &"twin_fangs", "build panel evolves the weapon")
 	c.eq(s.player.materials, 0, "build panel spends the evolution cost")
 	ui.free()
@@ -72,13 +74,15 @@ func test_build_panel_can_sell_a_weapon(c: Check) -> void:
 	s.player.add_weapon(Content.weapon(&"pistol"))
 	s.player.add_weapon(Content.weapon(&"rifle"))
 	var ui := _open_shop(s)
-	c.eq(ui.build_panel._sell_buttons.size(), 2, "one sell button per slot")
-	var refund := Shop.resale_total(s.player.weapons[1], s.player.level_at(1))
+	ui._open_weapon_workshop(1)
+	c.ok(ui.workshop.visible, "selected slot opens its workbench")
+	var refund := Shop.resale_for(s, 1)
 	var before := s.player.materials
-	ui.build_panel._sell_buttons[1].pressed.emit()
+	ui.workshop.choice_buttons[3].pressed.emit()
 	c.eq(s.player.weapons.size(), 1, "panel sell removes the slot")
 	c.eq(s.player.materials, before + refund, "panel sell refunds materials")
-	c.ok(ui.build_panel._sell_buttons[0].disabled, "the last weapon's sell button is disabled")
+	ui._open_weapon_workshop(0)
+	c.ok(ui.workshop.choice_buttons[3].disabled, "the last weapon's sell button is disabled")
 	ui.free()
 
 
@@ -104,21 +108,18 @@ func test_shop_locks_one_offer_through_reroll(c: Check) -> void:
 	ui.free()
 
 
-func test_shop_contract_accept_button(c: Check) -> void:
+func test_shop_order_is_purchased_from_goods(c: Check) -> void:
 	var s := _shop_sim(1000)
-	var contract := AnomalyContract.new()
-	contract.kind = AnomalyContract.CLEAN
-	contract.deposit = 6
-	contract.reward = 18
-	s.shop.contract = contract
+	var offer := Offer.new()
+	offer.contract = AnomalyContract.create(AnomalyContract.SALVAGE, s.next_wave_number())
+	offer.price = offer.contract.deposit
+	s.shop.offers[0] = offer
 	var ui := _open_shop(s)
-	c.ok(ui._contract_panel.visible, "contract row is visible")
-	c.eq(ui._contract_button.text, Loc.t("contract.accept"), "contract offers accept")
 	var before := s.player.materials
-	ui._contract_button.pressed.emit()
-	c.eq(s.player.materials, before - contract.deposit, "accepting pays the deposit once")
-	c.ok(s.active_contract == contract, "accepted contract becomes active")
-	c.ok(ui._contract_button.disabled, "accepted contract disables the button")
+	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+	c.eq(s.player.materials, before - offer.price, "goods purchase charges order once")
+	c.ok(s.active_contract == offer.contract, "purchased order becomes active")
+	c.ok((ui.offers_box.get_child(0) as OfferCard).disabled, "sold order card is inert")
 	ui.free()
 
 
@@ -191,7 +192,7 @@ func test_start_waits_for_discards_when_echoes_overflow(c: Check) -> void:
 	c.eq(s.echo_capacity(), 2, "two slots")
 	var ui := _open_shop(s)
 	c.ok(ui.start_button.disabled, "start blocked while over capacity")
-	c.eq(ui.echo_panel.discard_buttons.size(), 3, "a discard button per take")
+	c.eq(ui.echo_panel.discard_buttons.size(), ui.echo_panel.page_size, "a discard button per visible copy")
 	var started := [false]
 	ui.start_requested.connect(func() -> void: started[0] = true)
 	ui.start_button.pressed.emit()
@@ -302,7 +303,7 @@ func test_main_continues_into_boss_rush(c: Check) -> void:
 	c.eq(s.phase, Sim.Phase.SHOP, "main opens the boss rush shop")
 	c.ok(main.boon_ui.visible, "main shows the starting boon before the shop")
 	c.ok(not main.shop_ui.visible, "the shop waits for the boon choice")
-	c.eq(s.next_wave_number(), 25, "boss rush shop targets wave 25")
+	c.eq(s.next_wave_number(), WaveDirector.FINAL_WAVE + 4, "boss rush targets the next authored boss interval")
 	main.free()
 
 
@@ -587,7 +588,7 @@ func test_shop_traces_the_new_take_only_on_open(c: Check) -> void:
 	var s := _shop_sim(100, 3)
 	var ui := _open_shop(s)
 	var previews := ui.echo_panel.find_children("*", "PathPreview", true, false)
-	c.eq(previews.size(), 3, "one route preview per take")
+	c.eq(previews.size(), ui.echo_panel.page_size, "one route preview per visible copy")
 	var animating := 0
 	for node in previews:
 		if (node as PathPreview).is_animating():
@@ -645,10 +646,11 @@ func test_full_weapon_slots_can_swap_in_place(c: Check) -> void:
 	card.pressed.emit()
 	c.ok(ui.is_replacing(), "clicking a full weapon offer enters replace mode")
 	c.ok(ui.build_panel.replacing, "the build panel shows slot buttons")
-	var old := s.player.weapons[0]
-	var resale := Shop.resale_value(old)
+	var resale := Shop.resale_for(s, 0)
 	var before := s.player.materials
 	ui._on_replace_slot(0)
+	c.ok(ui.workshop.visible, "slot selection requires confirmation")
+	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.player.weapons[0], o.weapon, "the chosen slot gets the new weapon")
 	c.eq(s.player.materials, before - o.price + resale, "the old weapon is traded in")
 	c.ok(not ui.is_replacing(), "replace mode closes")
@@ -706,8 +708,9 @@ func test_shop_repair_button_spends_and_undoes(c: Check) -> void:
 	var take := s.bank.takes[0]
 	take.condition = 30.0
 	var ui := _open_shop(s)
-	c.eq(ui.echo_panel.repair_buttons.size(), 3, "one repair action per copy")
-	var button: Button = ui.echo_panel.repair_buttons.back()
+	c.eq(ui.echo_panel.repair_buttons.size(), ui.echo_panel.page_size, "one repair action per visible copy")
+	ui.echo_panel.page_next.pressed.emit()
+	var button: Button = ui.echo_panel.repair_buttons[0]
 	c.ok(not button.disabled, "repair is affordable")
 	var before := s.player.materials
 	var cost := s.shop.echo_repair_cost(take, s)
@@ -728,9 +731,11 @@ func test_shop_merges_two_takes(c: Check) -> void:
 	c.ok(ui.echo_panel.merge_button != null, "merge is offered with multiple takes")
 	ui.echo_panel.merge_button.pressed.emit()
 	c.ok(ui.echo_panel.is_merging(), "merge mode starts")
-	ui.echo_panel.discard_buttons[0].pressed.emit()
-	c.ok(ui.echo_panel.discard_buttons[0].text == Loc.t("shop.selected"), "first take is selected")
-	ui.echo_panel.discard_buttons[1].pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
+	c.eq(s.bank.takes.size(), before_count, "preview leaves source bodies untouched")
+	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.bank.takes.size(), 2, "two takes became one")
 	c.ok(not ui.echo_panel.is_merging(), "merge mode closes")
 	var merged := 0
@@ -907,7 +912,7 @@ func test_main_runs_the_whole_loop(c: Check) -> void:
 	c.eq(ShopState.capture(s).to_dict(), shop_before, "paused shop keeps offers, prices, materials and undo state")
 	main.pause_ui.resume_button.pressed.emit()
 	c.ok(not main.paused and main.shop_ui.visible, "resuming restores the same shop")
-	c.eq(main.shop_ui.reroll_button.text, Loc.t("shop.reroll", [s.shop.reroll_cost(s.wave)]), "resumed shop keeps its actual reroll quote")
+	c.eq(main.shop_ui.reroll_button.text, Loc.t("workshop.reroll_prices", [s.shop.reroll_cost(s.wave), s.shop.next_reroll_cost(s.wave)]), "resumed shop keeps current and next reroll quotes")
 	main.shop_ui.start_button.pressed.emit()
 	c.eq(s.phase, Sim.Phase.WAVE, "wave two started")
 	c.ok(main.hud.visible, "the HUD is back during the wave")

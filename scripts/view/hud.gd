@@ -33,6 +33,7 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	resized.connect(_layout_changed)
 
 
 func bind(s: Sim) -> void:
@@ -136,31 +137,68 @@ func _draw() -> void:
 	_stock(&"health_scroll", ArenaPainter.PAPER, InkStyleBox.Shape.PAPER, 2).draw(get_canvas_item(), regions["health"])
 	if sim.is_boss_wave():
 		_stock(&"wave_tag", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 5).draw(get_canvas_item(), regions["wave"])
+	draw_set_transform((regions.health as Rect2).position - Vector2(23.0, 5.0))
 	_draw_health()
 	_draw_echo_chips()
+	draw_set_transform(Vector2.ZERO)
 	_draw_wave()
 	_draw_wave_phase()
 	_draw_materials()
 	_draw_weapons()
-	_draw_gunsmith_charge()
 	_draw_controls()
+	_draw_expedition()
 	_draw_onboarding()
 	if debug:
 		_draw_debug()
 
 
-# Reference-canvas regions follow the game's existing keep-aspect viewport policy.
-# Floating pieces deliberately leave quiet gaps; there is no full-width HUD frame.
+func canvas_size() -> Vector2:
+	if is_inside_tree():
+		var extent := get_viewport_rect().size
+		if extent.x > 0.0 and extent.y > 0.0:
+			return extent
+	return Vector2(1280.0, 720.0)
+
+
+func is_compact() -> bool:
+	var extent := canvas_size()
+	return extent.x < 1100.0 or extent.y < 640.0
+
+
+func _layout_changed() -> void:
+	_meter_paths.clear()
+	queue_redraw()
+
+
+# Screen-space pieces follow the native canvas. World/camera rules stay separate.
 func layout_regions() -> Dictionary:
+	var extent := canvas_size()
+	var compact := is_compact()
+	var health := Rect2(16.0 if compact else 23.0, 5.0, 340.0, 65.0)
+	var materials := Rect2(extent.x - (178.0 if compact else 196.0), 9.0, 162.0, 59.0)
 	var boss := sim != null and sim.is_boss_wave()
 	var wave_width := 440.0 if boss else 310.0
-	return {
-		"health": Rect2(23.0, 5.0, 340.0, 65.0),
-		"wave": Rect2(640.0 - wave_width * 0.5, 7.0, wave_width, 61.0),
-		"phase": Rect2(850.0, 19.0, 210.0, 38.0),
-		"materials": Rect2(1084.0, 9.0, 162.0, 59.0),
-		"weapons": Rect2(34.0, 683.0, 268.0, 36.0),
-	}
+	var wave := Rect2(clampf(extent.x * 0.5 - wave_width * 0.5, health.end.x + 12.0, materials.position.x - wave_width - 12.0), 7.0, wave_width, 61.0)
+	var phase := Rect2(wave.end.x + 12.0, 19.0, minf(210.0, materials.position.x - wave.end.x - 24.0), 38.0)
+	if compact:
+		wave = Rect2(health.end.x + 12.0, 7.0, materials.position.x - health.end.x - 24.0, 61.0)
+		phase = Rect2()
+		var hint_width := extent.x * 0.5 - 24.0
+		var interaction := Rect2(extent.x * 0.5 + 8.0, extent.y - 42.0, hint_width, 36.0)
+		if sim == null or EchoSystem.selected_actor(sim) == null:
+			interaction = Rect2(16.0, extent.y - 42.0, extent.x - 32.0, 36.0)
+		return {"health": health, "wave": wave, "phase": phase, "materials": materials,
+			"weapons": Rect2(16.0, extent.y - 83.0, 268.0, 36.0),
+			"ability": Rect2(300.0, extent.y - 83.0, extent.x - 576.0, 36.0),
+			"echo_hint": Rect2(16.0, extent.y - 42.0, hint_width, 36.0),
+			"interaction": interaction,
+			"controls": Rect2(extent.x - 260.0, extent.y - 82.0, 244.0, 34.0)}
+	var controls := Rect2(extent.x - 268.0, extent.y - 33.0, 236.0, 31.0)
+	var hint := Rect2(592.0, extent.y - 37.0, minf(408.0, controls.position.x - 604.0), 36.0)
+	return {"health": health, "wave": wave, "phase": phase, "materials": materials,
+		"weapons": Rect2(34.0, extent.y - 37.0, 268.0, 36.0),
+		"ability": Rect2(312.0, extent.y - 37.0, 270.0, 36.0),
+		"echo_hint": hint, "interaction": hint, "controls": controls}
 
 
 func _draw_health() -> void:
@@ -236,53 +274,48 @@ func wave_title() -> String:
 
 
 func _draw_wave() -> void:
+	var rect: Rect2 = layout_regions().wave
 	var boss_wave := sim.is_boss_wave()
-	var field_ink := UiTheme.INK if boss_wave else ArenaPainter.PAPER
-	var field_dim := UiTheme.DIM if boss_wave else ArenaPainter.PAPER.darkened(0.08)
-	if sim.endless and not boss_wave:
-		_title_text(Loc.t("hud.endless", [sim.wave]), Vector2(440.0, 34.0), 31,
-				field_ink, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
-		var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
-		_meter(Rect2(535.0, 46.0, 210.0, 4.0), sim.wave_time / maxf(0.01, sim.wave_duration),
-				field_ink, Color(field_ink, 0.2), &"wave", 4.0)
-		_text("%d" % left, Vector2(754.0, 52.0), 14, field_dim)
+	var ink := UiTheme.INK if boss_wave else ArenaPainter.PAPER
+	var status := Expedition.status(sim)
+	var title := Loc.t("hud.act", [status.act, posmod(sim.wave - 1, 4) + 1])
+	var color := UiTheme.WARN if sim.boss_phase >= 2 else UiTheme.ECHO
+	if boss_wave:
+		title = Loc.t("hud.boss_down") if sim.boss != null and sim.boss_alive_count() == 0 else Loc.enemy_name(Expedition.boss_id(sim))
+		if sim.endless:
+			title = wave_title()
+		if sim.boss_phase >= 2:
+			title += " // II"
+	elif sim.endless:
+		title = Loc.t("hud.endless", [sim.wave])
+	_title_text(title, Vector2(rect.position.x, 33.0), 26 if is_compact() else 32,
+			color if boss_wave else ink, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+	var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
+	if is_compact():
+		var mission: Dictionary = sim.expedition.get("mission", {})
+		var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
+		var objective := Loc.t("order.%s.short" % kind)
+		if int(status.target) > 0:
+			objective += " %d/%d" % [status.progress, status.target]
+		if boss_wave:
+			objective = Loc.t("hud.act", [status.act, posmod(sim.wave - 1, 4) + 1]) + " · " + objective
+		else:
+			objective += " · %d" % left
+		_text(objective, Vector2(rect.position.x + 8.0, 53.0), 13, UiTheme.DIM if boss_wave else ArenaPainter.PAPER, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 16.0)
+		_meter(Rect2(rect.position.x + 12.0, 61.0, rect.size.x - 24.0, 3.0), sim.boss_health_ratio() if boss_wave else sim.wave_time / maxf(0.01, sim.wave_duration), color if boss_wave else ink, Color(ink, 0.18), &"boss" if boss_wave else &"wave", 3.0)
 		return
 	if boss_wave:
-		var phase2 := sim.boss_phase >= 2
-		var defeated := sim.boss != null and sim.boss_alive_count() == 0
-		if defeated:
-			_title_text(Loc.t("hud.boss_down"), Vector2(440.0, 34.0), 30,
-					UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
-		else:
-			var title := Loc.t("hud.boss_phase2") if phase2 else Loc.t("hud.boss")
-			if sim.endless:
-				title = wave_title() + ("  //  II" if phase2 else "")
-			var color := UiTheme.WARN if phase2 else UiTheme.ECHO
-			_title_text(title, Vector2(440.0, 34.0), 30, color, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
-			_meter(Rect2(463.0, 47.0, 350.0, 6.0), sim.boss_health_ratio(), color,
-					Color(ArenaPainter.INK, 0.16), &"boss", 6.0)
-			if phase2:
-				# Shared thread, two stitched knots: both halves belong to the same original.
-				for i in sim.boss_total_count():
-					var alive := i < sim.boss_alive_count()
-					var point := Vector2(825.0 + float(i) * 12.0, 47.0)
-					draw_circle(point, 3.0, color if alive else Color(ArenaPainter.INK, 0.18))
+		_meter(Rect2(rect.position.x + 43.0, 47.0, rect.size.x - 90.0, 6.0), sim.boss_health_ratio(), color, Color(ArenaPainter.INK, 0.16), &"boss", 6.0)
+		if sim.boss_phase >= 2:
+			for i in sim.boss_total_count():
+				draw_circle(Vector2(rect.end.x - 35.0 + float(i) * 12.0, 47.0), 3.0, color if i < sim.boss_alive_count() else Color(ArenaPainter.INK, 0.18))
 	else:
-		_title_text(Loc.t("hud.wave", [sim.wave, WaveDirector.FINAL_WAVE]), Vector2(440.0, 34.0), 32,
-				field_ink, HORIZONTAL_ALIGNMENT_CENTER, 400.0)
-		var left := ceili(maxf(0.0, sim.wave_duration - sim.wave_time))
-		var urgent := left <= 5
-		var col := ArenaPainter.DANGER if urgent else field_ink
-		_meter(Rect2(535.0, 46.0, 210.0, 4.0), sim.wave_time / maxf(0.01, sim.wave_duration),
-				col, Color(field_ink, 0.2), &"wave", 4.0)
-		_text("%d" % left, Vector2(754.0, 52.0), 14, field_ink)
-	if sim.endless:
-		return
-	for i in WaveDirector.FINAL_WAVE:
-		var point := Vector2(545.0 + float(i) * 10.0, 59.0 + sin(float(i) * 0.8) * 1.1)
-		var current := i == sim.wave - 1
-		var color := field_ink if current else Color(field_ink, 0.6 if i < sim.wave - 1 else 0.20)
-		draw_circle(point, 2.6 if current else 1.7, color)
+		_meter(Rect2(rect.position.x + 50.0, 46.0, rect.size.x - 100.0, 4.0), sim.wave_time / maxf(0.01, sim.wave_duration), ArenaPainter.DANGER if left <= 5 else ink, Color(ink, 0.2), &"wave", 4.0)
+		_text("%d" % left, Vector2(rect.end.x - 41.0, 52.0), 14, ink)
+	if not sim.endless:
+		for i in WaveDirector.FINAL_WAVE:
+			var point := Vector2(rect.position.x + 60.0 + float(i) * 10.0, 59.0 + sin(float(i) * 0.8) * 1.1)
+			draw_circle(point, 2.6 if i == sim.wave - 1 else 1.7, ink if i == sim.wave - 1 else Color(ink, 0.6 if i < sim.wave - 1 else 0.2))
 
 
 func wave_phase_profile() -> Dictionary:
@@ -290,13 +323,18 @@ func wave_phase_profile() -> Dictionary:
 
 
 func _draw_wave_phase() -> void:
-	if sim.is_boss_wave():
+	if is_compact() or sim.is_boss_wave():
 		return
-	var profile := wave_phase_profile()
+	var status := Expedition.status(sim)
 	var rect: Rect2 = layout_regions()["phase"]
 	_stock(&"phase_tag", UiTheme.PAPER, InkStyleBox.Shape.TAG, 9).draw(get_canvas_item(), rect)
-	_text(Loc.t(profile["name_key"]), Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-			13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
+	var mission: Dictionary = sim.expedition.get("mission", {})
+	var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
+	var label := Loc.t("order.%s.short" % kind)
+	if int(status.target) > 0:
+		label += "  %d/%d" % [status.progress, status.target]
+	_text(label, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
+			14, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
 
 
 func _draw_materials() -> void:
@@ -362,7 +400,8 @@ func _draw_weapons() -> void:
 
 
 func weapon_slot_rect(index: int) -> Rect2:
-	return Rect2(40.0 + float(index) * SLOT_GAP, SLOT_Y + (1.0 if index % 2 == 0 else -1.0), SLOT_W, SLOT_H)
+	var area: Rect2 = layout_regions().weapons
+	return Rect2(area.position.x + 6.0 + float(index) * SLOT_GAP, area.position.y + 5.0 + (1.0 if index % 2 == 0 else -1.0), SLOT_W, SLOT_H)
 
 
 func gunsmith_remaining() -> int:
@@ -375,12 +414,9 @@ func _draw_gunsmith_charge() -> void:
 	var remaining := gunsmith_remaining()
 	if remaining < 0:
 		return
+	var rect: Rect2 = layout_regions().controls
 	var text := Loc.t("hud.crit_next") if remaining == 1 else Loc.t("hud.crit_charge", [remaining])
-	var width := UiTheme.font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 13).x + 32.0
-	_stock(&"gunsmith_tag", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 1).draw(get_canvas_item(),
-			Rect2(312.0, 687.0, width, 30.0))
-	draw_circle(Vector2(323.0, 702.0), 2.5, UiTheme.WARN if remaining == 1 else UiTheme.COIN)
-	_text(text, Vector2(332.0, 705.0), 13, UiTheme.INK)
+	_text(text, rect.position + Vector2(8.0, 28.0), 13, UiTheme.WARN if remaining == 1 else UiTheme.COIN, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 16.0)
 
 
 static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:
@@ -410,7 +446,7 @@ func selected_echo_profile() -> Dictionary:
 	var profile := EchoSystem.skill_profile(actor.take, sim)
 	profile["seconds"] = echo_remaining(actor.take)
 	profile["wave"] = actor.take.wave
-	var camera := WorldArena.camera_rect(sim.player.pos)
+	var camera := WorldArena.camera_rect(sim.player.pos, WorldArena.display_viewport(canvas_size()))
 	var offscreen := not camera.has_point(actor.pos)
 	profile["offscreen"] = offscreen
 	profile["offscreen_direction"] = (actor.pos - camera.get_center()).normalized() if offscreen else Vector2.ZERO
@@ -418,50 +454,43 @@ func selected_echo_profile() -> Dictionary:
 
 
 func retirement_hint_profile() -> Dictionary:
-	return {"rect": Rect2(36.0, 590.0, 568.0, 88.0),
+	return {"rect": layout_regions().echo_hint,
 		"foreground": ArenaPainter.INK, "background": ArenaPainter.PAPER}
 
 
 func _draw_controls() -> void:
 	var profile := selected_echo_profile()
-	if not profile.is_empty():
-		var stock: Rect2 = retirement_hint_profile()["rect"]
+	var interaction: Dictionary = Expedition.status(sim).interaction
+	if not profile.is_empty() and (is_compact() or interaction.is_empty()):
+		var stock: Rect2 = retirement_hint_profile().rect
 		_stock(&"retirement_hint", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), stock)
-		var status := Loc.t("echo.selected", [profile["uid"], int(ceil(profile["condition"])), profile["seconds"]])
-		_text(status, Vector2(50.0, 612.0), 14, UiTheme.INK)
-		_text(Loc.echo_profile(profile), Vector2(50.0, 635.0), 13, UiTheme.DIM)
-		var action := Loc.t("echo.input_hint", [Controls.retire_label()])
-		if not sim.can_retire_echo():
-			action = Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
-		_text(action, Vector2(50.0, 658.0), 12, UiTheme.INK)
-		if profile["offscreen"]:
-			var direction: Vector2 = profile["offscreen_direction"]
-			var center := Vector2(579.0, 611.0)
-			draw_line(center - direction * 8.0, center + direction * 9.0, UiTheme.ACCENT, 2.0, true)
-			var tip := center + direction * 9.0
-			draw_line(tip, tip - direction.rotated(0.6) * 7.0, UiTheme.ACCENT, 2.0, true)
-			draw_line(tip, tip - direction.rotated(-0.6) * 7.0, UiTheme.ACCENT, 2.0, true)
+		var status := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition)), profile.seconds])
+		var action := Loc.t("echo.compact_input", [Controls.retire_label()]) if sim.can_retire_echo() else Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
+		_text(status if is_compact() else status + " · " + Loc.echo_profile(profile), stock.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, stock.size.x - 34.0)
+		_text(Loc.echo_profile(profile) + " · " + action if is_compact() else action, stock.position + Vector2(10.0, 29.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, stock.size.x - 20.0)
+		if profile.offscreen:
+			var direction: Vector2 = profile.offscreen_direction
+			var center := stock.position + Vector2(stock.size.x - 15.0, 12.0)
+			draw_line(center - direction * 7.0, center + direction * 8.0, UiTheme.ACCENT, 2.0, true)
+			var tip := center + direction * 8.0
+			draw_line(tip, tip - direction.rotated(0.6) * 6.0, UiTheme.ACCENT, 2.0, true)
+			draw_line(tip, tip - direction.rotated(-0.6) * 6.0, UiTheme.ACCENT, 2.0, true)
 	if _combo_left > 0.0:
 		var text := Loc.t("combo.triggered", [Loc.combo_name(_last_combo)])
-		var width := UiTheme.font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x + 28.0
-		_stock(&"combo_receipt", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), Rect2(640.0, 646.0, width, 30.0))
-		_text(text, Vector2(654.0, 666.0), 14, UiTheme.ACCENT)
-	var font_size := 14
-	var label_w := UiTheme.font()
-	var move_label := Loc.t("hud.move")
-	var pause_label := Loc.t("hud.pause")
-	var move_key := Controls.move_label()
-	var pause_key := Controls.pause_label()
-	var move_w := _keycap_width(move_key, font_size) + 8.0 + label_w.get_string_size(move_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
-	var pause_w := _keycap_width(pause_key, font_size) + 8.0 + label_w.get_string_size(pause_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
-	var x := 1240.0 - move_w - 18.0 - pause_w
-	_stock(&"controls_tag", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 4).draw(get_canvas_item(),
-			Rect2(x - 9.0, 687.0, move_w + pause_w + 36.0, 31.0))
-	_keycap(move_key, Vector2(x, 694.0), font_size)
-	_text(move_label, Vector2(x + _keycap_width(move_key, font_size) + 8.0, 709.0), font_size, UiTheme.DIM)
-	x += move_w + 18.0
-	_keycap(pause_key, Vector2(x, 694.0), font_size)
-	_text(pause_label, Vector2(x + _keycap_width(pause_key, font_size) + 8.0, 709.0), font_size, UiTheme.DIM)
+		var extent := canvas_size()
+		var width := minf(extent.x - 80.0, UiTheme.font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x + 28.0)
+		var rect := Rect2((extent.x - width) * 0.5, WorldArena.display_viewport(extent).end.y - 34.0, width, 30.0)
+		_stock(&"combo_receipt", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), rect)
+		_text(text, rect.position + Vector2(14.0, 20.0), 14, UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0)
+	var controls: Rect2 = layout_regions().controls
+	_stock(&"controls_tag", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 4).draw(get_canvas_item(), controls)
+	if gunsmith_remaining() >= 0:
+		_text(Controls.pause_label() + " · " + Loc.t("hud.pause"), controls.position + Vector2(8.0, 13.0), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, controls.size.x - 16.0)
+		_draw_gunsmith_charge()
+	else:
+		var key := Controls.pause_label()
+		_keycap(key, controls.position + Vector2(8.0, 5.0), 14)
+		_text(Loc.t("hud.pause"), controls.position + Vector2(16.0 + _keycap_width(key, 14), 21.0), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, controls.size.x - _keycap_width(key, 14) - 24.0)
 
 
 func _draw_onboarding() -> void:
@@ -470,7 +499,8 @@ func _draw_onboarding() -> void:
 	var alpha := hint_alpha()
 	if alpha <= 0.0:
 		return
-	var panel := Rect2(450.0, 536.0, 380.0, 48.0)
+	var extent := canvas_size()
+	var panel := Rect2((extent.x - 380.0) * 0.5, WorldArena.display_viewport(extent).end.y - (96.0 if is_compact() else 144.0), 380.0, 48.0)
 	var stock := _stock(&"onboarding", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 3)
 	stock.bg_color = Color(ArenaPainter.PAPER, alpha)
 	stock.border_color = Color(ArenaPainter.INK, alpha)
@@ -592,3 +622,32 @@ func _title_text(txt: String, pos: Vector2, size: int, color: Color = UiTheme.IN
 func _text(txt: String, pos: Vector2, size: int, color: Color = UiTheme.INK,
 		align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT, width: float = -1.0) -> void:
 	draw_string(UiTheme.font(), pos, txt, align, width, size, color)
+
+
+func _draw_expedition() -> void:
+	if sim == null:
+		return
+	var skill_rect: Rect2 = layout_regions().ability
+	_stock(&"ability_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), skill_rect)
+	var skill_name := Loc.t("ability.%s.name" % sim.character_id)
+	var skill_text := Loc.t("hud.skill", [Controls.skill_label(), skill_name, roundi(sim.character_energy)])
+	if sim.character_cooldown > 0.0:
+		_text(skill_text, skill_rect.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+		_text(Loc.t("hud.skill_cooldown", [sim.character_cooldown]), skill_rect.position + Vector2(10.0, 29.0), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+	else:
+		_text(skill_text, skill_rect.position + Vector2(10.0, 22.0), 14, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+	_meter(Rect2(skill_rect.position + Vector2(10.0, skill_rect.size.y - 2.0), Vector2(skill_rect.size.x - 20.0, 2.0)), sim.character_energy / 100.0, UiTheme.ACCENT, Color(UiTheme.INK, 0.15), &"role_energy", 2.0)
+	var status := Expedition.status(sim)
+	var interaction: Dictionary = status.interaction
+	if is_compact() or selected_echo_profile().is_empty() or not interaction.is_empty():
+		var hint_rect: Rect2 = layout_regions().interaction
+		_stock(&"interaction_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 8).draw(get_canvas_item(), hint_rect)
+		var hint := Loc.t("hud.manual_energy")
+		if not interaction.is_empty():
+			hint = Loc.t("hud.interact", [Controls.interact_label(), Loc.t(interaction.name_key)])
+		var debt := Loc.t("hud.debt", [status.debt]) if int(status.debt) > 0 else ""
+		if is_compact() and not debt.is_empty():
+			_text(hint, hint_rect.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
+			_text(debt, hint_rect.position + Vector2(10.0, 29.0), 13, UiTheme.WARN, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
+		else:
+			_text(hint + (" · " + debt if not debt.is_empty() else ""), hint_rect.position + Vector2(10.0, 23.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)

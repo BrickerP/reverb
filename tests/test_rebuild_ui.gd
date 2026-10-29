@@ -124,8 +124,8 @@ func test_repair_quotes_and_full_slots_keep_their_actions(c: Check) -> void:
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
 	ui.open(sim)
-	c.eq(ui.echo_panel.repair_buttons.size(), 3, "every bank copy exposes repair state")
-	c.ok(ui.echo_panel.repair_buttons.back().disabled, "full condition is visibly disabled")
+	c.eq(ui.echo_panel.repair_buttons.size(), ui.echo_panel.page_size, "visible page exposes bounded repair actions")
+	c.ok(ui.echo_panel.page_next != null, "remaining copies retain a page action")
 	var weapon_offer := Offer.new()
 	weapon_offer.weapon = Content.weapon(&"stamp")
 	weapon_offer.price = 30

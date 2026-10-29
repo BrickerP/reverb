@@ -3,6 +3,17 @@ extends RefCounted
 
 
 const WEAPON_DESCRIPTIONS := {
+	&"guard_decoy": "weapon.desc.guard_decoy",
+	&"paper_seed": "weapon.desc.paper_seed",
+	&"repair_kit": "weapon.desc.repair_kit",
+	&"debt_sentry": "weapon.desc.debt_sentry",
+	&"paper_hound": "weapon.desc.paper_hound",
+	&"binding_atlas": "weapon.desc.binding_atlas",
+	&"folding_guillotine": "weapon.desc.folding_guillotine",
+	&"ink_tempest": "weapon.desc.ink_tempest",
+	&"surveyor_lance": "weapon.desc.surveyor_lance",
+	&"saw_swarm": "weapon.desc.saw_swarm",
+	&"binding_writ": "weapon.desc.binding_writ",
 	&"pistol": "weapon.desc.pistol",
 	&"smg": "weapon.desc.smg",
 	&"stapler": "weapon.desc.stapler",
@@ -147,8 +158,8 @@ static func item_desc(it: ItemDef) -> String:
 	return "  ".join(parts)
 
 
-static func weapon_line(w: WeaponDef) -> String:
-	var dmg := number(w.damage)
+static func weapon_line(w: WeaponDef, level: int = 0) -> String:
+	var dmg := number(w.damage * w.level_mult(level))
 	if w.pellets > 1:
 		dmg += "x%d" % w.pellets
 	var line := t("weapon.line", [dmg, 1.0 / w.cooldown, int(w.reach)])

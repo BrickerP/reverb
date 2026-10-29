@@ -57,11 +57,11 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: tools/requirements-audio.txt
+          cache-dependency-path: tools/requirements-dev.txt
 
-      - name: Install score test dependency
+      - name: Install tooling test dependencies
         if: runner.os == 'Linux'
-        run: python -m pip install -r tools/requirements-audio.txt
+        run: python -m pip install -r tools/requirements-dev.txt
 
       - name: Python tooling tests
         if: runner.os == 'Linux'

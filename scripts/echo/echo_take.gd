@@ -20,6 +20,37 @@ var uid: int = 0
 var condition: float = 100.0
 var tint_index: int = 0
 var merged: bool = false
+var inherited_skill: StringName = &""
+var merge_trait: StringName = &""
+var archived: bool = false
+
+
+func copy() -> EchoTake:
+	var out := EchoTake.new()
+	out.samples = samples.duplicate()
+	out.weapons = weapons.duplicate()
+	out.levels = levels.duplicate()
+	out.stats = stats.copy()
+	out.wave = wave
+	out.condition = condition
+	out.merged = merged
+	out.inherited_skill = inherited_skill
+	out.merge_trait = merge_trait
+	out.archived = archived
+	return out
+
+
+func retirement_kind() -> StringName:
+	if inherited_skill != &"":
+		return inherited_skill
+	var strongest: WeaponDef = null
+	var strongest_power := -1.0
+	for i in weapons.size():
+		var candidate := weapons[i].level_dps(level_at(i))
+		if candidate > strongest_power:
+			strongest = weapons[i]
+			strongest_power = candidate
+	return EchoSystem.kind_for_style(strongest.attack_style) if strongest != null else &"pin"
 
 
 func tint() -> Color:

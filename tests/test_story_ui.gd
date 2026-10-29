@@ -9,6 +9,7 @@ func _root() -> Window:
 func test_receipt_is_optional_dismissible_and_keeps_discovery(c: Check) -> void:
 	var sim := Sim.new(11)
 	sim.start_run()
+	StoryLedger.on_wave(sim)
 	sim.wave = 2
 	StoryLedger.on_wave(sim)
 	var receipt := StoryReceipt.new()

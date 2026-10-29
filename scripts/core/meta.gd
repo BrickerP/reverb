@@ -18,6 +18,8 @@ var daily_last_win_seed: int = 0
 var ascension: int = 0
 var unlocked: Dictionary = {}
 var story_clues: Array[StringName] = []
+var echo_archives: Dictionary = {}
+var inherit_echo: bool = true
 
 
 func _init(save_path: String = DEFAULT_PATH) -> void:
@@ -40,6 +42,8 @@ func _defaults() -> void:
 	ascension = 0
 	unlocked = {}
 	story_clues.clear()
+	echo_archives.clear()
+	inherit_echo = true
 	for def: CharacterDef in Content.characters().values():
 		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
 
@@ -68,6 +72,13 @@ func _load() -> void:
 	daily_streak = int(data.get("daily_streak", 0))
 	daily_last_win_seed = int(data.get("daily_last_win_seed", 0))
 	ascension = clampi(int(data.get("ascension", 0)), 0, max_ascension())
+	inherit_echo = bool(data.get("inherit_echo", true))
+	var saved_archives: Variant = data.get("echo_archives", {})
+	if typeof(saved_archives) == TYPE_DICTIONARY:
+		for key: Variant in saved_archives:
+			var character_id := StringName(str(key))
+			if EchoArchive.eligible(character_id) and EchoArchive.decode(saved_archives[key]) != null:
+				echo_archives[String(character_id)] = saved_archives[key].duplicate(true)
 	var saved_clues: Variant = data.get("story_clues", [])
 	if typeof(saved_clues) == TYPE_ARRAY:
 		for value: Variant in saved_clues:
@@ -111,6 +122,8 @@ func save() -> bool:
 		"ascension": ascension,
 		"unlocked": flags,
 		"story_clues": story_clues,
+		"echo_archives": echo_archives,
+		"inherit_echo": inherit_echo,
 	}, "\t"))
 	file.flush()
 	var error := file.get_error()

@@ -12,14 +12,14 @@ func _shop_sim(materials: int = 100) -> Sim:
 	s.player.add_weapon(Content.weapon(&"pistol"))
 	s.player.add_weapon(Content.weapon(&"smg"))
 	s.player.weapon_levels[1] = 2
+	s.player.weapon_investments[1] = 65
 	return s
 
 
 func test_sell_quotes_and_refunds_the_full_resale(c: Check) -> void:
 	var s := _shop_sim()
 	var before := ShopState.capture(s)
-	var w := s.player.weapons[1]
-	var refund := Shop.resale_total(w, s.player.level_at(1))
+	var refund := Shop.resale_for(s, 1)
 	var quote := s.shop.quote(ShopResult.SELL, s, null, 1)
 	c.ok(quote.ok, "selling a second weapon quotes")
 	c.eq(quote.cost, -refund, "the quote is a negative cash flow")

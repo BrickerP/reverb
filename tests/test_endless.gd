@@ -34,11 +34,11 @@ func test_boss_rush_skips_normal_waves(c: Check) -> void:
 	c.eq(s.pending_boons.size(), 3, "boss rush opens with a boon choice")
 	c.ok(s.choose_boon(0), "boss rush starting boon can be chosen")
 	c.eq(s.pending_boons.size(), 0, "starting boon is consumed before the shop")
-	c.eq(s.next_wave_number(), 25, "the first boss rush wave is 25")
+	c.eq(s.next_wave_number(), 16, "the first boss rush wave is 16")
 	s.start_next_wave()
-	c.eq(s.wave, 25, "boss rush starts at wave 25")
-	c.ok(s.is_boss_wave(25), "wave 25 is a boss wave")
-	c.eq(s.next_wave_number(), 30, "the next shop targets wave 30")
+	c.eq(s.wave, 16, "boss rush starts at wave 16")
+	c.ok(s.is_boss_wave(16), "wave 16 is a boss wave")
+	c.eq(s.next_wave_number(), 20, "the next shop targets wave 20")
 
 
 func test_boss_rush_zero_slot_build_gets_a_shield(c: Check) -> void:
@@ -58,7 +58,7 @@ func test_boss_rush_zero_slot_build_gets_a_shield(c: Check) -> void:
 	c.eq(s.pending_boons.size(), 0, "both starting boons are consumed")
 
 
-func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:
+func test_boss_rush_boss_returns_to_shop_and_targets_wave_20(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()
 	s.player.stats.add(Stats.MAX_HP, 100000.0)
@@ -72,8 +72,8 @@ func test_boss_rush_boss_returns_to_shop_and_targets_wave_30(c: Check) -> void:
 	s.damage_enemy(s.boss, 1000000.0, Vector2.ZERO, false, -1)
 	_run(s, 1)
 	c.eq(s.phase, Sim.Phase.SHOP, "boss rush boss returns to shop")
-	c.eq(s.wave, 25, "boss rush keeps the boss wave number")
-	c.eq(s.next_wave_number(), 30, "the next boss rush wave skips to 30")
+	c.eq(s.wave, 16, "boss rush keeps the boss wave number")
+	c.eq(s.next_wave_number(), 20, "the next boss rush wave skips to 20")
 	c.eq(s.pending_boons.size(), 3, "boss rush offers the endless boon choice")
 
 
@@ -105,24 +105,24 @@ func test_endless_death_is_a_loss_not_a_second_win(c: Check) -> void:
 	c.ok(s.endless, "the run is still marked endless")
 
 
-func test_endless_boss_returns_every_five_waves(c: Check) -> void:
+func test_endless_boss_returns_every_four_waves(c: Check) -> void:
 	var s := Sim.new(7)
 	s.start_run()
 	s.phase = Sim.Phase.WON
 	s.player.stats.add(Stats.MAX_HP, 100000.0)
 	s.player.hp = s.player.max_hp()
 	c.ok(s.begin_endless(), "begin endless")
-	c.ok(s.is_boss_wave(25), "wave 25 is an endless boss wave")
-	c.ok(not s.is_boss_wave(24), "wave 24 is not a boss wave")
-	s.start_wave(25)
+	c.ok(s.is_boss_wave(16), "wave 16 is an endless boss wave")
+	c.ok(not s.is_boss_wave(15), "wave 15 is not a boss wave")
+	s.start_wave(16)
 	_run(s, 200)
 	c.ok(s.boss != null, "the endless boss spawns")
-	c.near(s.boss.max_hp, Content.enemy(&"paradox").hp * 2.0, 0.001,
+	c.near(s.boss.max_hp, Content.enemy(&"foreman").hp * 1.8, 0.001,
 			"endless boss health scales with the wave")
 	var wins := [0]
 	s.run_won.connect(func() -> void: wins[0] += 1)
 	s.damage_enemy(s.boss, 1000000.0, Vector2.ZERO, false, -1)
 	_run(s, 1)
 	c.eq(s.phase, Sim.Phase.SHOP, "killing an endless boss returns to the shop")
-	c.eq(s.wave, 25, "the endless wave number remains")
+	c.eq(s.wave, 16, "the endless wave number remains")
 	c.eq(wins[0], 0, "an endless boss does not emit run_won")

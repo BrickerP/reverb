@@ -3,6 +3,8 @@ extends RefCounted
 
 const BUY := &"buy"
 const REPLACE := &"replace"
+const REPLACE_ORDER := &"replace_order"
+const COMBINE := &"combine"
 const UPGRADE := &"upgrade"
 const EVOLVE := &"evolve"
 const SELL := &"sell"
@@ -18,6 +20,8 @@ var reason: StringName = &""
 var cost: int = 0
 var index: int = -1
 var offer_id: StringName = &""
+var donor_index: int = -1
+var target_id: StringName = &""
 var before_state: ShopState
 var after_state: ShopState
 
@@ -54,6 +58,8 @@ func to_dict() -> Dictionary:
 		"cost": cost,
 		"index": index,
 		"offer_id": String(offer_id),
+		"donor_index": donor_index,
+		"target_id": String(target_id),
 		"before": before_state.to_dict() if before_state != null else null,
 		"after": after_state.to_dict() if after_state != null else null,
 	}

@@ -1,13 +1,14 @@
 class_name PathPreview
 extends Control
 
-const PREVIEW_SIZE := Vector2(76.0, 48.0)
+const PREVIEW_SIZE := Vector2(45.0, 30.0)
 const STRIDE := 6
 const TRACE_TIME := 0.8
 
 var _points: PackedVector2Array = PackedVector2Array()
 var _tint: Color = Color.WHITE
 var _progress: float = 1.0
+var consumed := false
 
 
 func _init() -> void:
@@ -16,12 +17,16 @@ func _init() -> void:
 	set_process(false)
 
 
-func setup(take: EchoTake, animate: bool = false) -> void:
+func setup(take: EchoTake, animate: bool = false, extent: Vector2 = PREVIEW_SIZE) -> void:
+	custom_minimum_size = extent
 	_tint = take.tint().lerp(UiTheme.INK, 0.4)
-	var k := PREVIEW_SIZE.x / Sim.ARENA.size.x
+	var k := minf(extent.x / Sim.ARENA.size.x, extent.y / Sim.ARENA.size.y)
 	_points = PackedVector2Array()
-	for i in range(0, take.samples.size(), STRIDE):
+	var stride := maxi(1, mini(STRIDE, ceili(float(take.samples.size()) / 120.0)))
+	for i in range(0, take.samples.size(), stride):
 		_points.append(take.samples[i] - Sim.ARENA.position)
+	if not take.samples.is_empty() and (_points.is_empty() or _points[-1] != take.samples[-1] - Sim.ARENA.position):
+		_points.append(take.samples[-1] - Sim.ARENA.position)
 	for i in _points.size():
 		_points[i] = _points[i] * k
 	_progress = 0.0 if animate else 1.0
@@ -60,3 +65,6 @@ func _draw() -> void:
 			draw_polyline(_points, Color(_tint, 0.9), 1.5, true)
 	if not _points.is_empty():
 		draw_circle(_points[0], 3.0, UiTheme.INK)
+	if consumed:
+		draw_line(Vector2(5.0, 5.0), size - Vector2(5.0, 5.0), Color(UiTheme.WARN, 0.8), 2.0, true)
+		draw_line(Vector2(size.x - 5.0, 5.0), Vector2(5.0, size.y - 5.0), Color(UiTheme.WARN, 0.8), 2.0, true)

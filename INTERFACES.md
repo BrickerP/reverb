@@ -1,219 +1,212 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.14 contract. Simulation is authoritative; menus, drawing,
-audio and camera code read its state and submit explicit actions. They must not
-change damage, wear, economy, random streams or the result of a saved run.
+This is the current 0.15 contract. Simulation owns rules and mutation. UI,
+rendering, audio and native probes may read model state and submit explicit
+actions; they must not invent prices, damage, availability, debt, random results
+or saved-run outcomes.
 
 ## Ownership and entry points
 
 | Layer | Canonical entry points | Responsibility |
 |---|---|---|
-| Main | `scripts/game/main.gd` | Input, screens, pause, modal priority, lifecycle and persistence envelope |
-| Simulation | `scripts/sim/sim.gd` | Run/wave state, authoritative step order, actors, economy and events |
-| World | `WorldArena`, `WaveDirector`, `EnemyBrain` | Collision/cover, local spawn planning, phase pacing and enemy attacks |
-| Weapons | `Content`, `WeaponDef`, `Combat` | Canonical definitions, actual attacks, fields, status interactions and attribution |
-| Copies | `EchoRecorder`, `EchoTake`, `EchoBank`, `EchoActor`, `EchoSystem` | Recording, stable identities, playback, condition, selection and retirement |
-| Transactions | `Shop`, `ShopState`, `ShopResult` | Quotes, commits, replacement and exact undo |
-| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Exact suspension, atomic storage, local unlocks and discovered clues |
-| Presentation | `ArenaView`, `ArenaPainter`, `BattleDirector`, `GameAudio` | Bounded, read-only visual/audio reactions |
+| Main | `scripts/game/main.gd`, `scripts/core/controls.gd` | Input, modal priority, screen lifecycle, suspend envelope and Meta wiring |
+| Run | `Sim`, `WaveDirector`, `Expedition`, `WorldArena`, `EnemyBrain` | Encounters, authoritative ticking, missions, interactions, bosses, caps and endings |
+| Equipment | `Content`, `WeaponDef`, `Combat`, `SupportSystem` | 35 weapon profiles, hit identity, support bodies and bounded allocation |
+| Roles and copies | `CharacterSkills`, `EchoSystem`, `EchoBank`, `EchoArchive` | Role actions, copy wear/retirement, host-preserving merge and cross-run archive |
+| Transactions | `Shop`, `ShopState`, `ShopResult`, `Offer`, `AnomalyContract` | Six goods, quotes, order replacement, assembly, refit, branching and atomic undo |
+| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Snapshot v2, atomic storage, permanent unlock/archive data and route clues |
+| Presentation | `Hud`, `ArenaView`, `ExpeditionInk`, `BattleDirector`, `GameAudio` | Read-only, bounded, localized visual/audio feedback |
 
-New run, unbind, reload and Continue detach prior session listeners before
-binding the next session. Wave start clears the relevant presentation caches
-while retaining session subscriptions. Simulated actors, cooldowns and RNG come
-from the authoritative session.
+Main detaches prior session listeners before binding a new or restored session.
+Views re-read model objects after undo or restore; they never retain mutable
+simulation aliases as authority.
 
-## World, movement and wave pacing
+## Campaign, pacing and capacity
 
-- `Sim.ARENA = WorldArena.BOUNDS = Rect2(40, 80, 2400, 1200)` is the world.
-  `Sim.VIEWPORT = Rect2(40, 80, 1200, 600)` is the fixed HUD-safe drawing window.
-- `WorldArena.camera_rect(focus)` and `camera_offset(focus)` clamp the follow
-  camera. Recording samples, attacks and model positions stay in world space.
-- `move_body(pos, delta, radius)` sweeps and slides against bounds and five fixed
-  machines; `move_straight` resolves straight-line motion. `body_clear` validates
-  placement and `blocks_projectile` supplies cover checks.
-- Spawn planning uses the current camera neighborhood, player distance and clear
-  geometry. Pending spawns have a real 0.8-second telegraph before activation.
-- `WaveDirector.phase_profile(time, duration)` supplies localized phase identity
-  and intensity. Cohorts occupy 0–24%, 36–60% and 72–90% of the wave; rendering and
-  music read these same phases rather than inventing separate pacing clocks.
-- `EnemyBrain.step(sim, enemy, delta)` owns approach, warned direction/target,
-  attack and recovery. Runner dash, Brute slam and Silencer seal geometry are
-  authoritative. `attack_profile(enemy)` supplies Runner/Brute shapes; Silencer
-  rendering reads the saved `EnemyZone` warning/active geometry. Warden's facing
-  has limited turn speed. Enemy warning/status timers are saved.
-- A supply pickup may appear once at 45% duration on non-Boss waves divisible by
-  three. Its 8-second lifetime and `15 + wave` reward are model state. It requires
-  collection during combat and is excluded from ordinary wave-end collection.
+- `WaveDirector.FINAL_WAVE == 12`. Normal bosses are mandatory at 4, 8 and 12.
+  `Expedition.boss_id` maps them to `foreman`, `collector`, and `paradox`.
+- Endless and Boss Rush start from the completed stage-12 state. Boss encounters
+  recur at 16, 20, 24, and every fourth stage thereafter.
+- Normal duration is `min(60, 24 + 3 * (stage - 1))`. Spawn budget is
+  `min(360, 10 + 8 * stage)`. Drop cash is capped by
+  `min(300, 24 + 6 * stage)`.
+- `Sim.MAX_ENEMIES == 96`; ordinary enemies use at most 94 slots so a mandatory
+  boss or split body retains two reserved slots. Pending spawns cap at 24.
+  Saturated boss records retry after a real death frees capacity.
+- Cohorts occupy 0–24%, 36–60%, and 72–100%. Tail pressure remains active near
+  the end but respects the same caps. Each materialized spawn has a real
+  0.8-second telegraph.
+- `Sim.ARENA == Rect2(40, 80, 2400, 1200)`. The standard 1280×720 canvas uses
+  a 1200×600 battle rectangle; `WorldArena.display_viewport` derives the native
+  rectangle at other sizes. Model positions and attacks remain world
+  coordinates; culling and camera translation are presentation.
 
-## Weapons and hit identity
+## Boss and interaction geometry
 
-Content has 18 offered weapons and six earned evolution forms in six families:
-`sidearm`, `scatter`, `marksman`, `arcane`, `press`, `salvage`. Every shipped
-weapon, item, enemy and character has an explicit presentation catalog key.
+`EnemyBrain.attack_profile` exposes the same locked geometry used for damage:
 
-`Combat.step_weapons` / `fire` create actual projectile, burst, pin, cone, slam,
-line, ink, tape, boomerang, chain and orbit attacks. `AttackField` stores delayed
-or persistent work as a value snapshot: owner identity, weapon, level, position,
-direction, damage, status, cadence and remaining lifetime. `Projectile` carries
-its own source identity and return/flight state. Active limits are 192 fields,
-1,200 projectiles and eight chain targets; enemy seal zones are capped at 12.
-An action requiring persistent capacity must reject before consuming its copy
-when the relevant budget is full.
+| Boss | Profile | Authoritative behavior |
+|---|---|---|
+| Foreman | `press` | Warning locks a point; impact tests a radius-112 body area |
+| Collector | `dash` | Warning locks direction; active dash sweeps the traveled segment |
+| Paradox | `cross` | Warning locks a point; impact tests perpendicular 68-wide, 410-long arms |
 
-`Combat.combo_profile(weapons)` reports prerequisites for the build UI. A real
-press hit on a pinned target triggers `pin_press`; a non-ink/tape arcane hit on
-an inked target triggers `ink_arc`. Bounded extra hits never recursively spawn
-an unlimited chain. `Sim.combo_triggered(info: ComboInfo)` is emitted only after
-the interaction occurs, with target UID, source, tint, weapon, affected count
-and bonus damage.
+Paradox retains the phase-two split. Enemy capacity cannot delete either real
+body. Support units use their own radius in the same impact tests.
 
-Every shot, delayed field, projectile and hit preserves `actor_token`,
-`source_tint` and `weapon_id`. **-1 is the player, 0 unknown, positive tokens are
-stable `EchoTake.uid` values.** The numeric `source` remains the statistical slot;
-it must not be used to recover a current copy's identity. A removed copy's
-in-flight or delayed attacks retain their original token and tint through save.
+`Sim.interact()` delegates to `Expedition.interact()`. `Expedition.interaction()`
+returns the nearest available item with `name_key`, `description_key`, range,
+cost and cooldown. UI does not reproduce this logic. Shipped kinds are press,
+conveyor, recycler, mission part, terminal, repair target, rescue target and
+boss negotiation.
 
-## Copy condition, selection and retirement
+`Shift / LB` is the `character_skill` action. `E / X` is `interact`. Labels come
+from the active `InputMap` through `Controls`; they are not hard-coded in HUD.
+Modal screens block both actions and restore focus when closed.
 
-`EchoBank.add` allocates monotonically increasing positive UIDs. Restore retains
-them and the next counter; no runtime object ID becomes a saved actor token.
-`EchoTake.condition` starts at 100. `Stats.ECHO_DURATION` defaults to 120 seconds.
-During deployed combat playback, `EchoSystem.step` applies:
+## Work orders, debt and endings
 
-```
-condition -= 100 * delta / sim.echo_duration() * sim.wear_rate_mult
-```
+`AnomalyContract.KINDS` contains exactly `salvage`, `audit`, `repair`, `rescue`,
+`recruit`, and `credit`. Orders are ordinary `Offer.contract` values. There is
+no separate wager panel or parallel accept API.
 
-Pause, selection wheel and shops do not step combat. Offscreen copies and
-silenced playback still wear. Condition does not scale damage. At zero,
-`EchoSystem` removes actor and bank entry and emits an exhausted event without
-awarding the full active skill.
+`Shop._fill` produces six offers: two weapons, two passives, and two distinct
+orders. The active order aliases the purchased offer contract. Buying a second
+order requires `ShopResult.REPLACE_ORDER`; the previous deposit is credited in
+the quoted difference. One `ShopState` undo restores funds, offers, accepted
+aliases, mission state, debt and counters atomically.
 
-`Sim.selected_echo_uid`, `select_echo(uid)`, `cycle_echo(direction)`,
-`can_retire_echo()` and `retire_selected_echo()` are the action surface.
-`EchoSystem.skill_profile(take, sim)` is the HUD/wheel prediction and execution
-input. It chooses the highest level-DPS weapon; Mirror uses the same live
-loadout/levels/stats as its actual fire. Styles map to six skills:
+Credit is explicit: purchasing it adds 30 materials and 40 debt. No ordinary
+failure path adds debt. Outstanding debt blocks another credit offer and Echo
+archive writes. Wave settlement may pay existing debt from current materials;
+tests distinguish repayment from newly created debt.
 
-| Styles | Skill |
+`Expedition.apply_ending_outcome` is once-only and bounded:
+
+- `released`: selected first after two completed audits; repairs current copies
+  to 100 and writes off remaining credit debt.
+- `collective`: fills player health, then restores an existing recruited
+  companion or spawns one when capacity permits; otherwise the bounded pending
+  result is retained until capacity exists.
+- `indebted`: adds exactly 24 materials and keeps the debt ledger.
+
+The recorded outcome survives Endless and cannot be applied again.
+
+## Equipment and support contracts
+
+`Content.MAX_WEAPON_SLOTS == 6`. Content contains 18 base weapons, 12 earned
+final forms and five support weapons. A base weapon declares two canonical
+`evolution_options`; `Shop.evolution_choices` filters them through Content.
+`evolve_choice` requires a maxed weapon, three family pieces, an explicit target
+and sufficient materials.
+
+Weapon levels are 0–3. From stage 5, the paired weapon offer may match an owned
+weapon's exact level. `Shop.combine_weapons(host, donor)` accepts only different
+slots with the same canonical ID and grade. It increments the host, consumes the
+donor, carries both real investment ledgers plus the assembly fee, and emits
+separate host/donor presentation events. `WeaponDef.GRADE_MULTIPLIERS` is exactly
+`[1.0, 1.8, 3.2, 5.5]`; assembly therefore retains about 90%, 88.9% and 85.9%
+of the two input weapons' immediate DPS while freeing one slot. Offer price uses
+`1.65^grade` before the stage factor. Cash refit remains a stable, deliberately
+more expensive no-donor alternative, and high-price same-grade assembly may
+require saving across encounters. Resale and replacement use only recorded paid
+investment.
+
+Evolution replaces the canonical weapon definition but keeps
+`WeaponDef.MAX_LEVEL` and the actual paid-investment ledger, adding only the
+branch fee. It never resets a final form to grade zero or creates nominal resale
+value.
+
+`SupportSystem` stores plain dictionaries with stable UID, kind, position, HP,
+lifespan, cooldown, actor token, source identity, weapon, damage, charges, level
+and reach. `MAX_UNITS == 12`; at most one live recruited companion is allowed.
+The eight canonical kinds are hound, turret, repair station, paper tree, decoy,
+and the three recruited bosses.
+
+Support bodies can be damaged by enemy contact, zones, machines and boss
+geometry. Hounds retrieve ordinary scrap/supplies without charging role energy;
+paper trees have four shield/energy deliveries and no material payout. Repair
+stations have six charges. Repeated fire cannot refresh an existing living
+unit's HP, charges or lifetime.
+
+## Role ability contract
+
+`CharacterSkills.on_pickup(sim, value)` runs only for manual player collection.
+It grants `4 * min(value, 5)` energy, capped at 100. Automatic end payout and
+support retrieval add materials but do not invoke it.
+
+`CharacterSkills.activate(sim)` requires wave phase, 100 energy and zero role
+cooldown. It dispatches to six distinct mechanics. Energy and the six-second
+cooldown are committed only after the mechanic succeeds. Role state is kept in
+the bounded `role_effects` dictionary and is part of snapshot/undo validation.
+The shared Echo retirement input remains independent.
+
+## Echo merge and archive
+
+`EchoBank.preview_merge(host, donor, trait)` is pure and detached. It never
+allocates a UID or mutates input takes. `merge` confirms the preview, removes
+both inputs and allocates one new stable identity. The host always keeps its
+route and loadout.
+
+| Trait | Donor contribution |
 |---|---|
-| projectile, burst, pin | pin |
-| slam | stamp |
-| cone, line | cut |
-| ink, tape | ink |
-| boomerang | return |
-| chain, orbit | arc |
+| `skill` | Donor retirement kind; condition becomes the lower input condition |
+| `repair` | 50% of donor condition repairs the host, capped at 100 |
+| `power` | One strongest eligible host weapon level; lower condition minus 15 |
 
-An accepted active skill consumes the selected copy, sets a 0.35-second input
-cooldown and emits `echo_retired(info: EchoRetirementInfo)`. The payload contains
-`reason` (`active` / `exhausted`), UID/token, wave, position, condition, tint,
-kind, weapon and profile. Active retirement has no once-per-wave gate and no
-universal explosion/heal. Recording arrival is the actual wave/shop transition.
+Archive records are Meta data, not suspended-run data. `EchoArchive` stores one
+bounded record per eligible character and protects a stronger prior record.
+Solo, Daily, outstanding debt, invalid canonical gear/routes/stats, and missing
+capacity are rejected. Loading occupies a real Echo slot, uses current player
+stats as the baseline, caps condition at 60, and caps opening target power at
+the smaller of archived power and `current player DPS * 0.75` at stage 1. The
+title archive screen previews records and atomically toggles inheritance.
 
-Main records a Space/RB press. Releasing before 0.24 seconds retires; crossing
-0.24 seconds pauses simulation and opens `EchoSelectionWheel`. Wheel release
-only calls `select_echo` and resumes. Cancel closes without retiring. The wheel
-supports mouse, keyboard and left stick; HUD shows selected condition, predicted
-skill and offscreen direction with device-correct labels.
+## Snapshot v2 and atomic storage
 
-## Shop transactions and undo
+`RunSnapshot.VERSION == 2`. The graph includes expedition, debt/outcome,
+interactables, character energy/cooldown/effects, support units and next UID,
+graded offers, paid investment, assembly annotations, order aliases, Echo merge
+metadata, archive-loaded flags and boss negotiation. It preserves exact RNG and
+shared references while accepting only known classes, canonical content and
+finite bounded values.
 
-UI reads `Shop.quote`, repair/merge quotes and block reasons, then commits through
-Shop. `ShopResult` carries action, success, reason, cost, slot/offer identity and
-before/after state. Reactions use `shop_action_resolved` and
-`shop_history_changed`; presentation must not replace a functional error message
-with merchant flavor text.
+The old 0.14 suspended-run schema is intentionally incompatible. There is no
+legacy fallback or migration branch. Permanent Meta unlocks, clues, archives
+and settings remain separate.
 
-- Equipment uses `apply`, upgrade/evolve/sell methods and `undo`.
-- Copies use `repair_echo`, `discard_echo` and `merge_echoes`; `EchoPanel` emits
-  requests, never mutates the bank directly.
-- `echo_repair_amount` is `min(40, 100 - condition)`. Cost is ceil(amount ×0.25),
-  with the existing echo-set reduction and role discount, minimum one. A full
-  copy, invalid membership/phase or insufficient materials returns a reason.
-- Merge joins routes and up to eight highest level-DPS weapons, retains the lower
-  condition and assigns a new UID. It does not restore condition for free.
-- Full player weapon slots retain weapon offers and use explicit replacement.
-  Upgrade/evolution/refund values come from Shop, not duplicated UI arithmetic.
-- `ShopState` retains materials, HP/stats/items, loadout/levels/cooldowns, copy
-  samples/UIDs/condition/counters/selection, playback actors, offers/locks and
-  rerolls. Undo rebuilds objects; views must re-read bank entries after undo.
-- Undo does not reroll RNG. Reroll and wave start clear history. Contracts and
-  boon choices are separate from equipment/copy undo.
+`SuspendStore` validates capture before writing a same-directory temporary file,
+flushes it, and atomically renames it. A failed write keeps both the live run and
+the previous usable file. Source archive writes use the same rollback principle:
+failed Meta persistence restores the prior record and toggle.
 
-Boon choices must resolve before opening the already-rolled shop. Invalid choice
-or unaffordable reroll preserves the pending offer. Boss Rush's extra zero-slot
-choice remains a pending offer; Continue must reopen it. Zero-slot characters
-cannot receive echo-only rewards.
+## Presentation and verification
 
-## Exact suspension and language changes
+HUD uses compact top and bottom islands. Pure `WorldArena.display_viewport`
+derives a real battle rectangle from the native canvas, and Main resize applies
+it to the clip and camera. At 960×540 the camera FOV adapts while actor pixels retain their
+size; there is no global scale-down. Character Select pages three roles at 960
+and shows all six at 1280. End, Archive, HUD and four exercised UI surfaces keep
+enabled targets on-screen.
 
-`RunSnapshot.capture(sim)` returns a versioned, bounded known-type object graph;
-`restore(data)` returns a validated Sim or null with `last_error`. The codec
-preserves shared aliases, including boss/shard references, copy actors/bank,
-active contract/shop and undo history. Canonical content is encoded by kind/ID.
-Derived spatial caches rebuild after restore.
+Physics spawn planning continues to use the constant 1200×600 simulation field,
+so resize and presentation cannot consume or redirect gameplay RNG.
+`ExpeditionInk`, boss warnings, support health, skill emblems and end fold/loot
+reactions read model snapshots and have explicit caps.
 
-The graph includes both RNGs, world positions, plans, warning/attack timers,
-projectiles/fields/zones, recorder accumulator/samples, copy UID/condition,
-playback/cooldowns/selection, role/mode, pickups, shop, contracts, pending/taken
-boons and narrative choices. Integers and signed 64-bit RNG seed/state use decimal
-strings; floating-point values use their exact eight-byte binary64 hex encoding,
-not rounded JSON numbers. Validation rejects non-finite values, unknown classes,
-invalid references, schema mismatch, disconnected rows and multiple Sim roots
-before restoring a live session. Saves cannot name executable scripts or load
-arbitrary object classes.
+Current evidence entry points are:
 
-`SuspendStore.save(sim, envelope)` captures and validates before writing a
-same-directory temporary file, flushes, then atomically renames it. The file is
-`user://suspended_run.json` (test override: `REVERB_SUSPEND`), capped at 32 MiB.
-Failure retains the live run and the prior usable file. `load()` validates before
-Main swaps sessions. There is one current snapshot format, without a parallel
-legacy run-restore path.
+- `make test`, `make smoke`, and Python tooling tests;
+- `tools/expedition_art_probe.gd` for current art/presentation fixtures;
+- `tools/expedition_gameplay_probe.gd` for the completed integrated bilingual
+  and reduced closeout flow;
+- `make export` plus release auditing for actual platform artifacts.
 
-Main's envelope preserves character/daily identity, pause/context, record/end
-beats, shop visibility, run elapsed time/context and unlock text. Save and Return,
-Continue, window-close autosave and language reload all use this path. Continue
-restores a battle, shop transition or pending boon without healing, rerolling or
-restarting the wave. Language reload returns to Settings over the restored
-session. A save error stays visible and prevents the requested exit/reload.
-
-`StoryLedger` records short wave/repair/retirement/exhaustion/Boss clues. Current
-receipt and run choices are snapshot state; discovered clue IDs extend the
-existing Meta file. Reading or dismissing receipts never changes combat or RNG.
-
-## Rendering, sound and lifecycle
-
-`ArenaView` draws the world below a fixed clip equal to `Sim.VIEWPORT`; camera
-translation and shake stay inside it. Culling only changes draw work. Collision,
-attacks and copy wear remain independent of camera visibility. `BattleDirector`
-uses bounded value snapshots and stable locomotion phases; fast weapon fire must
-not continuously replace walking poses. `ThreatInk` uses authoritative attack
-and hazard geometry; `WeaponInk` and `EchoInk` retain weapon/copy identity.
-
-`GameAudio.music_profile` reads real phase, nearby threats, attack states, Boss
-and health. Five original 96-second arrangements share score time and crossfade
-for 1.2 seconds using two fixed music players. Pressure has hysteresis and a
-short hold. The existing 35 effects use 12 fixed voices (seven common, five
-protected), priorities, cooldowns and bounded envelopes. Master/music/effect
-gains are independent. Pause freezes music transport and stops disallowed
-effects; mute preserves transport; rebind clears old session voices/fades.
-Neither audio nor rendering consumes a gameplay RNG.
-
-## Verification and delivery
-
-`make test` and `make smoke` cover rules, modal flow and lifecycle. Dedicated
-probes are `tools/core_gameplay_probe.gd` (native Main/Sim, bilingual/reduced
-profiles), `tools/main_language_probe.gd`, `tools/music_lifecycle_probe.gd`,
-`tools/presentation_stress_probe.gd` and `tools/frame_probe.gd`. New gameplay is
-verified against its current contract, including identical future progression
-after suspend/restore; old-version byte identity is not a gameplay criterion.
-
-`tools/export_release_audit.py` stages a fixed Git commit and checks 92 runtime
-resources (48 PNGs, three fonts, 35 cues, ambient and five music tracks) plus 25
-provenance/license files, including `audio/music/score.json`. It extracts the
-actual macOS ZIP into a new directory and gates on `codesign --verify --deep
---strict --all-architectures`; the Godot built-in ad-hoc signature is integrity
-protection, not Developer ID distribution or Apple notarization. Windows builds
-are unsigned. Export startup and scripted input do not establish Windows/Linux
-GUI, physical-controller, Steam Deck, subjective audio or hardware performance
-acceptance.
+The final native evidence is EN 1280×720 (46 PNGs, 440 checks) and ZH Reduced
+960×540 (47 PNGs, 449 checks), both with empty failure lists. Each profile
+strictly restores the authoritative Snapshot around 43 Sim screenshots. These
+are clinical fixtures, not a human playthrough. Three-platform export remains a
+separate pending gate tracked in [docs/closeout-acceptance.md](docs/closeout-acceptance.md).
+Scripted evidence does not establish human balance, addictiveness,
+physical-controller behavior, Windows GUI behavior, notarization or universal
+frame-rate acceptance.

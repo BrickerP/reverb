@@ -107,7 +107,7 @@ static func pending_spawn_profile(spawn: PendingSpawn) -> Dictionary:
 	}
 
 
-# Wave-end beat: the just-recorded route collapses into the player.
+# A recording is filed as a paper copy. Cash settlement is a separate shop receipt.
 
 
 static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float,
@@ -115,20 +115,32 @@ static func record_beat(ci: CanvasItem, sim: Sim, take: EchoTake, t: float,
 	if take.samples.is_empty():
 		return
 	var p := clampf(t, 0.0, 1.0)
-	var collapse := p * p * (0.25 if reduced else 1.0)
 	var target := sim.player.pos
-	var stride := maxi(3, ceili(float(take.samples.size()) / 36.0))
-	for i in range(0, take.samples.size() - stride, stride * 2):
-		var a := take.samples[i].lerp(target, collapse)
-		var b := take.samples[i + stride].lerp(target, collapse)
-		ci.draw_line(a, b, Color(INK, 0.45 * (1.0 - p)), 2.0)
-	# The recording becomes a small tangible paper copy before it enters the shop.
-	var paper_pos := target + Vector2(0.0, -18.0 - 28.0 * p)
-	var rect := Rect2(paper_pos - Vector2(10.0, 13.0), Vector2(20.0, 26.0))
-	ci.draw_rect(rect, Color(PAPER, 1.0 - p))
-	ci.draw_rect(rect, Color(INK, 1.0 - p), false, 2.0)
-	ci.draw_line(rect.position + Vector2(4.0, 7.0), rect.position + Vector2(15.0, 7.0),
-			Color(INK, 1.0 - p), 2.0)
+	var paper_pos := target + Vector2(60.0 * p, -30.0 - (0.0 if reduced else sin(PI * p) * 32.0))
+	if not reduced:
+		var view := render_view(sim)
+		var gather := clampf(p / 0.65, 0.0, 1.0)
+		var stride := maxi(1, ceili(float(take.samples.size()) / 12.0))
+		for index in range(0, take.samples.size(), stride):
+			var origin := take.samples[index]
+			var bend := origin.lerp(paper_pos, 0.5) + Vector2(35.0 if index % 2 == 0 else -35.0, -45.0)
+			var point := origin.lerp(bend, gather).lerp(bend.lerp(paper_pos, gather), gather)
+			if view.has_point(point):
+				ci.draw_rect(Rect2(point - Vector2(3.0, 2.0), Vector2(6.0, 4.0)), Color(PAPER, (1.0 - gather) * 0.65))
+	var fold := 1.0 if reduced else 0.35 + 0.65 * absf(cos(p * PI))
+	var alpha := minf(1.0, p * 8.0) * (1.0 - maxf(0.0, p - 0.82) / 0.18)
+	ci.draw_set_transform(paper_pos, -0.12 + p * 0.2 if not reduced else 0.0, Vector2(fold, 1.0))
+	var outline := PackedVector2Array([Vector2(-17, -22), Vector2(9, -22), Vector2(18, -12), Vector2(16, 21), Vector2(-17, 22)])
+	ci.draw_colored_polygon(outline, Color(PAPER, alpha))
+	outline.append(outline[0])
+	ci.draw_polyline(outline, Color(INK, alpha), 2.0, true)
+	ci.draw_polyline(PackedVector2Array([Vector2(9, -22), Vector2(8, -11), Vector2(18, -12)]), Color(INK, alpha), 1.5, true)
+	ci.draw_line(Vector2(-9, -4), Vector2(-4, -1), Color(INK, alpha), 2.0)
+	ci.draw_line(Vector2(4, -1), Vector2(10, -4), Color(INK, alpha), 2.0)
+	ci.draw_rect(Rect2(-6, 8, 13, 6), Color(DANGER, alpha * 0.75))
+	ci.draw_set_transform(Vector2.ZERO)
+	if p > 0.35:
+		ci.draw_string(UiTheme.font(), paper_pos + Vector2(-45.0, 42.0), Loc.t("hud.record_filed"), HORIZONTAL_ALIGNMENT_CENTER, 100.0, 14, Color(PAPER, alpha))
 
 
 static func victory(ci: CanvasItem, origin: Vector2, _color: Color, t: float,
@@ -295,14 +307,14 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false, visual_time
 		var flip := facing.x > 0.0 and e.def.id != &"warden"
 		if e.def.is_boss:
 			var roaring := director != null and director.is_boss_roaring()
-			var boss_art := boss_art_profile(sim.boss_phase, sim.boss_shards.find(e), clock, reduced, roaring)
+			var boss_art := expedition_boss_art(e, sim.boss_phase, sim.boss_shards.find(e), clock, reduced, roaring, phase, moving)
 			frame = int(boss_art["frame"])
 			flip = bool(boss_art["flip"])
 		if e.def.id == &"warden":
 			_draw_art(ci, key, e.pos, art_size, rotation, art_tint, false, frame)
 		else:
 			_draw_art_foot(ci, key, foot, art_size, rotation, art_tint, flip, frame)
-		ThreatInk.draw_enemy_marks(ci, e, target, clock, reduced)
+		ThreatInk.draw_enemy_marks(ci, e, target, clock, reduced, not e.def.is_boss)
 		if e.radius >= 15.0 and e.hp < e.max_hp:
 			var fitted := _fitted_art_size(key, art_size)
 			var art_top := e.pos.y - fitted.y * 0.5 if e.def.id == &"warden" else foot.y - fitted.y
@@ -392,6 +404,24 @@ static func boss_art_profile(phase: int, shard_index: int, _visual_time: float,
 		frame = 1
 	# Each tear edge is already drawn on its correct side; mirroring swaps its identity.
 	return {"frame": mini(frame, count - 1), "flip": false}
+
+
+static func expedition_boss_art(enemy: EnemyState, phase: int, shard_index: int, clock: float,
+		reduced: bool = false, roaring: bool = false, gait_phase: float = 0.0, moving: bool = false) -> Dictionary:
+	if enemy.brain_state == &"defeated":
+		return {"frame": 6, "flip": false}
+	if enemy.def.id == &"paradox":
+		return boss_art_profile(phase, shard_index, clock, reduced, roaring or enemy.brain_state == &"warn")
+	var frame := 0
+	if enemy.flash > 0.0:
+		frame = 4
+	elif enemy.brain_state == &"warn":
+		frame = 1
+	elif enemy.brain_state in [&"slam", &"recover"]:
+		frame = 5
+	elif enemy.brain_state == &"dash" or moving:
+		frame = 2 + int(floor(gait_phase / PI)) % 2
+	return {"frame": frame, "flip": false}
 
 
 static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
@@ -736,7 +766,12 @@ static func _draw_art_foot(ci: CanvasItem, key: StringName, foot: Vector2, bound
 		return false
 	var pivot := PresentationAssets.frame_pivot(key, frame)
 	ci.draw_set_transform(foot, rotation, Vector2(-1.0 if flip_x else 1.0, 1.0))
-	ci.draw_texture_rect_region(tex, Rect2(-pivot * factor, source.size * factor), source, tint)
+	if (PresentationAssets.SOURCE_METADATA[key] as Dictionary).has("visible_rects"):
+		for visible: Rect2 in PresentationAssets.frame_visible_regions(key, frame):
+			var offset := (visible.position - source.position) * factor
+			ci.draw_texture_rect_region(tex, Rect2(-pivot * factor + offset, visible.size * factor), visible, tint)
+	else:
+		ci.draw_texture_rect_region(tex, Rect2(-pivot * factor, source.size * factor), source, tint)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	return true
 
@@ -788,6 +823,10 @@ static func _elite_color(kind: StringName) -> Color:
 
 
 static func _enemy_bounds(id: StringName) -> Vector2:
+	if id == &"foreman":
+		return Vector2(88.0, 78.0)
+	if id == &"collector":
+		return Vector2(78.0, 86.0)
 	return ThreatInk.art_bounds(id)
 
 

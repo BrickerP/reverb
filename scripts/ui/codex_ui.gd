@@ -99,7 +99,7 @@ func _chapter(family: StringName, weapons: Array[WeaponDef], total_weight: float
 	var drop := Loc.t("codex.evolve_only") if not weapons[0].drops else Loc.t("codex.drop", [
 			int(round(weapons[0].drop_weight / maxf(0.01, total_weight) * 100.0))])
 	feature_column.add_child(UiTheme.label(drop, 14, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER))
-	if weapons[0].evolves_to != &"":
+	if not weapons[0].evolution_options.is_empty():
 		var evolve := _evolution(weapons[0], 320.0)
 		evolve.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		feature_column.add_child(evolve)
@@ -166,7 +166,7 @@ func _card(weapon: WeaponDef, total_weight: float, featured: bool = false) -> Pa
 	stats.custom_minimum_size = Vector2(350.0, 0.0)
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	details.add_child(stats)
-	if weapon.evolves_to != &"":
+	if not weapon.evolution_options.is_empty():
 		details.add_child(_evolution(weapon, 350.0))
 	return card
 
@@ -181,7 +181,10 @@ func _stats_line(weapon: WeaponDef) -> String:
 
 
 func _evolution(weapon: WeaponDef, width: float) -> Label:
-	var label := UiTheme.label(Loc.t("codex.evolves", [Loc.weapon_name(weapon.evolves_to),
+	var names := PackedStringArray()
+	for target: StringName in weapon.evolution_options:
+		names.append(Loc.weapon_name(target))
+	var label := UiTheme.label(Loc.t("codex.evolves", [" / ".join(names),
 			Shop.EVOLVE_FAMILY_COUNT]), 14, UiTheme.ACCENT)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size = Vector2(width, 0.0)

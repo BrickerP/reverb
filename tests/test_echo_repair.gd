@@ -92,8 +92,9 @@ func test_full_weapon_slots_keep_replacement_offers(c: Check) -> void:
 	while sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
 		sim.player.add_weapon(Content.weapon(&"pistol"))
 	var weapon_offers := 0
-	for i in 50:
-		var offer := sim.shop._random_offer(sim)
-		if offer != null and offer.is_weapon():
+	sim.shop.roll(sim)
+	for offer: Offer in sim.shop.offers:
+		if offer.is_weapon():
 			weapon_offers += 1
-	c.ok(weapon_offers > 0, "full builds still roll real weapon offers for the replacement UI")
+			c.eq(sim.shop.block_reason(sim, offer), &"full", "full slot offer is retained for replacement")
+	c.ok(weapon_offers >= 2, "full builds still guarantee real replacement weapon offers")

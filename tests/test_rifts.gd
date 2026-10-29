@@ -24,15 +24,15 @@ func _clear_spawns(s: Sim) -> void:
 	s.enemies.clear()
 
 
-func test_rifts_start_at_wave_twelve(c: Check) -> void:
+func test_rifts_start_at_wave_six(c: Check) -> void:
 	var before := _sim()
-	before.start_wave(11)
+	before.start_wave(5)
 	_clear_spawns(before)
 	_run(before, 14.0)
 	c.eq(before.rifts.size(), 0, "no rifts before wave 12")
 
 	var s := _sim()
-	s.start_wave(12)
+	s.start_wave(6)
 	_clear_spawns(s)
 	_run(s, 7.8)
 	c.eq(s.rifts.size(), 0, "first rift waits for its delay")
@@ -58,7 +58,7 @@ func test_rifts_start_at_wave_twelve(c: Check) -> void:
 
 func test_rift_warns_then_damages_only_inside(c: Check) -> void:
 	var s := _sim()
-	s.start_wave(12)
+	s.start_wave(6)
 	_clear_spawns(s)
 	var spawned := [0]
 	var activated := [0]
@@ -101,8 +101,8 @@ func test_rift_warns_then_damages_only_inside(c: Check) -> void:
 func test_rift_spawn_is_seeded(c: Check) -> void:
 	var a := _sim(41)
 	var b := _sim(41)
-	a.start_wave(12)
-	b.start_wave(12)
+	a.start_wave(6)
+	b.start_wave(6)
 	_clear_spawns(a)
 	_clear_spawns(b)
 	_run(a, 8.1)

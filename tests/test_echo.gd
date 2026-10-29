@@ -167,12 +167,84 @@ func test_merge_two_takes(c: Check) -> void:
 	var m := bank.merge(a, b)
 	c.ok(m != null and m.merged, "merged take")
 	c.eq(bank.takes.size(), 1, "two takes became one")
-	c.eq(m.wave, 3, "newest wave label")
+	c.eq(m.wave, 1, "host wave label is preserved")
 	c.eq(m.condition, 63.0, "merge keeps the lower condition")
 	c.ok(m.uid > a.uid and m.uid > b.uid, "merge receives a new stable UID")
-	c.eq(m.weapons.size(), 3, "both loadouts are kept")
-	c.eq(m.samples.size(), a.samples.size() + EchoBank.BRIDGE_SAMPLES + b.samples.size(), "routes are joined")
+	c.eq(m.weapons.size(), 2, "host loadout is kept")
+	c.eq(m.samples, a.samples, "host route is preserved without a bridge")
+	c.eq(m.inherited_skill, b.retirement_kind(), "donor retirement skill transfers")
 	c.ok(not bank.takes.has(a) and not bank.takes.has(b), "sources are consumed")
+
+
+func test_merge_traits_preview_full_outcome_without_identity_mutation(c: Check) -> void:
+	var bank := EchoBank.new()
+	var host := _take([Vector2(200, 200), Vector2(220, 200)])
+	host.weapons.append(Content.weapon(&"pistol"))
+	host.levels.append(1)
+	host.condition = 55.0
+	var donor := _take([Vector2(600, 400), Vector2(620, 400)])
+	donor.weapons.append(Content.weapon(&"stamp"))
+	donor.levels.append(0)
+	donor.condition = 80.0
+	bank.add(host)
+	bank.add(donor)
+	var next_uid := bank.next_uid()
+	var tint_counter := bank.tint_counter()
+	var skill := bank.preview_merge(host, donor, &"skill")
+	var repair := bank.preview_merge(host, donor, &"repair")
+	var power := bank.preview_merge(host, donor, &"power")
+	c.eq(skill.uid, 0, "preview never allocates actor identity")
+	c.eq(skill.samples, host.samples, "preview shows exact host route")
+	c.eq(skill.inherited_skill, &"stamp", "skill preview uses donor shape")
+	c.eq(repair.condition, 95.0, "repair converts half donor condition")
+	c.eq(repair.weapons, host.weapons, "repair cannot clone donor weapons")
+	c.eq(power.level_at(0), 2, "power raises one eligible host weapon")
+	c.eq(power.condition, 40.0, "power shows explicit condition cost")
+	c.near(power.power(), host.weapons[0].level_dps(2), 0.001, "preview shows resulting DPS")
+	c.eq(host.condition, 55.0, "preview leaves host condition alone")
+	c.eq(host.level_at(0), 1, "preview leaves host level alone")
+	c.eq(bank.next_uid(), next_uid, "previews do not advance UID counter")
+	c.eq(bank.tint_counter(), tint_counter, "previews do not advance tint counter")
+	c.eq(bank.takes.size(), 2, "previews never consume bodies")
+	var merged := bank.merge(host, donor, &"power")
+	c.eq(merged.samples, power.samples, "commit agrees with preview route")
+	c.eq(merged.condition, power.condition, "commit agrees with preview condition")
+	c.eq(merged.levels, power.levels, "commit agrees with preview gear")
+	c.eq(bank.takes.size(), 1, "one donor buys one host result")
+
+
+func test_merge_rejects_unavailable_traits_without_consuming_takes(c: Check) -> void:
+	var bank := EchoBank.new()
+	var host := _weapon_take([&"pistol"])
+	var donor := _weapon_take([&"stamp"])
+	host.levels.append(WeaponDef.MAX_LEVEL)
+	bank.add(host)
+	bank.add(donor)
+	c.ok(bank.preview_merge(host, donor, &"power") == null, "maxed host cannot gain speculative power")
+	c.ok(bank.preview_merge(host, donor, &"repair") == null, "intact host cannot waste donor maintenance")
+	c.ok(bank.merge(host, donor, &"unknown") == null, "unknown trait rejected")
+	host.condition = 10.0
+	host.levels[0] = 0
+	c.ok(bank.preview_merge(host, donor, &"power") == null, "power cannot spend nonexistent condition")
+	c.eq(bank.takes.size(), 2, "all failures preserve both takes")
+
+
+func test_inherited_retirement_shape_uses_host_build_damage(c: Check) -> void:
+	var sim := Sim.new(65)
+	var host := _weapon_take([&"pistol"])
+	host.stats.add(Stats.DAMAGE_PCT, 0.5)
+	var donor := _weapon_take([&"stamp"])
+	donor.stats.add(Stats.DAMAGE_PCT, 20.0)
+	sim.bank.add(host)
+	sim.bank.add(donor)
+	var before := EchoSystem.skill_profile(host, sim)
+	var preview := sim.bank.preview_merge(host, donor, &"skill")
+	var profile := EchoSystem.skill_profile(preview, sim)
+	c.eq(profile.kind, &"stamp", "donor contributes actual retirement shape")
+	c.near(profile.damage, before.damage, 0.001, "donor cannot smuggle its damage multiplier into inherited skill")
+	c.eq(profile.weapon_id, &"pistol", "actual host weapon remains damage source identity")
+	c.eq(EchoSystem.kind_for_style(&"pet"), &"stamp", "pet retirement has an implemented local pressure skill")
+	c.eq(EchoSystem.kind_for_style(&"fabricate"), &"arc", "fabrication retirement has an implemented relay skill")
 
 
 func test_take_power_uses_stats(c: Check) -> void:

@@ -1,65 +1,75 @@
 class_name AnomalyContract
 extends RefCounted
 
-const CLEAN := &"clean"
-const CLEAR := &"clear"
-const HUNT := &"hunt"
-const RETIRE := &"retire"
+const SALVAGE := &"salvage"
+const AUDIT := &"audit"
+const REPAIR := &"repair"
+const RESCUE := &"rescue"
+const RECRUIT := &"recruit"
+const CREDIT := &"credit"
+const KINDS: Array[StringName] = [SALVAGE, AUDIT, REPAIR, RESCUE, RECRUIT, CREDIT]
 
-const START_WAVE := 3
-const CLEAN_DEPOSIT := 6
-const CLEAN_REWARD := 18
-const CLEAR_DEPOSIT := 6
-const CLEAR_REWARD := 18
-const HUNT_DEPOSIT := 8
-const HUNT_REWARD := 24
-const RETIRE_DEPOSIT := 8
-const RETIRE_REWARD := 24
-
-var kind: StringName = CLEAN
+var kind: StringName = SALVAGE
+# The purchase price of a one-encounter work order, refunded if exchanged before departure.
 var deposit: int = 0
 var reward: int = 0
 var target: int = 0
 var accepted: bool = false
 
 
-static func make(wave: int, rng: RandomNumberGenerator,
-		endless: bool = false, allow_retire: bool = true) -> AnomalyContract:
-	if wave < START_WAVE or (wave >= WaveDirector.FINAL_WAVE and not endless):
+static func create(kind_id: StringName, next_wave: int) -> AnomalyContract:
+	if not KINDS.has(kind_id):
 		return null
-	var pool: Array[StringName] = [CLEAN, CLEAR]
-	if wave >= WaveDirector.ELITE_START_WAVE:
-		pool.append(HUNT)
-	if allow_retire:
-		pool.append(RETIRE)
-	var contract := AnomalyContract.new()
-	contract.kind = pool[rng.randi_range(0, pool.size() - 1)]
-	match contract.kind:
-		CLEAN:
-			contract.deposit = CLEAN_DEPOSIT
-			contract.reward = CLEAN_REWARD
-		CLEAR:
-			contract.deposit = CLEAR_DEPOSIT
-			contract.reward = CLEAR_REWARD
-			contract.target = mini(40, 10 + wave)
-		HUNT:
-			contract.deposit = HUNT_DEPOSIT
-			contract.reward = HUNT_REWARD
-		RETIRE:
-			contract.deposit = RETIRE_DEPOSIT
-			contract.reward = RETIRE_REWARD
-	return contract
+	var order := AnomalyContract.new()
+	order.kind = kind_id
+	var act := maxi(0, int(float(maxi(1, next_wave) - 1) / 4.0))
+	match kind_id:
+		SALVAGE:
+			order.deposit = 8 + 2 * act
+			order.reward = 10 + 2 * act
+			order.target = 3
+		AUDIT:
+			order.deposit = 10 + 2 * act
+			order.reward = 12 + 2 * act
+			order.target = 2
+		REPAIR:
+			order.deposit = 12 + 2 * act
+			order.reward = 8 + 2 * act
+			order.target = 1
+		RESCUE:
+			order.deposit = 14 + 2 * act
+			order.reward = 10 + 2 * act
+			order.target = 1
+		RECRUIT:
+			order.deposit = 18 + 3 * act
+			order.reward = 0
+			order.target = 1
+		CREDIT:
+			order.deposit = 0
+			order.reward = 0
+			order.target = 8
+	return order
+
+
+func id() -> StringName:
+	return StringName("order_" + String(kind))
 
 
 func is_complete(sim: Sim) -> bool:
-	match kind:
-		CLEAN:
-			return not sim.wave_damage_taken
-		CLEAR:
-			return sim.wave_kills >= target
-		HUNT:
-			return sim.wave_elite_kills >= 1
-		RETIRE:
-			return sim.wave_retirements > 0
-		_:
-			return false
+	return Expedition.order_complete(sim, self)
+
+
+func to_dict() -> Dictionary:
+	return {"kind": String(kind), "deposit": deposit, "reward": reward,
+		"target": target, "accepted": accepted}
+
+
+static func from_dict(data: Dictionary) -> AnomalyContract:
+	var order := create(StringName(str(data.get("kind", ""))), 1)
+	if order == null:
+		return null
+	order.deposit = maxi(0, int(data.get("deposit", 0)))
+	order.reward = maxi(0, int(data.get("reward", 0)))
+	order.target = maxi(0, int(data.get("target", 0)))
+	order.accepted = bool(data.get("accepted", false))
+	return order

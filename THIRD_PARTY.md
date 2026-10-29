@@ -58,4 +58,6 @@ recording and original synthesis provenance remains in
 `audio/presentation/SOURCES.md`. The complete score recipe, source hash and
 finished-track hashes are in `audio/music/SOURCES.md` and `audio/music/score.json`.
 NumPy 2.0.2 is a development-only generation/test dependency in
-`tools/requirements-audio.txt`; Python and NumPy are not required by the game.
+`tools/requirements-dev.txt`; Python and NumPy are not required by the game.
+
+Pillow11.3.0 is used only by the existing atlas-measurement tool and read-only PNG provenance tests. It is not included in the game runtime.

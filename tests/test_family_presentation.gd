@@ -38,8 +38,16 @@ func _has_label(node: Node, text: String, exact: bool = false) -> bool:
 	return false
 
 
-func _refresh(panel: BuildPanel, sim: Sim) -> void:
-	panel.refresh(sim)
+func _open_core(ui: ShopUi) -> void:
+	if ui.workshop.visible:
+		ui.workshop.cancel_button.pressed.emit()
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui.workshop.choice_buttons[4].pressed.emit()
+
+
+func _open_families(ui: ShopUi) -> void:
+	_open_core(ui)
+	ui.workshop.choice_buttons[0].pressed.emit()
 
 
 func test_hud_readiness_uses_the_cooldown_combat_actually_schedules(c: Check) -> void:
@@ -96,22 +104,27 @@ func test_shop_transactions_toggle_every_mastery_summary_and_arcane_core(c: Chec
 		var mastery_text := Loc.t(str(data["key"]))
 		var sim := _family_sim(weapon_id)
 		var echo_power := sim.echo_power()
-		var panel := BuildPanel.new()
-		_root().add_child(panel)
-		_refresh(panel, sim)
-		c.ok(not _has_label(panel, mastery_text),
+		var offer := _weapon_offer(sim, weapon_id)
+		var ui := ShopUi.new()
+		ui.theme = UiTheme.build()
+		_root().add_child(ui)
+		ui.open(sim)
+		_open_families(ui)
+		c.ok(not _has_label(ui.workshop, mastery_text),
 				"three %s weapons do not show mastery" % String(weapon_id))
 		if weapon_id == &"orb":
-			c.ok(_has_label(panel, Loc.t("shop.echo_value", [2, 50]), true),
+			_open_core(ui)
+			c.ok(_has_label(ui.workshop, Loc.t("shop.echo_value", [2, 50])),
 					"three arcane weapons keep base core echo power")
-		var offer := _weapon_offer(sim, weapon_id)
-		c.ok(sim.shop.apply(ShopResult.BUY, sim, offer).ok,
-				"fourth %s applies through Shop transaction" % String(weapon_id))
-		_refresh(panel, sim)
-		c.ok(_has_label(panel, mastery_text),
+		ui.workshop.cancel_button.pressed.emit()
+		(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+		c.ok(offer.sold, "fourth %s buys through the actual goods card" % String(weapon_id))
+		_open_families(ui)
+		c.ok(_has_label(ui.workshop, mastery_text),
 				"four %s weapons show their mastery" % String(weapon_id))
 		if weapon_id == &"orb":
-			c.ok(_has_label(panel, Loc.t("shop.echo_value", [2, 50]), true),
+			_open_core(ui)
+			c.ok(_has_label(ui.workshop, Loc.t("shop.echo_value", [2, 50])),
 					"conduction mastery keeps the actual core echo power unchanged")
 			c.near(sim.echo_power(), echo_power, 0.0001,
 					"arcane mastery improves wet-target conduction instead of echo damage")
@@ -123,13 +136,16 @@ func test_shop_transactions_toggle_every_mastery_summary_and_arcane_core(c: Chec
 					sim.player.weapons, &"scatter", 161.0)
 			c.ok(near_dps > far_dps and is_equal_approx(far_dps, flat_dps),
 					"scatter mastery remains situational instead of a flat DPS bonus")
-			c.ok(_has_label(panel, "%d" % int(round(flat_dps)), true),
+			_open_core(ui)
+			c.ok(_has_label(ui.workshop, Loc.t("shop.take_dps", [int(round(flat_dps))])),
 					"core DPS stays at the unconditional value while summary states the range")
-		c.ok(sim.shop.undo(sim).ok, "mastery purchase undo succeeds")
-		_refresh(panel, sim)
-		c.ok(not _has_label(panel, mastery_text),
+		ui.workshop.cancel_button.pressed.emit()
+		ui.undo_button.pressed.emit()
+		_open_families(ui)
+		c.ok(not _has_label(ui.workshop, mastery_text),
 				"undo returns %s mastery presentation to three pieces" % String(weapon_id))
 		if weapon_id == &"orb":
-			c.ok(_has_label(panel, Loc.t("shop.echo_value", [2, 50]), true),
+			_open_core(ui)
+			c.ok(_has_label(ui.workshop, Loc.t("shop.echo_value", [2, 50])),
 					"arcane undo restores base core echo power")
-		panel.free()
+		ui.free()

@@ -159,10 +159,10 @@ func test_retirement_selection_has_opaque_contrast_in_both_languages(c: Check) -
 				"%s selected copy label exceeds readable contrast on its actual drawing stock" % lang)
 		c.eq(background.a, 1.0, "%s hint does not inherit the dark floor through transparency" % lang)
 		var rect: Rect2 = profile["rect"]
-		c.ok(rect.end.x < WorldArena.VIEWPORT.end.x and rect.end.y <= WorldArena.VIEWPORT.end.y,
-				"%s full key and translated caption remain in the existing bottom hint band" % lang)
-		c.ok(rect.position.y >= 590.0 and rect.size.y <= 88.0,
-				"%s selection and predicted skill stay inside the lower fighting-safe band" % lang)
+		c.ok(rect.end.x < Hud.WIDTH and rect.position.y >= WorldArena.VIEWPORT.end.y and rect.end.y <= 720.0,
+				"%s full key and translated caption stay in the fixed bottom HUD band" % lang)
+		c.ok(not rect.intersects(WorldArena.VIEWPORT) and rect.size.y <= 40.0,
+				"%s selection and predicted skill never obscure the fighting area" % lang)
 	Loc.lang = old_lang
 	hud.free()
 

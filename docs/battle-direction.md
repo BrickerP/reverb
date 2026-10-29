@@ -1,86 +1,156 @@
 # Battle direction
 
-The 0.14 battlefield connects paper-puppet action to actual weapon behaviors,
-enemy attacks and copy condition. Threats must explain where and when a hit can
-occur; decorative acting must preserve locomotion and ownership.
+The 0.15 battlefield connects paper-puppet acting to real expedition rules.
+Warnings explain where damage will occur, support bodies communicate ownership
+and mortality, and role/Echo effects preserve their causal source. Decoration
+must never move a hit, hide a mission, or imply a reward the model did not grant.
 
-## Acting and spatial hierarchy
+## Spatial hierarchy
 
-Nineteen eight-pose actor atlases cover six characters in front/back views and
-seven enemy identities. Common actors have idle, left/right step, hurt,
-preparation/follow-through and terminal poses. The Original has separate roar,
-tear and shard drawings. The merchant's four expressions form a separate atlas.
-Manifests declare layouts; runtime never guesses frame count from proportions.
-Shared crops, idle calibration and per-pose foot pivots keep scale and placement
-stable through wide action/death poses.
+The standard 1280×720 canvas shows a 1200×600 follow-camera window inside the
+2400×1200 world; smaller native canvases derive their own battle rectangle. Five
+cover machines and the expedition press, conveyor, recycler and mission targets
+use model geometry. Camera movement, shake, corpses, projectile marks and
+particles stay clipped to the battle window.
 
-The follow camera shows a 1200×600 portion of the 2400×1200 world below the fixed
-HUD. Five machine obstacles provide real cover. The clip contains camera motion,
-shake, corpses, projectile heads and particles. Offscreen culling cannot change
-actor stepping, weapon cadence, copy wear or attacks. HUD direction markers
-keep offscreen copies actionable.
+The HUD uses separate paper islands:
 
-Stable movement phases drive player, enemy and copy steps together with mounted
-weapons. Recoil is local to the fired weapon; rapid fire cannot consume every
-walking pose. Idle breath does not rotate or displace a still puppet. Event
-poses and optional motion freeze on pause; Reduced Effects retains actual
-warnings, active weapon fields, selected-copy identity and functional feedback.
+- top-left health and Echo condition;
+- top-center act/stage, boss health or Endless stage;
+- top-right mission phase and cash/debt context;
+- bottom weapon slots, role energy/readiness and contextual controls.
 
-## Causal enemy and weapon geometry
+The lower row clears the battle world instead of covering actors. Native resize
+derives a real camera rectangle from the canvas: 960×540 adapts FOV while keeping
+actor pixels at their authored size, with no global scale-down. Workshop copies
+and Character Select page explicitly; End, Archive and HUD keep controls inside
+the native canvas. Physics spawns still use the constant 1200×600 field so the
+responsive presentation cannot change gameplay RNG.
 
-`EnemyBrain` owns warned target/direction, attack and recovery. Runner commits
-to its warned dash, Brute to a directional slam, Silencer to a fixed seal area,
-and Warden turns with inertia. The same authoritative model geometry supplies
-rendered attack shapes and real collision. Warning, impact and recovery are distinct readable
-states; animation does not invent a harmless delay around contact damage.
+Stable movement phases drive player, enemies and Echoes. Mounted-weapon recoil
+does not replace locomotion. Optional motion freezes on pause. Reduced Effects
+keeps all warnings, hazards, support health, selected-Echo state, mission
+progress, interaction availability and input labels.
 
-`ThreatInk` also reads shield arcs, death-explosion radii and rift timers.
-`AttackField` geometry explains delayed slams, continuous cuts, ink/tape fields,
-chain links and orbit attacks. `WeaponInk` keeps all 24 weapon identities in
-muzzle, head and impact profiles, with plain fallback only for unknown developer
-projectiles. Optional trails can reduce under load without hiding required
-warnings or persistent damaging fields.
+## Boss language
 
-Boss tear acting follows the real phase event. Actual phase-two shard bodies
-remain at their model positions; persistent shard index selects the appropriate
-half, and a decorative stitch line never becomes a damage beam.
+Each act boss has an authored silhouette and a different locked primitive:
 
-## Copy identity and retirement
+| Boss | Warning | Active hit | Acting cue |
+|---|---|---|---|
+| Foreman | Point lock, 1.1 seconds | Circular press at the locked target | Raises and commits the heavy press body |
+| Collector | Direction lock, 0.95 seconds | Swept segment during a 0.65-second charge | Compresses, then drives forward along the warning |
+| Paradox | Point lock, 1.1 seconds | Perpendicular cross centered on the target | Folds into opposing cut axes before impact |
 
-Copy bodies show condition, merged status, silence and rewind. HUD and wheel
-identify the selected copy. Their prediction comes from `EchoSystem.skill_profile`, the same
-profile used by the actual skill. Mirror uses its current firing loadout for both.
-Low condition changes wear marks, never shot damage. Natural exhaustion removes
-the copy and has its own restrained terminal beat; active retirement uses the
-specific pin, stamp, cut, ink, return or arc effect.
+`EnemyBrain.attack_profile()` supplies warning and active geometry to
+presentation. The same locked target/direction supplies damage. Supports use
+their real body radius in these tests. Warning, impact and recovery remain
+separate states.
 
-All shot and hit paths carry stable identity: player -1, unknown 0, copy positive
-`EchoTake.uid`. Source tint and weapon travel with delayed fields/projectiles,
-including after retirement, undo or suspend/resume. Presentation must not look
-up a new actor by an old statistical slot. Typed `ShotInfo`, `DamageInfo`,
-`ExplosionInfo`, `EnemyDeathInfo`, `PlayerHurtInfo`, `EchoSilenceInfo`,
-`EchoRetirementInfo` and `ComboInfo` describe real events at their causal point.
+Paradox's phase-two split remains physical. Capacity reserves two boss slots;
+presentation may stitch the halves visually but cannot invent a beam, move a
+shard, or mark the encounter complete while one body lives.
 
-`BattleDirector` stores bounded value snapshots rather than mutable enemy
-references. Normal corpses cap at 24, Reduced Effects at eight. Session detach,
-new wave and pause clear or freeze the appropriate presentation state. Common
-and protected sound voices remain bounded; skill and combo cues must retain the
-same source attribution as their visual effect.
+## Machines and work-order targets
+
+Interactive machines use a shared availability profile. The prompt shows the
+current `E / X` label from InputMap and appears only when the player is in range.
+
+- The press displays its 1.1-second warning, then the same radius used against
+  player, enemies and supports.
+- The conveyor shows direction and active time; its ink motion follows actual
+  push state.
+- The recycler shows the real 8-material cost and cannot animate success when
+  unaffordable or cooling down.
+- Salvage parts, audit terminals, the repair target, rescue target and Boss
+  negotiation use distinct mission-letter/office-machine marks.
+
+Audit interaction exposes the danger zone it creates. Repair visibly disables
+the faulty press. Rescue health loss comes from actual enemy contact. Recruit
+keeps the defeated Boss present during the eight-second negotiation window;
+autofire does not play an ordinary loot/death beat first.
+
+## Support ownership and failure
+
+Support art covers hound idle/attack, turret idle/fire, repair station, paper
+tree early/grown and decoy. Recruited bosses reuse their identity with a friendly
+outline. Every body exposes HP and remaining-life state without looking like a
+cash pickup.
+
+Spawn, attack, repair, production, damage, destroy, retrieve and expire visuals
+come from `support_event` snapshots. Source slot, stable Echo token, tint and
+weapon ID survive delayed attacks and save/restore. Presentation never resolves
+an old slot to a different Echo.
+
+Natural expiry folds or powers down. Destruction uses a distinct hurt/failure
+beat. A paper tree shows limited deliveries of shield/energy; it never emits a
+cash shower. The single-companion and 12-unit caps are rules, not visual-only
+crowd reduction.
+
+## Role abilities and Echo actions
+
+Role readiness is driven by the authoritative 0–100 energy meter and six-second
+cooldown. Each successful ability has a bounded, recognizable emblem:
+
+- Looper: backward route ticks and a brief clock-fold;
+- Solo: one paper dash strip and parry crease;
+- Mirror: a two-point swap stitch;
+- Conductor: one selected-Echo anchor and three relay pulses;
+- Mender: a real repair-station placement;
+- Overloader: a stamp burst scaled by the retiring Echo's condition.
+
+Failed activation shows no spent-energy flourish. `Shift / LB` remains visually
+separate from `Space / RB` Echo retirement.
+
+Echo bodies show condition, merge trait, archive origin, silence and rewind.
+Merge preview keeps the host path and renders only the chosen donor trait. The
+preview is not a temporary live body. Active retirement uses the actual skill
+profile; natural exhaustion uses a smaller terminal beat and grants no full
+skill.
+
+## End and archive beats
+
+Boss defeat and final outcome are separate beats. Released, collective and
+indebted receipts use the applied model outcome, not inferred route flavor:
+
+- released repairs current Echoes and clears credit debt;
+- collective heals and restores or schedules one companion;
+- indebted adds 24 cash while leaving debt visible.
+
+The end screen has an explicit archive button and a live best-Echo path preview.
+Daily, Solo and unpaid-debt states visibly disable it. A protected stronger
+record returns distinct feedback from a storage failure. The title archive view
+previews one record per eligible character and exposes the inheritance toggle.
+
+## Bounded presentation
+
+`BattleDirector` caps normal corpse snapshots at 24. `ArenaView`, `WeaponInk`,
+skill emblems, support reactions and expedition marks each keep explicit bounded
+arrays. Reduced Effects lowers optional counts without removing required
+geometry. Session detach, new wave, pause and terminal states clear or freeze the
+appropriate caches.
+
+Sound maps all 35 weapon profiles onto the existing 35 dry SFX files. Support,
+boss and ability mappings may reuse cues with controlled pitch/volume; they do
+not create unlimited voices or change combat timing. Five synchronized
+96-second music arrangements continue to follow actual phase and threat state.
 
 ## Verification
 
-- `tools/core_gameplay_probe.gd` runs real Main/Sim scenarios for six roles,
-  attack styles, combinations, enemy warning/attack/recovery, scrolling/cover,
-  copy wear/repair/exhaustion, held selection, stable gait, story and music.
-  `REVERB_LANG`, `REVERB_PROBE_REDUCED` and `REVERB_PROBE_SIZE` select profiles.
-- `tools/main_language_probe.gd` checks real scene reload with an exact run;
-  `tools/music_lifecycle_probe.gd` exercises actual playback objects.
-- `tools/presentation_stress_probe.gd` and `tools/frame_probe.gd` measure the
-  declared rendered fixture and its budgets. Full tests and smoke protect
-  current gameplay, source identity and lifecycle.
+- `tests/test_expedition_presentation.gd` checks support art, boss warning/hit
+  primitives, shared interaction availability, bounded rendering and distinct
+  role emblems.
+- `tests/test_closeout_main.gd` drives real Main inputs, modal blocking, archive
+  actions and save/continue.
+- `tools/expedition_art_probe.gd` captures EN/ZH and 1280×720/960×540 fixtures.
+- `tools/expedition_gameplay_probe.gd` is the integrated native gameplay probe
+  replacing the obsolete 0.14 core probe.
 
-Fixtures declare staged durability, positions and offers. They are neither
-human playtests nor balance measurements. Exact future progression after a
-snapshot is required; byte identity with an older gameplay version is not.
-Physical controllers, Steam Deck, Windows/Linux GUI, subjective listening and
-lower-end hardware still require their own acceptance evidence.
+The gameplay probe completed EN 1280×720 (46 PNGs, 440 checks) and ZH Reduced
+960×540 (47 PNGs, 449 checks), both with empty failure lists. Each profile
+strictly restores the authoritative Snapshot around 43 Sim screenshots. These
+scripted fixtures are evidence of the production input/UI/model path, not a
+human playthrough. Export status is recorded separately in
+[closeout-acceptance.md](closeout-acceptance.md). Automated fixtures do not prove
+human readability speed, balance, addictiveness, physical-controller behavior,
+Windows GUI behavior or target-hardware frame rate.

@@ -120,3 +120,17 @@ func _grunt(s: Sim) -> EnemyState:
 
 func _root() -> Window:
 	return (Engine.get_main_loop() as SceneTree).root
+
+
+func test_daily_rifts_actually_arrive_before_normal_campaign_hazards(c: Check) -> void:
+	var daily := Sim.new(77)
+	daily.daily_modifier = DailyAnomaly.RIFTFALL
+	daily.start_run()
+	daily.start_wave(DailyAnomaly.RIFT_WAVE)
+	daily._step_rifts(Sim.RIFT_FIRST_DELAY + 0.1)
+	c.eq(daily.rifts.size(), 1, "daily early-rift rule changes the actual battle")
+	var ordinary := Sim.new(77)
+	ordinary.start_run()
+	ordinary.start_wave(DailyAnomaly.RIFT_WAVE)
+	ordinary._step_rifts(Sim.RIFT_FIRST_DELAY + 0.1)
+	c.eq(ordinary.rifts.size(), 0, "ordinary encounter remains free of early daily hazards")

@@ -374,3 +374,21 @@ func test_return_retirement_damage_equals_the_displayed_total(c: Check) -> void:
 	Combat.step_projectiles(sim,1.3)
 	c.near(target.max_hp-target.hp,float(profile["damage"]),0.001,"two real passes exactly match the displayed total")
 	c.ok(sim.projectiles[0].dead,"return finishes after both passes")
+
+
+func test_every_final_form_executes_real_damage_with_finite_state(c: Check) -> void:
+	for weapon: WeaponDef in Content.weapons().values():
+		if weapon.drops:
+			continue
+		var sim := _sim()
+		var enemy := _enemy(sim, 1, Vector2(400, 200))
+		c.ok(Combat.fire(sim, Vector2(300, 200), enemy.pos, weapon, 0, 1.0,
+			sim.player.stats, 1.0, -1, Color.WHITE), "%s has an executable final form" % weapon.id)
+		for index in 24:
+			Combat.tick_fields(sim, 0.05)
+			Combat.step_projectiles(sim, 0.05)
+		c.ok(enemy.hp < enemy.max_hp, "%s deals actual enemy damage" % weapon.id)
+		for projectile: Projectile in sim.projectiles:
+			c.ok(projectile.pos.is_finite() and is_finite(projectile.damage), "%s projectile state stays finite" % weapon.id)
+		c.ok(sim.attack_fields.size() <= Combat.MAX_ACTIVE_FIELDS and sim.projectiles.size() <= Combat.MAX_PROJECTILES,
+			"%s respects shared combat budgets" % weapon.id)

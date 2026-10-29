@@ -16,7 +16,7 @@ const MAX_ZONES := 12
 
 
 static func step(sim: Sim, enemy: EnemyState, delta: float) -> void:
-	if enemy == null or enemy.dead or enemy.def == null or delta <= 0.0 or not is_finite(delta):
+	if enemy == null or enemy.dead or enemy.def == null or delta <= 0.0 or not is_finite(delta) or Expedition.is_negotiating(sim):
 		return
 	enemy.flash = maxf(0.0, enemy.flash - delta)
 	enemy.attack_tick = maxf(0.0, enemy.attack_tick - delta)
@@ -39,11 +39,77 @@ static func step(sim: Sim, enemy: EnemyState, delta: float) -> void:
 		&"brute": _brute(sim, enemy, delta)
 		&"silencer": _silencer(sim, enemy, delta)
 		&"warden": _warden(sim, enemy, delta)
+		&"foreman", &"collector", &"paradox": _boss(sim, enemy, delta)
 		_:
-			var direction := (sim.player.pos - enemy.pos).normalized()
+			var target := SupportSystem.target_position(sim, enemy.pos, sim.player.pos)
+			var direction := (target - enemy.pos).normalized()
 			enemy.attack_direction = direction if direction != Vector2.ZERO else enemy.attack_direction
 			_walk(enemy, direction, enemy.speed, delta)
 			_contact(sim, enemy)
+
+
+static func _boss(sim: Sim, enemy: EnemyState, delta: float) -> void:
+	if enemy.brain_state == &"defeated":
+		return
+	if enemy.brain_state == &"warn":
+		enemy.brain_time = maxf(0.0, enemy.brain_time - delta)
+		if enemy.brain_time <= 0.0:
+			if enemy.def.id == &"collector":
+				_enter(enemy, &"dash", 0.65)
+			else:
+				_enter(enemy, &"slam", 0.22)
+				_boss_impact(sim, enemy)
+		return
+	if enemy.brain_state == &"dash":
+		var before := enemy.pos
+		var travel := minf(delta, enemy.brain_time)
+		enemy.pos = WorldArena.move_straight(enemy.pos, enemy.attack_direction * 580.0 * travel, enemy.radius)
+		var radius := 34.0 + PlayerState.RADIUS
+		if _segment_distance_squared(sim.player.pos, before, enemy.pos) <= radius * radius:
+			_hurt(sim, enemy, enemy.damage * 1.4, &"collector_charge", enemy.attack_direction)
+		for unit in sim.support_units.duplicate():
+			if _segment_distance_squared(unit["pos"], before, enemy.pos) <= pow(34.0 + SupportSystem.UNIT_RADIUS, 2.0):
+				SupportSystem.damage(sim, int(unit["uid"]), enemy.damage * travel)
+		enemy.brain_time = maxf(0.0, enemy.brain_time - delta)
+		if enemy.brain_time <= 0.0:
+			_enter(enemy, &"recover", 1.3)
+		return
+	if enemy.brain_state in [&"slam", &"recover"]:
+		enemy.brain_time = maxf(0.0, enemy.brain_time - delta)
+		if enemy.brain_time <= 0.0:
+			if enemy.brain_state == &"slam":
+				_enter(enemy, &"recover", 1.4)
+			else:
+				_enter(enemy, &"approach", 0.0)
+		return
+	var target := SupportSystem.target_position(sim, enemy.pos, sim.player.pos)
+	var offset := target - enemy.pos
+	if offset.length_squared() <= 440.0 * 440.0:
+		_lock(enemy, target)
+		_enter(enemy, &"warn", 0.95 if enemy.def.id == &"collector" else 1.1)
+	else:
+		enemy.attack_direction = offset.normalized()
+		_walk(enemy, enemy.attack_direction, enemy.speed * 1.15, delta)
+	_contact(sim, enemy)
+
+
+static func _boss_impact(sim: Sim, enemy: EnemyState) -> void:
+	var point := enemy.attack_target
+	var offset := sim.player.pos - point
+	var inside := offset.length() <= 112.0 + PlayerState.RADIUS
+	if enemy.def.id == &"paradox":
+		inside = (absf(offset.x) <= 34.0 + PlayerState.RADIUS and absf(offset.y) <= 205.0 + PlayerState.RADIUS) \
+			or (absf(offset.y) <= 34.0 + PlayerState.RADIUS and absf(offset.x) <= 205.0 + PlayerState.RADIUS)
+	if inside:
+		_hurt(sim, enemy, enemy.damage * 1.6, &"foreman_press" if enemy.def.id == &"foreman" else &"paradox_cross", offset.normalized())
+	for unit in sim.support_units.duplicate():
+		var support_offset: Vector2 = unit["pos"] - point
+		var hit := support_offset.length() <= 112.0 + SupportSystem.UNIT_RADIUS
+		if enemy.def.id == &"paradox":
+			hit = (absf(support_offset.x) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.y) <= 205.0 + SupportSystem.UNIT_RADIUS) \
+				or (absf(support_offset.y) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.x) <= 205.0 + SupportSystem.UNIT_RADIUS)
+		if hit:
+			SupportSystem.damage(sim, int(unit["uid"]), enemy.damage * 1.6)
 
 
 static func _runner(sim: Sim, enemy: EnemyState, delta: float) -> void:
@@ -159,10 +225,13 @@ static func step_zones(sim: Sim, delta: float) -> void:
 		if active_delta > 0.0 and zone.active > 0.0:
 			zone.active = maxf(0.0, zone.active - active_delta)
 			zone.tick = maxf(0.0, zone.tick - active_delta)
-			if zone.is_active() and zone.tick <= 0.0 and zone.contains(sim.player.pos, PlayerState.RADIUS):
-				if sim.player.iframes <= 0.0:
+			if zone.is_active() and zone.tick <= 0.0:
+				if zone.contains(sim.player.pos, PlayerState.RADIUS) and sim.player.iframes <= 0.0:
 					sim._hurt_player(zone.damage, &"silencer", &"seal", sim.player.pos,
 						(sim.player.pos - zone.pos).normalized(), true, zone.source_uid)
+				for unit in sim.support_units.duplicate():
+					if zone.contains(unit["pos"], SupportSystem.UNIT_RADIUS):
+						SupportSystem.damage(sim, int(unit["uid"]), zone.damage)
 				zone.tick = EnemyZone.HIT_INTERVAL
 		if zone.active > 0.0:
 			sim.enemy_zones[keep] = zone
@@ -190,6 +259,14 @@ static func in_slam(enemy: EnemyState, point: Vector2, radius: float = 0.0) -> b
 static func attack_profile(enemy: EnemyState) -> Dictionary:
 	if enemy == null or enemy.def == null:
 		return {"visible": false}
+	if enemy.def.is_boss:
+		var kind: StringName = {&"foreman": &"press", &"collector": &"dash", &"paradox": &"cross"}.get(enemy.def.id, &"press")
+		return {"visible": enemy.brain_state in [&"warn", &"dash", &"slam"],
+			"warning": enemy.brain_state == &"warn", "active": enemy.brain_state in [&"dash", &"slam"],
+			"kind": kind, "origin": enemy.pos, "target": enemy.attack_target,
+			"direction": enemy.attack_direction, "radius": 112.0 if kind == &"press" else 34.0,
+			"reach": (580.0 * enemy.brain_time if enemy.brain_state == &"dash" else 377.0) if kind == &"dash" else 205.0, "half_angle": BRUTE_HALF_ANGLE,
+			"progress": 1.0 - clampf(enemy.brain_time / (0.95 if kind == &"dash" else 1.1), 0.0, 1.0)}
 	var warning := enemy.brain_state == &"warn"
 	var active := enemy.brain_state in [&"dash", &"slam"]
 	var kind := &"dash" if enemy.def.id == &"runner" else &"slam"

@@ -12,6 +12,13 @@ const MACHINES: Array[Rect2] = [
 ]
 
 
+static func display_viewport(canvas_size: Vector2) -> Rect2:
+	var size := canvas_size if canvas_size.is_finite() and canvas_size.x >= 640.0 and canvas_size.y >= 480.0 else Vector2(1280.0, 720.0)
+	var compact := size.x < 1100.0 or size.y < 640.0
+	var bottom := 88.0 if compact else 40.0
+	return Rect2(40.0, 80.0, size.x - 80.0, size.y - 80.0 - bottom)
+
+
 static func camera_rect(focus: Vector2, viewport: Rect2 = VIEWPORT) -> Rect2:
 	var size := viewport.size.min(BOUNDS.size)
 	var center := focus if focus.is_finite() else BOUNDS.get_center()
@@ -140,3 +147,17 @@ static func _unembed(pos: Vector2, pad: float, bounds: Rect2) -> Vector2:
 			2: pos.y = obstacle.position.y - 0.01
 			3: pos.y = obstacle.end.y + 0.01
 	return pos.clamp(bounds.position, bounds.end)
+
+
+# Service pads sit in front of solid cover, so interaction never requires entering it.
+static func machine_sites() -> Array[Dictionary]:
+	var sites: Array[Dictionary] = []
+	var kinds: Array[StringName] = [&"press", &"conveyor", &"recycler", &"press", &"conveyor"]
+	for index in MACHINES.size():
+		var machine := MACHINES[index]
+		var point := move_body(machine.get_center() + Vector2(0.0, machine.size.y * 0.5 + 60.0), Vector2.ZERO, 24.0)
+		sites.append({"id": StringName("machine_%d" % index), "kind": kinds[index], "pos": point,
+			"range": 112.0, "cost": 8 if kinds[index] == &"recycler" else 0, "warning": 0.0,
+			"active": 4.0 if kinds[index] == &"conveyor" else 0.0, "cooldown": 4.0 + float(index),
+			"used": false, "direction": Vector2.RIGHT if index % 2 == 0 else Vector2.LEFT})
+	return sites

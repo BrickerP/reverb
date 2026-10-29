@@ -32,6 +32,17 @@ const ALL_NAMES: Array[StringName] = [
 	&"hurt_contact", &"hurt_blast", &"equipment_apply", &"equipment_undo", &"shop_reroll",
 ]
 const WEAPON_PROFILES := {
+	&"guard_decoy": {"cue": &"shield_block", "volume": -2.7, "pitch": 0.87, "gate": 0.35},
+	&"paper_seed": {"cue": &"weapon_orb", "volume": -3.4, "pitch": 1.18, "gate": 0.5},
+	&"repair_kit": {"cue": &"equipment_apply", "volume": -3.2, "pitch": 1.11, "gate": 0.45},
+	&"debt_sentry": {"cue": &"weapon_pistol", "volume": -2.3, "pitch": 0.84, "gate": 0.28},
+	&"paper_hound": {"cue": &"weapon_hex_bolt", "volume": -3.5, "pitch": 0.81, "gate": 0.42},
+	&"binding_atlas": {"cue": &"weapon_nova_core", "volume": -1.4, "pitch": 0.76, "gate": 0.43},
+	&"folding_guillotine": {"cue": &"weapon_rail_spike", "volume": 0.4, "pitch": 0.71, "gate": 0.27},
+	&"ink_tempest": {"cue": &"weapon_orb", "volume": -1.8, "pitch": 0.59, "gate": 0.38},
+	&"surveyor_lance": {"cue": &"weapon_rifle", "volume": 0.2, "pitch": 0.65, "gate": 0.18},
+	&"saw_swarm": {"cue": &"weapon_flechette", "volume": -0.5, "pitch": 0.83, "gate": 0.24},
+	&"binding_writ": {"cue": &"weapon_pistol", "volume": -0.5, "pitch": 0.67, "gate": 0.14},
 	&"pistol": {"cue": &"weapon_pistol", "volume": 0.0, "pitch": 1.00},
 	&"smg": {"cue": &"weapon_smg", "volume": -3.0, "pitch": 1.08},
 	&"shotgun": {"cue": &"weapon_shotgun", "volume": 1.0, "pitch": 0.94},

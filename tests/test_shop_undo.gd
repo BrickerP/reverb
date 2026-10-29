@@ -135,7 +135,7 @@ func test_upgrade_and_evolution_undo(c: Check) -> void:
 	c.eq(s.player.level_at(0), 0, "upgrade undo restores level")
 
 	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
-	var evolve := s.shop.apply(ShopResult.EVOLVE, s, null, 0)
+	var evolve := s.shop.evolve_choice(s, 0, &"twin_fangs")
 	c.ok(evolve.ok, "evolution applies")
 	c.eq(s.player.weapons[0].id, &"twin_fangs", "evolved weapon")
 	s.shop.undo(s)

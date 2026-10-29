@@ -18,6 +18,10 @@ extends Resource
 
 
 func apply(sim: Sim) -> void:
+	sim.character_id = id
+	sim.character_energy = 100.0
+	sim.character_cooldown = 0.0
+	sim.role_effects.clear()
 	for stat: StringName in overrides:
 		sim.player.stats.values[stat] = float(overrides[stat])
 	for stat: StringName in mods:

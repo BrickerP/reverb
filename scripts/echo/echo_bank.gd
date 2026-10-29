@@ -1,8 +1,8 @@
 class_name EchoBank
 extends RefCounted
 
-const MAX_MERGED_WEAPONS := 8
-const BRIDGE_SAMPLES := 12
+const MERGE_TRAITS: Array[StringName] = [&"skill", &"repair", &"power"]
+const POWER_CONDITION_COST := 15.0
 
 var takes: Array[EchoTake] = []
 var _tint_counter: int = 0
@@ -44,58 +44,53 @@ func find_uid(uid: int) -> EchoTake:
 	return null
 
 
-# Overdub: two takes become one echo that walks both recorded routes and keeps both loadouts.
-func merge(a: EchoTake, b: EchoTake) -> EchoTake:
-	if a == null or b == null or a == b:
+# The host keeps its complete route and build. The donor buys exactly one donor_trait.
+# Preview is a detached value: neither identity counters nor the inputs are touched.
+func preview_merge(a: EchoTake, b: EchoTake, donor_trait: StringName = &"skill") -> EchoTake:
+	if a == null or b == null or a == b or not MERGE_TRAITS.has(donor_trait):
 		return null
-	if not takes.has(a) or not takes.has(b):
+	if not takes.has(a) or not takes.has(b) or a.weapons.is_empty() or b.weapons.is_empty():
 		return null
-	var out := EchoTake.new()
-	out.wave = maxi(a.wave, b.wave)
-	out.samples = _join(a.samples, b.samples)
-	var loadout := _best_loadout(a, b)
-	var best_weapons: Array = loadout[0]
-	var best_levels: Array = loadout[1]
-	for w: Variant in best_weapons:
-		out.weapons.append(w as WeaponDef)
-	for level: Variant in best_levels:
-		out.levels.append(int(level))
-	out.stats = (a.stats if a.power() >= b.power() else b.stats).copy()
-	var keep_condition := minf(a.condition, b.condition)
+	if not is_finite(a.condition) or not is_finite(b.condition) or a.condition <= 0.0 or b.condition <= 0.0:
+		return null
+	var out := a.copy()
+	out.tint_index = _tint_counter
+	out.merged = true
+	out.merge_trait = donor_trait
+	match donor_trait:
+		&"skill":
+			out.inherited_skill = b.retirement_kind()
+			out.condition = minf(a.condition, b.condition)
+		&"repair":
+			if a.condition >= 100.0:
+				return null
+			out.condition = minf(100.0, a.condition + b.condition * 0.5)
+		&"power":
+			if minf(a.condition, b.condition) <= POWER_CONDITION_COST:
+				return null
+			var index := -1
+			var strongest := -1.0
+			for i in out.weapons.size():
+				if out.level_at(i) < WeaponDef.MAX_LEVEL and out.weapons[i].level_dps(out.level_at(i)) > strongest:
+					index = i
+					strongest = out.weapons[i].level_dps(out.level_at(i))
+			if index < 0:
+				return null
+			while out.levels.size() < out.weapons.size():
+				out.levels.append(0)
+			out.levels[index] += 1
+			out.condition = minf(a.condition, b.condition) - POWER_CONDITION_COST
+	return out
+
+
+func merge(a: EchoTake, b: EchoTake, donor_trait: StringName = &"skill") -> EchoTake:
+	var out := preview_merge(a, b, donor_trait)
+	if out == null:
+		return null
 	takes.erase(a)
 	takes.erase(b)
 	add(out)
-	out.condition = keep_condition
-	out.merged = true
 	return out
-
-
-func _join(a: PackedVector2Array, b: PackedVector2Array) -> PackedVector2Array:
-	if a.is_empty():
-		return b.duplicate()
-	if b.is_empty():
-		return a.duplicate()
-	var out := a.duplicate()
-	for i in BRIDGE_SAMPLES:
-		out.append(a[a.size() - 1].lerp(b[0], float(i + 1) / float(BRIDGE_SAMPLES)))
-	out.append_array(b)
-	return out
-
-
-func _best_loadout(a: EchoTake, b: EchoTake) -> Array:
-	var entries: Array[Dictionary] = []
-	for i in a.weapons.size():
-		entries.append({"weapon": a.weapons[i], "level": a.level_at(i)})
-	for i in b.weapons.size():
-		entries.append({"weapon": b.weapons[i], "level": b.level_at(i)})
-	entries.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
-		return (x["weapon"] as WeaponDef).level_dps(x["level"]) > (y["weapon"] as WeaponDef).level_dps(y["level"]))
-	var weapons: Array[WeaponDef] = []
-	var levels: Array[int] = []
-	for entry: Dictionary in entries.slice(0, mini(MAX_MERGED_WEAPONS, entries.size())):
-		weapons.append(entry["weapon"])
-		levels.append(int(entry["level"]))
-	return [weapons, levels]
 
 
 func overflow(capacity: int) -> int:

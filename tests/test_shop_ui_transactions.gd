@@ -232,6 +232,7 @@ func test_invalid_drop_quote_explains_the_reason(c: Check) -> void:
 
 func test_partial_build_swap_action_uses_trade_in_before_mutating(c: Check) -> void:
 	var s := _shop_sim(20)
+	s.player.weapon_investments[0] = 8
 	var offer := _weapon_offer(s, &"smg", 24)
 	var ui := _open(s)
 	var card := ui.offers_box.get_child(0) as OfferCard
@@ -244,6 +245,8 @@ func test_partial_build_swap_action_uses_trade_in_before_mutating(c: Check) -> v
 	c.eq(ShopState.capture(s).to_dict(), before, "choosing swap does not mutate state")
 	c.ok(ui.build_panel.focus_first_slot(), "replacement slot is focusable")
 	ui.build_panel._slot_buttons[0].pressed.emit()
+	c.ok(ui.workshop.visible, "slot selection opens an explicit final confirmation")
+	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.player.weapons.size(), 1, "swap keeps partial build size")
 	c.eq(s.player.weapons[0].id, &"smg", "focused slot receives replacement")
 	c.ok(s.player.materials >= 0, "trade-in makes replacement affordable")
@@ -261,7 +264,7 @@ func test_partial_build_swap_action_uses_trade_in_before_mutating(c: Check) -> v
 
 
 func test_upgraded_trade_in_quote_commit_and_undo_use_one_mechanics_value(c: Check) -> void:
-	var s := _shop_sim(100)
+	var s := _shop_sim(500)
 	var offer := _weapon_offer(s, &"smg", 10)
 	var ui := _open(s)
 	ui._on_upgrade_weapon(0)
@@ -270,7 +273,7 @@ func test_upgraded_trade_in_quote_commit_and_undo_use_one_mechanics_value(c: Che
 	var before_replace := ShopState.capture(s).to_dict()
 	var history_before := s.shop._undo_stack.size()
 	c.eq(history_before, 2, "upgrade history remains available")
-	var resale := Shop.resale_total(s.player.weapons[0], s.player.level_at(0))
+	var resale := Shop.resale_for(s, 0)
 	var payload: Variant = ui.drag_payload_for(offer)
 	var quote := ui.quote_drop(payload, &"weapon_slot", 0)
 	c.ok(quote.ok and quote.cost < 0, "upgraded trade-in quotes a refund")

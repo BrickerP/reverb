@@ -1,30 +1,44 @@
 extends RefCounted
 
 
-func test_floating_hud_regions_fit_small_and_tall_keep_aspect_windows(c: Check) -> void:
-	var sim := Sim.new(31)
-	sim.start_run()
-	var hud := Hud.new()
-	hud.bind(sim)
-	for wave: int in [1, 20]:
-		sim.wave = wave
-		var regions := hud.layout_regions()
-		var health: Rect2 = regions["health"]
-		var wave_tag: Rect2 = regions["wave"]
-		var materials: Rect2 = regions["materials"]
-		c.ok(health.end.x < wave_tag.position.x and wave_tag.end.x < materials.position.x,
-				"health scroll, wave tag and material bag leave calm gaps at wave %d" % wave)
-		for window: Vector2 in [Vector2(960.0, 540.0), Vector2(1280.0, 720.0), Vector2(1280.0, 800.0)]:
-			var scale := minf(window.x / 1280.0, window.y / 720.0)
-			var offset := (window - Vector2(1280.0, 720.0) * scale) * 0.5
-			var screen := Rect2(Vector2.ZERO, window)
+func test_floating_hud_regions_fit_native_small_and_tall_windows(c: Check) -> void:
+	var root := (Engine.get_main_loop() as SceneTree).root
+	for extent: Vector2i in [Vector2i(960, 540), Vector2i(1280, 720), Vector2i(1280, 800)]:
+		var viewport := SubViewport.new()
+		viewport.size = extent
+		root.add_child(viewport)
+		var sim := Sim.new(31)
+		sim.start_run()
+		var take := EchoTake.new()
+		take.weapons.append(Content.weapon(Content.STARTER_WEAPON))
+		take.levels.append(0)
+		take.samples = PackedVector2Array([Vector2(400, 300), Vector2(500, 350)])
+		sim.bank.add(take)
+		var hud := Hud.new()
+		viewport.add_child(hud)
+		for wave in [1, 4, 12]:
+			sim.start_wave(wave)
+			hud.bind(sim)
+			var before := RunSnapshot.capture(sim)
+			var regions := hud.layout_regions()
+			var screen := Rect2(Vector2.ZERO, Vector2(extent))
+			c.eq(hud.canvas_size(), Vector2(extent), "HUD uses the native logical canvas without projection")
 			for region: Rect2 in regions.values():
-				var projected := Rect2(offset + region.position * scale, region.size * scale)
-				c.ok(screen.encloses(projected), "floating pieces remain inside the actual keep-aspect content area")
-		var weapon_area: Rect2 = regions["weapons"]
-		for i in Content.MAX_WEAPON_SLOTS:
-			c.ok(weapon_area.encloses(hud.weapon_slot_rect(i)), "individual weapon scraps fit the bottom safe band")
-	hud.free()
+				c.ok(screen.encloses(region), "every authored HUD region stays within native pixels")
+			var health: Rect2 = regions.health
+			var wave_tag: Rect2 = regions.wave
+			var materials: Rect2 = regions.materials
+			c.ok(health.end.x < wave_tag.position.x and wave_tag.end.x < materials.position.x, "health, objective/boss and material regions remain separated")
+			var weapon_area: Rect2 = regions.weapons
+			for index in Content.MAX_WEAPON_SLOTS:
+				c.ok(weapon_area.encloses(hud.weapon_slot_rect(index)), "all six weapon scraps fit their native bottom row")
+			var arena := WorldArena.display_viewport(Vector2(extent))
+			c.ok(weapon_area.position.y >= arena.end.y and (regions.ability as Rect2).position.y >= arena.end.y, "weapon and ability pieces stay below the actual arena crop")
+			if hud.is_compact():
+				c.ok((regions.echo_hint as Rect2).position.y > weapon_area.end.y, "compact selected Echo occupies the second bottom row")
+				c.ok(not (regions.echo_hint as Rect2).intersects(regions.interaction), "compact world interaction remains visible beside selected Echo")
+			c.eq(RunSnapshot.capture(sim), before, "native HUD layout leaves full simulation and both RNGs untouched")
+		viewport.free()
 
 
 func test_low_health_face_wakes_only_for_damage_and_reduced_mode_stays_still(c: Check) -> void:

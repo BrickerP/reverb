@@ -1,6 +1,7 @@
 class_name EndUi
 extends Control
 
+signal archive_requested(take: EchoTake)
 signal restart_requested
 signal character_requested
 signal seed_retry_requested(seed_value: int)
@@ -9,6 +10,8 @@ signal endless_requested
 signal boss_rush_requested
 signal feedback_requested
 
+var archive_button: Button
+var _archive_note: Label
 var restart_button: Button
 var character_button: Button
 var endless_button: Button
@@ -30,6 +33,12 @@ var _best_preview: PathPreview
 var _best_label: Label
 var _no_echo: Label
 var _seed_value: int = 0
+var _panel: PanelContainer
+var _margin: MarginContainer
+var _box: VBoxContainer
+var _report: Label
+var _echo_row: HBoxContainer
+var _archive_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -42,7 +51,8 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	add_child(center)
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var panel := PanelContainer.new()
+	_panel = PanelContainer.new()
+	var panel := _panel
 	panel.custom_minimum_size = Vector2(930.0, 0.0)
 	var sheet := UiTheme.surface_panel().duplicate() as InkStyleBox
 	sheet.shape = InkStyleBox.Shape.PAPER
@@ -50,18 +60,22 @@ func _ready() -> void:
 	sheet.variant = 16
 	panel.add_theme_stylebox_override("panel", sheet)
 	center.add_child(panel)
-	var margin := MarginContainer.new()
+	_margin = MarginContainer.new()
+	var margin := _margin
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 30)
 	panel.add_child(margin)
-	var box := VBoxContainer.new()
+	_box = VBoxContainer.new()
+	var box := _box
 	box.add_theme_constant_override("separation", 11)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(box)
-	box.add_child(UiTheme.label(Loc.t("end.report"), 16, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	_report = UiTheme.label(Loc.t("end.report"), 16, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_report)
 	_title = UiTheme.label("", 52, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	box.add_child(_title)
 	_afterword = UiTheme.label("", 17, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	_afterword.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_afterword)
 	_stats = UiTheme.label("", 17, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -79,10 +93,30 @@ func _ready() -> void:
 	_best_label = UiTheme.label("", 18)
 	info.add_child(_best_label)
 	_best_row.add_child(info)
-	box.add_child(_best_row)
+	_echo_row = HBoxContainer.new()
+	_echo_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_echo_row.add_theme_constant_override("separation", 20)
+	_echo_row.add_child(_best_row)
+	box.add_child(_echo_row)
+	_archive_box = VBoxContainer.new()
+	_archive_box.custom_minimum_size.x = 350.0
+	_archive_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_archive_box.add_theme_constant_override("separation", 4)
+	_echo_row.add_child(_archive_box)
+	archive_button = Button.new()
+	archive_button.text = Loc.t("archive.save_best")
+	archive_button.custom_minimum_size = Vector2(280.0, 32.0)
+	archive_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	archive_button.pressed.connect(func() -> void: archive_requested.emit(best_take))
+	_archive_box.add_child(archive_button)
+	_archive_note = UiTheme.label("", 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	_archive_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_archive_box.add_child(_archive_note)
 	_no_echo = UiTheme.label(Loc.t("end.no_echo"), 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
-	box.add_child(_no_echo)
+	_echo_row.add_child(_no_echo)
+	_echo_row.move_child(_no_echo, 0)
 	_unlock = UiTheme.label("", 18, UiTheme.COIN, HORIZONTAL_ALIGNMENT_CENTER)
+	_unlock.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_unlock)
 	var decisions := HBoxContainer.new()
 	decisions.add_theme_constant_override("separation", 20)
@@ -129,6 +163,8 @@ func _ready() -> void:
 	feedback_button.pressed.connect(func() -> void: feedback_requested.emit())
 	tools.add_child(feedback_button)
 	box.add_child(tools)
+	get_viewport().size_changed.connect(_apply_layout)
+	_apply_layout()
 
 
 func _small_action() -> Button:
@@ -140,6 +176,7 @@ func _small_action() -> Button:
 
 
 func show_result(sim: Sim, unlocked_text: String = "") -> void:
+	_apply_layout()
 	var won := sim.phase == Sim.Phase.WON
 	_afterword.text = Loc.t("end.win_note") if won else Loc.t("end.loss_note")
 	if sim.endless:
@@ -160,11 +197,19 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	for take: EchoTake in sim.bank.takes:
 		if best_take == null or sim.echo_dps(take) > sim.echo_dps(best_take):
 			best_take = take
+	archive_button.disabled = best_take == null or not EchoArchive.eligible(sim.character_id) or sim.daily_modifier != &"" or int(sim.expedition.get("debt", 0)) > 0
+	_archive_note.text = Loc.t("archive.eligible_note") if not archive_button.disabled else Loc.t("archive.unavailable")
+	if int(sim.expedition.get("debt", 0)) > 0:
+		_archive_note.text = Loc.t("archive.debt")
+	var report := Expedition.status(sim)
+	_afterword.text = Loc.t(report.ending) if won else Loc.t("end.loss_note")
+	if won and not str(report.get("outcome_key", "")).is_empty():
+		_afterword.text += "\n" + Loc.t(report.outcome_key)
 	_best_row.visible = best_take != null
 	_no_echo.visible = best_take == null
 	if best_take != null:
 		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(sim.echo_dps(best_take)))])
-		_best_preview.setup(best_take, not reduced_effects)
+		_best_preview.setup(best_take, not reduced_effects, _preview_extent())
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
 	endless_button.text = Loc.t("end.endless_continue")
@@ -205,7 +250,7 @@ func focus_default() -> void:
 
 
 func _rebuild_focus_cycle() -> void:
-	UiFocus.cycle([retry_button, open_log_button, feedback_button, endless_button,
+	UiFocus.cycle([archive_button, retry_button, open_log_button, feedback_button, endless_button,
 			boss_rush_button, restart_button, character_button])
 
 
@@ -219,3 +264,60 @@ func _on_restart() -> void:
 
 func _on_character() -> void:
 	character_requested.emit()
+
+
+func set_archive_result(ok: bool, error: String = "") -> void:
+	_archive_note.text = Loc.t("archive.saved") if ok else Loc.t(error if error != "" else "archive.save_failed")
+	archive_button.disabled = ok
+	_rebuild_focus_cycle()
+	if ok:
+		restart_button.grab_focus()
+
+
+func _canvas_size() -> Vector2:
+	if not is_inside_tree():
+		return Vector2(1280.0, 720.0)
+	var extent := get_viewport_rect().size
+	return extent if extent.x > 0.0 and extent.y > 0.0 else Vector2(1280.0, 720.0)
+
+
+func _compact() -> bool:
+	var extent := _canvas_size()
+	return extent.x < 1100.0 or extent.y < 640.0
+
+
+func _preview_extent() -> Vector2:
+	return Vector2(88.0, 48.0) if _compact() else Vector2(110.0, 60.0)
+
+
+func _apply_layout() -> void:
+	if _panel == null:
+		return
+	var compact := _compact()
+	_panel.custom_minimum_size.x = minf(930.0, maxf(0.0, _canvas_size().x - 24.0))
+	for side in ["left", "right", "top", "bottom"]:
+		_margin.add_theme_constant_override("margin_" + side, 8 if compact else 30)
+	_box.add_theme_constant_override("separation", 4 if compact else 11)
+	_title.add_theme_font_size_override("font_size", 34 if compact else 52)
+	_report.add_theme_font_size_override("font_size", 14 if compact else 16)
+	_afterword.add_theme_font_size_override("font_size", 16 if compact else 17)
+	_stats.add_theme_font_size_override("font_size", 14 if compact else 17)
+	_stats.custom_minimum_size.x = 0.0
+	_unlock.add_theme_font_size_override("font_size", 14 if compact else 18)
+	var actions: Array[Button] = [archive_button, character_button, endless_button, boss_rush_button, retry_button, open_log_button, feedback_button]
+	var widths: Array[float] = [280.0, 204.0, 230.0, 170.0, 156.0, 156.0, 156.0]
+	for index in actions.size():
+		var button := actions[index]
+		WorkshopUi.fit_button(button, 14 if compact else 16, 30.0 if compact else 34.0)
+		button.custom_minimum_size.x = minf(widths[index], 230.0) if compact else widths[index]
+	UiTheme.stamp_button(restart_button)
+	restart_button.custom_minimum_size = Vector2(240.0 if compact else 296.0, 40.0 if compact else 54.0)
+	restart_button.add_theme_font_size_override("font_size", 17 if compact else 18)
+	if compact:
+		for state in ["normal", "hover", "pressed", "disabled"]:
+			var style := restart_button.get_theme_stylebox(state).duplicate() as StyleBox
+			style.content_margin_top = 2.0
+			style.content_margin_bottom = 2.0
+			restart_button.add_theme_stylebox_override(state, style)
+	if best_take != null:
+		_best_preview.setup(best_take, false, _preview_extent())

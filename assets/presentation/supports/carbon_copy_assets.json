@@ -1,0 +1,87 @@
+[
+  {
+    "id": "crew",
+    "path": "assets/presentation/supports/crew.png",
+    "file": "assets/presentation/supports/crew.png",
+    "originalsource": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-90deb940-d770-4e90-9516-bb3d6cc281df.png",
+    "source_file": "/Users/yupeng/.codex/generated_images/01a18296-db63-7bb2-9605-61f40b908744/exec-90deb940-d770-4e90-9516-bb3d6cc281df.png",
+    "width": 1536,
+    "height": 1024,
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "mode": "RGBA",
+    "sha256": "97b6c0f75b86b1e743c2cb5b3dc8c485199aaafa6947165b80cbe1f2410729ea",
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "transparent_pixels": 948130,
+    "visible_alpha_min": 20,
+    "pixels_preserved": true,
+    "regions": {
+      "support_hound_idle": [
+        20,
+        130,
+        338,
+        305
+      ],
+      "support_hound_attack": [
+        386,
+        143,
+        382,
+        296
+      ],
+      "support_turret_idle": [
+        780,
+        120,
+        360,
+        330
+      ],
+      "support_turret_fire": [
+        1152,
+        144,
+        369,
+        296
+      ],
+      "support_repair_station": [
+        30,
+        571,
+        353,
+        369
+      ],
+      "support_paper_tree_early": [
+        478,
+        558,
+        290,
+        390
+      ],
+      "support_paper_tree_grown": [
+        768,
+        512,
+        384,
+        442
+      ],
+      "support_decoy": [
+        1193,
+        556,
+        319,
+        382
+      ]
+    },
+    "pose_order": [
+      "hound_idle",
+      "hound_attack",
+      "turret_idle",
+      "turret_fire",
+      "repair_station",
+      "paper_tree_early",
+      "paper_tree_grown",
+      "decoy"
+    ],
+    "authored_grid": [
+      4,
+      2
+    ]
+  }
+]

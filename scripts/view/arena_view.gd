@@ -36,6 +36,7 @@ var _actor_motion: Dictionary = {}
 var _actor_positions: Dictionary = {}
 var _motion_sample_time := -1.0
 var _cropped := false
+var _display_rect := WorldArena.VIEWPORT
 var _muzzles: Array[Dictionary] = []
 var _hits: Array[Dictionary] = []
 var _explosions: Array[Dictionary] = []
@@ -148,11 +149,19 @@ func set_cropped(on: bool) -> void:
 	_update_camera()
 
 
+func set_display_rect(rect: Rect2) -> void:
+	if not rect.position.is_finite() or not rect.size.is_finite() or rect.size.x <= 0.0 or rect.size.y <= 0.0:
+		return
+	_display_rect = rect
+	_update_camera()
+	queue_redraw()
+
+
 func camera_profile() -> Dictionary:
 	var focus := sim.player.pos if sim != null else WorldArena.BOUNDS.get_center()
-	var camera := WorldArena.camera_rect(focus)
+	var camera := WorldArena.camera_rect(focus, _display_rect)
 	if sim != null:
-		camera.position = (Vector2.ZERO if _cropped else WorldArena.VIEWPORT.position) - position
+		camera.position = (Vector2.ZERO if _cropped else _display_rect.position) - position
 	return {"world_rect": camera, "offset": position, "cropped": _cropped}
 
 
@@ -160,9 +169,9 @@ func _update_camera(shake: Vector2 = Vector2.ZERO) -> void:
 	if sim == null:
 		position = Vector2.ZERO
 		return
-	var camera := WorldArena.camera_rect(sim.player.pos)
+	var camera := WorldArena.camera_rect(sim.player.pos, _display_rect)
 	var origin := (camera.position - shake).clamp(WorldArena.BOUNDS.position, WorldArena.BOUNDS.end - camera.size)
-	position = (Vector2.ZERO if _cropped else WorldArena.VIEWPORT.position) - origin
+	position = (Vector2.ZERO if _cropped else _display_rect.position) - origin
 
 
 func set_reduced_effects(on: bool) -> void:
@@ -350,6 +359,7 @@ func _draw() -> void:
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	WeaponInk.draw_fields(self, sim, reduced_effects)
+	ExpeditionInk.draw(self, sim, _visual_time, reduced_effects)
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
 	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
 	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director, _actor_motion)

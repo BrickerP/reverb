@@ -3,7 +3,7 @@ extends RefCounted
 
 # Saves only this closed family of data objects. A save never supplies a script
 # path, invokes a setter outside these classes, or carries signal connections.
-const VERSION := 1
+const VERSION := 2
 const MAX_OBJECTS := 16000
 const MAX_VALUES := 1000000
 const MAX_DEPTH := 48
@@ -253,7 +253,11 @@ func _decode(value: Variant, depth: int) -> Variant:
 			if typeof(decoded) != TYPE_FLOAT:
 				return _fail("snapshot.invalid_geometry")
 			parts.append(decoded)
-		return Vector2(parts[0], parts[1]) if count == 2 else Color(parts[0], parts[1], parts[2], parts[3])
+		if count == 2:
+			var vector := Vector2(parts[0], parts[1])
+			return vector if vector.is_finite() else _fail("snapshot.non_finite")
+		var color := Color(parts[0], parts[1], parts[2], parts[3])
+		return color if is_finite(color.r) and is_finite(color.g) and is_finite(color.b) and is_finite(color.a) else _fail("snapshot.non_finite")
 	if value.has("a") and value.has("t") and value.size() == 2:
 		if typeof(value.a) != TYPE_ARRAY or value.a.size() > MAX_VALUES \
 				or typeof(value.t) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(value.t)) \
@@ -276,6 +280,8 @@ func _decode(value: Variant, depth: int) -> Variant:
 					return _fail("snapshot.invalid_array")
 				if value.t == TYPE_PACKED_INT32_ARRAY and (entry < -2147483648 or entry > 2147483647):
 					return _fail("snapshot.invalid_integer")
+				if value.t == TYPE_PACKED_FLOAT32_ARRAY and absf(entry) > 3.402823466e38:
+					return _fail("snapshot.non_finite")
 		match int(value.t):
 			TYPE_ARRAY: return entries
 			TYPE_PACKED_VECTOR2_ARRAY: return PackedVector2Array(entries)
@@ -389,7 +395,11 @@ func _validate_run(sim: Sim) -> bool:
 			or sim.shop == null or sim.rng == null or sim.hazard_rng == null \
 			or sim.phase < Sim.Phase.WAVE or sim.phase > Sim.Phase.WON or sim.wave < 0 \
 			or sim.player.weapons.size() != sim.player.weapon_levels.size() \
-			or sim.player.weapons.size() != sim.player.cooldowns.size() or not _story_valid(sim.story_progress):
+			or sim.player.weapons.size() != sim.player.cooldowns.size() \
+			or not _investments_valid(sim.player.weapon_investments, sim.player.weapons.size()) \
+			or not _story_valid(sim.story_progress) or Content.character(sim.character_id) == null \
+			or not _role_valid(sim.role_effects, sim.character_energy, sim.character_cooldown) \
+			or not Expedition.validate_state(sim) or not SupportSystem.validate_state(sim.support_units, sim._next_support_uid):
 		return false
 	if sim.wave_time < 0.0 or sim.wave_duration < 0.0 or sim.retire_cooldown < 0.0 \
 			or sim.echo_silenced < 0.0 or sim.ascension < 0 or sim.ascension > 3 \
@@ -397,6 +407,8 @@ func _validate_run(sim: Sim) -> bool:
 			or sim.repair_discount < 0.0 or sim.repair_discount > 1.0 or sim.wear_rate_mult < 0.0 \
 			or sim.retirement_mult < 0.0 or sim.pickup_repair < 0.0 \
 			or (sim.daily_modifier != &"" and not DailyAnomaly.ALL.has(sim.daily_modifier)):
+		return false
+	if sim.bank.next_uid() < 1 or sim.bank.tint_counter() < 0:
 		return false
 	for counter: String in ["kills", "wave_kills", "wave_elite_kills", "boon_rerolls", "echo_refreshes",
 		"contracts_accepted", "contracts_completed", "contracts_failed", "retirements", "wave_retirements",
@@ -413,7 +425,7 @@ func _validate_run(sim: Sim) -> bool:
 				selected_found = true
 		if not selected_found:
 			return false
-	if sim.active_contract != null and (not sim.active_contract.accepted or sim.active_contract != sim.shop.contract):
+	if sim.active_contract != null and (not sim.active_contract.accepted or not AnomalyContract.KINDS.has(sim.active_contract.kind)):
 		return false
 	var plan: Array = sim.get("_plan")
 	if sim.get("_plan_idx") < 0 or sim.get("_plan_idx") > plan.size() or sim.get("_next_uid") < 1:
@@ -426,14 +438,20 @@ func _validate_run(sim: Sim) -> bool:
 	var uids := {}
 	for take: EchoTake in sim.bank.takes:
 		if take == null or take.stats == null or take.uid <= 0 or uids.has(take.uid) \
-				or take.condition < 0.0 or take.condition > 100.0 \
-				or take.weapons.size() != take.levels.size():
+				or take.condition < 0.0 or take.condition > 100.0 or sim.bank.tint_counter() <= take.tint_index:
 			return false
 		uids[take.uid] = true
 		if sim.bank.next_uid() <= take.uid:
 			return false
+	var actor_ids := {}
 	for actor: EchoActor in sim.echoes:
 		if actor == null or actor.take == null or not sim.bank.takes.has(actor.take):
+			return false
+		if actor_ids.has(actor.take.uid) or actor.index != actor_ids.size():
+			return false
+		actor_ids[actor.take.uid] = true
+		var weapon_count := sim.player.weapons.size() if sim.live_echo else actor.take.weapons.size()
+		if actor.cooldowns.size() != weapon_count:
 			return false
 	var enemy_uids := {}
 	for enemy: EnemyState in sim.enemies:
@@ -451,7 +469,20 @@ func _validate_run(sim: Sim) -> bool:
 		if event == null or event.def == null:
 			return false
 	for offer: Offer in sim.shop.offers:
-		if offer == null or (offer.weapon == null) == (offer.item == null):
+		if offer == null or int(offer.weapon != null) + int(offer.item != null) + int(offer.contract != null) != 1:
+			return false
+		if offer.contract != null and offer.contract.accepted and (offer.contract != sim.active_contract \
+				or not offer.sold or offer.contract.deposit != offer.price):
+			return false
+	if sim.bank.takes.size() > Sim.MAX_ECHO_CAPACITY + 1 or sim.echoes.size() > Sim.MAX_ECHO_CAPACITY \
+			or sim.shop.offers.size() > Shop.OFFER_COUNT \
+			or sim.shop.get("_undo_stack").size() > Shop.MAX_UNDO:
+		return false
+	if sim.selected_echo_uid > 0 and not uids.has(sim.selected_echo_uid):
+		return false
+	if sim.active_contract != null:
+		var mission: Dictionary = sim.expedition.get("mission", {})
+		if mission.get("kind", &"") != sim.active_contract.kind or not mission.get("state", &"") in [&"pending", &"active", &"failed"]:
 			return false
 	return true
 
@@ -463,14 +494,21 @@ func _validate_objects() -> bool:
 		if object is EchoTake:
 			if object.stats == null or object.uid <= 0 or object.tint_index < 0 \
 					or object.condition < 0.0 or object.condition > 100.0 \
-					or not _loadout_valid(object.weapons, object.levels):
+					or object.weapons.is_empty() or object.samples.is_empty() \
+					or not _loadout_valid(object.weapons, object.levels, true) \
+					or not _echo_metadata_valid(object.inherited_skill, object.merge_trait) \
+					or object.samples.size() > EchoArchive.MAX_SAMPLES:
 				return false
 		if object is PlayerState:
 			if object.stats == null or not _loadout_valid(object.weapons, object.weapon_levels) \
 					or object.weapons.size() != object.cooldowns.size() \
+					or not _investments_valid(object.weapon_investments, object.weapons.size()) \
+					or object.materials < 0 or object.weapons.size() > Content.MAX_WEAPON_SLOTS \
 					or not _items_valid(object.items) or not _sets_valid(object.set_bonus_applied):
 				return false
-		if object is Offer and ((object.weapon == null) == (object.item == null) or object.price < 0):
+		if object is Offer and (int(object.weapon != null) + int(object.item != null) + int(object.contract != null) != 1 \
+				or object.price < 0 or object.weapon_level < 0 or object.weapon_level > WeaponDef.MAX_LEVEL \
+				or (object.weapon == null and object.weapon_level != 0)):
 			return false
 		if object is EnemyState and (object.def == null or object.uid <= 0 or object.max_hp <= 0.0 \
 				or object.speed < 0.0 or object.damage < 0.0 or object.radius <= 0.0 \
@@ -481,8 +519,7 @@ func _validate_objects() -> bool:
 			return false
 		if object is EchoRecorder and (object.get("_acc") < 0.0 or object.get("_acc") >= EchoTake.SAMPLE_DT):
 			return false
-		if object is AnomalyContract and (object.kind not in [AnomalyContract.CLEAN, AnomalyContract.CLEAR,
-			AnomalyContract.HUNT, AnomalyContract.RETIRE] or object.deposit < 0 or object.reward < 0 or object.target < 0):
+		if object is AnomalyContract and not _order_data_valid(object.to_dict()):
 			return false
 		if object is ShopState and not _undo_valid(object):
 			return false
@@ -518,24 +555,99 @@ func _sets_valid(values: Dictionary) -> bool:
 	return true
 
 
-func _loadout_valid(weapons: Array, levels: Array) -> bool:
-	if weapons.size() != levels.size():
+func _loadout_valid(weapons: Array, levels: Array, missing_levels: bool = false) -> bool:
+	if missing_levels and levels.is_empty():
+		for weapon: Variant in weapons:
+			if not weapon is WeaponDef or Content.weapon(weapon.id) != weapon:
+				return false
+		return weapons.size() <= Content.MAX_WEAPON_SLOTS
+	if weapons.size() != levels.size() or weapons.size() > Content.MAX_WEAPON_SLOTS:
 		return false
 	for i in weapons.size():
-		if weapons[i] == null or levels[i] < 0 or levels[i] > WeaponDef.MAX_LEVEL:
+		if not weapons[i] is WeaponDef or Content.weapon(weapons[i].id) != weapons[i] \
+				or typeof(levels[i]) != TYPE_INT or levels[i] < 0 or levels[i] > WeaponDef.MAX_LEVEL:
 			return false
 	return true
 
 
+func _investments_valid(values: Array, count: int) -> bool:
+	if values.size() != count:
+		return false
+	for value: Variant in values:
+		if typeof(value) != TYPE_INT or value < 0 or value > 1000000000:
+			return false
+	return true
+
+
+func _echo_metadata_valid(skill: StringName, merge_trait: StringName) -> bool:
+	return EchoArchive.SKILLS.has(skill) and (merge_trait == &"" or EchoBank.MERGE_TRAITS.has(merge_trait))
+
+
+func _bounded_number(value: Variant, minimum: float, maximum: float) -> bool:
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(float(value)) and float(value) >= minimum and float(value) <= maximum
+
+
+func _role_valid(effects: Dictionary, energy: float, cooldown: float) -> bool:
+	if not _bounded_number(energy, 0.0, 100.0) or not _bounded_number(cooldown, 0.0, CharacterSkills.COOLDOWN):
+		return false
+	var timers := {"anchor_left": 4.0, "ability_flash": 0.65, "relay_left": 0.8, "rewind_sample_left": 0.1}
+	for key: Variant in effects:
+		if typeof(key) not in [TYPE_STRING, TYPE_STRING_NAME]:
+			return false
+		if timers.has(String(key)):
+			if not _bounded_number(effects[key], 0.0, timers[String(key)]):
+				return false
+		elif key == "anchor_uid":
+			if typeof(effects[key]) != TYPE_INT or effects[key] <= 0:
+				return false
+		elif key == "relay_pulses":
+			if typeof(effects[key]) != TYPE_INT or effects[key] < 0 or effects[key] > 3:
+				return false
+		elif key == "ability_kind":
+			if typeof(effects[key]) != TYPE_STRING_NAME or Content.character(effects[key]) == null:
+				return false
+		elif key == "rewind_history":
+			if typeof(effects[key]) != TYPE_ARRAY or effects[key].size() > CharacterSkills.HISTORY_SAMPLES:
+				return false
+			for point: Variant in effects[key]:
+				if typeof(point) != TYPE_VECTOR2 or not point.is_finite() or not WorldArena.BOUNDS.has_point(point):
+					return false
+		else:
+			return false
+	return true
+
+
+func _order_data_valid(order: Dictionary) -> bool:
+	if not _row_types(order, {"kind": TYPE_STRING, "deposit": TYPE_INT, "reward": TYPE_INT,
+		"target": TYPE_INT, "accepted": TYPE_BOOL}):
+		return false
+	var kind := StringName(order.kind)
+	if not AnomalyContract.KINDS.has(kind) or order.deposit < 0 or order.reward < 0 \
+			or order.deposit > 1000000000 or order.reward > 1000000000:
+		return false
+	return order.target == {&"salvage": 3, &"audit": 2, &"repair": 1, &"rescue": 1, &"recruit": 1, &"credit": 8}[kind]
+
+
 func _undo_valid(state: ShopState) -> bool:
 	if state.next_echo_uid < 1 or state.selected_echo_uid < 0 or state.retire_cooldown < 0.0 \
-			or state.echo_refreshes < 0 or state.rerolls < 0 or state.wave < 0 or state.phase != Sim.Phase.SHOP:
+			or state.echo_refreshes < 0 or state.rerolls < 0 or state.wave < 0 or state.phase != Sim.Phase.SHOP \
+			or state.materials < 0 or Content.character(state.character_id) == null \
+			or state.contracts_accepted < 0 or state.contracts_completed < 0 or state.contracts_failed < 0 \
+			or state.weapons.size() > Content.MAX_WEAPON_SLOTS \
+			or state.echoes.size() > Sim.MAX_ECHO_CAPACITY + 1 or state.offers.size() > Shop.OFFER_COUNT \
+			or state.echo_actors.size() > Sim.MAX_ECHO_CAPACITY \
+			or state.weapon_change_index < -1 or state.weapon_change_index >= Content.MAX_WEAPON_SLOTS \
+			or state.weapon_combine_host < -1 or state.weapon_combine_host >= Content.MAX_WEAPON_SLOTS:
 		return false
 	for level: int in state.weapon_levels:
 		if level < 0 or level > WeaponDef.MAX_LEVEL:
 			return false
 	if not _stats_valid(state.stats) or not _items_valid(state.items) or not _sets_valid(state.set_bonus_applied) \
-			or state.weapons.size() != state.weapon_levels.size() or state.weapons.size() != state.cooldowns.size():
+			or state.weapons.size() != state.weapon_levels.size() or state.weapons.size() != state.cooldowns.size() \
+			or not _investments_valid(state.weapon_investments, state.weapons.size()) \
+			or not _role_valid(state.role_effects, state.character_energy, state.character_cooldown) \
+			or not Expedition.validate_plain(state.expedition, state.interactables) \
+			or not SupportSystem.validate_state(state.support_units, state.next_support_uid):
 		return false
 	for id: StringName in state.weapons:
 		if Content.weapon(id) == null:
@@ -544,29 +656,63 @@ func _undo_valid(state: ShopState) -> bool:
 	for entry: Dictionary in state.echoes:
 		if not _row_types(entry, {"samples": TYPE_PACKED_VECTOR2_ARRAY, "weapons": TYPE_PACKED_STRING_ARRAY,
 			"levels": TYPE_ARRAY, "stats": TYPE_DICTIONARY, "wave": TYPE_INT, "uid": TYPE_INT,
-			"condition": TYPE_FLOAT, "tint": TYPE_INT, "merged": TYPE_BOOL}):
+			"condition": TYPE_FLOAT, "tint": TYPE_INT, "merged": TYPE_BOOL,
+			"inherited_skill": TYPE_STRING_NAME, "merge_trait": TYPE_STRING_NAME, "archived": TYPE_BOOL}):
 			return false
 		if entry.uid <= 0 or echo_ids.has(entry.uid) or state.next_echo_uid <= entry.uid \
-				or entry.condition < 0.0 or entry.condition > 100.0 or entry.tint < 0 \
-				or entry.weapons.size() != entry.levels.size() or not _stats_valid(entry.stats):
+				or entry.condition < 0.0 or entry.condition > 100.0 or entry.tint < 0 or state.tint_counter <= entry.tint \
+				or (not entry.levels.is_empty() and entry.weapons.size() != entry.levels.size()) \
+				or entry.weapons.size() > Content.MAX_WEAPON_SLOTS or entry.samples.size() > EchoArchive.MAX_SAMPLES \
+				or not _stats_valid(entry.stats) or not _echo_metadata_valid(entry.inherited_skill, entry.merge_trait):
 			return false
 		echo_ids[entry.uid] = true
 		for i in entry.weapons.size():
-			if Content.weapon(StringName(entry.weapons[i])) == null or typeof(entry.levels[i]) != TYPE_INT \
-					or entry.levels[i] < 0 or entry.levels[i] > WeaponDef.MAX_LEVEL:
+			if Content.weapon(StringName(entry.weapons[i])) == null:
 				return false
+			if not entry.levels.is_empty() and (typeof(entry.levels[i]) != TYPE_INT or entry.levels[i] < 0 or entry.levels[i] > WeaponDef.MAX_LEVEL):
+				return false
+	if state.selected_echo_uid > 0 and not echo_ids.has(state.selected_echo_uid):
+		return false
+	var actor_ids := {}
 	for entry: Dictionary in state.echo_actors:
 		if not _row_types(entry, {"uid": TYPE_INT, "index": TYPE_INT, "t": TYPE_FLOAT,
-			"pos": TYPE_VECTOR2, "rewinding": TYPE_BOOL, "cooldowns": TYPE_ARRAY}) or not echo_ids.has(entry.uid):
+			"pos": TYPE_VECTOR2, "rewinding": TYPE_BOOL, "cooldowns": TYPE_ARRAY}) or not echo_ids.has(entry.uid) \
+				or entry.index != actor_ids.size() or entry.t < 0.0 or actor_ids.has(entry.uid) \
+				or entry.cooldowns.size() > Content.MAX_WEAPON_SLOTS:
 			return false
+		actor_ids[entry.uid] = true
 		for cooldown: Variant in entry.cooldowns:
 			if typeof(cooldown) != TYPE_FLOAT:
 				return false
+	if not state.active_order.is_empty() and (not _order_data_valid(state.active_order) or not state.active_order.accepted):
+		return false
+	var active_count := 0
 	for entry: Dictionary in state.offers:
 		if not _row_types(entry, {"kind": TYPE_STRING, "id": TYPE_STRING_NAME, "price": TYPE_INT,
-			"sold": TYPE_BOOL, "locked": TYPE_BOOL}):
+			"sold": TYPE_BOOL, "locked": TYPE_BOOL, "contract": TYPE_DICTIONARY,
+			"active": TYPE_BOOL, "weapon_level": TYPE_INT}):
 			return false
-		if not entry.kind in ["weapon", "item"] or _content(entry.kind, entry.id) == null or entry.price < 0:
+		if entry.price < 0 or entry.weapon_level < 0 or entry.weapon_level > WeaponDef.MAX_LEVEL:
+			return false
+		if entry.kind == "order":
+			if not _order_data_valid(entry.contract) or entry.id != StringName("order_" + entry.contract.kind) \
+					or entry.weapon_level != 0 or entry.active != entry.contract.accepted:
+				return false
+			if entry.active:
+				active_count += 1
+				if not entry.sold or state.active_order != entry.contract or entry.price != entry.contract.deposit:
+					return false
+		elif entry.kind in ["weapon", "item"]:
+			if _content(entry.kind, entry.id) == null or not entry.contract.is_empty() or entry.active \
+					or (entry.kind == "item" and entry.weapon_level != 0):
+				return false
+		else:
+			return false
+	if active_count > 1:
+		return false
+	if not state.active_order.is_empty():
+		var mission: Dictionary = state.expedition.get("mission", {})
+		if mission.get("kind", &"") != StringName(state.active_order.kind) or mission.get("state", &"") != &"pending":
 			return false
 	return true
 
@@ -631,7 +777,7 @@ func _prevalidate(root: Variant) -> bool:
 	var sim_count := 0
 	for row: Variant in _rows:
 		if typeof(row) != TYPE_DICTIONARY or typeof(row.get("type")) != TYPE_STRING \
-				or not TYPES.has(row.type) or typeof(row.get("fields")) != TYPE_DICTIONARY:
+				or row.size() != 2 or not TYPES.has(row.type) or typeof(row.get("fields")) != TYPE_DICTIONARY:
 			_fail("snapshot.unknown_type")
 			return false
 		if row.type == "Sim":

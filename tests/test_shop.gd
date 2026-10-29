@@ -4,19 +4,16 @@ extends RefCounted
 func _shop_sim(materials: int = 1000) -> Sim:
 	var s := Sim.new(3)
 	s.start_run()
-	s.wave_duration = 0.05
-	s.player.stats.add(Stats.MAX_HP, 100000.0)
-	s.player.hp = s.player.max_hp()
-	for i in 5:
-		s.step(1.0 / 60.0, Vector2.ZERO)
+	s.phase = Sim.Phase.SHOP
 	s.player.materials = materials
 	return s
 
 
-func _item_offer(id: StringName, price: int) -> Offer:
+func _item_offer(s: Sim, id: StringName, price: int) -> Offer:
 	var o := Offer.new()
 	o.item = Content.item(id)
 	o.price = price
+	s.shop.offers.append(o)
 	return o
 
 
@@ -63,10 +60,10 @@ func test_weapon_evolution_requires_level_and_family(c: Check) -> void:
 	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
 	var cost := Shop.evolution_cost(s.player.weapons[0])
 	s.player.materials = cost
-	c.eq(Shop.evolution_block_reason(s, 0), &"", "max level + three sidearms qualifies")
-	c.ok(s.shop.evolve_weapon(s, 0), "evolution succeeds")
+	c.eq(Shop.evolution_block_reason(s, 0, &"twin_fangs"), &"", "max level + three sidearms qualifies")
+	c.ok(s.shop.evolve_choice(s, 0, &"twin_fangs").ok, "evolution succeeds")
 	c.eq(s.player.weapons[0].id, &"twin_fangs", "weapon becomes the evolved form")
-	c.eq(s.player.level_at(0), 0, "evolved weapon starts at level 1")
+	c.eq(s.player.level_at(0), WeaponDef.MAX_LEVEL, "evolution retains the assembled grade")
 	c.eq(s.player.materials, 0, "evolution spends materials")
 
 
@@ -78,8 +75,8 @@ func test_weapon_evolution_rejects_low_family_count(c: Check) -> void:
 		s.player.add_weapon(Content.weapon(&"pistol"))
 	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
 	s.player.materials = 1000
-	c.eq(Shop.evolution_block_reason(s, 0), &"family", "two sidearms are not enough")
-	c.ok(not s.shop.evolve_weapon(s, 0), "low family count refuses evolution")
+	c.eq(Shop.evolution_block_reason(s, 0, &"twin_fangs"), &"family", "two sidearms are not enough")
+	c.ok(not s.shop.evolve_choice(s, 0, &"twin_fangs").ok, "low family count refuses evolution")
 
 
 func test_roll_is_unique_and_priced_by_wave(c: Check) -> void:
@@ -87,18 +84,21 @@ func test_roll_is_unique_and_priced_by_wave(c: Check) -> void:
 	s.wave = 5
 	for r in 20:
 		s.shop.roll(s)
-		c.eq(s.shop.offers.size(), Shop.OFFER_COUNT, "four offers")
+		c.eq(s.shop.offers.size(), Shop.OFFER_COUNT, "six offers")
 		var seen := {}
 		for o in s.shop.offers:
 			c.ok(not seen.has(o.id()), "offer ids are unique")
 			seen[o.id()] = true
-			var base: int = o.weapon.price if o.is_weapon() else o.item.price
-			c.eq(o.price, int(ceil(float(base) * 1.25)), "price scales with the wave")
+			if o.is_contract():
+				c.eq(o.price, o.contract.deposit, "work order states its purchase cost")
+			else:
+				var base: int = o.weapon.price if o.is_weapon() else o.item.price
+				c.eq(o.price, Shop.price_for(base, s.wave), "price scales with the stage")
 
 
 func test_buying_an_item_applies_it(c: Check) -> void:
 	var s := _shop_sim(100)
-	var o := _item_offer(&"iron_heart", 14)
+	var o := _item_offer(s, &"iron_heart", 14)
 	var max_hp := s.player.max_hp()
 	var hp := s.player.hp
 	c.ok(s.shop.buy(s, o), "purchase succeeds")
@@ -112,7 +112,7 @@ func test_buying_an_item_applies_it(c: Check) -> void:
 
 func test_buying_needs_money_and_the_shop_phase(c: Check) -> void:
 	var s := _shop_sim(5)
-	var o := _item_offer(&"iron_heart", 14)
+	var o := _item_offer(s, &"iron_heart", 14)
 	c.ok(not s.shop.buy(s, o), "too poor")
 	c.eq(s.player.materials, 5, "nothing deducted")
 	s.player.materials = 100
@@ -125,6 +125,7 @@ func test_weapon_slots_are_capped(c: Check) -> void:
 	var o := Offer.new()
 	o.weapon = Content.weapon(&"smg")
 	o.price = 10
+	s.shop.offers.append(o)
 	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS - 1:
 		s.player.add_weapon(Content.weapon(&"pistol"))
 	c.ok(s.shop.buy(s, o), "buys into the last free slot")
@@ -132,6 +133,7 @@ func test_weapon_slots_are_capped(c: Check) -> void:
 	var o2 := Offer.new()
 	o2.weapon = Content.weapon(&"rifle")
 	o2.price = 10
+	s.shop.offers.append(o2)
 	c.ok(not s.shop.buy(s, o2), "no seventh weapon")
 	var weapon_offers := 0
 	for r in 30:
@@ -147,28 +149,28 @@ func test_item_stack_limit(c: Check) -> void:
 	var s := _shop_sim()
 	var cap := Content.item(&"spare_deck").max_stack
 	for i in cap:
-		c.ok(s.shop.buy(s, _item_offer(&"spare_deck", 1)), "buy #%d" % (i + 1))
-	c.ok(not s.shop.buy(s, _item_offer(&"spare_deck", 1)), "stack limit reached")
+		c.ok(s.shop.buy(s, _item_offer(s, &"spare_deck", 1)), "buy #%d" % (i + 1))
+	c.ok(not s.shop.buy(s, _item_offer(s, &"spare_deck", 1)), "stack limit reached")
 	c.near(s.player.stats.get_stat(Stats.ECHO_SLOTS), 2.0 + float(cap), 0.001, "echo slots raised")
 	c.eq(s.echo_capacity(), 2 + cap, "capacity follows the stat")
 	for r in 40:
 		s.shop.roll(s)
 		for offer in s.shop.offers:
-			c.ok(offer.is_weapon() or offer.item.id != &"spare_deck", "maxed items are not offered")
+			c.ok(offer.is_weapon() or offer.is_contract() or offer.item.id != &"spare_deck", "maxed items are not offered")
 
 
 func test_block_reason_explains_why_an_offer_is_unavailable(c: Check) -> void:
 	var s := _shop_sim(100)
-	var o := _item_offer(&"iron_heart", 14)
+	var o := _item_offer(s, &"iron_heart", 14)
 	c.eq(s.shop.block_reason(s, o), &"", "an affordable offer is open")
 	s.player.materials = 5
 	c.eq(s.shop.block_reason(s, o), &"poor", "too poor")
 	s.player.materials = 100
 	c.ok(s.shop.buy(s, o), "buy it")
 	c.eq(s.shop.block_reason(s, o), &"sold", "sold")
-	var deck := _item_offer(&"spare_deck", 1)
+	var deck := _item_offer(s, &"spare_deck", 1)
 	for i in Content.item(&"spare_deck").max_stack:
-		s.shop.buy(s, _item_offer(&"spare_deck", 1))
+		s.shop.buy(s, _item_offer(s, &"spare_deck", 1))
 	c.eq(s.shop.block_reason(s, deck), &"maxed", "stack limit reached")
 	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
 		s.player.add_weapon(Content.weapon(&"pistol"))
@@ -206,8 +208,8 @@ func test_replace_weapon_trades_in_the_old_one(c: Check) -> void:
 	o.price = 34
 	s.shop.offers.clear()
 	s.shop.offers.append(o)
-	var old := s.player.weapons[0]
-	var resale := Shop.resale_value(old)
+	s.player.weapon_investments[0] = 14
+	var resale := Shop.resale_for(s, 0)
 	var before := s.player.materials
 	c.ok(s.shop.replace_weapon(s, o, 0), "swap succeeds")
 	c.eq(s.player.weapons[0], o.weapon, "new weapon takes the slot")
@@ -220,12 +222,13 @@ func test_replace_weapon_refunds_half_of_upgrade_investment(c: Check) -> void:
 	while s.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
 		s.player.add_weapon(Content.weapon(&"pistol"))
 	s.player.weapon_levels[0] = 2
+	s.player.weapon_investments[0] = 60
 	var o := Offer.new()
 	o.weapon = Content.weapon(&"rifle")
 	o.price = 20
 	s.shop.offers.append(o)
-	var total := Shop.resale_total(s.player.weapons[0], 2)
-	c.ok(total > Shop.resale_value(s.player.weapons[0]), "upgrades add trade-in value")
+	var total := Shop.resale_for(s, 0)
+	c.ok(total > 7, "upgrades add trade-in value")
 	c.ok(s.shop.replace_weapon(s, o, 0), "swap succeeds with trade-in value")
 	c.eq(s.player.materials, total - o.price, "half of upgrade spend is returned")
 	c.eq(s.player.level_at(0), 0, "new weapon starts at level 1")

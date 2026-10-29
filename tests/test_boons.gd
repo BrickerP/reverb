@@ -32,7 +32,7 @@ func test_endless_boss_offers_and_applies_a_boon(c: Check) -> void:
 	s.player.stats.add(Stats.MAX_HP, 100000.0)
 	s.player.hp = s.player.max_hp()
 	c.ok(s.begin_endless(), "begin endless")
-	s.start_wave(25)
+	s.start_wave(WaveDirector.FINAL_WAVE + 4)
 	_run(s, 200)
 	c.ok(s.boss != null, "boss spawns")
 	s.damage_enemy(s.boss, 1000000.0, Vector2.ZERO, false, -1)

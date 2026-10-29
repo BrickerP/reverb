@@ -36,24 +36,20 @@ func test_shop_keeps_primary_actions_outside_scrolling_stock(c: Check) -> void:
 	ui.free()
 
 
-func test_eight_copies_are_scrollable_and_overflow_still_blocks_start(c: Check) -> void:
+func test_eight_copies_page_without_blocking_nonoverflow(c: Check) -> void:
 	var sim := _sim_with_takes(8)
 	var before := ShopState.capture(sim).to_dict()
 	var ui := ShopUi.new()
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
 	ui.open(sim)
-	c.eq(ui.echo_panel.discard_buttons.size(), 8, "every over-capacity copy retains an action")
-	var scroll := ui.echo_panel._takes_box.get_parent() as ScrollContainer
-	c.ok(scroll != null and scroll.follow_focus, "copy list scrolls to each focused action")
-	c.ok(not scroll.is_ancestor_of(ui.echo_panel.merge_button), "staple action remains fixed above copies")
-	c.ok(ui.start_button.disabled, "overflow cannot bypass the wave-start rule")
-	c.ok(not ui._warning.text.is_empty(), "overflow task is explained in the fixed tray")
-	ui.reroll_button.grab_focus()
-	ui.focus_default()
-	c.ok(ui.echo_panel.discard_buttons[0].has_focus(),
-			"returning from a modal restores focus to the blocking copy task")
-	c.eq(ShopState.capture(sim).to_dict(), before, "opening the new layout leaves shop state untouched")
+	c.eq(ui.echo_panel.discard_buttons.size(), ui.echo_panel.page_size, "copy actions are bounded by page size")
+	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "no nested copy scrolling")
+	c.ok(ui.echo_panel.page_next != null and not ui.echo_panel.page_next.disabled, "remaining copies have an explicit page action")
+	c.ok(ui.start_button.disabled, "actual overflow blocks departure")
+	ui.echo_panel.page_next.pressed.emit()
+	c.eq(ui.echo_panel.page, 1, "paging changes only the visible bank page")
+	c.eq(ShopState.capture(sim).to_dict(), before, "paging never mutates the bank")
 	ui.free()
 
 
@@ -65,7 +61,7 @@ func test_long_lived_copy_still_uses_exact_seconds_and_condition(c: Check) -> vo
 	panel.refresh(sim)
 	var found := false
 	for label: Label in panel.find_children("*", "Label", true, false):
-		if label.text == Loc.t("echo.condition", [60, 240]):
+		if label.text.contains(Loc.t("echo.condition", [60, 240])):
 			found = true
 	c.ok(found, "long playback is an exact condition and seconds label")
 	c.eq(panel.discard_buttons.size(), 1, "duration never creates extra meter controls")

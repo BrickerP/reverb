@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render the original 48-bar Paperwork Waltz with deterministic instruments.
 
-Uses the pinned NumPy tooling dependency in tools/requirements-audio.txt. The game only loads
+Uses the pinned NumPy tooling dependency in tools/requirements-dev.txt. The game only loads
 finished PCM, and never synthesizes audio or consumes simulation randomness.
 """
 from __future__ import annotations

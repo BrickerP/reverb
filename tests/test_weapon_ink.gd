@@ -16,7 +16,7 @@ func test_all_weapon_identities_have_distinct_drawn_language(c: Check) -> void:
 		glyphs.append(p["glyph"])
 		gestures.append(p["muzzle"])
 		impacts.append(p["impact"])
-	c.eq(glyphs.size(), 24, "all twenty-four shipped weapons have explicit art language")
+	c.eq(glyphs.size(), 35, "all thirty-five shipped weapons have explicit art language")
 	var first := WeaponInk.profile(&"pistol")
 	first["recoil"] = 999.0
 	c.ok(float(WeaponInk.profile(&"pistol")["recoil"]) < 10.0, "a shot cannot mutate the global identity catalog")

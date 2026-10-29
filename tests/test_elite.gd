@@ -38,6 +38,7 @@ func test_elite_base_stats_and_reward(c: Check) -> void:
 func test_bulwark_elite_uses_runtime_shield(c: Check) -> void:
 	var s := _sim()
 	var e := _materialize(s, &"bulwark")
+	e.hp = 1000.0
 	c.eq(e.shield_arc_value(), Sim.ELITE_BULWARK_ARC, "bulwark gets its shield arc")
 	c.eq(e.shield_reduction_value(), Sim.ELITE_BULWARK_REDUCTION, "bulwark gets its reduction")
 	s.player.pos = e.pos + Vector2(-100.0, 0.0)

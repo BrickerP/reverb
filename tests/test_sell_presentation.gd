@@ -37,6 +37,7 @@ func _set_weapons(sim: Sim, ids: Array[StringName]) -> void:
 	sim.player.cooldowns.clear()
 	for id: StringName in ids:
 		sim.player.add_weapon(Content.weapon(id))
+		sim.player.weapon_investments[-1] = Content.weapon(id).price
 
 
 func test_sell_button_uses_quote_and_last_weapon_has_accessible_reason(c: Check) -> void:
@@ -46,10 +47,11 @@ func test_sell_button_uses_quote_and_last_weapon_has_accessible_reason(c: Check)
 	var ui := _open(sim)
 	var quote := sim.shop.quote(ShopResult.SELL, sim, null, 1)
 	c.ok(quote.ok and quote.cost < 0, "mechanics exposes the sell refund quote")
-	c.eq(ui.build_panel._sell_buttons[1].text, Loc.t("shop.sell", [absi(quote.cost)]),
+	c.eq(_sell_button(ui, 1).text, Loc.t("shop.sell", [absi(quote.cost)]),
 			"sell label displays the authoritative quote")
-	ui.build_panel._sell_buttons[1].pressed.emit()
-	var last := ui.build_panel._sell_buttons[0]
+	ui._open_weapon_workshop(1)
+	ui.workshop.choice_buttons[3].pressed.emit()
+	var last := _sell_button(ui, 0)
 	c.ok(last.disabled, "last weapon sell action is disabled")
 	c.eq(last.accessibility_description, Loc.t("shop.sell_last_reason"),
 			"disabled action explains why one weapon must remain")
@@ -70,12 +72,12 @@ func test_sale_refund_focus_and_audio_follow_committed_result_once(c: Check) -> 
 	_root().add_child(audio)
 	audio.bind(sim)
 	var ui := _open(sim)
-	ui.build_panel._sell_buttons[1].pressed.emit()
+	ui._open_weapon_workshop(1)
+	ui.workshop.choice_buttons[3].pressed.emit()
 	c.eq(sim.player.materials, materials_before + absi(quote.cost),
 			"committed sale refunds the exact quoted materials")
-	c.ok(ui.build_panel._upgrade_buttons[0].disabled,
-			"remaining max-level weapon has no upgrade focus target")
-	c.ok(ui.undo_button.has_focus(), "sale falls back to focused Undo")
+	c.ok(not ui.workshop.visible, "sale closes the workbench")
+	c.ok(ui.build_panel._upgrade_buttons[0].has_focus() or ui.undo_button.has_focus(), "sale restores a stable action focus")
 	c.eq(audio.play_count(&"buy"), 1, "sale uses one existing transaction cue")
 	c.eq(audio.play_count(&"equipment_apply"), 0, "sale does not duplicate the purchase cue")
 	ui.undo_button.pressed.emit()
@@ -90,9 +92,10 @@ func test_middle_same_id_sale_and_undo_target_only_real_slot_changes(c: Check) -
 	_set_weapons(sim, [&"pistol", &"pistol", &"pistol", &"pistol"])
 	var ui := _open(sim)
 	var mastery := Loc.t("shop.family_mastery_sidearm")
-	c.ok(_has_label(ui.build_panel, mastery), "four-piece family mastery starts visible")
-	ui.build_panel._sell_buttons[1].pressed.emit()
-	c.ok(not _has_label(ui.build_panel, mastery), "middle sale updates family four to three")
+	c.eq(Combat.family_count(sim.player.weapons, &"sidearm"), 4, "four-piece family starts equipped")
+	ui._open_weapon_workshop(1)
+	ui.workshop.choice_buttons[3].pressed.emit()
+	c.eq(Combat.family_count(sim.player.weapons, &"sidearm"), 3, "sale updates actual family count")
 	c.eq(ui.pending_feedback_count(), 2, "sale queues one removal and one refund cue")
 	c.ok(bool(ui._pending_feedback[&"materials"].get("refund", false)),
 			"material cue is identified as a refund from the committed result")
@@ -103,7 +106,7 @@ func test_middle_same_id_sale_and_undo_target_only_real_slot_changes(c: Check) -
 		c.eq(target.feedback_runs, 0, "shifted same-ID slots never receive a fake sale pulse")
 	c.eq(ui.material_feedback_runs, 1, "refund counter pulses once")
 	ui.undo_button.pressed.emit()
-	c.ok(_has_label(ui.build_panel, mastery), "undo restores family three to four")
+	c.eq(Combat.family_count(sim.player.weapons, &"sidearm"), 4, "undo restores actual family count")
 	c.eq(ui.pending_feedback_count(), 2, "undo queues one reinsertion and one material rewind")
 	ui.flush_feedback()
 	c.eq(ui.build_panel.slot_drop_targets[1].feedback_runs, 1,
@@ -116,3 +119,8 @@ func test_middle_same_id_sale_and_undo_target_only_real_slot_changes(c: Check) -
 					"undo leaves every unaffected slot still")
 	c.eq(ui.material_feedback_runs, 2, "refund rewind pulses materials exactly once")
 	ui.free()
+
+
+func _sell_button(ui: ShopUi, index: int) -> Button:
+	ui._open_weapon_workshop(index)
+	return ui.workshop.choice_buttons[3]

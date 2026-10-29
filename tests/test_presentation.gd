@@ -31,7 +31,7 @@ func test_required_art_loads(c: Check) -> void:
 
 
 func test_every_weapon_id_resolves_to_distinct_imported_art(c: Check) -> void:
-	c.eq(PresentationAssets.WEAPON_KEYS.size(), 24, "all eighteen shop weapons and six evolutions have art")
+	c.eq(PresentationAssets.WEAPON_KEYS.size(), 35, "all base, final and support weapons have art")
 	c.eq(PresentationAssets.WEAPON_KEYS.size(), Content.weapons().size(),
 			"weapon catalog has no missing or extra IDs")
 	var keys: Array[StringName] = []
@@ -122,7 +122,7 @@ func test_unknown_definitions_use_documented_safe_fallbacks(c: Check) -> void:
 func test_source_metadata_stays_inside_original_images(c: Check) -> void:
 	c.eq(PresentationAssets.SOURCE_METADATA.size(), PresentationAssets.PATHS.size(),
 			"every presentation asset has source metadata")
-	c.eq(PresentationAssets.PATHS.size(), 56, "catalog contains all fifty-six shipped visual identities")
+	c.eq(PresentationAssets.PATHS.size(), 78, "catalog includes expedition bosses, arsenal, support poses and mission letter")
 	var identities: Array[String] = []
 	for key: StringName in PresentationAssets.PATHS:
 		c.ok(PresentationAssets.SOURCE_METADATA.has(key), "metadata exists for %s" % key)

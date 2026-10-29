@@ -1,26 +1,30 @@
 class_name WaveDirector
 extends RefCounted
 
-const FINAL_WAVE := 20
-const ELITE_START_WAVE := 10
+const FINAL_WAVE := 12
+const ELITE_START_WAVE := 6
 const ELITE_KINDS := [&"overclocked", &"bulwark", &"volatile", &"splitter"]
 const MIN_SPAWN_DISTANCE := 240.0
 const EDGE_INSET := 24.0
-const COHORT_WINDOWS := [[0.0, 0.24], [0.36, 0.60], [0.72, 0.90]]
+const COHORT_WINDOWS := [[0.0, 0.24], [0.36, 0.60], [0.72, 1.0]]
 
 
 static func duration_for(wave: int) -> float:
-	return minf(60.0, 20.0 + 2.5 * float(wave - 1))
+	return minf(60.0, 24.0 + 3.0 * float(wave - 1))
 
 
 static func budget_for(wave: int) -> float:
 	var w := float(wave)
-	return 6.0 + 7.0 * w + 1.0 * w * w
+	return minf(360.0, 10.0 + 8.0 * w)
+
+
+static func cash_budget(wave: int) -> int:
+	return mini(300, 24 + 6 * maxi(1, wave))
 
 
 static func hp_scale(wave: int) -> float:
 	var k := float(wave - 1)
-	return 1.0 + 0.20 * k + 0.06 * k * k
+	return 1.0 + 0.16 * k + 0.015 * k * k
 
 
 static func damage_scale(wave: int) -> float:
@@ -45,9 +49,7 @@ static func phase_profile(wave_time: float, duration: float) -> Dictionary:
 		return _phase(&"second_push", 0.75)
 	if time < duration * COHORT_WINDOWS[2][0]:
 		return _phase(&"second_breather", 0.18)
-	if time < duration * COHORT_WINDOWS[2][1]:
-		return _phase(&"final_push", 1.0)
-	return _phase(&"clear", 0.30)
+	return _phase(&"final_push", 1.0)
 
 
 static func _phase(id: StringName, intensity: float) -> Dictionary:
@@ -81,11 +83,14 @@ static func plan(wave: int, run_seed: int, budget_mult: float = 1.0,
 		var local_progress := (float(i - first) + rng.randf()) / float(end - first)
 		var window: Array = COHORT_WINDOWS[cohort]
 		var start := maxf(0.5, duration * float(window[0]))
-		e.time = lerpf(start, duration * float(window[1]), local_progress)
+		var finish := duration * float(window[1])
+		if cohort == 2:
+			finish = maxf(start, duration - Sim.SPAWN_TELEGRAPH)
+		e.time = lerpf(start, finish, local_progress)
 		events.append(e)
-	# One visible elite per wave from wave 10. It upgrades an existing budget slot;
+	# An elite upgrades an existing budget slot in late ordinary encounters;
 	# it never adds spawn cost or consumes an extra RNG stream for the rest of the plan.
-	if wave >= ELITE_START_WAVE and (wave < FINAL_WAVE or (endless and wave > FINAL_WAVE)) and not events.is_empty():
+	if wave >= ELITE_START_WAVE and wave % 4 != 0 and (wave < FINAL_WAVE or (endless and wave > FINAL_WAVE)) and not events.is_empty():
 		var available: Array[int] = []
 		for i in events.size():
 			available.append(i)

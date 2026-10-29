@@ -107,7 +107,7 @@ func _sell_and_undo_case() -> bool:
 	var sold_id := sim.player.weapons[sold_index].id
 	var sold_level := sim.player.level_at(sold_index)
 	var sold_cooldown := sim.player.cooldowns[sold_index]
-	var refund := Shop.resale_total(sim.player.weapons[sold_index], sold_level)
+	var refund := Shop.resale_for(sim, sold_index)
 	var quote := sim.shop.quote(ShopResult.SELL, sim, null, sold_index)
 	if not _require(quote.ok and quote.cost == -refund
 			and ui.build_panel._sell_buttons[sold_index].text == Loc.t("shop.sell", [refund]),

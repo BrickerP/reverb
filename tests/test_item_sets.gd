@@ -110,15 +110,37 @@ func _find_label(node: Node, needle: String) -> bool:
 	return false
 
 
-func test_build_panel_shows_completed_set(c: Check) -> void:
-	var s := _sim()
-	for id in [&"spare_deck", &"long_play", &"loud_speaker"]:
-		s.player.add_item(Content.item(id))
-	var panel := BuildPanel.new()
-	_root().add_child(panel)
-	panel.refresh(s)
-	c.ok(_find_label(panel, Loc.t("set.echo_bonus")), "completed set bonus is visible")
-	panel.free()
+func test_workbench_shows_every_completed_set_and_actual_core_stats(c: Check) -> void:
+	var cases: Array[Dictionary] = [
+		{"id": &"echo", "members": [&"spare_deck", &"long_play", &"loud_speaker"]},
+		{"id": &"gunsmith", "members": [&"sharp_edge", &"quick_trigger", &"long_barrel"]},
+		{"id": &"field", "members": [&"iron_heart", &"regen_patch", &"sneakers"]},
+	]
+	for data in cases:
+		var s := _sim()
+		for id: StringName in data.members:
+			s.player.add_item(Content.item(id))
+		var ui := ShopUi.new()
+		ui.theme = UiTheme.build()
+		_root().add_child(ui)
+		ui.open(s)
+		ui.build_panel._slot_buttons[0].pressed.emit()
+		ui.workshop.choice_buttons[5].pressed.emit()
+		c.ok(ui.workshop.visible, "actual slot entry opens the passive workbench")
+		ui.workshop.choice_buttons[1].pressed.emit()
+		c.ok(_find_label(ui.workshop, Loc.t("set.%s_bonus" % data.id)), "%s completed bonus is visible on its passive page" % data.id)
+		ui.workshop.cancel_button.pressed.emit()
+		ui.build_panel._slot_buttons[0].pressed.emit()
+		ui.workshop.choice_buttons[4].pressed.emit()
+		if data.id == &"echo":
+			c.ok(_find_label(ui.workshop, Loc.t("shop.echo_value", [s.echo_capacity(), int(round(s.echo_power() * 100.0))])), "echo set core uses actual capacity and power")
+		elif data.id == &"gunsmith":
+			for stat in [Stats.DAMAGE_PCT, Stats.ATTACK_SPEED_PCT]:
+				c.ok(_find_label(ui.workshop, Loc.stat_name(stat) + " · " + Loc.stat_value(stat, s.player.stats.get_stat(stat), false)), "gunsmith actual stat remains visible in core")
+		else:
+			ui.workshop.choice_buttons[1].pressed.emit()
+			c.ok(_find_label(ui.workshop, Loc.stat_name(Stats.SHIELD) + " · " + Loc.stat_value(Stats.SHIELD, s.player.stats.get_stat(Stats.SHIELD), false)), "field set actual shield remains visible in core")
+		ui.free()
 
 
 func _root() -> Window:

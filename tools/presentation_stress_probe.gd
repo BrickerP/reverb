@@ -7,6 +7,7 @@ extends SceneTree
 const WARMUP_FRAMES := 120
 const MEASURED_FRAMES := 360
 const DEADLINE_MSEC := 180000
+const OUTPUT_DIR := "/Users/yupeng/projects/personal/reverb-delivery-expedition-closeout/after/pressure"
 const LOADOUT: Array[StringName] = [
 	&"pistol", &"longbow", &"shotgun", &"twin_fangs", &"flak_crown", &"nova_core",
 ]
@@ -21,6 +22,8 @@ const CASES := [
 	{"name": "300_eight_reduced", "count": 300, "reduced": true, "echoes": 8},
 	{"name": "35_ballistic_eight_copies", "count": 35, "reduced": false, "echoes": 8, "ballistic": true},
 	{"name": "300_dense_eight_copies", "count": 300, "reduced": false, "echoes": 8, "dense": true},
+	{"name": "96_legal_8echo_12support_standard", "count": 96, "reduced": false, "echoes": 8, "ballistic": true, "legal": true},
+	{"name": "96_legal_8echo_12support_reduced", "count": 96, "reduced": true, "echoes": 8, "ballistic": true, "legal": true},
 ]
 
 var _main: Node
@@ -29,17 +32,22 @@ var _started_msec := Time.get_ticks_msec()
 var _failed := false
 var _shots_dir := ""
 var _summary: Dictionary = {"cases": [], "screenshots": {}, "pure_view_tick": {}}
+var _support_events: Dictionary = {}
+var _isolated_paths: Dictionary = {}
 
 
 func _initialize() -> void:
-	OS.set_environment("REVERB_SUSPEND", "user://dev_presentation_stress_probe_suspend.json")
-	RenderingServer.render_loop_enabled = false
-	OS.set_environment("REVERB_SAVE", "user://presentation_stress_probe_save.json")
-	OS.set_environment("REVERB_RUN_LOG", "user://presentation_stress_probe_runs.jsonl")
-	OS.set_environment("REVERB_SETTINGS", "user://presentation_stress_probe_settings.json")
-	_clear_fixture_files()
-	_shots_dir = ProjectSettings.globalize_path("res://shots")
+	_shots_dir = OUTPUT_DIR
 	DirAccess.make_dir_recursive_absolute(_shots_dir)
+	var data_dir := _shots_dir.path_join("userdata")
+	DirAccess.make_dir_recursive_absolute(data_dir)
+	for key: String in ["REVERB_SAVE", "REVERB_RUN_LOG", "REVERB_SETTINGS", "REVERB_FEEDBACK_LOG", "REVERB_SUSPEND"]:
+		var path := data_dir.path_join(key.to_lower() + ".json")
+		_isolated_paths[key] = path
+		OS.set_environment(key, path)
+	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
+	_clear_fixture_files()
+	RenderingServer.render_loop_enabled = false
 	_main = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(_main)
 	_run.call_deferred()
@@ -57,16 +65,37 @@ func _process(_delta: float) -> bool:
 func _run() -> void:
 	if not (await _wait_for_main()):
 		return
+	if OS.get_cmdline_user_args().has("validate-fixture"):
+		_setup_run(false, 8, true, true)
+		_fill_legal_pressure()
+		if _failed or not _validate_legal_fixture(_main.sim):
+			return
+		for frame in WARMUP_FRAMES + MEASURED_FRAMES:
+			_main.sim.step(1.0 / 60.0, Vector2.ZERO)
+		if not _validate_legal_fixture(_main.sim):
+			return
+		print("legal pressure headless runtime: %s" % JSON.stringify({"frames": 480,
+			"projectiles": _main.sim.projectiles.size(), "support_events": _support_events,
+			"role_fields": _main.sim.role_effects.size(), "energy": _main.sim.character_energy}))
+		_main.free()
+		print("legal pressure headless fixture: OK")
+		quit()
+		return
 	if not _check_pure_view_tick():
 		return
-	if not (await _edge_fixture(false, "edge_standard")):
-		return
-	if not (await _edge_fixture(true, "edge_reduced")):
-		return
+	var legal_only := OS.get_cmdline_user_args().has("legal-only")
+	_summary["run_scope"] = "legal-only; legacy manual over-cap diagnostics retained but omitted" if legal_only else "all rendering diagnostics plus legal-cap cases"
+	if not legal_only:
+		if not (await _edge_fixture(false, "edge_standard")):
+			return
+		if not (await _edge_fixture(true, "edge_reduced")):
+			return
 	for raw: Dictionary in CASES:
+		if legal_only and not bool(raw.get("legal", false)):
+			continue
 		var result: Dictionary = await _measure_case(
 				String(raw["name"]), int(raw["count"]), bool(raw["reduced"]), int(raw.get("echoes", 4)),
-				bool(raw.get("ballistic", false)), bool(raw.get("dense", false)))
+				bool(raw.get("ballistic", false)), bool(raw.get("dense", false)), bool(raw.get("legal", false)))
 		if result.is_empty():
 			return
 		(_summary["cases"] as Array).append(result)
@@ -106,6 +135,7 @@ func _check_pure_view_tick() -> bool:
 	_main.pause_ui.close()
 	_main._view.set_paused(false)
 	var rng_state: int = sim.rng.state
+	var hazard_state: int = sim.hazard_rng.state
 	var wave_time: float = sim.wave_time
 	var player_pos: Vector2 = sim.player.pos
 	var cooldowns: Array[float] = sim.player.cooldowns.duplicate()
@@ -113,7 +143,7 @@ func _check_pure_view_tick() -> bool:
 	if not _require(not before_snapshot.is_empty(), "pure view fixture has a complete gameplay snapshot"):
 		return false
 	_main._view._process(0.25)
-	var unchanged: bool = (sim.rng.state == rng_state and is_equal_approx(sim.wave_time, wave_time)
+	var unchanged: bool = (sim.rng.state == rng_state and sim.hazard_rng.state == hazard_state and is_equal_approx(sim.wave_time, wave_time)
 			and sim.player.pos == player_pos and sim.player.cooldowns == cooldowns
 	)
 	if not _require(unchanged, "pure ArenaView tick leaves Sim state and RNG unchanged"):
@@ -121,7 +151,7 @@ func _check_pure_view_tick() -> bool:
 	if not _require(RunSnapshot.capture(sim) == before_snapshot,
 			"pure ArenaView tick preserves the entire exact gameplay snapshot"):
 		return false
-	_summary["pure_view_tick"] = {"rng_unchanged": true, "wave_time_unchanged": true,
+	_summary["pure_view_tick"] = {"rng_unchanged": true, "hazard_rng_unchanged": true, "wave_time_unchanged": true,
 		"player_position_unchanged": true, "cooldowns_unchanged": true, "full_snapshot_unchanged": true}
 	_main.paused = false
 	return true
@@ -133,7 +163,7 @@ func _edge_fixture(reduced: bool, name: String) -> bool:
 	var positions: Array[Vector2] = [
 		Vector2(82.0, 118.0), Vector2(340.0, 104.0), Vector2(640.0, 108.0),
 		Vector2(950.0, 104.0), Vector2(1192.0, 122.0), Vector2(88.0, 620.0),
-		Vector2(1180.0, 614.0),
+		Vector2(1180.0, 614.0), Vector2(950.0, 610.0), Vector2(640.0, 610.0),
 	]
 	var defs: Array[EnemyDef] = Content.enemies()
 	for i in defs.size():
@@ -142,22 +172,26 @@ func _edge_fixture(reduced: bool, name: String) -> bool:
 		_drive_square(_i)
 		await process_frame
 	_release_input()
-	if not _require(_contains_all_enemy_types(sim), "%s contains all seven enemy types" % name):
+	if not _require(_contains_all_enemy_types(sim), "%s contains all canonical enemy types" % name):
 		return false
 	var captured: bool = await _capture(name)
 	return captured
 
 
 func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
-		ballistic: bool = false, dense: bool = false) -> Dictionary:
-	_setup_run(reduced, copies, ballistic)
+		ballistic: bool = false, dense: bool = false, legal: bool = false) -> Dictionary:
+	_setup_run(reduced, copies, ballistic, legal)
 	# Standard and reduced variants share the exact enemy layout seed so their
 	# timing difference measures presentation settings rather than placement.
-	if ballistic:
+	if legal:
+		_fill_legal_pressure()
+	elif ballistic:
 		_fill_ballistic_enemies(count)
 	else:
 		_fill_enemies(count, 4100 + count, dense)
 	var sim: Sim = _main.sim
+	if legal and not _validate_legal_fixture(sim):
+		return {}
 	if dense:
 		var before := RunSnapshot.capture(sim)
 		if not _require(not before.is_empty() and RunSnapshot.restore(before) != null,
@@ -172,6 +206,11 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 	var peak_visible_enemies: int = 0
 	var min_visible_enemies: int = count
 	var peak_echoes: int = 0
+	var peak_supports := 0
+	var min_supports := SupportSystem.MAX_UNITS if legal else 0
+	var peak_role_fields := 0
+	var peak_energy := 0.0
+	var peak_mission_progress := 0
 	var peak_projectiles: int = 0
 	var peak_attack_fields: int = 0
 	var peak_enemy_zones: int = 0
@@ -194,6 +233,11 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 			peak_visible_enemies = maxi(peak_visible_enemies, visible_enemies)
 			min_visible_enemies = mini(min_visible_enemies, visible_enemies)
 			peak_echoes = maxi(peak_echoes, sim.echoes.size())
+			peak_supports = maxi(peak_supports, sim.support_units.size())
+			min_supports = mini(min_supports, sim.support_units.size()) if legal else 0
+			peak_role_fields = maxi(peak_role_fields, sim.role_effects.size())
+			peak_energy = maxf(peak_energy, sim.character_energy)
+			peak_mission_progress = maxi(peak_mission_progress, int(sim.expedition.get("mission", {}).get("progress", 0)))
 			peak_projectiles = maxi(peak_projectiles, sim.projectiles.size())
 			peak_attack_fields = maxi(peak_attack_fields, sim.attack_fields.size())
 			peak_enemy_zones = maxi(peak_enemy_zones, sim.enemy_zones.size())
@@ -210,7 +254,7 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 	if not _require(times.size() == MEASURED_FRAMES,
 			"%s records every measured frame" % name):
 		return {}
-	if not _require(_contains_all_enemy_types(sim), "%s retains all seven enemy types" % name):
+	if not legal and not _require(_contains_all_enemy_types(sim), "%s retains all canonical enemy types" % name):
 		return {}
 	if not _require(peak_projectiles <= Combat.MAX_PROJECTILES
 			and peak_attack_fields <= Combat.MAX_ACTIVE_FIELDS and peak_enemy_zones <= EnemyBrain.MAX_ZONES,
@@ -232,6 +276,11 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 		return {}
 	if not _require(peak_audio_voices <= GameAudio.POOL,
 			"%s audio voices stay within the fixed pool" % name):
+		return {}
+	if legal and not _require(peak_echoes == 8 and peak_supports == 12 and min_supports == 12 and sim.enemies.size() == 96,
+			"legal pressure maintains 96 real admitted bodies, eight copies and twelve actual owned supports"):
+		return {}
+	if legal and not _validate_legal_fixture(sim):
 		return {}
 	if count == 300 or ballistic:
 		if not (await _capture(("ballistic_%s" if ballistic else "dense_%s") % name)):
@@ -256,6 +305,13 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 		"peak_enemies": peak_enemies, "peak_visible_enemies": peak_visible_enemies,
 		"min_visible_enemies": min_visible_enemies, "last_visible_enemies": _visible_enemy_count(sim),
 		"peak_echoes": peak_echoes, "peak_projectiles": peak_projectiles,
+		"peak_supports": peak_supports, "min_supports": min_supports, "support_events": _support_events.duplicate(true),
+		"peak_role_fields": peak_role_fields, "peak_energy": peak_energy, "peak_mission_progress": peak_mission_progress,
+		"legal_capacity_fixture": legal, "legal_snapshot_roundtrip": legal,
+		"mission_kind": String(sim.expedition.get("mission", {}).get("kind", &"")),
+		"mission_state": String(sim.expedition.get("mission", {}).get("state", &"")),
+		"character_id": String(sim.character_id), "last_support_uid_cursor": sim._next_support_uid,
+		"fixture_scope": "legal runtime population / real Echo-owned supports / amplified diagnostic gear" if legal else "manual over-cap rendering diagnostic; not a legal spawn-cap claim",
 		"peak_attack_fields": peak_attack_fields, "peak_enemy_zones": peak_enemy_zones,
 		"last_projectiles": sim.projectiles.size(), "last_mesh": mesh, "peak_mesh": peak_mesh,
 		"last_source_wave_time": sim.wave_time,
@@ -269,7 +325,7 @@ func _measure_case(name: String, count: int, reduced: bool, copies: int = 4,
 		"peak_feedback": peak_feedback, "peak_audio_voices": peak_audio_voices}
 
 
-func _setup_run(reduced: bool, copies: int = 4, ballistic: bool = false) -> void:
+func _setup_run(reduced: bool, copies: int = 4, ballistic: bool = false, legal: bool = false) -> void:
 	_main.new_run(20261023, &"looper")
 	var sim: Sim = _main.sim
 	sim.player.weapons.clear()
@@ -289,7 +345,15 @@ func _setup_run(reduced: bool, copies: int = 4, ballistic: bool = false) -> void
 		sim.bank.add(take)
 		take.condition = 15.0 + float(i) * 10.0 if copies == 8 else 100.0
 		take.merged = copies == 8 and i % 3 == 0
-	sim.start_wave(3)
+	if legal:
+		var order := AnomalyContract.new()
+		order.kind = &"audit"
+		order.accepted = true
+		order.deposit = 0
+		sim.active_contract = order
+		sim.contracts_accepted = 1
+		Expedition.on_order_purchased(sim, order)
+	sim.start_wave(12 if legal else 3)
 	if not _require(sim.echoes.size() == copies, "all requested copies exist in the real simulation"):
 		return
 	if copies == 8:
@@ -302,7 +366,11 @@ func _setup_run(reduced: bool, copies: int = 4, ballistic: bool = false) -> void
 		if not _require(merged == 3 and sim.bank.takes.size() == 8 and is_equal_approx(sim.echo_duration(), 600.0),
 				"mixed-wear fixture retains merged copies, duration and complete bank"):
 			return
-	sim.wave_duration = 120.0
+	sim.wave_duration = 60.0 if legal else 120.0
+	_support_events.clear()
+	if legal:
+		sim.support_event.connect(_on_support_event)
+		sim.activate_character_skill()
 	sim._plan.clear()
 	sim._plan_idx = 0
 	_main._view.set_reduced_effects(reduced)
@@ -347,6 +415,76 @@ func _fill_enemies(count: int, seed_value: int, dense: bool = false) -> void:
 			if not _require(WorldArena.body_clear(position, def.radius), "dense body clears real world machines"):
 				return
 		_add_enemy(def, position, def.speed)
+
+
+func _fill_legal_pressure() -> void:
+	var sim: Sim = _main.sim
+	var definitions: Array[EnemyDef] = []
+	for definition in Content.enemies():
+		if not definition.is_boss:
+			definitions.append(definition)
+	for index in Sim.MAX_ORDINARY_ENEMIES:
+		var arrival := PendingSpawn.new()
+		arrival.def = definitions[index % definitions.size()]
+		arrival.pos = Vector2(1740.0 + float(index % 8) * 4.0, 170.0 + float(index % 13) * 5.0)
+		if not _require(sim._materialize(arrival), "legal pressure admits each ordinary body through Sim"):
+			return
+		var enemy: EnemyState = sim.enemies.back()
+		enemy.max_hp = 1.0e9
+		enemy.hp = enemy.max_hp
+		enemy.damage = 0.0
+		enemy.pin_left = 120.0
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"paradox")
+	arrival.pos = Vector2(1740.0, 250.0)
+	if not _require(sim._materialize(arrival), "legal pressure uses the real reserved boss slot"):
+		return
+	sim.boss.max_hp = 1.0e9
+	sim.boss.hp = 4.9e8
+	sim.boss_original_max_hp = 1.0e9
+	sim._begin_boss_phase2()
+	for boss: EnemyState in sim.boss_shards:
+		boss.damage = 0.0
+		boss.pin_left = 120.0
+	sim.echo_silenced = 0.0
+	sim._boss_silence_cd = 100.0
+	sim._boss_minion_cd = 100.0
+	var kinds: Array[StringName] = [&"hound", &"turret", &"repair_station", &"paper_tree", &"decoy",
+		&"turret", &"hound", &"turret", &"repair_station", &"paper_tree", &"decoy", &"turret"]
+	for index in kinds.size():
+		var owner: EchoActor = sim.echoes[index % sim.echoes.size()]
+		var offset := Vector2(140.0 + float(index % 6) * 9.0, 35.0 + float(index / 6) * 35.0)
+		if kinds[index] in [&"repair_station", &"paper_tree"]:
+			offset = Vector2(45.0 + float(index % 3) * 12.0, 35.0 + float(index / 6) * 25.0)
+		var position := WorldArena.move_body(sim.player.pos, offset, SupportSystem.UNIT_RADIUS)
+		if not _require(SupportSystem.spawn(sim, kinds[index], position, owner.take.uid), "each support resolves an actual stable Echo owner"):
+			return
+
+
+func _validate_legal_fixture(sim: Sim) -> bool:
+	if not _require(sim.enemies.size() == 96 and sim.echoes.size() == 8 and sim.support_units.size() == 12,
+			"legal pressure fixture has exact gameplay population counts"):
+		return false
+	var owners: Dictionary = {}
+	for actor: EchoActor in sim.echoes:
+		owners[actor.take.uid] = actor.index
+	for unit: Dictionary in sim.support_units:
+		if not _require(owners.has(int(unit["actor_token"])) and int(owners[int(unit["actor_token"])]) == int(unit["source"]),
+				"support attribution resolves its live Echo index and UID"):
+			return false
+	var before := RunSnapshot.capture(sim)
+	if not _require(not before.is_empty(), "legal pressure captures every authoritative field"):
+		return false
+	var restored := RunSnapshot.restore(before)
+	if not _require(restored != null and RunSnapshot.capture(restored) == before,
+			"legal pressure snapshot restores eight real owners, twelve supports, role and mission state exactly"):
+		return false
+	return true
+
+
+func _on_support_event(info: Dictionary) -> void:
+	var kind := String(info.get("kind", &"unknown"))
+	_support_events[kind] = int(_support_events.get(kind, 0)) + 1
 
 
 func _visible_enemy_count(sim: Sim) -> int:
@@ -426,14 +564,16 @@ func _capture(name: String) -> bool:
 	_main._view.set_process(false)
 	_main._view.set_physics_process(false)
 	_main.hud.set_process(false)
+	var before := RunSnapshot.capture(sim)
 	# Align the presentation to this frozen simulation without advancing a clock.
 	_main._view._process(0.0)
 	var source_time := sim.wave_time
 	var source_heads := sim.projectiles.size()
 	var source_valid_heads := _valid_projectile_count(sim)
 	var source_frame := _frames
+	var source_rng := sim.rng.state
+	var source_hazard_rng := sim.hazard_rng.state
 	var previous_mesh := WeaponInk.render_stats()
-	var before := RunSnapshot.capture(sim)
 	print("stress capture source: %s" % JSON.stringify({"name": name, "source_wave_time": source_time,
 		"probe_frame": source_frame, "live_heads": source_heads, "valid_heads": source_valid_heads,
 		"previous_mesh": previous_mesh}))
@@ -447,6 +587,8 @@ func _capture(name: String) -> bool:
 	var image: Image = root.get_texture().get_image()
 	var captured_mesh := WeaponInk.render_stats()
 	var epoch := {"source_wave_time": source_time, "captured_wave_time": sim.wave_time,
+		"rng_unchanged": sim.rng.state == source_rng, "hazard_rng_unchanged": sim.hazard_rng.state == source_hazard_rng,
+		"same_simulation_epoch": sim.wave_time == source_time,
 		"source_probe_frame": source_frame, "captured_probe_frame": _frames,
 		"source_live_heads": source_heads, "captured_live_heads": sim.projectiles.size(),
 		"source_valid_heads": source_valid_heads, "captured_valid_heads": _valid_projectile_count(sim),
@@ -458,8 +600,11 @@ func _capture(name: String) -> bool:
 	_main.hud.set_process(hud_process)
 	print("stress capture epoch: %s" % JSON.stringify({"name": name, "epoch": epoch}))
 	if not _require(bool(epoch["full_snapshot_unchanged"]) and sim.wave_time == source_time
-			and sim.projectiles.size() == source_heads,
+			and sim.projectiles.size() == source_heads and sim.rng.state == source_rng and sim.hazard_rng.state == source_hazard_rng,
 			"%s frozen capture preserves its complete simulation epoch" % name):
+		return false
+	if not _require(int(captured_mesh.get("projectiles", -1)) == source_valid_heads,
+			"%s frozen mesh submits every valid projectile head from the captured simulation epoch" % name):
 		return false
 	if not _require(image != null and not image.is_empty(), "%s frame readback exists" % name):
 		return false
@@ -508,7 +653,8 @@ func _write_summary() -> void:
 		"ballistic_attack_speed_multiplier": 3.0, "ballistic_targets": "35 at (1980..1992,182..218), real120s pin",
 		"dense_case": "300 enemies within centered +/-370x200, machine-clear, stationary player, normal enemy brains",
 		"visible_enemy_scope": "living enemy center points inside the current unshaken camera, without art padding",
-		"enemy_types": 7, "enemy_hp": "forced unkillable", "enemy_damage": 0,
+		"enemy_types": Content.enemies().size(), "userdata": _isolated_paths,
+		"legal_case": "94 admitted ordinary mobs + actual Paradox split; 8 real Echo owners; 12 SupportSystem spawns; 60s battle clock", "enemy_hp": "forced unkillable", "enemy_damage": 0,
 		"timing_scope": "fixed-fps vsync-off explicit one-draw-per-tick headroom; not universal FPS"}
 	var path: String = _shots_dir.path_join("presentation_stress_summary.json")
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
@@ -559,8 +705,6 @@ func _fail(message: String) -> void:
 
 
 func _clear_fixture_files() -> void:
-	for name in ["presentation_stress_probe_save.json", "presentation_stress_probe_runs.jsonl",
-			"presentation_stress_probe_settings.json"]:
-		var path: String = ProjectSettings.globalize_path("user://" + name)
+	for path: String in _isolated_paths.values():
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)

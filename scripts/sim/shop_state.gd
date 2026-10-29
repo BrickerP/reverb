@@ -8,6 +8,7 @@ var hp: float = 0.0
 var stats: Dictionary = {}
 var weapons: Array[StringName] = []
 var weapon_levels: Array[int] = []
+var weapon_investments: Array[int] = []
 var cooldowns: Array[float] = []
 var items: Dictionary = {}
 var set_bonus_applied: Dictionary = {}
@@ -20,11 +21,25 @@ var echo_refreshes: int = 0
 var echo_actors: Array[Dictionary] = []
 var offers: Array[Dictionary] = []
 var rerolls: int = 0
+var active_order: Dictionary = {}
+var contracts_accepted: int = 0
+var contracts_completed: int = 0
+var contracts_failed: int = 0
+var expedition: Dictionary = {}
+var character_id: StringName = &""
+var character_energy: float = 0.0
+var character_cooldown: float = 0.0
+var role_effects: Dictionary = {}
+var support_units: Array[Dictionary] = []
+var next_support_uid: int = 1
+var interactables: Array[Dictionary] = []
+var shield: float = 0.0
 var phase: int = 0
 var wave: int = 0
 # Presentation-event annotation for the action following this snapshot. It is not
 # simulation state and is intentionally excluded from restore() and to_dict().
 var weapon_change_index: int = -1
+var weapon_combine_host: int = -1
 
 
 static func capture(sim: Sim) -> ShopState:
@@ -35,6 +50,7 @@ static func capture(sim: Sim) -> ShopState:
 	for w in sim.player.weapons:
 		state.weapons.append(w.id)
 	state.weapon_levels = sim.player.weapon_levels.duplicate()
+	state.weapon_investments = sim.player.weapon_investments.duplicate()
 	state.cooldowns = sim.player.cooldowns.duplicate()
 	state.items = sim.player.items.duplicate()
 	state.set_bonus_applied = sim.player.set_bonus_applied.duplicate()
@@ -52,6 +68,9 @@ static func capture(sim: Sim) -> ShopState:
 			"condition": take.condition,
 			"tint": take.tint_index,
 			"merged": take.merged,
+			"inherited_skill": take.inherited_skill,
+			"merge_trait": take.merge_trait,
+			"archived": take.archived,
 		})
 	state.tint_counter = sim.bank.tint_counter()
 	state.next_echo_uid = sim.bank.next_uid()
@@ -64,13 +83,29 @@ static func capture(sim: Sim) -> ShopState:
 			"cooldowns": actor.cooldowns.duplicate()})
 	for o in sim.shop.offers:
 		state.offers.append({
-			"kind": "weapon" if o.is_weapon() else "item",
+			"kind": "weapon" if o.is_weapon() else ("order" if o.is_contract() else "item"),
+			"contract": o.contract.to_dict() if o.is_contract() else {},
+			"active": o.is_contract() and o.contract == sim.active_contract,
 			"id": o.id(),
 			"price": o.price,
+			"weapon_level": o.weapon_level,
 			"sold": o.sold,
 			"locked": o.locked,
 		})
 	state.rerolls = sim.shop.rerolls
+	state.active_order = sim.active_contract.to_dict() if sim.active_contract != null else {}
+	state.contracts_accepted = sim.contracts_accepted
+	state.contracts_completed = sim.contracts_completed
+	state.contracts_failed = sim.contracts_failed
+	state.expedition = sim.expedition.duplicate(true)
+	state.character_id = sim.character_id
+	state.character_energy = sim.character_energy
+	state.character_cooldown = sim.character_cooldown
+	state.role_effects = sim.role_effects.duplicate(true)
+	state.support_units.assign(sim.support_units.duplicate(true))
+	state.next_support_uid = sim._next_support_uid
+	state.interactables.assign(sim.interactables.duplicate(true))
+	state.shield = sim.player.shield
 	state.phase = int(sim.phase)
 	state.wave = sim.wave
 	return state
@@ -82,6 +117,7 @@ func restore(sim: Sim) -> void:
 	sim.player.stats.values = stats.duplicate()
 	sim.player.weapons.clear()
 	sim.player.weapon_levels = weapon_levels.duplicate()
+	sim.player.weapon_investments = weapon_investments.duplicate()
 	sim.player.cooldowns = cooldowns.duplicate()
 	for id in weapons:
 		var w := Content.weapon(id)
@@ -98,8 +134,6 @@ func restore(sim: Sim) -> void:
 			take.weapons.append(Content.weapon(StringName(str(id))))
 		for level: Variant in entry.get("levels", []):
 			take.levels.append(int(level))
-		while take.levels.size() < take.weapons.size():
-			take.levels.append(0)
 		take.stats = Stats.new()
 		take.stats.values = (entry.get("stats", {}) as Dictionary).duplicate()
 		take.wave = int(entry.get("wave", 0))
@@ -107,6 +141,9 @@ func restore(sim: Sim) -> void:
 		take.condition = float(entry["condition"])
 		take.tint_index = int(entry.get("tint", 0))
 		take.merged = bool(entry.get("merged", false))
+		take.inherited_skill = StringName(str(entry.get("inherited_skill", "")))
+		take.merge_trait = StringName(str(entry.get("merge_trait", "")))
+		take.archived = bool(entry.get("archived", false))
 		max_tint = maxi(max_tint, take.tint_index)
 		sim.bank.takes.append(take)
 	sim.bank.set_tint_counter(maxi(tint_counter, max_tint + 1))
@@ -125,18 +162,36 @@ func restore(sim: Sim) -> void:
 		actor.rewinding = bool(entry["rewinding"])
 		actor.cooldowns.assign(entry["cooldowns"])
 		sim.echoes.append(actor)
+	sim.active_contract = AnomalyContract.from_dict(active_order) if not active_order.is_empty() else null
 	sim.shop.offers.clear()
 	for entry: Dictionary in offers:
 		var o := Offer.new()
 		if str(entry.get("kind", "")) == "weapon":
 			o.weapon = Content.weapon(StringName(str(entry.get("id", ""))))
+		elif str(entry.get("kind", "")) == "order":
+			o.contract = AnomalyContract.from_dict(entry.get("contract", {}))
+			if bool(entry.get("active", false)):
+				sim.active_contract = o.contract
 		else:
 			o.item = Content.item(StringName(str(entry.get("id", ""))))
 		o.price = int(entry.get("price", 0))
+		o.weapon_level = int(entry.get("weapon_level", 0))
 		o.sold = bool(entry.get("sold", false))
 		o.locked = bool(entry.get("locked", false))
 		sim.shop.offers.append(o)
 	sim.shop.rerolls = rerolls
+	sim.contracts_accepted = contracts_accepted
+	sim.contracts_completed = contracts_completed
+	sim.contracts_failed = contracts_failed
+	sim.expedition = expedition.duplicate(true)
+	sim.character_id = character_id
+	sim.character_energy = character_energy
+	sim.character_cooldown = character_cooldown
+	sim.role_effects = role_effects.duplicate(true)
+	sim.support_units.assign(support_units.duplicate(true))
+	sim._next_support_uid = next_support_uid
+	sim.interactables.assign(interactables.duplicate(true))
+	sim.player.shield = shield
 	sim.phase = phase as Sim.Phase
 	sim.wave = wave
 
@@ -147,13 +202,14 @@ func to_dict() -> Dictionary:
 		weapon_ids.append(String(id))
 	var offer_rows: Array[Dictionary] = []
 	for entry: Dictionary in offers:
-		offer_rows.append(entry.duplicate())
+		offer_rows.append(entry.duplicate(true))
 	return {
 		"materials": materials,
 		"hp": hp,
 		"stats": stats.duplicate(),
 		"weapons": weapon_ids,
 		"weapon_levels": weapon_levels.duplicate(),
+		"weapon_investments": weapon_investments.duplicate(),
 		"cooldowns": cooldowns.duplicate(),
 		"items": items.duplicate(),
 		"set_bonus_applied": set_bonus_applied.duplicate(),
@@ -166,6 +222,19 @@ func to_dict() -> Dictionary:
 		"echo_actors": echo_actors.duplicate(true),
 		"offers": offer_rows,
 		"rerolls": rerolls,
+		"active_order": active_order.duplicate(true),
+		"contracts_accepted": contracts_accepted,
+		"contracts_completed": contracts_completed,
+		"contracts_failed": contracts_failed,
+		"expedition": expedition.duplicate(true),
+		"character_id": String(character_id),
+		"character_energy": character_energy,
+		"character_cooldown": character_cooldown,
+		"role_effects": role_effects.duplicate(true),
+		"support_units": support_units.duplicate(true),
+		"next_support_uid": next_support_uid,
+		"interactables": interactables.duplicate(true),
+		"shield": shield,
 		"phase": phase,
 		"wave": wave,
 	}

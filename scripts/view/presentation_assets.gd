@@ -4,6 +4,17 @@ extends RefCounted
 # Every shipped content ID has an explicit key. Known content never silently falls
 # back by family; fallbacks below only protect unknown future or null definitions.
 const WEAPON_KEYS := {
+	&"binding_writ": &"weapon_binding_writ",
+	&"saw_swarm": &"weapon_saw_swarm",
+	&"surveyor_lance": &"weapon_surveyor_lance",
+	&"ink_tempest": &"weapon_ink_tempest",
+	&"folding_guillotine": &"weapon_folding_guillotine",
+	&"binding_atlas": &"weapon_binding_atlas",
+	&"paper_hound": &"weapon_paper_hound",
+	&"debt_sentry": &"weapon_debt_sentry",
+	&"repair_kit": &"weapon_repair_kit",
+	&"paper_seed": &"weapon_paper_seed",
+	&"guard_decoy": &"weapon_guard_decoy",
 	&"pistol": &"weapon_pistol", &"smg": &"weapon_smg",
 	&"shotgun": &"weapon_shotgun", &"rifle": &"weapon_rifle",
 	&"orb": &"weapon_orb", &"flechette": &"weapon_flechette",
@@ -26,6 +37,7 @@ const ITEM_KEYS := {
 	&"loud_speaker": &"item_loud_speaker",
 }
 const ENEMY_KEYS := {
+	&"foreman": &"enemy_foreman", &"collector": &"enemy_collector",
 	&"grunt": &"enemy_grunt", &"runner": &"enemy_runner",
 	&"brute": &"enemy_brute", &"silencer": &"enemy_silencer",
 	&"bomber": &"enemy_bomber", &"warden": &"enemy_warden",
@@ -43,6 +55,28 @@ const CHARACTER_BACK_KEYS := {
 }
 
 const PATHS := {
+	&"weapon_binding_writ": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_saw_swarm": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_surveyor_lance": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_ink_tempest": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_folding_guillotine": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_binding_atlas": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_paper_hound": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_debt_sentry": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_repair_kit": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_paper_seed": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"weapon_guard_decoy": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"mission_letter": "res://assets/presentation/weapons/expedition_arsenal.png",
+	&"support_hound_idle": "res://assets/presentation/supports/crew.png",
+	&"support_hound_attack": "res://assets/presentation/supports/crew.png",
+	&"support_turret_idle": "res://assets/presentation/supports/crew.png",
+	&"support_turret_fire": "res://assets/presentation/supports/crew.png",
+	&"support_repair_station": "res://assets/presentation/supports/crew.png",
+	&"support_paper_tree_early": "res://assets/presentation/supports/crew.png",
+	&"support_paper_tree_grown": "res://assets/presentation/supports/crew.png",
+	&"support_decoy": "res://assets/presentation/supports/crew.png",
+	&"enemy_foreman": "res://assets/presentation/enemies/foreman.png",
+	&"enemy_collector": "res://assets/presentation/enemies/collector.png",
 	&"shopkeeper": "res://assets/presentation/surfaces/shopkeeper.png",
 	&"recording_cartridge": "res://assets/presentation/surfaces/recording_cartridge.png",
 	&"character_looper_front": "res://assets/presentation/player.png",
@@ -104,6 +138,28 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
+	&"weapon_binding_writ": {"size": Vector2(1448, 1086), "region": Rect2(30, 115, 332, 224), "idle": Rect2(30, 115, 332, 224), "pivots": [Vector2(166.0, 224)]},
+	&"weapon_saw_swarm": {"size": Vector2(1448, 1086), "region": Rect2(362, 101, 362, 254), "idle": Rect2(362, 101, 362, 254), "pivots": [Vector2(181.0, 254)]},
+	&"weapon_surveyor_lance": {"size": Vector2(1448, 1086), "region": Rect2(724, 100, 362, 262), "idle": Rect2(724, 100, 362, 262), "pivots": [Vector2(181.0, 262)]},
+	&"weapon_ink_tempest": {"size": Vector2(1448, 1086), "region": Rect2(1086, 45, 336, 317), "idle": Rect2(1086, 45, 336, 317), "pivots": [Vector2(168.0, 317)]},
+	&"weapon_folding_guillotine": {"size": Vector2(1448, 1086), "region": Rect2(51, 384, 294, 315), "idle": Rect2(51, 384, 294, 315), "pivots": [Vector2(147.0, 315)]},
+	&"weapon_binding_atlas": {"size": Vector2(1448, 1086), "region": Rect2(410, 395, 297, 329), "idle": Rect2(410, 395, 297, 329), "pivots": [Vector2(148.5, 329)]},
+	&"weapon_paper_hound": {"size": Vector2(1448, 1086), "region": Rect2(763, 362, 311, 362), "idle": Rect2(763, 362, 311, 362), "pivots": [Vector2(155.5, 362)]},
+	&"weapon_debt_sentry": {"size": Vector2(1448, 1086), "region": Rect2(1129, 362, 287, 355), "idle": Rect2(1129, 362, 287, 355), "pivots": [Vector2(143.5, 355)]},
+	&"weapon_repair_kit": {"size": Vector2(1448, 1086), "region": Rect2(27, 748, 335, 271), "idle": Rect2(27, 748, 335, 271), "pivots": [Vector2(167.5, 271)]},
+	&"weapon_paper_seed": {"size": Vector2(1448, 1086), "region": Rect2(362, 724, 353, 325), "idle": Rect2(362, 724, 353, 325), "pivots": [Vector2(176.5, 325)]},
+	&"weapon_guard_decoy": {"size": Vector2(1448, 1086), "region": Rect2(787, 724, 261, 319), "idle": Rect2(787, 724, 261, 319), "pivots": [Vector2(130.5, 319)]},
+	&"mission_letter": {"size": Vector2(1448, 1086), "region": Rect2(1110, 765, 308, 263), "idle": Rect2(1110, 765, 308, 263), "pivots": [Vector2(154.0, 263)]},
+	&"support_hound_idle": {"size": Vector2(1536, 1024), "region": Rect2(20, 130, 338, 305), "idle": Rect2(20, 130, 338, 305), "pivots": [Vector2(169.0, 305)]},
+	&"support_hound_attack": {"size": Vector2(1536, 1024), "region": Rect2(386, 143, 382, 296), "idle": Rect2(386, 143, 382, 296), "pivots": [Vector2(191.0, 296)]},
+	&"support_turret_idle": {"size": Vector2(1536, 1024), "region": Rect2(781, 124, 323, 314), "idle": Rect2(781, 124, 323, 314), "pivots": [Vector2(179.0, 314)]},
+	&"support_turret_fire": {"size": Vector2(1536, 1024), "region": Rect2(1152, 144, 369, 296), "idle": Rect2(1152, 144, 369, 296), "pivots": [Vector2(184.5, 296)]},
+	&"support_repair_station": {"size": Vector2(1536, 1024), "region": Rect2(30, 571, 353, 369), "idle": Rect2(30, 571, 353, 369), "pivots": [Vector2(176.5, 369)]},
+	&"support_paper_tree_early": {"size": Vector2(1536, 1024), "region": Rect2(478, 558, 290, 390), "idle": Rect2(478, 558, 290, 390), "pivots": [Vector2(145.0, 390)]},
+	&"support_paper_tree_grown": {"size": Vector2(1536, 1024), "region": Rect2(768, 512, 384, 442), "idle": Rect2(768, 512, 384, 442), "pivots": [Vector2(192.0, 442)]},
+	&"support_decoy": {"size": Vector2(1536, 1024), "region": Rect2(1193, 556, 319, 382), "idle": Rect2(1193, 556, 319, 382), "pivots": [Vector2(159.5, 382)]},
+	&"enemy_foreman": {"size": Vector2(1536, 1024), "region": Rect2(0, 55, 384, 441), "idle": Rect2(5, 130, 379, 362), "pivots": [Vector2(192.0, 437), Vector2(192.0, 441), Vector2(192.0, 437), Vector2(192.0, 441), Vector2(192.0, 359), Vector2(192.0, 362), Vector2(192.0, 364), Vector2(192.0, 369)], "visible_rects": {0: [Rect2(5, 130, 353, 160), Rect2(5, 290, 375, 202)]}},
+	&"enemy_collector": {"size": Vector2(1536, 1024), "region": Rect2(0, 43, 384, 442), "idle": Rect2(20, 91, 364, 392), "pivots": [Vector2(192.0, 440), Vector2(192.0, 442), Vector2(192.0, 438), Vector2(192.0, 440), Vector2(192.0, 403), Vector2(192.0, 397), Vector2(192.0, 397), Vector2(192.0, 398)]},
 	&"shopkeeper": {"size": Vector2(2172, 724), "region": Rect2(50, 123, 419, 494), "idle": Rect2(87, 124, 347, 493), "pivots": [Vector2(221.5, 494), Vector2(221.5, 494), Vector2(221.5, 493), Vector2(221.5, 494)]},
 	&"recording_cartridge": {"size": Vector2(1536, 1024), "region": Rect2(226, 29, 1116, 967), "idle": Rect2(226, 29, 1116, 967), "pivots": [Vector2(542.0, 967)]},
 	&"character_looper_front": {"size": Vector2(1536, 1024), "region": Rect2(33, 88, 319, 360), "idle": Rect2(69, 128, 254, 313), "pivots": [Vector2(159.0, 353), Vector2(159.0, 360), Vector2(159.0, 357), Vector2(159.0, 353), Vector2(159.0, 297), Vector2(159.0, 296), Vector2(159.0, 306), Vector2(159.0, 310)]},
@@ -163,6 +219,8 @@ const SOURCE_METADATA := {
 }
 
 const ATLAS_LAYOUTS := {
+	&"enemy_foreman": Vector2i(4, 2),
+	&"enemy_collector": Vector2i(4, 2),
 	&"shopkeeper": Vector2i(4, 1),
 	&"character_looper_front": Vector2i(4, 2),
 	&"character_looper_back": Vector2i(4, 2),
@@ -308,3 +366,43 @@ static func character_key(id: StringName, back: bool = false) -> StringName:
 	var fallback: StringName = &"character_looper_back" if back else &"character_looper_front"
 	var key: StringName = keys.get(id, fallback)
 	return key
+
+
+static func support_key(kind: StringName, active: bool = false) -> StringName:
+	match kind:
+		&"hound": return &"support_hound_attack" if active else &"support_hound_idle"
+		&"turret": return &"support_turret_fire" if active else &"support_turret_idle"
+		&"repair_station": return &"support_repair_station"
+		&"paper_tree": return &"support_paper_tree_grown" if active else &"support_paper_tree_early"
+		&"decoy": return &"support_decoy"
+		&"recruited_foreman": return &"enemy_foreman"
+		&"recruited_collector": return &"enemy_collector"
+		&"recruited_paradox": return &"enemy_paradox"
+	return &""
+
+
+static func support_texture(kind: StringName, active: bool = false) -> Texture2D:
+	return texture(support_key(kind, active))
+
+
+static func support_region(kind: StringName, active: bool = false, frame: int = 0) -> Rect2:
+	return frame_region(support_key(kind, active), frame)
+
+
+# Source slices are authored offline. They preserve a pose's coordinate system
+# and complete silhouette without drawing disconnected neighboring-cell pixels.
+static func frame_visible_regions(key: StringName, index: int = 0) -> Array[Rect2]:
+	var frame := frame_region(key, index)
+	var result: Array[Rect2] = []
+	if not frame.has_area():
+		return result
+	var data: Dictionary = SOURCE_METADATA[key]
+	var sliced: Dictionary = data.get("visible_rects", {})
+	var selected := clampi(index, 0, maxi(0, frame_count(key) - 1))
+	if not sliced.has(selected):
+		result.append(frame)
+		return result
+	var scale := texture(key).get_size() / (data["size"] as Vector2)
+	for rect: Rect2 in sliced[selected]:
+		result.append(Rect2(rect.position * scale, rect.size * scale))
+	return result

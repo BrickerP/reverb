@@ -2,6 +2,7 @@ extends RefCounted
 
 
 func _root() -> Window:
+	Controls.register()
 	return (Engine.get_main_loop() as SceneTree).root
 
 
@@ -144,7 +145,7 @@ func test_character_stage_has_open_shapes_and_focus_driven_details(c: Check) -> 
 			rises.append(rise)
 	c.ok(rises.size() >= 3, "the cast does not share four identical baselines")
 	select._cards[2].grab_focus()
-	c.eq(select._detail.text, Loc.character_desc(&"mirror"), "focus reveals the chosen role's real tradeoff")
+	_assert_role_detail(c, select, &"mirror", "focus reveals the chosen role's real tradeoff")
 	c.eq(select._selection_note.text, Loc.t("select.current_use", [Loc.character_name(&"mirror")]),
 			"the stage responds to the actual selected identity")
 	select.seed_edit.grab_focus()
@@ -207,19 +208,19 @@ func test_mouse_preview_does_not_steal_focus_or_start_a_run(c: Check) -> void:
 	select.character_chosen.connect(func(id: StringName) -> void: chosen.append(id))
 	select._cards[0].grab_focus()
 	select._cards[2].mouse_entered.emit()
-	c.eq(select._detail.text, Loc.character_desc(&"mirror"), "pointer entry previews the hovered role")
+	_assert_role_detail(c, select, &"mirror", "pointer entry previews the hovered role")
 	c.ok(select._cards[0].has_focus(), "hover does not steal the keyboard selection")
 	c.ok(chosen.is_empty(), "hover does not emit a start action")
 	select._cards[2].mouse_exited.emit()
-	c.eq(select._detail.text, Loc.character_desc(&"looper"), "pointer exit restores keyboard role")
+	_assert_role_detail(c, select, &"looper", "pointer exit restores keyboard role")
 	select.seed_edit.grab_focus()
 	var motion := InputEventMouseMotion.new()
 	motion.position = Vector2(40.0, 40.0)
 	select._cards[1].gui_input.emit(motion)
-	c.eq(select._detail.text, Loc.character_desc(&"solo"), "motion within a role updates its preview")
+	_assert_role_detail(c, select, &"solo", "motion within a role updates its preview")
 	c.ok(select.seed_edit.has_focus() and chosen.is_empty(), "pointer browsing leaves the batch field and run untouched")
 	select._cards[1].mouse_exited.emit()
-	c.eq(select._detail.text, Loc.character_desc(&"looper"), "exit from seed/footer browsing restores the recent real role")
+	_assert_role_detail(c, select, &"looper", "exit from seed/footer browsing restores the recent real role")
 	select.free()
 
 
@@ -257,3 +258,8 @@ func test_secondary_actions_have_idle_stitches_without_changing_their_focus_obje
 	c.ok(_contrast(boons.reroll_button.get_theme_color("font_hover_pressed_color"), UiTheme.INK) >= 4.5,
 			"dark-stage reroll keeps light text when pressed")
 	boons.free()
+
+
+func _assert_role_detail(c: Check, select: CharacterSelectUi, id: StringName, label: String) -> void:
+	c.ok(select._detail.text.begins_with(Loc.character_desc(id)), label + " · passive tradeoff")
+	c.ok(select._detail.text.contains(Loc.t("ability.%s.name" % id)) and select._detail.text.contains(Loc.t("ability.%s.desc" % id)) and select._detail.text.contains(Controls.skill_label()), label + " · active ability and real input hint")

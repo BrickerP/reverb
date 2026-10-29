@@ -47,16 +47,16 @@ func test_enemy_types_unlock_by_wave(c: Check) -> void:
 
 
 func test_elites_start_at_wave_ten_and_never_replace_the_boss(c: Check) -> void:
-	for wave in range(1, 10):
+	for wave in range(1, WaveDirector.ELITE_START_WAVE):
 		for e in WaveDirector.plan(wave, 5):
 			c.eq(e.elite_kind, &"", "wave %d has no elite" % wave)
-	for wave in range(10, WaveDirector.FINAL_WAVE):
+	for wave in range(WaveDirector.ELITE_START_WAVE, WaveDirector.FINAL_WAVE):
 		var elites := 0
 		for e in WaveDirector.plan(wave, 5):
 			if e.elite_kind != &"":
 				elites += 1
 				c.ok(e.elite_kind in WaveDirector.ELITE_KINDS, "wave %d elite kind is known" % wave)
-		c.eq(elites, 1, "wave %d has exactly one elite" % wave)
+		c.eq(elites, 0 if wave % 4 == 0 else 1, "only ordinary late encounters receive an elite")
 	for e in WaveDirector.plan(WaveDirector.FINAL_WAVE, 5):
 		c.eq(e.elite_kind, &"", "the boss wave has no regular elite")
 	var endless_elites := 0
@@ -69,8 +69,8 @@ func test_elites_start_at_wave_ten_and_never_replace_the_boss(c: Check) -> void:
 
 
 func test_scaling_curves(c: Check) -> void:
-	c.near(WaveDirector.duration_for(1), 20.0, 0.001, "wave 1 lasts 20s")
-	c.near(WaveDirector.duration_for(WaveDirector.FINAL_WAVE), 60.0, 0.001, "duration capped at 60s")
+	c.near(WaveDirector.duration_for(1), 24.0, 0.001, "opening encounter lasts 24s")
+	c.near(WaveDirector.duration_for(WaveDirector.FINAL_WAVE), 57.0, 0.001, "campaign pacing reaches 57 seconds")
 	c.near(WaveDirector.hp_scale(1), 1.0, 0.0001, "no hp scaling on wave 1")
 	c.ok(WaveDirector.speed_scale(100) <= 1.3, "speed scaling is capped")
 	for w in range(2, 21):

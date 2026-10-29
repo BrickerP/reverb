@@ -10,40 +10,25 @@ func _cleanup() -> void:
 
 
 func test_defaults_and_character_unlock_wave_boundaries(c: Check) -> void:
-	_cleanup()
-	var meta := Meta.new(PATH)
-	c.ok(meta.is_unlocked(&"looper"), "looper starts unlocked")
-	c.ok(not meta.is_unlocked(&"solo"), "solo starts locked")
-	c.ok(not meta.is_unlocked(&"mender"), "mender starts locked")
-	c.ok(not meta.is_unlocked(&"overloader"), "overloader starts locked")
-	c.eq(meta.best_wave, 0, "fresh best wave")
-	var s := Sim.new(1)
-	s.start_run()
-	s.phase = Sim.Phase.LOST
-	s.wave = 4
-	var newly := meta.record_run(s)
-	c.ok(newly.is_empty(), "wave 4 unlocks nothing")
-	s.wave = 5
-	newly = meta.record_run(s)
-	c.eq(newly, [&"mender"], "mender unlocks exactly at best wave 5")
-	s.wave = 9
-	newly = meta.record_run(s)
-	c.ok(newly.is_empty(), "wave 9 does not repeat an existing unlock")
-	c.eq(meta.best_wave, 9, "best wave recorded")
-	s.wave = 10
-	newly = meta.record_run(s)
-	c.eq(newly, [&"solo"], "solo keeps its wave 10 unlock")
-	s.wave = 11
-	newly = meta.record_run(s)
-	c.ok(newly.is_empty(), "overloader remains locked before wave 12")
-	s.wave = 12
-	newly = meta.record_run(s)
-	c.eq(newly, [&"overloader"], "overloader unlocks exactly at best wave 12")
-	c.ok(not meta.is_unlocked(&"mirror"), "mirror still needs a win")
-	var loaded := Meta.new(PATH)
-	for id: StringName in [&"mender", &"solo", &"overloader"]:
-		c.ok(loaded.is_unlocked(id), "%s unlock persists" % id)
-	c.eq(loaded.runs, 6, "runs persist")
+	for role: StringName in [&"mender", &"solo", &"overloader", &"conductor"]:
+		_cleanup()
+		var meta := Meta.new(PATH)
+		c.ok(meta.is_unlocked(&"looper"), "looper starts unlocked")
+		c.ok(not meta.is_unlocked(role), "%s starts locked" % role)
+		var threshold := Content.character(role).unlock_wave
+		c.ok(threshold > 0 and threshold <= WaveDirector.FINAL_WAVE, "unlock fits complete campaign")
+		var sim := Sim.new(1)
+		sim.phase = Sim.Phase.LOST
+		sim.wave = threshold - 1
+		meta.record_run(sim)
+		c.ok(not meta.is_unlocked(role), "%s stays locked before authored stage" % role)
+		sim.wave = threshold
+		meta.record_run(sim)
+		c.ok(meta.is_unlocked(role), "%s unlocks at authored stage" % role)
+		var loaded := Meta.new(PATH)
+		c.ok(loaded.is_unlocked(role), "%s unlock persists" % role)
+		c.eq(loaded.best_wave, threshold, "best stage persists")
+		c.ok(not loaded.is_unlocked(&"mirror"), "mirror still requires a win")
 	_cleanup()
 
 

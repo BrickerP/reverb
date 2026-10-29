@@ -18,6 +18,7 @@ signal damage_event(info: DamageInfo)
 signal explosion_info(info: ExplosionInfo)
 signal weapon_changed(info: WeaponChangeInfo)
 signal material_collected(amount: int)
+signal support_event(info: Dictionary)
 signal purchased
 signal explosion(pos: Vector2, radius: float, color: Color)
 signal boss_spawned(enemy: EnemyState)
@@ -68,7 +69,7 @@ const ELITE_VOLATILE_DAMAGE := 6.0
 const ELITE_SPLIT_SHARE := 0.22
 const ELITE_SPLIT_DAMAGE := 0.55
 const ELITE_SPLIT_SPEED := 0.90
-const RIFT_START_WAVE := 12
+const RIFT_START_WAVE := 6
 const RIFT_FIRST_DELAY := 8.0
 const RIFT_INTERVAL := 16.0
 const RIFT_DAMAGE_BASE := 3.0
@@ -78,6 +79,10 @@ const FIELD_SHIELD_BURST_RADIUS := 72.0
 const FIELD_SHIELD_BURST_DAMAGE := 8.0
 const FIELD_SHIELD_BURST_KNOCK := 90.0
 const MAX_ECHO_CAPACITY := 8
+const MAX_ENEMIES := 96
+const BOSS_RESERVED_SLOTS := 2
+const MAX_ORDINARY_ENEMIES := MAX_ENEMIES - BOSS_RESERVED_SLOTS
+const MAX_PENDING := 24
 
 var run_seed: int = 1
 var rng := RandomNumberGenerator.new()
@@ -106,6 +111,14 @@ var last_contract_reward: int = 0
 var contracts_accepted: int = 0
 var contracts_completed: int = 0
 var contracts_failed: int = 0
+var character_id: StringName = &"looper"
+var character_energy: float = 100.0
+var character_cooldown: float = 0.0
+var role_effects: Dictionary = {}
+var support_units: Array[Dictionary] = []
+var _next_support_uid: int = 1
+var interactables: Array[Dictionary] = []
+var expedition: Dictionary = {}
 var player := PlayerState.new()
 var enemies: Array[EnemyState] = []
 var projectiles: Array[Projectile] = []
@@ -166,6 +179,13 @@ func _init(seed_value: int = 1) -> void:
 
 
 func start_run() -> void:
+	Expedition.initialize(self)
+	support_units.clear()
+	interactables.clear()
+	_next_support_uid = 1
+	character_energy = 100.0
+	character_cooldown = 0.0
+	role_effects.clear()
 	endless = false
 	boss_rush = false
 	second_wind_charges = 0
@@ -277,11 +297,11 @@ func can_start_wave() -> bool:
 	return phase == Phase.SHOP and bank.overflow(echo_capacity()) == 0
 
 
-# Normal final wave, or every fifth endless wave, schedules Paradox.
+# Every fourth encounter concludes an act with a mandatory boss.
 func is_boss_wave(n: int = wave) -> bool:
 	if not endless:
-		return n == WaveDirector.FINAL_WAVE
-	return n > WaveDirector.FINAL_WAVE and n % 5 == 0
+		return n > 0 and n <= WaveDirector.FINAL_WAVE and n % 4 == 0
+	return n > WaveDirector.FINAL_WAVE and n % 4 == 0
 
 
 func ascension_elite_count() -> int:
@@ -293,7 +313,7 @@ func ascension_elite_count() -> int:
 func ascension_rift_wave() -> int:
 	if daily_modifier == DailyAnomaly.RIFTFALL or daily_modifier == DailyAnomaly.RIFTSTORM:
 		return DailyAnomaly.RIFT_WAVE
-	return 10 if ascension >= 2 else RIFT_START_WAVE
+	return 5 if ascension >= 2 else RIFT_START_WAVE
 
 
 func ascension_rift_interval() -> float:
@@ -305,7 +325,7 @@ func ascension_rift_interval() -> float:
 
 
 func next_wave_number() -> int:
-	return wave + (5 if boss_rush else 1)
+	return wave + (4 if boss_rush else 1)
 
 
 func start_next_wave() -> void:
@@ -361,7 +381,7 @@ func start_wave(n: int) -> void:
 	attack_fields.clear()
 	enemy_zones.clear()
 	rifts.clear()
-	_rift_cd = RIFT_FIRST_DELAY if n >= ascension_rift_wave() and (n < WaveDirector.FINAL_WAVE or endless) else 0.0
+	_rift_cd = RIFT_FIRST_DELAY if n >= ascension_rift_wave() and not is_boss_wave(n) else 0.0
 	shop.clear_history()
 	wave_start_materials = player.materials
 	last_wave_earned = 0
@@ -372,7 +392,7 @@ func start_wave(n: int) -> void:
 	_plan = WaveDirector.plan(n, run_seed, mult, endless, ascension_elite_count())
 	if boss_wave:
 		var boss_event := SpawnEvent.new()
-		boss_event.def = Content.enemy(&"paradox")
+		boss_event.def = Content.enemy(Expedition.boss_id(self))
 		boss_event.time = 1.5
 		_plan.append(boss_event)
 		_plan.sort_custom(func(a: SpawnEvent, b: SpawnEvent) -> bool: return a.time < b.time)
@@ -390,6 +410,7 @@ func start_wave(n: int) -> void:
 	pickups.clear()
 	pending.clear()
 	player.pos = ARENA.get_center() if n == 1 or player.pos == Vector2.ZERO else WorldArena.move_body(player.pos, Vector2.ZERO, PlayerState.RADIUS)
+	Expedition.begin_wave(self)
 	player.shield = player.max_shield()
 	player.iframes = 0.0
 	for i in player.cooldowns.size():
@@ -410,12 +431,17 @@ func start_wave(n: int) -> void:
 func step(delta: float, move_dir: Vector2) -> void:
 	if phase != Phase.WAVE:
 		return
+	if delta <= 0.0 or not is_finite(delta):
+		return
 	wave_time += delta
+	CharacterSkills.step(self, delta)
+	Expedition.step(self, delta)
 	echo_silenced = maxf(0.0, echo_silenced - delta)
 	_move_player(delta, move_dir)
 	recorder.record(player.pos, delta)
 	EchoSystem.step(self, delta)
 	_spawn_enemies(delta)
+	_step_tail_pressure(delta)
 	_step_supply()
 	_move_enemies(delta)
 	_boss_step(delta)
@@ -438,6 +464,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	Combat.step_projectiles(self, delta)
 	Combat.tick_fields(self, delta)
 	_update_pickups(delta)
+	SupportSystem.step(self, delta)
 	_compact()
 	if player.hp <= 0.0:
 		phase = Phase.LOST
@@ -445,8 +472,12 @@ func step(delta: float, move_dir: Vector2) -> void:
 	elif is_boss_wave():
 		if boss != null and boss_alive_count() == 0:
 			_end_wave()
-	elif wave_time >= wave_duration:
+	elif boss != null and boss_alive_count() == 0 and expedition.get("mission", {}).get("kind", &"") == &"recruit":
 		_end_wave()
+	elif wave_time >= wave_duration and not Expedition.is_negotiating(self):
+		var mission: Dictionary = expedition.get("mission", {})
+		if mission.get("kind", &"") != &"recruit" or boss == null or boss_alive_count() == 0:
+			_end_wave()
 
 
 func _fit_echo_cooldowns(actor: EchoActor) -> void:
@@ -470,8 +501,10 @@ func _emit_echo_silence(duration: float, enemy: EnemyState, kind: StringName) ->
 
 func _boss_step(delta: float) -> void:
 	var controller := _alive_boss()
-	if controller == null:
+	if controller == null or controller.def.id != &"paradox" or Expedition.is_negotiating(self):
 		return
+	if boss_phase == 1 and boss.hp > 0.0 and boss.hp <= boss.max_hp * BOSS_PHASE2_HP_RATIO:
+		_begin_boss_phase2()
 	_boss_silence_cd -= delta
 	if _boss_silence_cd <= 0.0:
 		_boss_silence_cd = BOSS_SILENCE_EVERY
@@ -485,7 +518,7 @@ func _boss_step(delta: float) -> void:
 			ps.def = Content.enemy(&"runner")
 			ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 			ps.delay = SPAWN_TELEGRAPH
-			pending.append(ps)
+			queue_spawn(ps)
 
 
 func _alive_boss() -> EnemyState:
@@ -498,6 +531,8 @@ func _alive_boss() -> EnemyState:
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
 		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit",
 		actor_token: int = -1, source_tint: Color = Color.WHITE) -> void:
+	if e == null or e.dead or e.brain_state == &"defeated" or not is_finite(amount) or amount <= 0.0:
+		return
 	var actual := amount
 	var reduced := false
 	var shield_arc := e.shield_arc_value()
@@ -508,7 +543,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 			reduced = true
 	e.hp -= actual
 	e.flash = 0.09
-	e.knock += knock
+	e.knock += knock if knock.is_finite() else Vector2.ZERO
 	enemy_hit.emit(e.pos, actual, crit, source)
 	var info := DamageInfo.new()
 	info.source = source
@@ -523,9 +558,19 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.hit_dir = hit_dir
 	info.effect = effect
 	damage_event.emit(info)
-	if e == boss and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * BOSS_PHASE2_HP_RATIO:
+	if e == boss and e.def.id == &"paradox" and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * BOSS_PHASE2_HP_RATIO:
 		_begin_boss_phase2()
 	if e.hp > 0.0 or e.dead:
+		return
+	if Expedition.try_negotiate(self, e):
+		return
+	_finalize_enemy_death(e, source, actor_token, source_tint, weapon_id, hit_dir, effect)
+
+
+func _finalize_enemy_death(e: EnemyState, source: int = -1, actor_token: int = -1,
+		source_tint: Color = Color.WHITE, weapon_id: StringName = &"",
+		hit_dir: Vector2 = Vector2.ZERO, effect: StringName = &"") -> void:
+	if e.dead:
 		return
 	e.dead = true
 	kills += 1
@@ -534,8 +579,11 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		wave_elite_kills += 1
 	var pk := Pickup.new()
 	pk.pos = e.pos
-	pk.value = maxi(1, int(round(float(e.def.drop * e.drop_mult) * material_drop_multiplier())))
-	pickups.append(pk)
+	var remaining := maxi(0, WaveDirector.cash_budget(wave) - int(expedition.get("cash_issued", 0)))
+	pk.value = mini(remaining, maxi(1, int(round(float(e.def.drop * e.drop_mult) * material_drop_multiplier()))))
+	if pk.value > 0:
+		expedition["cash_issued"] = int(expedition.get("cash_issued", 0)) + pk.value
+		pickups.append(pk)
 	var death := EnemyDeathInfo.new()
 	death.target_uid = e.uid
 	death.enemy_id = e.def.id
@@ -564,6 +612,8 @@ func _split_elite(e: EnemyState) -> void:
 	if e == null or not e.elite or e.elite_kind != &"splitter":
 		return
 	for i in 2:
+		if not can_admit_enemy(false):
+			break
 		var child := EnemyState.new()
 		child.uid = _next_uid
 		_next_uid += 1
@@ -575,13 +625,12 @@ func _split_elite(e: EnemyState) -> void:
 		child.radius = e.def.radius
 		var offset := Vector2(-24.0 if i == 0 else 24.0, 0.0)
 		var pad := child.radius + 8.0
-		child.pos = (e.pos + offset).clamp(ARENA.position + Vector2(pad, pad),
-				ARENA.end - Vector2(pad, pad))
+		child.pos = WorldArena.move_body(e.pos, offset, pad)
 		enemies.append(child)
 
 
 func _begin_boss_phase2() -> void:
-	if boss == null or boss_phase != 1:
+	if boss == null or boss_phase != 1 or not can_admit_enemy(true):
 		return
 	boss_phase = 2
 	var remaining := boss.hp
@@ -618,6 +667,8 @@ func _begin_boss_phase2() -> void:
 			shard.pos = candidate
 			best_distance = clearance
 			best_visible = visible
+	if best_distance < 0.0:
+		shard.pos = WorldArena.move_body(boss.pos, Vector2(0.0, 260.0), pad)
 	boss_shards.append(shard)
 	enemies.append(shard)
 	echo_silenced = maxf(echo_silenced, BOSS_PHASE2_SILENCE)
@@ -694,7 +745,7 @@ func _bomber_explode(e: EnemyState) -> void:
 # incoming amount first; `PlayerHurtInfo.amount` remains the HP damage actually dealt.
 func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Vector2,
 		direction: Vector2, grant_iframes: bool = true, source_uid: int = -1) -> void:
-	if amount <= 0.0:
+	if not is_finite(amount) or amount <= 0.0 or Expedition.is_negotiating(self):
 		return
 	var had_shield := player.shield > 0.0
 	var absorbed := minf(player.shield, amount)
@@ -770,6 +821,28 @@ func _move_player(delta: float, move_dir: Vector2) -> void:
 	player.hp = minf(player.max_hp(), player.hp + player.stats.get_stat(Stats.HP_REGEN) * delta)
 
 
+func activate_character_skill() -> bool:
+	return CharacterSkills.activate(self)
+
+
+func interact() -> bool:
+	return Expedition.interact(self)
+
+
+func _step_tail_pressure(delta: float) -> void:
+	if wave_time < wave_duration * 0.72 or wave_time >= wave_duration - 0.3 or Expedition.is_negotiating(self):
+		return
+	expedition["tail_clock"] = maxf(-1.2, float(expedition.get("tail_clock", 0.0)) - delta)
+	if float(expedition["tail_clock"]) > 0.0 or enemies.size() + pending.size() >= mini(8, 3 + int(wave / 3)):
+		return
+	expedition["tail_clock"] = 1.2
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"runner" if wave >= 3 else &"grunt")
+	arrival.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
+	arrival.delay = 0.3
+	queue_spawn(arrival)
+
+
 func _spawn_enemies(delta: float) -> void:
 	while _plan_idx < _plan.size() and _plan[_plan_idx].time <= wave_time:
 		var ps := PendingSpawn.new()
@@ -777,15 +850,16 @@ func _spawn_enemies(delta: float) -> void:
 		ps.elite_kind = _plan[_plan_idx].elite_kind
 		ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 		ps.delay = SPAWN_TELEGRAPH
-		pending.append(ps)
+		if not queue_spawn(ps) and ps.def.is_boss:
+			break
 		_plan_idx += 1
 	var keep: Array[PendingSpawn] = []
 	for ps in pending:
-		ps.delay -= delta
+		ps.delay = maxf(0.0, ps.delay - delta)
 		if ps.delay > 0.0:
 			keep.append(ps)
-		else:
-			_materialize(ps)
+		elif not _materialize(ps) and ps.def.is_boss:
+			keep.append(ps)
 	pending = keep
 
 
@@ -812,12 +886,46 @@ func _apply_elite(e: EnemyState, kind: StringName) -> void:
 			pass
 
 
-func _materialize(ps: PendingSpawn) -> void:
+func can_admit_enemy(boss_body: bool, include_pending: bool = false) -> bool:
+	var total := enemies.size()
+	var ordinary := 0
+	for enemy in enemies:
+		if enemy.def != null and not enemy.def.is_boss:
+			ordinary += 1
+	if include_pending:
+		total += pending.size()
+		for arrival in pending:
+			if arrival.def != null and not arrival.def.is_boss:
+				ordinary += 1
+	return total < MAX_ENEMIES and (boss_body or ordinary < MAX_ORDINARY_ENEMIES)
+
+
+func queue_spawn(arrival: PendingSpawn) -> bool:
+	if arrival == null or arrival.def == null:
+		return false
+	if arrival.def.is_boss:
+		if pending.size() >= MAX_PENDING:
+			return false
+	elif pending.size() >= MAX_PENDING - 1 or not can_admit_enemy(false, true):
+		return false
+	pending.append(arrival)
+	return true
+
+
+func _materialize(ps: PendingSpawn) -> bool:
+	if ps.def == null:
+		return false
+	if not can_admit_enemy(ps.def.is_boss):
+		# A malformed or externally saturated state cannot erase a mandatory boss.
+		# Its original spawn record is retried after a real death frees capacity.
+		if ps.def.is_boss and not pending.has(ps):
+			queue_spawn(ps)
+		return false
 	var e := EnemyState.new()
 	e.uid = _next_uid
 	_next_uid += 1
 	e.def = ps.def
-	e.pos = ps.pos
+	e.pos = WorldArena.move_body(ps.pos, Vector2.ZERO, ps.def.radius)
 	var hp_scale := 1.0 if ps.def.is_boss else WaveDirector.hp_scale(wave)
 	if ps.def.is_boss and endless and wave > WaveDirector.FINAL_WAVE:
 		hp_scale = 1.0 + 0.20 * float(wave - WaveDirector.FINAL_WAVE)
@@ -832,8 +940,7 @@ func _materialize(ps: PendingSpawn) -> void:
 	if ps.elite_kind != &"":
 		_apply_elite(e, ps.elite_kind)
 	if ps.def.is_boss:
-		var pad := e.radius + 16.0
-		e.pos = e.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+		e.pos = WorldArena.move_body(e.pos, Vector2.ZERO, e.radius + 16.0)
 	e.attack_direction = (player.pos - e.pos).normalized()
 	enemies.append(e)
 	if ps.def.is_boss:
@@ -846,6 +953,7 @@ func _materialize(ps: PendingSpawn) -> void:
 		_boss_silence_cd = 5.0
 		_boss_minion_cd = 8.0
 		boss_spawned.emit(e)
+	return true
 
 
 func _move_enemies(delta: float) -> void:
@@ -903,7 +1011,7 @@ func _step_rifts(delta: float) -> void:
 		if r.telegraph > 0.0 or r.active > 0.0:
 			kept.append(r)
 	rifts = kept
-	if wave >= ascension_rift_wave() and (wave < WaveDirector.FINAL_WAVE or endless):
+	if wave >= ascension_rift_wave() and not is_boss_wave():
 		_rift_cd -= delta
 		if _rift_cd <= 0.0:
 			_spawn_rift()
@@ -911,6 +1019,8 @@ func _step_rifts(delta: float) -> void:
 
 
 func _spawn_rift() -> void:
+	if rifts.size() >= 6:
+		return
 	var pad := TemporalRift.RADIUS + 20.0
 	var offset := Vector2.from_angle(hazard_rng.randf() * TAU) * hazard_rng.randf_range(0.0, 70.0)
 	var pos := (player.pos + offset).clamp(
@@ -923,9 +1033,12 @@ func _spawn_rift() -> void:
 
 
 func _damage_rift(r: TemporalRift) -> void:
+	var damage := RIFT_DAMAGE_BASE + RIFT_DAMAGE_PER_WAVE * float(wave)
+	for unit in support_units.duplicate():
+		if (unit["pos"] as Vector2).distance_to(r.pos) <= r.radius + SupportSystem.UNIT_RADIUS:
+			SupportSystem.damage(self, int(unit["uid"]), damage)
 	if player.pos.distance_to(r.pos) > r.radius + PlayerState.RADIUS:
 		return
-	var damage := RIFT_DAMAGE_BASE + RIFT_DAMAGE_PER_WAVE * float(wave)
 	_hurt_player(damage, &"rift", &"rift", player.pos, Vector2.ZERO, false)
 
 
@@ -940,21 +1053,32 @@ func _update_pickups(delta: float) -> void:
 		var to_player := player.pos - pk.pos
 		var d2 := to_player.length_squared()
 		if d2 <= COLLECT_RADIUS * COLLECT_RADIUS:
-			player.materials += pk.value
-			if pk.kind == &"supply":
-				supply_claims += 1
-			if pickup_repair > 0.0:
-				var take := bank.find_uid(selected_echo_uid)
-				if take != null:
-					take.condition = minf(100.0, take.condition + float(pk.value) * pickup_repair)
-			material_collected.emit(pk.value)
-			pk.value = 0
+			collect_pickup(pk, true)
 			continue
 		if not pk.magnet and d2 <= pull * pull:
 			pk.magnet = true
 		if pk.magnet:
 			pk.speed += MAGNET_ACCEL * delta
 			pk.pos += to_player.normalized() * minf(pk.speed * delta, sqrt(d2))
+
+
+func collect_pickup(pk: Pickup, manual: bool = true) -> bool:
+	if pk == null or pk.value <= 0 or not pickups.has(pk) or pk.kind not in [&"scrap", &"supply"]:
+		return false
+	if pk.kind == &"supply" and pk.life <= 0.0:
+		return false
+	player.materials += pk.value
+	if pk.kind == &"supply":
+		supply_claims += 1
+	if manual:
+		CharacterSkills.on_pickup(self, pk.value)
+		if pickup_repair > 0.0:
+			var take := bank.find_uid(selected_echo_uid)
+			if take != null:
+				take.condition = minf(100.0, take.condition + float(pk.value) * pickup_repair)
+	material_collected.emit(pk.value)
+	pk.value = 0
+	return true
 
 
 func _compact() -> void:
@@ -981,7 +1105,7 @@ func _compact() -> void:
 func _end_wave() -> void:
 	echo_silenced = 0.0
 	for pk in pickups:
-		if pk.kind != &"supply":
+		if pk.kind == &"scrap":
 			player.materials += pk.value
 	pickups.clear()
 	if active_contract != null:
@@ -999,6 +1123,7 @@ func _end_wave() -> void:
 			player.materials += reward
 		contract_resolved.emit(contract, success, reward)
 		active_contract = null
+	Expedition.finish_wave(self, last_contract_success)
 	last_wave_earned = maxi(0, player.materials - wave_start_materials)
 	last_interest = interest_for(player.materials)
 	player.materials += last_interest
