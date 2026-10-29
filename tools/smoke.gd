@@ -31,6 +31,7 @@ var _hooked := false
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_smoke_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://smoke_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://smoke_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://smoke_settings.json")

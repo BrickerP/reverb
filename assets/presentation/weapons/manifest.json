@@ -198,6 +198,263 @@
       "rows": 1
     },
     {
+      "file": "office_arsenal.png",
+      "sha256": "bd24e716ba25cbe09c6bfee7c399496e51a558f95f7cb29d3f5081ff1539278f",
+      "size": [
+        1448,
+        1086
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        79,
+        115,
+        1379,
+        980
+      ],
+      "frame_union_ltrb": [
+        79,
+        115,
+        1379,
+        980
+      ],
+      "frame_bounds_ltrb": [
+        [
+          79,
+          115,
+          1379,
+          980
+        ]
+      ],
+      "frame_pivots": [
+        [
+          645.0,
+          865
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1,
+      "regions": {
+        "weapon_stapler": {
+          "source_rect_xywh": [
+            79,
+            124,
+            235,
+            191
+          ],
+          "bounds_ltrb": [
+            79,
+            124,
+            314,
+            315
+          ],
+          "pivot": [
+            117.5,
+            191
+          ]
+        },
+        "weapon_paper_saw": {
+          "source_rect_xywh": [
+            425,
+            121,
+            249,
+            191
+          ],
+          "bounds_ltrb": [
+            425,
+            121,
+            674,
+            312
+          ],
+          "pivot": [
+            124.5,
+            191
+          ]
+        },
+        "weapon_hole_punch": {
+          "source_rect_xywh": [
+            777,
+            124,
+            255,
+            202
+          ],
+          "bounds_ltrb": [
+            777,
+            124,
+            1032,
+            326
+          ],
+          "pivot": [
+            127.5,
+            202
+          ]
+        },
+        "weapon_ink_bottle": {
+          "source_rect_xywh": [
+            1155,
+            115,
+            207,
+            206
+          ],
+          "bounds_ltrb": [
+            1155,
+            115,
+            1362,
+            321
+          ],
+          "pivot": [
+            103.5,
+            206
+          ]
+        },
+        "weapon_stamp": {
+          "source_rect_xywh": [
+            94,
+            437,
+            203,
+            223
+          ],
+          "bounds_ltrb": [
+            94,
+            437,
+            297,
+            660
+          ],
+          "pivot": [
+            101.5,
+            223
+          ]
+        },
+        "weapon_mallet": {
+          "source_rect_xywh": [
+            418,
+            441,
+            259,
+            201
+          ],
+          "bounds_ltrb": [
+            418,
+            441,
+            677,
+            642
+          ],
+          "pivot": [
+            129.5,
+            201
+          ]
+        },
+        "weapon_cutter": {
+          "source_rect_xywh": [
+            775,
+            498,
+            275,
+            113
+          ],
+          "bounds_ltrb": [
+            775,
+            498,
+            1050,
+            611
+          ],
+          "pivot": [
+            137.5,
+            113
+          ]
+        },
+        "weapon_tape_spool": {
+          "source_rect_xywh": [
+            1152,
+            446,
+            227,
+            199
+          ],
+          "bounds_ltrb": [
+            1152,
+            446,
+            1379,
+            645
+          ],
+          "pivot": [
+            113.5,
+            199
+          ]
+        },
+        "weapon_rubber_band": {
+          "source_rect_xywh": [
+            94,
+            750,
+            209,
+            210
+          ],
+          "bounds_ltrb": [
+            94,
+            750,
+            303,
+            960
+          ],
+          "pivot": [
+            104.5,
+            210
+          ]
+        },
+        "weapon_paper_plane": {
+          "source_rect_xywh": [
+            423,
+            781,
+            252,
+            159
+          ],
+          "bounds_ltrb": [
+            423,
+            781,
+            675,
+            940
+          ],
+          "pivot": [
+            126.0,
+            159
+          ]
+        },
+        "weapon_hydraulic_press": {
+          "source_rect_xywh": [
+            801,
+            742,
+            227,
+            238
+          ],
+          "bounds_ltrb": [
+            801,
+            742,
+            1028,
+            980
+          ],
+          "pivot": [
+            113.5,
+            238
+          ]
+        },
+        "weapon_redaction_engine": {
+          "source_rect_xywh": [
+            1138,
+            769,
+            240,
+            196
+          ],
+          "bounds_ltrb": [
+            1138,
+            769,
+            1378,
+            965
+          ],
+          "pivot": [
+            120.0,
+            196
+          ]
+        }
+      }
+    },
+    {
       "file": "rail_spike.png",
       "sha256": "d968818cc7c42030c1f49dc5eedba1eac818f04704f24e531bff99b4683616fd",
       "size": [

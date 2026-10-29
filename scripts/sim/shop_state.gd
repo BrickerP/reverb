@@ -13,6 +13,11 @@ var items: Dictionary = {}
 var set_bonus_applied: Dictionary = {}
 var echoes: Array[Dictionary] = []
 var tint_counter: int = 0
+var next_echo_uid: int = 1
+var selected_echo_uid: int = 0
+var retire_cooldown: float = 0.0
+var echo_refreshes: int = 0
+var echo_actors: Array[Dictionary] = []
 var offers: Array[Dictionary] = []
 var rerolls: int = 0
 var phase: int = 0
@@ -43,11 +48,20 @@ static func capture(sim: Sim) -> ShopState:
 			"levels": take.levels.duplicate(),
 			"stats": take.stats.values.duplicate(),
 			"wave": take.wave,
-			"age": take.age,
+			"uid": take.uid,
+			"condition": take.condition,
 			"tint": take.tint_index,
 			"merged": take.merged,
 		})
 	state.tint_counter = sim.bank.tint_counter()
+	state.next_echo_uid = sim.bank.next_uid()
+	state.selected_echo_uid = sim.selected_echo_uid
+	state.retire_cooldown = sim.retire_cooldown
+	state.echo_refreshes = sim.echo_refreshes
+	for actor in sim.echoes:
+		state.echo_actors.append({"uid": actor.take.uid, "index": actor.index,
+			"t": actor.t, "pos": actor.pos, "rewinding": actor.rewinding,
+			"cooldowns": actor.cooldowns.duplicate()})
 	for o in sim.shop.offers:
 		state.offers.append({
 			"kind": "weapon" if o.is_weapon() else "item",
@@ -89,12 +103,28 @@ func restore(sim: Sim) -> void:
 		take.stats = Stats.new()
 		take.stats.values = (entry.get("stats", {}) as Dictionary).duplicate()
 		take.wave = int(entry.get("wave", 0))
-		take.age = int(entry.get("age", 0))
+		take.uid = int(entry["uid"])
+		take.condition = float(entry["condition"])
 		take.tint_index = int(entry.get("tint", 0))
 		take.merged = bool(entry.get("merged", false))
 		max_tint = maxi(max_tint, take.tint_index)
 		sim.bank.takes.append(take)
 	sim.bank.set_tint_counter(maxi(tint_counter, max_tint + 1))
+	sim.bank.set_next_uid(next_echo_uid)
+	sim.selected_echo_uid = selected_echo_uid
+	sim.retire_cooldown = retire_cooldown
+	sim.echo_refreshes = echo_refreshes
+	sim.echoes.clear()
+	for entry in echo_actors:
+		var take := sim.bank.find_uid(int(entry["uid"]))
+		if take == null:
+			continue
+		var actor := EchoActor.new(take, int(entry["index"]))
+		actor.t = float(entry["t"])
+		actor.pos = entry["pos"]
+		actor.rewinding = bool(entry["rewinding"])
+		actor.cooldowns.assign(entry["cooldowns"])
+		sim.echoes.append(actor)
 	sim.shop.offers.clear()
 	for entry: Dictionary in offers:
 		var o := Offer.new()
@@ -124,10 +154,16 @@ func to_dict() -> Dictionary:
 		"stats": stats.duplicate(),
 		"weapons": weapon_ids,
 		"weapon_levels": weapon_levels.duplicate(),
+		"cooldowns": cooldowns.duplicate(),
 		"items": items.duplicate(),
 		"set_bonus_applied": set_bonus_applied.duplicate(),
 		"echoes": echoes.duplicate(true),
 		"tint_counter": tint_counter,
+		"next_echo_uid": next_echo_uid,
+		"selected_echo_uid": selected_echo_uid,
+		"retire_cooldown": retire_cooldown,
+		"echo_refreshes": echo_refreshes,
+		"echo_actors": echo_actors.duplicate(true),
 		"offers": offer_rows,
 		"rerolls": rerolls,
 		"phase": phase,

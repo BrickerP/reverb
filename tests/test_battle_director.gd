@@ -17,7 +17,7 @@ func test_shot_pose_is_event_driven_throttled_and_gives_walking_time(c: Check) -
 	var director := BattleDirector.new()
 	var shot := ShotInfo.new()
 	shot.source = -1
-	shot.weapon_id = &"smg"
+	shot.weapon_id = &"mallet"
 	var key: StringName = &"character_looper_front"
 	c.eq(PresentationAssets.frame_count(key), 8, "player atlas contains authored action and death cells")
 	c.eq(director.player_pose(key, 12.0, false, false), 0, "time alone never invents an attack")
@@ -58,6 +58,7 @@ func test_echo_shooting_uses_take_identity_instead_of_reordered_slots(c: Check) 
 	var director := BattleDirector.new()
 	var shot := ShotInfo.new()
 	shot.source = 0
+	shot.weapon_id = &"mallet"
 	var key: StringName = &"character_mirror_front"
 	shot.actor_token = 17001
 	c.ok(director.shot(shot), "captured take identity starts its own action")
@@ -69,22 +70,24 @@ func test_echo_shooting_uses_take_identity_instead_of_reordered_slots(c: Check) 
 	c.eq(director.player_pose(key, 0.0, false, false), 0, "copy actions do not kick the current self")
 
 
-func test_copy_identity_is_opaque_signed_not_a_positive_slot_number(c: Check) -> void:
+func test_copy_identity_uses_persistent_positive_take_uids(c: Check) -> void:
 	var director := BattleDirector.new()
-	var take := EchoTake.new()
 	var shot := ShotInfo.new()
 	shot.source = 0
-	for token: int in [take.get_instance_id(), -9223371986674121139, 17001]:
+	shot.weapon_id = &"mallet"
+	for token: int in [1, 17001, 17002]:
 		director.clear()
 		shot.actor_token = token
-		c.ok(BattleDirector.is_copy_token(token), "real and captured signed RefCounted identities remain copies")
-		c.ok(director.shot(shot), "negative actor identity can drive its actual firing pose")
+		c.ok(BattleDirector.is_copy_token(token), "positive saved take UID is a copy")
+		c.ok(director.shot(shot), "stable UID drives its own heavy action")
 		c.eq(director.echo_pose(&"character_looper_front", token, 0.0, false, false), 5,
-				"drawn actor frame matches the opaque identity without an index lookup")
+			"drawn heavy action matches the captured UID")
 		c.eq(director.player_pose(&"character_looper_front", 0.0, false, false), 0,
-				"a signed copy identity never becomes the player sentinel")
-	c.ok(not BattleDirector.is_copy_token(-1) and not BattleDirector.is_copy_token(0),
-			"only explicit player and unknown sentinels are excluded")
+			"copy action never becomes a player action")
+	for token in [-9223371986674121139, -2, -1, 0]:
+		shot.actor_token = token
+		c.ok(not BattleDirector.is_copy_token(token), "negative and unknown tokens are not saved copy UIDs")
+		c.ok(not director.shot(shot), "invalid copy actor token cannot drive a body action")
 
 
 func test_death_snapshots_are_immutable_bounded_and_have_distinct_exit_shapes(c: Check) -> void:
@@ -318,8 +321,10 @@ func test_copy_recoil_survives_slot_reordering_without_jumping_to_another_take(c
 	var sim := Sim.new(184)
 	sim.start_run()
 	var first := EchoTake.new()
+	first.uid = 1
 	first.samples = PackedVector2Array([Vector2(100.0, 100.0), Vector2(110.0, 100.0)])
 	var second := EchoTake.new()
+	second.uid = 2
 	second.samples = first.samples
 	sim.echoes.append(EchoActor.new(first, 0))
 	sim.echoes.append(EchoActor.new(second, 1))
@@ -327,17 +332,17 @@ func test_copy_recoil_survives_slot_reordering_without_jumping_to_another_take(c
 	view.bind(sim)
 	var shot := ShotInfo.new()
 	shot.source = 1
-	shot.actor_token = second.get_instance_id()
+	shot.actor_token = second.uid
 	shot.source_tint = second.tint()
 	shot.weapon_id = &"pistol"
 	view._on_shot_info(shot)
 	c.eq(view._muzzles[0]["source"], 1, "shot packet keeps its original authoritative slot")
-	c.eq(view._muzzles[0]["actor_token"], second.get_instance_id(), "drawing separately keeps the take identity")
+	c.eq(view._muzzles[0]["actor_token"], second.uid, "drawing separately keeps the take identity")
 	sim.echoes.remove_at(0)
 	sim.echoes[0].index = 0
-	c.ok(ArenaPainter._mounted_recoil(view._muzzles, second.get_instance_id(), &"pistol") > 0.0,
-			"the same paper copy keeps its recoil after another copy collapses")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, first.get_instance_id(), &"pistol"), 0.0,
+	c.ok(ArenaPainter._mounted_recoil(view._muzzles, second.uid, &"pistol") > 0.0,
+			"the same paper copy keeps its recoil after another copy retires")
+	c.eq(ArenaPainter._mounted_recoil(view._muzzles, first.uid, &"pistol"), 0.0,
 			"removed/reused slots cannot steal a different copy's shot reaction")
 	view.free()
 
@@ -346,13 +351,14 @@ func test_delayed_feedback_reads_captured_colour_and_unknown_actor_is_neutral(c:
 	var sim := Sim.new(185)
 	sim.start_run()
 	var take := EchoTake.new()
+	take.uid = 3
 	take.samples = PackedVector2Array([Vector2.ONE, Vector2(2.0, 1.0)])
 	sim.echoes.append(EchoActor.new(take, 0))
 	var view := ArenaView.new()
 	view.bind(sim)
 	var hit := DamageInfo.new()
 	hit.source = 0
-	hit.actor_token = take.get_instance_id()
+	hit.actor_token = take.uid
 	hit.source_tint = Color("ad6e54")
 	hit.weapon_id = &"pistol"
 	take.tint_index = 4
@@ -371,10 +377,10 @@ func test_delayed_feedback_reads_captured_colour_and_unknown_actor_is_neutral(c:
 			"unknown copy source cannot kick the player's firing pose")
 	var consumed := _death()
 	consumed.source = -1
-	consumed.actor_token = take.get_instance_id()
+	consumed.actor_token = take.uid
 	consumed.source_tint = Color("ad6e54")
 	c.ok(view.kill_color(consumed) != consumed.color,
-			"collapse preserves its consumed copy identity even when the legacy statistics source is player")
+			"retirement preserves its consumed copy identity even when the legacy statistics source is player")
 	view.free()
 
 

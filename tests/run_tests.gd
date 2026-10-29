@@ -5,6 +5,7 @@ const SUITE_DIR := "res://tests/"
 
 func _initialize() -> void:
 	# Keep Meta writes out of the player's real save during tests.
+	OS.set_environment("REVERB_SUSPEND", "user://test_suspended_run.json")
 	OS.set_environment("REVERB_SAVE", "user://test_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://test_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://test_settings.json")

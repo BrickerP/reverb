@@ -14,8 +14,25 @@ const PLAYER_ART_SIZE := Vector2(50.0, 58.0)
 const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
 const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
 const REDUCED_MOTION_SCALE := 0.3
+const CULL_ART_MARGIN := 100.0
+const CULL_SHAKE_MARGIN := 9.0
 
 static var _arena_floor_texture: Texture2D
+
+
+static func render_view(sim: Sim) -> Rect2:
+	return WorldArena.camera_rect(sim.player.pos).grow(CULL_SHAKE_MARGIN)
+
+
+static func body_in_view(pos: Vector2, view: Rect2, extra_margin: float = 0.0) -> bool:
+	return pos.is_finite() and view.grow(CULL_ART_MARGIN + maxf(0.0, extra_margin)).has_point(pos)
+
+
+static func corpse_in_view(corpse: Dictionary, view: Rect2) -> bool:
+	var pos: Vector2 = corpse.get("pos", Vector2.ZERO)
+	# Authored exit poses can stretch, rotate and travel up to fifteen pixels.
+	var radius := maxf(0.0, float(corpse.get("radius", 0.0)))
+	return body_in_view(pos, view, maxf(0.0, radius * 2.5 - 60.0) + 16.0)
 
 
 static func arena(ci: CanvasItem) -> void:
@@ -26,6 +43,14 @@ static func arena(ci: CanvasItem) -> void:
 		ci.draw_texture_rect(floor_texture, a, false, Color(1.0, 1.0, 1.0, 0.88))
 	# A quiet floor and a heavy ink perimeter leave moving silhouettes in charge.
 	ci.draw_rect(a, Color(INK, 0.10))
+	# Quiet registration seams and lane marks make scrolling legible without
+	# turning the floor into a noisy grid or competing with real danger ink.
+	for column in range(1, 4):
+		var x := a.position.x + float(column) * 600.0
+		ci.draw_line(Vector2(x, a.position.y + 22.0), Vector2(x, a.end.y - 22.0), Color(INK, 0.07), 1.0)
+	for row in range(1, 3):
+		var y := a.position.y + float(row) * 400.0
+		ci.draw_line(Vector2(a.position.x + 22.0, y), Vector2(a.end.x - 22.0, y), Color(PAPER, 0.08), 1.0)
 	ci.draw_rect(a.grow(3.0), Color(INK, 0.18), false, 8.0)
 	ci.draw_rect(a, INK, false, 3.0)
 	for side: float in [-1.0, 1.0]:
@@ -48,6 +73,25 @@ static func pending(ci: CanvasItem, sim: Sim) -> void:
 		var col := Color(base_color, float(profile["alpha"]))
 		ci.draw_arc(ps.pos, float(profile["radius"]), 0.0, TAU, 20, col, 2.0)
 		ci.draw_circle(ps.pos, 2.5, col)
+		var indicator := pending_indicator(sim, ps)
+		if bool(indicator["visible"]):
+			var point: Vector2 = indicator["pos"]
+			var facing: Vector2 = indicator["direction"]
+			var side := Vector2(-facing.y, facing.x)
+			var arrow := PackedVector2Array([point + facing * 8.0,
+				point - facing * 5.0 + side * 5.0, point - facing * 5.0 - side * 5.0])
+			ci.draw_circle(point, 12.0, Color(PAPER, 0.65), true, -1.0, true)
+			ci.draw_colored_polygon(arrow, Color(base_color, 0.75))
+			ci.draw_arc(point, 14.0, -PI * 0.5, -PI * 0.5 + TAU * float(indicator["progress"]),
+				20, col, 1.8, true)
+
+
+static func pending_indicator(sim: Sim, spawn: PendingSpawn) -> Dictionary:
+	var camera := WorldArena.camera_rect(sim.player.pos)
+	var point := spawn.pos.clamp(camera.position + Vector2(20.0, 20.0), camera.end - Vector2(20.0, 20.0))
+	var direction := (spawn.pos - point).normalized()
+	return {"visible": not camera.has_point(spawn.pos), "pos": point, "direction": direction,
+		"progress": 1.0 - clampf(spawn.delay / Sim.SPAWN_TELEGRAPH, 0.0, 1.0)}
 
 
 static func pending_spawn_profile(spawn: PendingSpawn) -> Dictionary:
@@ -164,35 +208,89 @@ static func rifts(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 
 static func pickups(ci: CanvasItem, sim: Sim) -> void:
 	for pk in sim.pickups:
-		var rect := Rect2(pk.pos - Vector2(3.0, 4.0), Vector2(6.0, 8.0))
+		var profile := pickup_profile(pk)
+		if not bool(profile["visible"]):
+			continue
+		var rect: Rect2 = profile["rect"]
+		if bool(profile["supply"]):
+			ci.draw_rect(Rect2(rect.position + Vector2(2.0, 3.0), rect.size), Color(INK, 0.26))
+			ci.draw_rect(rect, PAPER)
+			ci.draw_rect(rect, INK, false, 2.0)
+			var seam := rect.get_center()
+			ci.draw_line(rect.position, seam + Vector2(0.0, -3.0), INK, 1.4, true)
+			ci.draw_line(Vector2(rect.end.x, rect.position.y), seam + Vector2(0.0, -3.0), INK, 1.4, true)
+			ci.draw_line(seam + Vector2(0.0, -3.0), Vector2(seam.x, rect.end.y), Color(DANGER, 0.85), 4.0, true)
+			var label := Rect2(rect.end.x - 3.0, rect.position.y + 7.0, 34.0, 17.0)
+			ci.draw_rect(label, PAPER)
+			ci.draw_rect(label, INK, false, 1.3)
+			ci.draw_string(UiTheme.font(), label.position + Vector2(3.0, 12.0), "+%d" % int(profile["value"]),
+				HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 5.0, 13, INK)
+			if bool(profile["timed"]):
+				var bar := Rect2(rect.position + Vector2(-3.0, rect.size.y + 6.0), Vector2(34.0, 4.0))
+				var timer_color := DANGER if float(profile["remaining"]) <= 2.0 else INK
+				ci.draw_rect(bar, Color(PAPER, 0.9))
+				ci.draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(profile["life_fraction"]), bar.size.y)), timer_color)
+				ci.draw_rect(bar, INK, false, 1.0)
+				ci.draw_string(UiTheme.font(), bar.end + Vector2(4.0, 1.0), str(ceili(float(profile["remaining"]))),
+					HORIZONTAL_ALIGNMENT_LEFT, 20.0, 12, timer_color)
+			continue
 		ci.draw_rect(rect, PAPER)
 		ci.draw_rect(rect, INK, false, 1.0)
 		ci.draw_line(rect.position + Vector2(1.5, 3.0), rect.position + Vector2(4.5, 3.0), INK, 1.0)
 
 
+static func pickup_profile(pickup: Pickup) -> Dictionary:
+	var valid := pickup != null and pickup.pos.is_finite() and is_finite(pickup.life)
+	var supply := valid and pickup.kind == &"supply"
+	var size := Vector2(28.0, 24.0) if supply else Vector2(6.0, 8.0)
+	var remaining := maxf(0.0, pickup.life) if valid else 0.0
+	var position := pickup.pos if valid else Vector2.ZERO
+	return {"visible": valid and pickup.life >= 0.0, "supply": supply,
+		"timed": valid and pickup.life > 0.0, "remaining": remaining,
+		"life_fraction": clampf(remaining / Pickup.SUPPLY_LIFETIME, 0.0, 1.0),
+		"size": size, "rect": Rect2(position - size * 0.5, size),
+		"value": pickup.value if valid else 0}
+
+
 static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false, visual_time: float = -1.0,
-		director: BattleDirector = null) -> void:
+		director: BattleDirector = null, motions: Dictionary = {}) -> void:
 	var target := sim.player.pos
 	var clock := sim.wave_time if visual_time < 0.0 else visual_time
+	var view := render_view(sim)
 	for e in sim.enemies:
 		if e.dead or e.def == null:
+			continue
+		if not body_in_view(e.pos, view, maxf(0.0, e.radius * 2.5 - 60.0)):
+			if ThreatInk.attack_in_view(e, view):
+				ThreatInk.draw_attack(ci, e, reduced)
+			if ThreatInk.marks_in_view(e, view):
+				ThreatInk.draw_enemy_marks(ci, e, target, clock, reduced, false)
 			continue
 		var col := _elite_color(e.elite_kind) if e.elite else DANGER
 		if e.flash > 0.0:
 			col = Color.WHITE
 		var key := PresentationAssets.enemy_key(e.def)
-		var stride := sin(clock * (7.5 if e.def.id == &"runner" else 4.5)
-				+ e.pos.x * 0.021 + e.pos.y * 0.013) * (REDUCED_MOTION_SCALE if reduced else 1.0)
+		var motion: Dictionary = motions.get(-e.uid - 2, {})
+		var phase := float(motion.get("phase", 0.0))
+		var moving := bool(motion.get("moving", false))
+		var gait := BattleDirector.gait_profile(phase, float(motion.get("amount", 0.0)), moving, reduced)
 		var facing := (target - e.pos).normalized()
+		if e.def.id == &"warden" or e.brain_state in [&"warn", &"dash", &"slam", &"seal", &"recover"]:
+			facing = e.attack_direction
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
 		var art_size := _enemy_bounds(e.def.id) * e.radius / maxf(1.0, e.def.radius)
-		art_size *= Vector2(1.0 + absf(stride) * 0.025, 1.0 - absf(stride) * 0.018)
+		art_size *= gait["scale"] as Vector2
 		var art_tint := Color(1.0, 0.76, 0.68) if e.flash > 0.0 else Color.WHITE
-		var frame := actor_frame(key, clock + float(e.uid) * 0.137, e.speed > 0.0, e.flash > 0.0, reduced)
+		var frame := actor_frame(key, phase, moving, e.flash > 0.0, reduced)
 		if director != null:
-			frame = director.enemy_pose(key, e.uid, clock + float(e.uid) * 0.137, e.speed > 0.0, reduced)
-		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + stride * minf(1.8, e.radius * 0.08))
+			frame = director.enemy_pose(key, e.uid, phase, moving, reduced)
+		if frame != 3:
+			if e.brain_state in [&"warn", &"recover"]:
+				frame = mini(4, PresentationAssets.frame_count(key) - 1)
+			elif e.brain_state in [&"dash", &"slam", &"seal"]:
+				frame = mini(5, PresentationAssets.frame_count(key) - 1)
+		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + float(gait["bob"]))
 		var rotation := _warden_rotation(facing) if e.def.id == &"warden" else 0.0
 		var flip := facing.x > 0.0 and e.def.id != &"warden"
 		if e.def.is_boss:
@@ -222,24 +320,30 @@ static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: fl
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
 		recoils: Array[Dictionary] = [], reduced: bool = false, visual_time: float = -1.0,
-		director: BattleDirector = null) -> void:
+		director: BattleDirector = null, motions: Dictionary = {}) -> void:
 	var r := PlayerState.RADIUS
 	var clock := sim.wave_time if visual_time < 0.0 else visual_time
+	var view := render_view(sim)
 	for actor in sim.echoes:
+		if not body_in_view(actor.pos, view):
+			continue
 		var profile := EchoInk.profile(actor, sim, clock, reduced)
 		var c: Color = profile["tint"]
-		var moving := sim.phase == Sim.Phase.WAVE and actor.take.position_at(actor.t + EchoTake.SAMPLE_DT).distance_squared_to(actor.pos) > 0.01
-		var motion_scale := REDUCED_MOTION_SCALE if reduced else 1.0
-		var bob := _motion_bob(clock, actor.pos, 7.0, 1.0) * motion_scale if moving else 0.0
+		var token := actor.take.uid
+		var motion: Dictionary = motions.get(token, {})
+		var phase := float(motion.get("phase", 0.0))
+		var moving := bool(motion.get("moving", false))
+		var gait := BattleDirector.gait_profile(phase, float(motion.get("amount", 0.0)), moving, reduced)
+		var bob := float(gait["bob"])
 		var alpha := float(profile["alpha"])
 		var facing := _echo_facing(actor)
 		var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
-		var frame := actor_frame(key, clock + float(actor.index) * 0.13, moving, false, reduced)
+		var frame := actor_frame(key, phase, moving, false, reduced)
 		if director != null:
-			frame = director.echo_pose(key, actor.take.get_instance_id(), clock + float(actor.index) * 0.13, moving, reduced)
+			frame = director.echo_pose(key, token, phase, moving, reduced)
 		var foot := actor.pos + Vector2(0.0, r + bob)
 		var paper_scale: Vector2 = profile["paper_scale"]
-		var art_size := _character_bounds(character_id) * paper_scale
+		var art_size := _character_bounds(character_id) * paper_scale * (gait["scale"] as Vector2)
 		var print_offset: Vector2 = profile["print_offset"]
 		_draw_art_foot(ci, key, foot + print_offset, art_size, 0.0,
 				Color(c, float(profile["offset_alpha"])), _horizontal_flip(facing), frame)
@@ -248,7 +352,7 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 				Color(body_tint, alpha), _horizontal_flip(facing), frame)
 		var weapons: Array[WeaponDef] = sim.player.weapons if sim.live_echo else actor.take.weapons
 		_draw_weapon_loadout(ci, sim, actor.pos, weapons, facing, bob, alpha,
-				c, 0.45, 0.82, actor.take.get_instance_id(), recoils)
+				c, 0.45, 0.82, token, recoils)
 		var fitted := _fitted_art_size(key, art_size)
 		var art_rect := Rect2(Vector2(foot.x - fitted.x * 0.5, foot.y - fitted.y), fitted)
 		EchoInk.draw_marks(ci, actor, art_rect, profile, reduced)
@@ -266,14 +370,14 @@ static func projectile_trails_enabled(reduced: bool, count: int) -> bool:
 	return WeaponInk.trails_enabled(reduced, count)
 
 
-static func actor_frame(key: StringName, visual_time: float, moving: bool,
+static func actor_frame(key: StringName, gait_phase: float, moving: bool,
 		hurt: bool = false, reduced: bool = false) -> int:
 	var count := PresentationAssets.frame_count(key)
 	if count <= 1:
 		return 0
 	if hurt:
 		return mini(3, count - 1)
-	return BattleDirector.walk_pose(key, visual_time, moving, reduced)
+	return BattleDirector.walk_pose(key, gait_phase, moving, reduced)
 
 
 # Boss cells have authored semantics: original, roar, left half, right half.
@@ -301,19 +405,22 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	ci.draw_circle(pl.pos + Vector2(0.0, 5.0), r + 3.0, Color(INK, 0.22 * alpha))
 	var visual_time := float(motion.get("visual_time", sim.wave_time))
 	var move_weight := clampf(float(motion.get("amount", 0.0)), 0.0, 1.0)
+	var moving := bool(motion.get("moving", false))
+	var phase := float(motion.get("gait_phase", 0.0))
 	var reduced := bool(motion.get("reduced", false))
-	var motion_scale := REDUCED_MOTION_SCALE if reduced else 1.0
-	var gait := visual_time * lerpf(3.2, 8.5, move_weight) + pl.pos.x * 0.012
-	var bob := sin(gait * 2.0) * lerpf(0.45, 1.8, move_weight) * motion_scale
-	var sway := sin(gait) * lerpf(0.012, 0.055, move_weight) * motion_scale
-	var breathe := 1.0 + sin(visual_time * 3.1 + pl.pos.y * 0.012) * lerpf(0.018, 0.01, move_weight) * motion_scale
+	var gait := BattleDirector.gait_profile(phase, move_weight, moving, reduced)
+	var bob := float(gait["bob"])
+	var sway := float(gait["lean"])
+	# Breathing changes only the body around its planted foot. It never translates
+	# or rotates an idle puppet, and has no variable-frequency elapsed-time phase.
+	var breath := sin(visual_time * 1.6) * 0.004 * (0.3 if reduced else 1.0) if not moving else 0.0
 	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
-	var art_size := _character_bounds(character_id) * Vector2(2.0 - breathe, breathe)
+	var art_size := _character_bounds(character_id) * (gait["scale"] as Vector2) * Vector2(1.0 - breath * 0.4, 1.0 + breath)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
 	var foot := pl.pos + Vector2(0.0, r + bob)
-	var frame := actor_frame(key, visual_time, move_weight > 0.05, pl.iframes > 0.22, reduced)
+	var frame := actor_frame(key, phase, moving, pl.iframes > 0.22, reduced)
 	if director != null:
-		frame = director.player_pose(key, visual_time, move_weight > 0.05, reduced)
+		frame = director.player_pose(key, phase, moving, reduced)
 	if pl.hp <= 0.0:
 		bob = 0.0
 		sway = 0.0
@@ -387,7 +494,12 @@ static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
 
 # Dead actors have no collision body. Their finite snapshots sit below living threats.
 static func actor_remains(ci: CanvasItem, director: BattleDirector, reduced: bool = false) -> void:
+	var arena_view := ci as ArenaView
+	var cull := arena_view != null and arena_view.sim != null
+	var view := render_view(arena_view.sim) if cull else Rect2()
 	for corpse in director.corpses:
+		if cull and not corpse_in_view(corpse, view):
+			continue
 		var profile := BattleDirector.corpse_profile(corpse, reduced)
 		var id: StringName = corpse["enemy_id"]
 		var definition := Content.enemy(id)
@@ -530,14 +642,7 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 		var radius := float(data["radius"])
 		var color: Color = data["color"]
 		var pos: Vector2 = data["pos"]
-		if data["effect"] == &"echo_collapse":
-			var paper_size := Vector2(26.0, 32.0) * maxf(0.12, 1.0 - p * 3.0)
-			var paper := Rect2(pos - paper_size * 0.5, paper_size)
-			ci.draw_rect(paper, Color(PAPER, t))
-			ci.draw_rect(paper, Color(INK, t), false, 2.0)
-			_ink_burst(ci, pos, radius * p, Color(DANGER, t * 0.8), p * 0.3)
-			ci.draw_arc(pos, radius * p, 0.0, TAU, 40, Color(DANGER, t), 3.0)
-		elif data["kind"] == ExplosionInfo.BOMBER:
+		if data["kind"] == ExplosionInfo.BOMBER:
 			ci.draw_arc(pos, radius * (0.35 + 0.65 * p), 0.0, TAU, 28,
 					Color(UiTheme.WARN, 0.85 * t), 3.0)
 		else:
@@ -694,6 +799,10 @@ static func _character_bounds(id: StringName) -> Vector2:
 			return Vector2(54.0, 64.0)
 		&"conductor":
 			return Vector2(58.0, 64.0)
+		&"mender":
+			return Vector2(54.0, 62.0)
+		&"overloader":
+			return Vector2(60.0, 66.0)
 		_:
 			return PLAYER_ART_SIZE
 
@@ -796,7 +905,3 @@ static func _aim_direction(sim: Sim, origin: Vector2, fallback: Vector2) -> Vect
 	if fallback != Vector2.ZERO:
 		return fallback.normalized()
 	return Vector2.RIGHT
-
-
-static func _motion_bob(wave_time: float, pos: Vector2, speed: float, distance: float) -> float:
-	return sin(wave_time * speed + pos.x * 0.017 + pos.y * 0.011) * distance

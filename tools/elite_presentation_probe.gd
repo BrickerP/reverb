@@ -22,6 +22,7 @@ var _summary: Dictionary = {
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_elite_presentation_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://elite_presentation_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://elite_presentation_probe_runs.jsonl")
 	OS.set_environment("REVERB_FEEDBACK_LOG", "user://elite_presentation_probe_feedback.jsonl")

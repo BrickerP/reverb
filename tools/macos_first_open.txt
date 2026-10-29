@@ -1,0 +1,17 @@
+Take Stack - Mac 开发预览
+
+解压后，将 Take Stack.app 移至 Applications（应用程序），再双击运行。
+
+此应用已通过两个架构的签名完整性检查，使用本地签名；尚未经过 Apple 公证。
+首次启动被拦截时，请打开“系统设置 → 隐私与安全性”，为 Take Stack 选择“仍要打开”。
+
+如果没有此按钮，先确认下载来自 BrickerP/reverb，并核对同页 SHA256SUMS.txt。
+然后可仅针对已放入 Applications 的这份游戏执行：
+
+xattr -dr com.apple.quarantine "/Applications/Take Stack.app"
+
+此操作只处理本游戏的下载隔离标记。不要关闭整个系统的安全检查。
+
+Move Take Stack.app to Applications. This preview has a verified ad-hoc signature,
+but is not Apple-notarized. On first launch, allow this app in System Settings >
+Privacy & Security > Open Anyway. Only trust the official BrickerP/reverb download.

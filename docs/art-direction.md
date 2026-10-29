@@ -1,115 +1,101 @@
-# Carbon Copy Purgatory
+# Carbon Copy Purgatory art direction
 
-Take Stack's visual identity is a world that recycles yesterday's versions of
-you. The Creased, Reject, Misprint and Binder are original paper puppets;
-discarded copies are printed, stapled and eventually consumed. Humor comes from
-their silhouettes, expressions and actions. Gameplay IDs and rules are unchanged.
+Take Stack is a bureau that recycles yesterday's versions of you. Six original
+paper-puppet identities, worn copies and hostile office waste share charcoal
+contours, recycled cream paper, tired expressions and restrained sage, yellow
+and red accents. Humor comes from silhouettes and actions; readable threats and
+player identity take priority over decoration.
 
 ## Visual grammar
 
-- Strong charcoal ink contours, flat cream paper, one restrained shadow.
-- Quiet sage-gray arena; red hazards, paper actors and distinct enemy silhouettes.
-- Copies use faded paper and offset-print marks. Only the active section of their
-  recorded route is visible, avoiding full-length lines covering the arena.
-- Menus use paper panels, ink type, stamp buttons and visible focus rings.
-  Both languages use live Godot text, never lettering baked into artwork.
-- Focus, locked content and dangerous actions use shape/text as well as color.
+- Quiet ash-paper floor, localized conveyor/workstation/notice clusters, useful
+  machine cover and a structural ink perimeter support the larger scrolling world.
+- Copies retain whole-body faded paper, offset-print identity, staples and clear
+  wear/silence/rewind marks. Only the active route segment is emphasized. The HUD
+  names the selected copy, condition, skill prediction and offscreen direction.
+- The player draws clearly over routine debris. Enemy bodies and authoritative
+  threats keep their actual positions and geometry during crowd overlap.
+- Organic paper panels, stamp buttons, unboxed data rows and ink-bracket focus
+  form one native UI language. Functional text and hit areas stay stable while
+  merchant and paper decorations react to real transaction outcomes.
+- English display text uses Amatic SC, Chinese display text ZCOOL KuaiLe, and
+  Noto Sans CJK SC supplies readable body text. Labels remain live, localized
+  Godot text; focus, locks and danger also use shape or text rather than color alone.
 
-## Animation and simulation contract
+## Production assets and animation
 
-Eight character direction sheets and seven enemy sheets each contain eight drawn
-poses in a four-column, two-row atlas. The UI merchant retains four expressions.
-Ordinary actors add action/recovery and crumple/flatten to idle, alternating steps
-and hurt. The Original also has authored tear-transition drawings; phase one
-never samples torn live poses. Phase-two shards select their own half from their
-persistent position in `Sim.boss_shards`. See [battle-direction.md](battle-direction.md).
+The production set contains **48 PNGs**. The runtime catalog has **56 identity
+keys**, including all 24 weapons, 11 items, seven enemies, 12 character views,
+merchant and recording cartridge. One office-arsenal sheet supplies independent
+static weapon regions; the depot-landmark sheet also uses static prop regions.
+Neither is a strip of animation frames.
 
-`PresentationAssets.frame_region()` uses a shared per-sheet crop; `idle_region()`
-calibrates live scale and `frame_pivot()` aligns each drawn foot baseline. `ArenaPainter`
-retains batch drawing without an animation node tree per enemy. Visual clocks
-stop on pause; reduced effects simplify optional motion. Recoil, paper fragments,
-recording arrival, stapling, collapse and victory stamps use existing events.
+There are **20 animated atlases**: 12 character front/back sheets and seven enemy
+sheets each have eight authored poses, plus the merchant's four expressions.
+Actors use four columns by two rows. Common poses are idle, alternating steps,
+hurt, preparation, follow-through, crumple and flatten. The Original has distinct
+intact, roar, half-body and tear-transition drawings. Phase one never samples
+live torn halves; phase-two art follows persistent shard identity.
 
-Animation changes no simulated position, collision, hit timing, damage, economy
-or RNG. World rendering and thumbnails share the same identity catalog.
+`PresentationAssets.frame_region()` uses a common measured crop across an atlas;
+`idle_region()` calibrates live size and thumbnails, and `frame_pivot()` aligns
+each pose's foot. Wide terminal poses cannot shrink living actors. Source PNG
+bytes remain the original image-generation outputs; regions, bounds and pivots
+are metadata, not programmatic repainting. Runtime uses precomputed metadata
+and never scans source alpha pixels.
+
+Imports retain mipmaps. Maximum imported edges are 2048 pixels for the arena
+floor, 1024 for depot landmarks and the application icon, and 512 for the other
+presentation PNGs. Source resolution, exact prompts, output paths and hashes
+remain in group manifests.
+
+## Simulation and presentation boundary
+
+World positions, recordings, collision and attacks use the 2400×1200 world.
+Camera translation and shake draw below the fixed 1200×600 HUD-safe clip. Culling
+only reduces draw work; offscreen copies still play, fire and wear by simulation
+rules. The five cover machines have model collision; decorative perimeter props
+do not acquire extra collision from their pictures.
+
+`BattleDirector` coordinates stable locomotion, recoil, actions and bounded
+value-snapshot corpses without a node tree per actor. `ArenaPainter` keeps batch
+drawing. Visual clocks freeze on pause; Reduced Effects removes optional motion
+while retaining selection, warnings, real fields and all functional feedback.
+Rendering cannot alter position, hit timing, damage, economy, wear or RNG.
+
+## Sound identity
+
+Original score **Paperwork Waltz** develops a crooked piano / low-reed / office-
+percussion melody across five synchronized 96-second arrangements: menu, shop,
+battle, pressure and Boss. Two music voices crossfade at the same score position
+according to actual simulation threats and wave phases. The 35 dry paper/office
+effects keep their pinned CC0 recording and original synthesis provenance.
+Music, effects and master gain are independently adjustable; pause, mute,
+transition ducking and session reset have bounded lifecycle behavior.
+
+Recipes and licensing are in [music sources](../audio/music/SOURCES.md),
+[effect sources](../audio/presentation/SOURCES.md) and
+[third-party notices](../THIRD_PARTY.md). Objective file and lifecycle checks do
+not establish subjective listening approval.
 
 ## Reproduction and verification
 
-```
-python3 tools/sync_art_catalog.py  # offline metadata; requires Pillow
+```bash
+python3 tools/sync_art_catalog.py
 make test
 make smoke
-REVERB_LANG=en godot --path . --fixed-fps 60 --disable-vsync --script res://tools/carbon_copy_ui_probe.gd
-REVERB_LANG=zh godot --path . --fixed-fps 60 --disable-vsync --script res://tools/carbon_copy_ui_probe.gd
+REVERB_LANG=en godot --path . --disable-vsync --script res://tools/core_gameplay_probe.gd
+REVERB_LANG=zh REVERB_PROBE_REDUCED=1 godot --path . --disable-vsync --script res://tools/core_gameplay_probe.gd
 godot --path . --fixed-fps 60 --disable-vsync --script res://tools/presentation_stress_probe.gd
-godot --path . --fixed-fps 60 --disable-vsync --write-movie res://shots/presentation.avi --script res://tools/presentation_preview.gd
+godot --path . --fixed-fps 60 --disable-vsync --script res://tools/frame_probe.gd
 ```
 
-The UI probe checks all menu/modal states, contrast, scrolling and injected
-keyboard/joypad navigation. Injection validates the input path; it is not a
-physical controller or Steam Deck test. Stress captures use real rendering and
-report frame-production headroom, not a universal FPS promise. Presentation
-fixtures stage durability, waves and offers for legible footage; they are not
-balance or human-playtest data. All probes use isolated fixture files.
+Catalog sync is offline metadata work using Pillow. Native probes stage declared
+fixtures, capture actual pixels and exercise production input paths. They use
+isolated files. These are regression and layout evidence, not human balance,
+recognition-speed, physical-controller or target-device evidence. Pressure
+captures report their own machine and scene; there is no universal FPS promise.
 
-Prompts and hashes are in each group's `SOURCES.md`, `carbon_copy_assets.json`
-and `manifest.json`. Exports are audited from an immutable Git commit with
-`tools/export_release_audit.py`.
-
-## Organic interface language (0.11.1)
-
-The interface uses one native InkStyleBox resource with hand-shaped curves,
-local-coordinate triangulation and restrained ink marks. Large sheets, squat
-action tabs and unboxed data rows have different visual weights. Focus is
-drawn as ink brackets rather than a glowing rectangular border. The old raster
-panel path is removed. Main hit areas and text remain still while decorative
-objects react to events.
-
-Character selection is an open stage; only the current character receives a
-strong ink silhouette. The supply desk uses larger objects and price tags,
-with build and copy dossiers stacked to one side. The merchant reacts only
-to actual transaction outcomes. An unaffordable purchase retains its exact
-reason; flavor text does not replace the functional message. Undo, reroll,
-merge and purchase each have a distinct short, interruptible visual action.
-
-English display text uses Amatic SC and Chinese display text uses ZCOOL KuaiLe;
-Noto remains the readable body face. Font licenses and source hashes ship in
-the exported resource pack. Inspiration is the drawn marks, negative space
-and expressive interaction of Klei's official Don't Starve gallery:
-https://www.klei.com/games/dont-starve-together
-All characters and game-specific illustration remain original.
-
-## Recycling depot and field hierarchy (0.13.0)
-
-The discarded-crate wall is replaced by a quiet ash-paper floor and structural
-ink perimeter. A returns conveyor, a stamping workstation and an absurd notice
-occupy localized edge/corner clusters. Prop artwork keeps natural proportions;
-the horizontal notice is a native torn-paper shape with live bilingual text.
-The central fighting space stays empty. One `RecyclingDepot` child redraws at
-12 Hz from the presentation clock; pause freezes it and Reduced Effects holds
-one stationary state. Props are scenery, without new collision or rules.
-
-The world is a descendant of a fixed `Control.clip_contents` rectangle equal
-to `Sim.ARENA`. An intermediate inverse origin preserves world coordinates,
-while shake remains inside the crop. Actor art, particles and batched projectile
-heads cannot enter transparent HUD margins. The active player draws after
-routine debris; bowed paper/ink edges separate locally overlapping bodies.
-Enemies and their authoritative threat geometry are not faded or relocated.
-
-Copy states use whole-body value and shape plus large closed/stapled/torn marks;
-the tiny below-foot lifetime meter is removed. The Original's 0.62-second tear
-has tension, seam break and spring release; decorative prints never hold or move
-the real phase-two bodies. These states are assessed in the actual 1280x720
-battlefield, alongside Reduced Effects and scaled windows.
-
-All 35 sounds use one strict presentation palette from pinned CC0 object
-recordings plus original granular paper synthesis. Staple, stamp, crumple,
-feed and jam cues share a quiet mechanical room bed. Important events briefly
-duck the bed; voice budgets, mute and pause remain bounded. This is material
-sound design, without a new composed soundtrack or a claim of listening approval.
-See `audio/presentation/SOURCES.md` for complete recipes and provenance.
-
-`tools/depot_art_probe.gd` records copy states, crowd overlap, edge clipping
-and six tear timestamps. Its staged fixture declares positions/ages/durability;
-zero changed pixels outside the crop proves the draw boundary, not human
-recognition speed. Real handling and listening remain separate acceptance work.
+All source records live in group `SOURCES.md`, `carbon_copy_assets.json` and
+`manifest.json` files. `tools/export_release_audit.py` validates actual exported
+resources and provenance from a fixed commit; it does not replace visual review.

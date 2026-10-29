@@ -133,10 +133,14 @@ func test_weapon_slots_are_capped(c: Check) -> void:
 	o2.weapon = Content.weapon(&"rifle")
 	o2.price = 10
 	c.ok(not s.shop.buy(s, o2), "no seventh weapon")
+	var weapon_offers := 0
 	for r in 30:
 		s.shop.roll(s)
 		for offer in s.shop.offers:
-			c.ok(not offer.is_weapon(), "full slots stop weapon offers")
+			if offer.is_weapon():
+				weapon_offers += 1
+				c.eq(s.shop.block_reason(s, offer), &"full", "weapon offers request replacement at full capacity")
+	c.ok(weapon_offers > 0, "full slots retain weapon offers for replacement")
 
 
 func test_item_stack_limit(c: Check) -> void:

@@ -15,6 +15,7 @@ var _summary: Dictionary = {"screenshots": {}, "navigation": [], "physical_contr
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_carbon_copy_ui_probe_suspend.json")
 	var names: Dictionary = {"REVERB_SAVE": "test_carbon_ui_save.json",
 		"REVERB_RUN_LOG": "test_carbon_ui_runs.jsonl", "REVERB_SETTINGS": "test_carbon_ui_settings.json",
 		"REVERB_FEEDBACK_LOG": "test_carbon_ui_feedback.jsonl"}

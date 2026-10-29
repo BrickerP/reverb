@@ -9,27 +9,41 @@ func _cleanup() -> void:
 		DirAccess.remove_absolute(abs)
 
 
-func test_defaults_and_unlock_at_wave_ten(c: Check) -> void:
+func test_defaults_and_character_unlock_wave_boundaries(c: Check) -> void:
 	_cleanup()
 	var meta := Meta.new(PATH)
 	c.ok(meta.is_unlocked(&"looper"), "looper starts unlocked")
 	c.ok(not meta.is_unlocked(&"solo"), "solo starts locked")
+	c.ok(not meta.is_unlocked(&"mender"), "mender starts locked")
+	c.ok(not meta.is_unlocked(&"overloader"), "overloader starts locked")
 	c.eq(meta.best_wave, 0, "fresh best wave")
 	var s := Sim.new(1)
 	s.start_run()
 	s.phase = Sim.Phase.LOST
-	s.wave = 9
+	s.wave = 4
 	var newly := meta.record_run(s)
-	c.ok(newly.is_empty(), "wave 9 unlocks nothing")
+	c.ok(newly.is_empty(), "wave 4 unlocks nothing")
+	s.wave = 5
+	newly = meta.record_run(s)
+	c.eq(newly, [&"mender"], "mender unlocks exactly at best wave 5")
+	s.wave = 9
+	newly = meta.record_run(s)
+	c.ok(newly.is_empty(), "wave 9 does not repeat an existing unlock")
 	c.eq(meta.best_wave, 9, "best wave recorded")
 	s.wave = 10
 	newly = meta.record_run(s)
-	c.eq(newly.size(), 1, "one character unlocked")
-	c.ok(meta.is_unlocked(&"solo"), "solo is unlocked at wave 10")
+	c.eq(newly, [&"solo"], "solo keeps its wave 10 unlock")
+	s.wave = 11
+	newly = meta.record_run(s)
+	c.ok(newly.is_empty(), "overloader remains locked before wave 12")
+	s.wave = 12
+	newly = meta.record_run(s)
+	c.eq(newly, [&"overloader"], "overloader unlocks exactly at best wave 12")
 	c.ok(not meta.is_unlocked(&"mirror"), "mirror still needs a win")
 	var loaded := Meta.new(PATH)
-	c.ok(loaded.is_unlocked(&"solo"), "unlock persists")
-	c.eq(loaded.runs, 2, "runs persist")
+	for id: StringName in [&"mender", &"solo", &"overloader"]:
+		c.ok(loaded.is_unlocked(id), "%s unlock persists" % id)
+	c.eq(loaded.runs, 6, "runs persist")
 	_cleanup()
 
 

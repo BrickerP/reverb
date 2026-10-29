@@ -12,6 +12,7 @@ var _dir := ""
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_ui_shots_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://ui_shots_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://ui_shots_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://ui_shots_settings.json")

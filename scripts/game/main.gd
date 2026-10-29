@@ -35,9 +35,20 @@ var _settings_restore_pause := false
 var _daily_run := false
 var _run_context: Dictionary = {}
 var _latest_saved_run: Dictionary = {}
+var echo_wheel: EchoSelectionWheel
+var story_ui: StoryArchiveUi
+var receipt_ui: StoryReceipt
+var _replace_dialog: ConfirmationDialog
+var _pending_start: Dictionary = {}
+var _retire_pressed := false
+var _retire_hold := 0.0
+var _story_restore_pause := false
+static var _resume_after_language := false
+const RETIRE_HOLD_TIME := 0.24
 
 
 func _ready() -> void:
+	get_tree().auto_accept_quit = false
 	UserData.migrate_legacy()
 	Controls.register()
 	var sp := OS.get_environment("REVERB_SETTINGS")
@@ -48,6 +59,7 @@ func _ready() -> void:
 	_apply_display()
 	audio = GameAudio.new()
 	add_child(audio)
+	_apply_audio()
 	var theme := UiTheme.build()
 	_view = ArenaView.new()
 	_view.shake_enabled = settings.shake
@@ -55,15 +67,13 @@ func _ready() -> void:
 	# preserves existing simulation/drawing coordinates and view.position semantics.
 	_arena_clip = Control.new()
 	_arena_clip.name = "BattlefieldClip"
-	_arena_clip.position = Sim.ARENA.position
-	_arena_clip.size = Sim.ARENA.size
+	_arena_clip.position = Sim.VIEWPORT.position
+	_arena_clip.size = Sim.VIEWPORT.size
 	_arena_clip.clip_contents = true
 	_arena_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_arena_clip)
-	var world_origin := Node2D.new()
-	world_origin.position = -Sim.ARENA.position
-	_arena_clip.add_child(world_origin)
-	world_origin.add_child(_view)
+	_view.set_cropped(true)
+	_arena_clip.add_child(_view)
 	hud = Hud.new()
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()
@@ -84,6 +94,26 @@ func _ready() -> void:
 	_add_layer(5, settings_ui, theme)
 	_add_layer(6, history_ui, theme)
 	_add_layer(7, codex_ui, theme)
+	echo_wheel = EchoSelectionWheel.new()
+	story_ui = StoryArchiveUi.new()
+	receipt_ui = StoryReceipt.new()
+	_add_layer(11, echo_wheel, theme)
+	_add_layer(10, story_ui, theme)
+	_add_layer(9, receipt_ui, theme)
+	receipt_ui.position = Vector2(430.0, 220.0)
+	receipt_ui.custom_minimum_size.x = 420.0
+	receipt_ui.archive_requested.connect(open_story)
+	receipt_ui.dismissed.connect(_on_receipt_closed)
+	story_ui.closed.connect(_on_story_closed)
+	echo_wheel.cancelled.connect(_cancel_retirement_selection)
+	_replace_dialog = ConfirmationDialog.new()
+	_replace_dialog.theme = theme
+	_replace_dialog.title = Loc.t("select.replace_save_title")
+	_replace_dialog.dialog_text = Loc.t("select.replace_save_body")
+	_replace_dialog.ok_button_text = Loc.t("select.new_run")
+	_replace_dialog.cancel_button_text = Loc.t("shop.cancel")
+	_replace_dialog.confirmed.connect(_confirm_new_run)
+	add_child(_replace_dialog)
 	shop_ui.start_requested.connect(_on_start_requested)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
@@ -97,6 +127,7 @@ func _ready() -> void:
 	feedback_ui.closed.connect(_on_feedback_closed)
 	boon_ui.chosen.connect(_on_boon_chosen)
 	boon_ui.reroll_requested.connect(_on_boon_reroll)
+	boon_ui.save_requested.connect(save_and_return)
 	character_select.character_chosen.connect(choose_character)
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
@@ -106,9 +137,16 @@ func _ready() -> void:
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
 	pause_ui.mute_requested.connect(_on_mute_requested)
-	pause_ui.quit_requested.connect(show_select)
+	pause_ui.quit_requested.connect(_abandon_run)
+	pause_ui.save_requested.connect(save_and_return)
+	pause_ui.story_requested.connect(open_story)
+	character_select.continue_requested.connect(continue_run)
+	character_select.story_requested.connect(open_story)
+	shop_ui.receipt_requested.connect(open_receipt)
 	history_ui.replay_requested.connect(_on_history_replay)
 	settings_ui.volume_changed.connect(_on_volume_changed)
+	settings_ui.music_volume_changed.connect(_on_music_volume_changed)
+	settings_ui.effects_volume_changed.connect(_on_effects_volume_changed)
 	settings_ui.shake_changed.connect(_on_shake_changed)
 	settings_ui.reduced_effects_changed.connect(_on_reduced_effects_changed)
 	settings_ui.fullscreen_changed.connect(_on_fullscreen_changed)
@@ -128,10 +166,14 @@ func _ready() -> void:
 				FeedbackLog.DEFAULT_PATH.get_file())
 	feedback_log = FeedbackLog.new(feedback_path)
 	show_select()
+	if _resume_after_language:
+		_resume_after_language = false
+		_resume_language_settings.call_deferred()
 
 
 func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1,
 		daily_modifier: StringName = &"") -> void:
+	SuspendStore.clear()
 	_detach_presentation_session()
 	feedback_ui.reset()
 	boon_ui.close()
@@ -152,6 +194,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	_view.visible = true
 	hud.bind(sim)
 	audio.bind(sim)
+	_connect_run_events()
 	hud.visible = true
 	shop_ui.visible = false
 	end_ui.visible = false
@@ -176,7 +219,7 @@ func choose_character(id: StringName, seed_value: int = -1) -> void:
 	var chosen := seed_value
 	if chosen < 0 and character_select != null:
 		chosen = character_select.chosen_seed()
-	new_run(chosen, id)
+	_request_start(chosen, id, -1, &"", false)
 
 
 func _retry_seed(seed_value: int) -> void:
@@ -193,8 +236,7 @@ func today_seed() -> int:
 
 func start_daily() -> void:
 	var seed_value := today_seed()
-	new_run(seed_value, &"looper", 0, DailyAnomaly.for_seed(seed_value))
-	_daily_run = true
+	_request_start(seed_value, &"looper", 0, DailyAnomaly.for_seed(seed_value), true)
 
 
 func _open_log_folder() -> void:
@@ -233,7 +275,7 @@ func open_settings() -> void:
 		_set_paused(true)
 	if pause_ui != null:
 		pause_ui.close()
-	settings_ui.open(settings, sim == null or sim.phase in [Sim.Phase.LOST, Sim.Phase.WON])
+	settings_ui.open(settings)
 
 
 func open_codex() -> void:
@@ -306,17 +348,26 @@ func _on_fullscreen_changed(on: bool) -> void:
 
 
 func _on_language_changed(code: String) -> void:
+	var active := sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]
+	if active and not _save_active():
+		settings_ui.open(settings)
+		settings_ui.show_error(Loc.t(SuspendStore.last_error))
+		return
 	settings.language = code
 	settings.save()
 	if code == "":
 		Loc.reset_lang()
 	else:
 		Loc.lang = code
+	_resume_after_language = active
 	get_tree().reload_current_scene()
 
 
 func _apply_audio() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(0.001, settings.volume)))
+	if audio != null:
+		audio.set_music_volume(settings.music_volume)
+		audio.set_effects_volume(settings.effects_volume)
 
 
 func _apply_display() -> void:
@@ -337,6 +388,8 @@ func _apply_reduced_effects() -> void:
 		shop_ui.set_reduced_effects(settings.reduced_effects)
 	if end_ui != null:
 		end_ui.set_reduced_effects(settings.reduced_effects)
+	if echo_wheel != null:
+		echo_wheel.reduced_effects = settings.reduced_effects
 
 
 func show_select() -> void:
@@ -359,11 +412,27 @@ func show_select() -> void:
 	_view.visible = false
 	character_select.refresh(meta, today_seed(),
 			meta.daily_best if meta.daily_seed == today_seed() else 0)
+	character_select.set_resume_available(SuspendStore.exists())
 	character_select.visible = true
 	character_select.focus_default()
 
 
 func _detach_presentation_session() -> void:
+	_retire_pressed = false
+	_retire_hold = 0.0
+	if echo_wheel != null:
+		echo_wheel.close()
+	if receipt_ui != null:
+		receipt_ui.hide()
+	if story_ui != null:
+		story_ui.hide()
+	if sim != null:
+		if sim.echo_retired.is_connected(_on_retirement):
+			sim.echo_retired.disconnect(_on_retirement)
+		if sim.combo_triggered.is_connected(_on_combo):
+			sim.combo_triggered.disconnect(_on_combo)
+		if sim.wave_ended.is_connected(_on_story_wave):
+			sim.wave_ended.disconnect(_on_story_wave)
 	if _view != null:
 		_view.unbind()
 	if hud != null:
@@ -376,13 +445,14 @@ func _detach_presentation_session() -> void:
 
 
 func toggle_pause() -> void:
-	if sim != null and sim.phase == Sim.Phase.WAVE:
+	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
 		_set_paused(not paused)
 
 
 func _physics_process(delta: float) -> void:
+	_update_retirement_hold(delta)
 	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible \
-			or feedback_ui.visible or boon_ui.visible:
+			or feedback_ui.visible or boon_ui.visible or story_ui.visible or receipt_ui.visible:
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
@@ -397,6 +467,23 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	Controls.note_event(event)
+	if echo_wheel.visible:
+		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
+			_cancel_retirement_selection()
+			get_viewport().set_input_as_handled()
+		return
+	if story_ui.visible:
+		if event.is_action_pressed(&"ui_cancel"):
+			story_ui.close()
+			get_viewport().set_input_as_handled()
+		return
+	if receipt_ui.visible:
+		if event.is_action_pressed(&"ui_cancel"):
+			receipt_ui.hide()
+			_on_receipt_closed()
+			get_viewport().set_input_as_handled()
+		return
 	if boon_ui.visible:
 		return
 	if feedback_ui.visible:
@@ -429,9 +516,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"history") and (character_select.visible or end_ui.visible):
 		open_history()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed(&"collapse_echo") and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
-		if sim.collapse_oldest_echo():
-			get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"retire_echo") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
+		_retire_pressed = true
+		_retire_hold = 0.0
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"pause"):
 		toggle_pause()
 	elif event.is_action_pressed(&"restart") and end_ui.visible:
@@ -439,7 +527,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"retry") and end_ui.visible and sim != null:
 		_retry_seed(sim.run_seed)
 	elif event.is_action_pressed(&"quit_run") and paused:
-		show_select()
+		save_and_return()
 	elif event.is_action_pressed(&"character") and end_ui.visible:
 		show_select()
 	elif event.is_action_pressed(&"mute"):
@@ -493,6 +581,8 @@ func _record_run() -> void:
 	if _recorded or sim == null or meta == null:
 		return
 	_recorded = true
+	SuspendStore.clear()
+	_persist_story()
 	if sim.endless:
 		meta.record_endless(sim)
 		if run_log != null:
@@ -525,6 +615,7 @@ func _open_shop() -> void:
 	_shop_delay = 0.0
 	hud.visible = false
 	shop_ui.open(sim)
+	_persist_story()
 
 
 func _show_boon() -> void:
@@ -611,3 +702,240 @@ func _restore_underlay_focus() -> void:
 		character_select.focus_default()
 	elif shop_ui != null and shop_ui.visible:
 		shop_ui.focus_default()
+
+
+func _connect_run_events() -> void:
+	sim.echo_retired.connect(_on_retirement)
+	sim.combo_triggered.connect(_on_combo)
+	sim.wave_ended.connect(_on_story_wave)
+
+
+func _on_retirement(info: EchoRetirementInfo) -> void:
+	_view.react_retirement(info)
+	_persist_story()
+
+
+func _on_combo(info: ComboInfo) -> void:
+	hud.set_combo_feedback(info)
+
+
+func _on_story_wave(_wave: int) -> void:
+	_persist_story()
+
+
+func _persist_story() -> void:
+	if sim != null and meta != null:
+		if not meta.discover_story(StoryLedger.discovered(sim)) and pause_ui.visible:
+			pause_ui.show_error(Loc.t("story.save_failed"))
+
+
+func _on_music_volume_changed(value: float) -> void:
+	settings.music_volume = value
+	settings.save()
+	_apply_audio()
+
+
+func _on_effects_volume_changed(value: float) -> void:
+	settings.effects_volume = value
+	settings.save()
+	_apply_audio()
+
+
+func _request_start(seed_value: int, id: StringName, ascension_value: int,
+		anomaly: StringName, daily: bool) -> void:
+	if SuspendStore.exists():
+		_pending_start = {"seed": seed_value, "character": id,
+			"ascension": ascension_value, "anomaly": anomaly, "daily": daily}
+		_replace_dialog.popup_centered(Vector2i(520, 180))
+		return
+	new_run(seed_value, id, ascension_value, anomaly)
+	_daily_run = daily
+
+
+func _confirm_new_run() -> void:
+	if _pending_start.is_empty():
+		return
+	var pending := _pending_start.duplicate()
+	_pending_start.clear()
+	new_run(int(pending.seed), StringName(pending.character), int(pending.ascension), StringName(pending.anomaly))
+	_daily_run = bool(pending.daily)
+
+
+func _save_active() -> bool:
+	if sim == null or not sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
+		return false
+	_persist_story()
+	return SuspendStore.save(sim, {
+		"main_version": 1, "character_id": character_id, "daily": _daily_run, "paused": paused,
+		"shop_delay": _shop_delay, "end_delay": _end_delay, "recorded": _recorded,
+		"shop_visible": shop_ui.visible, "settings_restore_pause": _settings_restore_pause,
+		"elapsed_msec": maxi(0, Time.get_ticks_msec() - _run_started_msec),
+		"run_context": _run_context.duplicate(true), "unlock_text": _unlock_text})
+
+
+func save_and_return() -> bool:
+	if not _save_active():
+		_show_save_error(Loc.t(SuspendStore.last_error if SuspendStore.last_error != "" else "suspend.write_failed"))
+		return false
+	show_select()
+	return true
+
+
+func continue_run(restore_pause: bool = false) -> bool:
+	var saved := SuspendStore.load()
+	if saved.is_empty():
+		character_select.set_resume_available(SuspendStore.exists(), Loc.t(SuspendStore.last_error))
+		return false
+	if not saved.get("envelope") is Dictionary or not _valid_main_envelope(saved.envelope):
+		character_select.set_resume_available(true, Loc.t("suspend.corrupt"))
+		return false
+	var envelope: Dictionary = saved.envelope
+	var id := StringName(str(envelope.get("character_id", "looper")))
+	if Content.character(id) == null:
+		character_select.set_resume_available(true, Loc.t("suspend.corrupt"))
+		return false
+	_detach_presentation_session()
+	sim = saved.sim as Sim
+	character_id = id
+	_daily_run = bool(envelope.get("daily", false))
+	_recorded = bool(envelope.get("recorded", false))
+	_shop_delay = float(envelope.get("shop_delay", 0.0))
+	_end_delay = float(envelope.get("end_delay", 0.0))
+	_run_started_msec = Time.get_ticks_msec() - int(envelope.get("elapsed_msec", 0))
+	_run_context = (envelope.get("run_context", {}) as Dictionary).duplicate(true)
+	_unlock_text = str(envelope.get("unlock_text", ""))
+	_settings_restore_pause = bool(envelope.get("settings_restore_pause", false))
+	_phase = sim.phase
+	_view.bind(sim, character_id)
+	hud.bind(sim)
+	audio.bind(sim)
+	_connect_run_events()
+	character_select.visible = false
+	end_ui.visible = false
+	shop_ui.visible = false
+	_view.visible = true
+	hud.visible = true
+	_set_paused(restore_pause and bool(envelope.get("paused", false)))
+	if sim.phase == Sim.Phase.SHOP:
+		if not sim.pending_boons.is_empty():
+			_show_boon()
+		elif bool(envelope.get("shop_visible", true)) or _shop_delay <= 0.0:
+			_open_shop()
+	_persist_story()
+	return true
+
+
+func _resume_language_settings() -> void:
+	if continue_run(true):
+		pause_ui.close()
+		settings_ui.open(settings)
+
+
+func _abandon_run() -> void:
+	SuspendStore.clear()
+	show_select()
+
+
+func open_story() -> void:
+	_story_restore_pause = paused
+	if sim != null:
+		_set_paused(true)
+		pause_ui.close()
+	if receipt_ui != null:
+		receipt_ui.hide()
+	_persist_story()
+	story_ui.open(meta)
+
+
+func _on_story_closed() -> void:
+	if sim != null:
+		_set_paused(_story_restore_pause)
+	_restore_underlay_focus()
+
+
+func open_receipt() -> void:
+	if sim == null or sim.phase != Sim.Phase.SHOP:
+		return
+	receipt_ui.display(sim)
+	if receipt_ui.visible:
+		receipt_ui.archive_button.grab_focus()
+
+
+func _on_receipt_closed() -> void:
+	shop_ui.refresh_receipt()
+	_restore_underlay_focus()
+
+
+func _input(event: InputEvent) -> void:
+	Controls.note_event(event)
+	if event.is_action_released(&"retire_echo") and _retire_pressed:
+		var held := _retire_hold
+		_retire_pressed = false
+		_retire_hold = 0.0
+		if echo_wheel.visible:
+			var selected := echo_wheel.close()
+			if sim != null and selected > 0:
+				sim.select_echo(selected)
+			_set_paused(false)
+		elif held < RETIRE_HOLD_TIME and sim != null and not paused:
+			sim.retire_selected_echo()
+		get_viewport().set_input_as_handled()
+
+
+func _update_retirement_hold(delta: float) -> void:
+	if not _retire_pressed or echo_wheel.visible or sim == null:
+		return
+	_retire_hold += delta
+	if _retire_hold >= RETIRE_HOLD_TIME and not paused and sim.phase == Sim.Phase.WAVE:
+		_set_paused(true)
+		pause_ui.close()
+		echo_wheel.open(sim)
+
+
+func _cancel_retirement_selection() -> void:
+	_retire_pressed = false
+	_retire_hold = 0.0
+	if echo_wheel.visible:
+		echo_wheel.close()
+	_set_paused(false)
+
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_CLOSE_REQUEST:
+		return
+	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
+		if not _save_active():
+			_set_paused(true)
+			_show_save_error(Loc.t(SuspendStore.last_error))
+			return
+	get_tree().quit()
+
+
+func _show_save_error(message: String) -> void:
+	if boon_ui.visible:
+		boon_ui.show_error(message)
+	elif settings_ui.visible:
+		settings_ui.show_error(message)
+	else:
+		story_ui.hide()
+		receipt_ui.hide()
+		pause_ui.show_error(message)
+
+
+func _valid_main_envelope(value: Dictionary) -> bool:
+	var required := {"main_version": TYPE_INT, "daily": TYPE_BOOL, "paused": TYPE_BOOL,
+		"recorded": TYPE_BOOL, "shop_visible": TYPE_BOOL, "settings_restore_pause": TYPE_BOOL,
+		"elapsed_msec": TYPE_INT, "run_context": TYPE_DICTIONARY, "unlock_text": TYPE_STRING}
+	for key: String in required:
+		if not value.has(key) or typeof(value[key]) != int(required[key]):
+			return false
+	if int(value.main_version) != 1 or int(value.elapsed_msec) < 0:
+		return false
+	if not value.has("character_id") or not typeof(value.character_id) in [TYPE_STRING, TYPE_STRING_NAME]:
+		return false
+	for key: String in ["shop_delay", "end_delay"]:
+		if not value.has(key) or not typeof(value[key]) in [TYPE_FLOAT, TYPE_INT]:
+			return false
+		if not is_finite(float(value[key])) or float(value[key]) < 0.0 or float(value[key]) > 20.0:
+			return false
+	return true

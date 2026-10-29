@@ -103,9 +103,9 @@ func test_each_boon_applies(c: Check) -> void:
 	c.ok(Boon.apply(s, Boon.MAGNET), "magnet boon applies")
 	c.near(s.player.stats.get_stat(Stats.PICKUP_RANGE), pickup + 30.0, 0.001,
 			"pickup range increases")
-	var lifespan := s.echo_lifespan()
+	var duration := s.echo_duration()
 	c.ok(Boon.apply(s, Boon.ETERNITY), "eternity boon applies")
-	c.eq(s.echo_lifespan(), lifespan + 1, "echo lifespan increases")
+	c.near(s.echo_duration(), duration + 40.0, 0.001, "eternity adds forty seconds of deployed playback")
 	c.ok(Boon.apply(s, Boon.SECOND_WIND), "second wind boon applies")
 	c.eq(s.second_wind_charges, 1, "second wind grants one charge")
 	var slots := s.echo_capacity()
@@ -121,7 +121,7 @@ func test_zero_slot_boons_skip_echo_options(c: Check) -> void:
 		var boons := Boon.roll(s.rng, 3, s)
 		c.eq(boons.size(), 3, "zero-slot rolls still offer three boons")
 		c.ok(not boons.has(Boon.ECHO), "echo power is filtered")
-		c.ok(not boons.has(Boon.ETERNITY), "echo lifespan is filtered")
+		c.ok(not boons.has(Boon.ETERNITY), "echo duration is filtered")
 		c.ok(not boons.has(Boon.RESERVOIR), "echo capacity is filtered")
 
 

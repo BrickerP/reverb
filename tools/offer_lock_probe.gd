@@ -16,6 +16,7 @@ var _summary: Dictionary = {"source": "fixture", "checks": {}, "screenshots": {}
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_offer_lock_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://offer_lock_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://offer_lock_probe_runs.jsonl")
 	OS.set_environment("REVERB_FEEDBACK_LOG", "user://offer_lock_probe_feedback.jsonl")

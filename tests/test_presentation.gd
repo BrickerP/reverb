@@ -31,10 +31,11 @@ func test_required_art_loads(c: Check) -> void:
 
 
 func test_every_weapon_id_resolves_to_distinct_imported_art(c: Check) -> void:
+	c.eq(PresentationAssets.WEAPON_KEYS.size(), 24, "all eighteen shop weapons and six evolutions have art")
 	c.eq(PresentationAssets.WEAPON_KEYS.size(), Content.weapons().size(),
 			"weapon catalog has no missing or extra IDs")
 	var keys: Array[StringName] = []
-	var paths: Array[String] = []
+	var identities: Array[String] = []
 	for weapon: WeaponDef in Content.weapons().values():
 		c.ok(PresentationAssets.WEAPON_KEYS.has(weapon.id), "%s has explicit weapon art" % weapon.id)
 		var key := PresentationAssets.weapon_key(weapon)
@@ -42,8 +43,11 @@ func test_every_weapon_id_resolves_to_distinct_imported_art(c: Check) -> void:
 		c.ok(not keys.has(key), "%s weapon key is unique" % weapon.id)
 		keys.append(key)
 		var path := String(PresentationAssets.PATHS.get(key, ""))
-		c.ok(not path.is_empty() and not paths.has(path), "%s weapon file is unique" % weapon.id)
-		paths.append(path)
+		var region := PresentationAssets.region(key)
+		var identity := "%s:%s" % [path, PresentationAssets.SOURCE_METADATA[key]["region"]]
+		c.ok(not path.is_empty() and region.has_area(), "%s has real imported weapon art" % weapon.id)
+		c.ok(not identities.has(identity), "%s has a unique file and atlas-region identity" % weapon.id)
+		identities.append(identity)
 		c.ok(PresentationAssets.texture(key) != null, "%s weapon art imports" % weapon.id)
 
 
@@ -118,6 +122,8 @@ func test_unknown_definitions_use_documented_safe_fallbacks(c: Check) -> void:
 func test_source_metadata_stays_inside_original_images(c: Check) -> void:
 	c.eq(PresentationAssets.SOURCE_METADATA.size(), PresentationAssets.PATHS.size(),
 			"every presentation asset has source metadata")
+	c.eq(PresentationAssets.PATHS.size(), 56, "catalog contains all fifty-six shipped visual identities")
+	var identities: Array[String] = []
 	for key: StringName in PresentationAssets.PATHS:
 		c.ok(PresentationAssets.SOURCE_METADATA.has(key), "metadata exists for %s" % key)
 		if not PresentationAssets.SOURCE_METADATA.has(key):
@@ -125,6 +131,9 @@ func test_source_metadata_stays_inside_original_images(c: Check) -> void:
 		var metadata: Dictionary = PresentationAssets.SOURCE_METADATA[key]
 		var source_size: Vector2 = metadata["size"]
 		var source_region: Rect2 = metadata["region"]
+		var identity := "%s:%s" % [PresentationAssets.PATHS[key], source_region]
+		c.ok(not identities.has(identity), "%s has a distinct static source region" % key)
+		identities.append(identity)
 		c.ok(source_region.has_area(), "source region has area for %s" % key)
 		c.ok(Rect2(Vector2.ZERO, source_size).encloses(source_region),
 				"source region stays inside source image for %s" % key)
@@ -175,7 +184,7 @@ func test_presentation_updates_do_not_advance_simulation(c: Check) -> void:
 	var facing := sim.player.facing
 	view._process(0.25)
 	ArenaPainter._aim_direction(sim, sim.player.pos, sim.player.facing)
-	ArenaPainter._motion_bob(sim.wave_time, sim.player.pos, 6.0, 1.6)
+	BattleDirector.gait_profile(0.75, 1.0, true)
 	c.eq(sim.rng.state, rng_state, "presentation leaves simulation RNG untouched")
 	c.eq(sim.wave_time, wave_time, "presentation does not advance wave time")
 	c.eq(sim.player.pos, player_pos, "presentation does not move the player")

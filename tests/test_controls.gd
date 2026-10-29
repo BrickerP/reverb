@@ -24,5 +24,5 @@ func test_gamepad_ui_uses_standard_buttons(c: Check) -> void:
 	c.ok(_has_button(&"ui_left", JOY_BUTTON_DPAD_LEFT), "d-pad left")
 	c.ok(_has_button(&"ui_right", JOY_BUTTON_DPAD_RIGHT), "d-pad right")
 	c.ok(_has_button(&"debug", JOY_BUTTON_BACK), "View toggles debug")
-	c.ok(_has_key(&"collapse_echo", KEY_SPACE), "Space collapses an echo")
-	c.ok(_has_button(&"collapse_echo", JOY_BUTTON_RIGHT_SHOULDER), "right shoulder collapses an echo")
+	c.ok(_has_key(&"retire_echo", KEY_SPACE), "Space retires the selected copy")
+	c.ok(_has_button(&"retire_echo", JOY_BUTTON_RIGHT_SHOULDER), "right shoulder retires the selected copy")

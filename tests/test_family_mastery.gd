@@ -24,7 +24,7 @@ func test_four_piece_families_get_distinct_masteries(c: Check) -> void:
 	c.eq(Combat.family_mastery_pierce(scatter, &"scatter"), 0, "other families do not pierce")
 	var arcane := _weapons(&"orb", 4)
 	c.near(Combat.family_mastery_damage(arcane, &"arcane", 10.0), 1.0, 0.001,
-			"arcane uses echo power, not a damage multiplier")
+			"arcane changes conduction rather than generic damage")
 
 
 func test_marksman_mastery_reaches_the_projectile(c: Check) -> void:
@@ -51,17 +51,27 @@ func test_marksman_mastery_reaches_the_projectile(c: Check) -> void:
 	c.eq(s.projectiles[0].pierce_left, rifle.pierce + 1, "the mastery pierce is applied to the shot")
 
 
-func test_arcane_mastery_raises_echo_power(c: Check) -> void:
+func test_arcane_mastery_extends_real_wet_conduction(c: Check) -> void:
 	var s := Sim.new(3)
-	s.start_run()
-	var base := s.echo_power()
-	s.player.weapons.clear()
-	s.player.weapon_levels.clear()
-	s.player.cooldowns.clear()
-	for i in 4:
-		s.player.add_weapon(Content.weapon(&"orb"))
-	c.near(s.echo_power(), base + Combat.FAMILY_MASTERY_ARCANE_ECHO, 0.001,
-			"four arcane weapons raise echo power")
+	var source := Vector2(200.0, 200.0)
+	s.player.stats.values[Stats.CRIT_CHANCE] = 0.0
+	for index in 6:
+		var e := EnemyState.new()
+		e.uid = index + 1
+		e.def = Content.enemy(&"grunt")
+		e.pos = Vector2(300.0 + float(index) * 4.0, 200.0)
+		e.hp = 1000.0
+		e.max_hp = e.hp
+		e.ink_left = 2.0
+		s.enemies.append(e)
+	var combos: Array[ComboInfo] = []
+	s.combo_triggered.connect(func(info: ComboInfo) -> void: combos.append(info))
+	var w := Content.weapon(&"hex_bolt").duplicate() as WeaponDef
+	w.chain_count = 1
+	Combat.fire(s, source, Vector2(300.0,200.0), w, 0, 1.0,
+		s.player.stats, 1.0, -1, Color.WHITE, 0, false, -1, true)
+	c.eq(combos.size(), 1, "one actual conduction interaction")
+	c.eq(combos[0].affected, 5, "arcane mastery reaches a fourth wet neighbor")
 
 
 func _find_label(node: Node, needle: String) -> bool:

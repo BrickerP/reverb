@@ -75,15 +75,18 @@ func test_take_power_uses_weapon_levels(c: Check) -> void:
 	c.near(t.power(), Content.weapon(&"pistol").level_dps(2), 0.001, "level scales echo power")
 
 
-func test_bank_ages_and_expires(c: Check) -> void:
+func test_bank_assigns_monotonic_stable_uids(c: Check) -> void:
 	var bank := EchoBank.new()
-	var t := EchoTake.new()
-	bank.add(t)
-	c.eq(bank.age_after_wave(3).size(), 0, "wave 1 played, not expired")
-	c.eq(bank.age_after_wave(3).size(), 0, "wave 2 played, not expired")
-	var expired := bank.age_after_wave(3)
-	c.eq(expired.size(), 1, "expires after its third wave")
-	c.eq(bank.takes.size(), 0, "expired take removed")
+	var first := EchoTake.new()
+	bank.add(first)
+	c.eq(first.uid, 1, "first recording has a positive UID")
+	bank.discard(first)
+	var second := EchoTake.new()
+	bank.add(second)
+	c.eq(second.uid, 2, "retired IDs are never reused")
+	c.eq(second.condition, 100.0, "new recording starts fully intact")
+	bank.set_next_uid(1)
+	c.eq(bank.next_uid(), 3, "restoration counter cannot collide with a retained take")
 
 
 func test_bank_overflow_and_trim_removes_weakest(c: Check) -> void:
@@ -156,7 +159,7 @@ func test_merge_two_takes(c: Check) -> void:
 	a.weapons.append(Content.weapon(&"pistol"))
 	a.weapons.append(Content.weapon(&"smg"))
 	bank.add(a)
-	a.age = 1
+	a.condition = 63.0
 	var b := _take([Vector2(100, 100), Vector2(120, 120)])
 	b.wave = 3
 	b.weapons.append(Content.weapon(&"rifle"))
@@ -165,7 +168,8 @@ func test_merge_two_takes(c: Check) -> void:
 	c.ok(m != null and m.merged, "merged take")
 	c.eq(bank.takes.size(), 1, "two takes became one")
 	c.eq(m.wave, 3, "newest wave label")
-	c.eq(m.age, 1, "the older take's age is kept")
+	c.eq(m.condition, 63.0, "merge keeps the lower condition")
+	c.ok(m.uid > a.uid and m.uid > b.uid, "merge receives a new stable UID")
 	c.eq(m.weapons.size(), 3, "both loadouts are kept")
 	c.eq(m.samples.size(), a.samples.size() + EchoBank.BRIDGE_SAMPLES + b.samples.size(), "routes are joined")
 	c.ok(not bank.takes.has(a) and not bank.takes.has(b), "sources are consumed")

@@ -4,6 +4,32 @@ Generated on 2026-10-28 using the built-in imagegen tool. All selected originals
 
 The existing gameplay IDs and paths are retained. This artwork does not change weapon rules, prices or damage. Weapon direction is right-facing except the vertical longbow. All PNGs pass RGBA, transparent-corner, alpha-range and non-empty visible-bounds checks. Bounds use alpha >= 20/255 and exclusive LTRB coordinates.
 
+## Office arsenal atlas (2026-10-30)
+
+`office_arsenal.png` adds twelve original office-junk weapons in one 1448 by
+1086 transparent RGBA atlas, arranged in four columns and three rows of 362
+pixel cells. A built-in imagegen spacing refinement keeps every complete object
+inside its own cell. The final file is a byte-for-byte copy of that tool output;
+no programmatic drawing, cropping, alpha replacement or resampling was used.
+
+Row-major order:
+
+1. stapler, paper_saw, hole_punch, ink_bottle
+2. stamp, mallet, cutter, tape_spool
+3. rubber_band, paper_plane, hydraulic_press, redaction_engine
+
+All twelve cells are nonempty, unique, and separated by transparent internal
+grid boundaries at alpha >= 20/255. Each weapon has a distinct explicit runtime
+key with its tight measured source-pixel XYWH rectangle in the authored
+`regions` dictionary of `carbon_copy_assets.json`. The offline catalog generator
+emits one static crop per key; sharing the PNG does not share a weapon's pixels
+or add animation frames. Arena mounts, shop icons and inventory views consume
+the same crop.
+
+The exact generation and spacing-refinement prompts, initial/final original
+paths, reference hash, source byte hash, region hashes and alpha checks are
+retained in `carbon_copy_assets.json`. Both original tool outputs remain intact.
+
 The three top-level assets (pistol, shotgun, orb) are included in carbon_copy_assets.json; the directory manifest contains the nine files physically in weapons/. The top-level manifest is maintained by the integrating task.
 
 ## Sources and prompts

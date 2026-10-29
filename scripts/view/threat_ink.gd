@@ -43,7 +43,8 @@ static func profile(enemy: EnemyState, target: Vector2, clock: float,
 		body_color = elite_color(kind)
 	if valid and enemy.flash > 0.0:
 		body_color = Color.WHITE
-	var direction := (target - position).normalized() if target.is_finite() else Vector2.RIGHT
+	var direction := enemy.attack_direction if valid and enemy.def.id == &"warden" \
+		else ((target - position).normalized() if target.is_finite() else Vector2.RIGHT)
 	if direction == Vector2.ZERO:
 		direction = Vector2.RIGHT
 	var time := clock if is_finite(clock) else 0.0
@@ -83,6 +84,7 @@ static func profile(enemy: EnemyState, target: Vector2, clock: float,
 		"glyph_anchor": anchor,
 		"glyph_tilt": (float(posmod(enemy.uid, 5)) - 2.0) * 0.025 if valid else 0.0,
 		"latent_blast": death_radius > 0.0,
+		"attack": EnemyBrain.attack_profile(enemy) if valid else {},
 	}
 
 
@@ -121,11 +123,13 @@ static func glyph_segments(kind: StringName, scale: float = 1.0) -> PackedVector
 
 
 static func draw_enemy_marks(ci: CanvasItem, enemy: EnemyState, target: Vector2,
-		clock: float, reduced: bool = false) -> void:
+		clock: float, reduced: bool = false, include_attack: bool = true) -> void:
 	if ci == null or enemy == null or enemy.def == null or enemy.dead \
 			or not enemy.pos.is_finite() or not is_finite(enemy.radius) or enemy.radius <= 0.0 \
 			or not is_finite(enemy.def.radius) or enemy.def.radius <= 0.0:
 		return
+	if include_attack:
+		draw_attack(ci, enemy, reduced)
 	var blast_radius := _positive(enemy.death_radius_value())
 	var arc := minf(360.0, _positive(enemy.shield_arc_value()))
 	if not enemy.elite and blast_radius <= 0.0 and arc <= 0.0:
@@ -161,7 +165,8 @@ static func draw_enemy_marks(ci: CanvasItem, enemy: EnemyState, target: Vector2,
 		var marker := enemy.pos + Vector2(0.0, enemy.radius + 7.0)
 		ci.draw_line(marker + Vector2(-4.0,0.0), marker + Vector2(4.0,0.0), DANGER, 2.0, true)
 	if arc > 0.0:
-		var facing := (target - enemy.pos).normalized() if target.is_finite() else Vector2.RIGHT
+		var facing := enemy.attack_direction if enemy.def.id == &"warden" \
+			else ((target - enemy.pos).normalized() if target.is_finite() else Vector2.RIGHT)
 		if facing == Vector2.ZERO:
 			facing = Vector2.RIGHT
 		var shield_radius := enemy.radius + 6.0
@@ -175,6 +180,108 @@ static func draw_enemy_marks(ci: CanvasItem, enemy: EnemyState, target: Vector2,
 			var edge := Vector2.from_angle(angle)
 			ci.draw_line(enemy.pos + edge * (shield_radius - 2.5),
 					enemy.pos + edge * (shield_radius + 2.5), INK, 2.0, true)
+
+
+static func attack_bounds(enemy: EnemyState) -> Rect2:
+	if enemy == null or enemy.def == null or enemy.dead or not enemy.pos.is_finite() \
+			or enemy.brain_state not in [&"warn", &"dash", &"slam"] \
+			or enemy.def.id not in [&"runner", &"brute"]:
+		return Rect2()
+	var attack := EnemyBrain.attack_profile(enemy)
+	if attack["kind"] == &"dash":
+		var end := WorldArena.move_straight(enemy.pos, enemy.attack_direction * float(attack["reach"]), enemy.radius)
+		var minimum := Vector2(minf(enemy.pos.x, end.x), minf(enemy.pos.y, end.y))
+		var maximum := Vector2(maxf(enemy.pos.x, end.x), maxf(enemy.pos.y, end.y))
+		return Rect2(minimum, maximum - minimum).grow(enemy.radius + 3.0)
+	return sector_bounds(enemy.pos, enemy.attack_direction, float(attack["reach"]), float(attack["half_angle"]))
+
+
+static func sector_bounds(origin: Vector2, direction: Vector2, reach: float, half_angle: float) -> Rect2:
+	var minimum := origin
+	var maximum := origin
+	var facing := direction.angle()
+	for angle: float in [facing - half_angle, facing + half_angle, 0.0, PI * 0.5, PI, PI * 1.5]:
+		if absf(angle_difference(facing, angle)) > half_angle + 0.00001:
+			continue
+		var point := origin + Vector2.from_angle(angle) * maxf(1.0, reach)
+		minimum.x = minf(minimum.x, point.x)
+		minimum.y = minf(minimum.y, point.y)
+		maximum.x = maxf(maximum.x, point.x)
+		maximum.y = maxf(maximum.y, point.y)
+	return Rect2(minimum, maximum - minimum).grow(3.0)
+
+
+static func attack_in_view(enemy: EnemyState, view: Rect2) -> bool:
+	var bounds := attack_bounds(enemy)
+	return bounds.has_area() and bounds.intersects(view)
+
+
+static func marks_in_view(enemy: EnemyState, view: Rect2) -> bool:
+	if enemy == null or enemy.def == null or enemy.dead:
+		return false
+	var blast := _positive(enemy.death_radius_value())
+	if not enemy.elite and blast <= 0.0 and enemy.shield_arc_value() <= 0.0:
+		return false
+	var art_extent := art_bounds(enemy.def.id).length() * enemy.radius / maxf(1.0, enemy.def.radius) + 20.0
+	var extent := maxf(blast + 3.0, maxf(enemy.radius + 20.0, art_extent))
+	return view.grow(extent).has_point(enemy.pos)
+
+
+static func draw_attack(ci: CanvasItem, enemy: EnemyState, _reduced: bool = false) -> void:
+	var attack := EnemyBrain.attack_profile(enemy)
+	if not bool(attack["visible"]):
+		return
+	var origin: Vector2 = attack["origin"]
+	var direction: Vector2 = attack["direction"]
+	var active := bool(attack["active"])
+	var edge := Color(DANGER, 0.9 if active else 0.4 + float(attack["progress"]) * 0.4)
+	var fill := Color(DANGER, 0.16 if active else 0.055)
+	if attack["kind"] == &"dash":
+		var radius := float(attack["radius"])
+		var end := WorldArena.move_straight(origin, direction * float(attack["reach"]), radius)
+		var normal := Vector2(-direction.y, direction.x) * radius
+		if origin.distance_squared_to(end) < 0.25:
+			ci.draw_circle(origin, radius, fill, true, -1.0, true)
+			ci.draw_arc(origin, radius, 0.0, TAU, 20, edge, 1.8, true)
+			return
+		var corridor := PackedVector2Array([origin + normal, end + normal, end - normal, origin - normal])
+		ci.draw_colored_polygon(corridor, fill)
+		ci.draw_line(origin + normal, end + normal, edge, 1.8, true)
+		ci.draw_line(origin - normal, end - normal, edge, 1.8, true)
+		ci.draw_arc(end, radius, direction.angle() - PI * 0.5, direction.angle() + PI * 0.5,
+			12, edge, 1.8, true)
+		var arrow := end - direction * 12.0
+		ci.draw_polyline(PackedVector2Array([arrow + normal * 0.35, end, arrow - normal * 0.35]), edge, 2.0, true)
+	else:
+		var reach := float(attack["reach"])
+		var half_angle := float(attack["half_angle"])
+		var sector := PackedVector2Array([origin])
+		for index in 21:
+			var angle := direction.angle() - half_angle + half_angle * 2.0 * float(index) / 20.0
+			sector.append(origin + Vector2.from_angle(angle) * reach)
+		ci.draw_colored_polygon(sector, fill)
+		sector.append(origin)
+		ci.draw_polyline(sector, edge, 2.0 if active else 1.5, true)
+		ci.draw_line(origin + direction * 16.0, origin + direction * (reach - 14.0), Color(edge, 0.4), 1.0, true)
+
+
+static func draw_enemy_zones(ci: CanvasItem, sim: Sim) -> void:
+	for zone in sim.enemy_zones:
+		var active := zone.is_active()
+		if not active and not zone.is_warning():
+			continue
+		ci.draw_circle(zone.pos, zone.radius, Color(DANGER, 0.14 if active else 0.04), true, -1.0, true)
+		if active:
+			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 40, Color(PAPER, 0.6), 4.0, true)
+			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 40, DANGER, 2.0, true)
+		else:
+			ci.draw_set_transform(zone.pos)
+			ci.draw_multiline(dashed_boundary_points(zone.radius), Color(DANGER, 0.65), 1.8, true)
+			ci.draw_set_transform(Vector2.ZERO)
+		var stamp := Rect2(zone.pos - Vector2(16.0, 11.0), Vector2(32.0, 22.0))
+		ci.draw_rect(stamp, Color(PAPER, 0.28 if active else 0.14), true)
+		ci.draw_rect(stamp, Color(INK, 0.55), false, 1.6)
+		ci.draw_line(stamp.position + Vector2(4.0, 5.0), stamp.end - Vector2(4.0, 5.0), DANGER, 3.0, true)
 
 
 static func rift_profile(rift: TemporalRift, clock: float = 0.0,

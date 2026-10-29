@@ -30,9 +30,12 @@ var shake_enabled := true
 var reduced_effects := false
 var _paused := false
 var _visual_time := 0.0
-var _last_player_pos := Vector2.ZERO
 var _motion_amount := 0.0
 var _motion_speed := 0.0
+var _actor_motion: Dictionary = {}
+var _actor_positions: Dictionary = {}
+var _motion_sample_time := -1.0
+var _cropped := false
 var _muzzles: Array[Dictionary] = []
 var _hits: Array[Dictionary] = []
 var _explosions: Array[Dictionary] = []
@@ -69,13 +72,14 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_victory_time = 0.0
 	_boss_death_origin = Vector2.ZERO
 	_visual_time = 0.0
-	_last_player_pos = sim.player.pos
 	_motion_amount = 0.0
 	_motion_speed = 0.0
 	_paused = false
 	_noise_counter = 0
 	_clear_feedback()
 	_director.clear()
+	_reset_motion()
+	_update_camera()
 	sim.enemy_killed.connect(_on_kill)
 	sim.shot_fired_info.connect(_on_shot_info)
 	sim.damage_event.connect(_on_damage_info)
@@ -93,6 +97,12 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.wave_ended.connect(_on_wave_phase)
 	sim.run_lost.connect(_on_run_lost)
 	sim.run_won.connect(_on_run_won)
+	for actor in sim.echoes:
+		var points := PackedVector2Array()
+		for index in range(0, actor.take.samples.size(), PATH_STRIDE):
+			points.append(actor.take.samples[index])
+		_paths[actor] = points
+		_reveal[actor] = 1.0
 	_sync_backdrop()
 
 
@@ -106,6 +116,9 @@ func unbind() -> void:
 	_sparks.clear()
 	_clear_feedback()
 	_director.clear()
+	_actor_motion.clear()
+	_actor_positions.clear()
+	_motion_sample_time = -1.0
 	_shake = 0.0
 	_beat_take = null
 	_beat_time = 0.0
@@ -113,7 +126,6 @@ func unbind() -> void:
 	_victory_time = 0.0
 	_boss_death_origin = Vector2.ZERO
 	_visual_time = 0.0
-	_last_player_pos = Vector2.ZERO
 	_motion_amount = 0.0
 	_motion_speed = 0.0
 	_paused = false
@@ -125,8 +137,32 @@ func unbind() -> void:
 func set_paused(on: bool) -> void:
 	_paused = on
 	if on:
-		position = Vector2.ZERO
+		_update_camera()
 	_sync_backdrop()
+
+
+# Main clips this node beneath the fixed HUD-safe viewport. Parent translation
+# affects drawing only; all samples, attacks and paths retain world positions.
+func set_cropped(on: bool) -> void:
+	_cropped = on
+	_update_camera()
+
+
+func camera_profile() -> Dictionary:
+	var focus := sim.player.pos if sim != null else WorldArena.BOUNDS.get_center()
+	var camera := WorldArena.camera_rect(focus)
+	if sim != null:
+		camera.position = (Vector2.ZERO if _cropped else WorldArena.VIEWPORT.position) - position
+	return {"world_rect": camera, "offset": position, "cropped": _cropped}
+
+
+func _update_camera(shake: Vector2 = Vector2.ZERO) -> void:
+	if sim == null:
+		position = Vector2.ZERO
+		return
+	var camera := WorldArena.camera_rect(sim.player.pos)
+	var origin := (camera.position - shake).clamp(WorldArena.BOUNDS.position, WorldArena.BOUNDS.end - camera.size)
+	position = (Vector2.ZERO if _cropped else WorldArena.VIEWPORT.position) - origin
 
 
 func set_reduced_effects(on: bool) -> void:
@@ -136,7 +172,7 @@ func set_reduced_effects(on: bool) -> void:
 	if not on:
 		return
 	_shake = 0.0
-	position = Vector2.ZERO
+	_update_camera()
 	_sparks.clear()
 	_muzzles.clear()
 	_weapon_changes.clear()
@@ -183,6 +219,10 @@ func clear_victory() -> void:
 	queue_redraw()
 
 
+func _physics_process(_delta: float) -> void:
+	_sample_motion()
+
+
 func _process(delta: float) -> void:
 	if sim == null or _paused:
 		return
@@ -194,15 +234,8 @@ func _process(delta: float) -> void:
 		_director.step_terminal(delta)
 	_shake = maxf(0.0, _shake - delta * 1.8)
 	var shake_amount := _shake * _shake * (0.35 if reduced_effects else 1.0)
-	position = Vector2(sin(_visual_time * 31.0), sin(_visual_time * 43.0 + 1.7)) * shake_amount * 9.0
-	if running:
-		var distance := sim.player.pos.distance_to(_last_player_pos)
-		_motion_speed = minf(1.0, distance / maxf(1.0, delta * 180.0))
-		_motion_amount = move_toward(_motion_amount, _motion_speed, delta * (8.0 if _motion_speed > 0.02 else 5.0))
-		_last_player_pos = sim.player.pos
-	else:
-		_motion_amount = 0.0
-		_motion_speed = 0.0
+	_update_camera(Vector2(sin(_visual_time * 31.0), sin(_visual_time * 43.0 + 1.7)) * shake_amount * 9.0)
+	_sample_motion()
 	var keep := 0
 	for s in _sparks:
 		s.life -= delta
@@ -233,6 +266,72 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func _reset_motion() -> void:
+	_actor_motion.clear()
+	_actor_positions.clear()
+	_motion_sample_time = sim.wave_time if sim != null else -1.0
+	if sim != null:
+		_store_actor_motion(-1, sim.player.pos, 0.0, 160.0)
+		for actor in sim.echoes:
+			_store_actor_motion(actor.take.uid, actor.pos, 0.0, 160.0)
+		for enemy in sim.enemies:
+			_store_actor_motion(-enemy.uid - 2, enemy.pos, 0.0, clampf(enemy.radius * 8.0, 100.0, 220.0))
+	_motion_amount = 0.0
+	_motion_speed = 0.0
+
+
+func _sample_motion() -> void:
+	if sim == null or _paused:
+		return
+	if sim.wave_time < _motion_sample_time:
+		_reset_motion()
+	if sim.phase != Sim.Phase.WAVE:
+		for token in _actor_motion:
+			_actor_motion[token]["moving"] = false
+			_actor_motion[token]["amount"] = 0.0
+		_motion_amount = 0.0
+		_motion_speed = 0.0
+		return
+	if is_equal_approx(sim.wave_time, _motion_sample_time):
+		return
+	var elapsed := maxf(0.0, sim.wave_time - _motion_sample_time)
+	_motion_sample_time = sim.wave_time
+	var live: Dictionary = {-1: true}
+	_store_actor_motion(-1, sim.player.pos, elapsed, 160.0)
+	for actor in sim.echoes:
+		live[actor.take.uid] = true
+		_store_actor_motion(actor.take.uid, actor.pos, elapsed, 160.0)
+	for enemy in sim.enemies:
+		if enemy.dead:
+			continue
+		var token := -enemy.uid - 2
+		live[token] = true
+		_store_actor_motion(token, enemy.pos, elapsed, clampf(enemy.radius * 8.0, 100.0, 220.0))
+	for token in _actor_positions.keys():
+		if not live.has(token):
+			_actor_positions.erase(token)
+			_actor_motion.erase(token)
+	var player_motion: Dictionary = _actor_motion[-1]
+	_motion_amount = float(player_motion["amount"])
+	_motion_speed = float(player_motion["amount"])
+
+
+func _store_actor_motion(token: int, actor_pos: Vector2, elapsed: float, stride: float) -> void:
+	var previous: Vector2 = _actor_positions.get(token, actor_pos)
+	var distance := previous.distance_to(actor_pos)
+	var phase := float(_actor_motion.get(token, {}).get("phase", 0.0))
+	# Repositioning a body or looping a recording starts on a planted foot.
+	if distance > 120.0 or not is_finite(distance):
+		phase = 0.0
+		distance = 0.0
+	elif distance > 0.001:
+		phase = fposmod(phase + distance * TAU / stride, TAU)
+	var moving := distance > 0.001 and elapsed > 0.0
+	var amount := clampf(distance / maxf(0.001, elapsed * 180.0), 0.0, 1.0) if moving else 0.0
+	_actor_motion[token] = {"phase": phase, "moving": moving, "amount": amount}
+	_actor_positions[token] = actor_pos
+
+
 func _sync_backdrop() -> void:
 	if _backdrop != null:
 		_backdrop.set_presentation(_visual_time, reduced_effects, _paused)
@@ -247,12 +346,14 @@ func _draw() -> void:
 	else:
 		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT, reduced_effects)
 	ArenaPainter.pickup_range(self, sim)
+	ThreatInk.draw_enemy_zones(self, sim)
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
+	WeaponInk.draw_fields(self, sim, reduced_effects)
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
 	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
-	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director)
-	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director)
+	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director, _actor_motion)
+	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director, _actor_motion)
 	ArenaPainter.boss_tear(self, _director, reduced_effects)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
@@ -320,7 +421,10 @@ func _on_damage_info(info: DamageInfo) -> void:
 	var hit_color := Color.WHITE
 	if BattleDirector.is_copy_token(info.actor_token):
 		hit_color = info.source_tint
-	_push_feedback(_hits, {"life": 0.22 if info.crit else 0.15, "max_life": 0.22 if info.crit else 0.15,
+	var weapon := Content.weapon(info.weapon_id)
+	var heavy := weapon != null and weapon.attack_style in [&"slam", &"line", &"cone"]
+	var hit_life := 0.28 if info.crit else (0.24 if heavy else 0.15)
+	_push_feedback(_hits, {"life": hit_life, "max_life": hit_life,
 			"pos": info.pos, "direction": direction, "crit": info.crit, "reduced": info.reduced,
 			"weapon_id": info.weapon_id, "source": info.source, "effect": info.effect,
 			"target_uid": info.target_uid, "actor_token": info.actor_token,
@@ -382,6 +486,24 @@ func _on_echo(actor: EchoActor) -> void:
 	if ring != null:
 		ring.ring = true
 		ring.radius = PlayerState.RADIUS
+
+
+func react_retirement(info: EchoRetirementInfo) -> void:
+	if not info.pos.is_finite():
+		return
+	_last_event = {"kind": &"retirement", "reason": info.reason, "uid": info.uid,
+		"actor_token": info.actor_token, "skill": info.kind, "pos": info.pos,
+		"source_tint": info.tint, "weapon_id": info.weapon_id}
+	var count := 3 if info.exhausted or reduced_effects else 9
+	for index in count:
+		var tint := ArenaPainter.PAPER if index % 3 == 0 else info.tint
+		_spark(info.pos, tint, 25.0 if info.exhausted else 80.0, 0.3)
+	_actor_positions.erase(info.uid)
+	_actor_motion.erase(info.uid)
+	for actor in _paths.keys():
+		if actor.take.uid == info.uid:
+			_paths.erase(actor)
+			_reveal.erase(actor)
 
 
 func _on_boss_spawned(enemy: EnemyState) -> void:
@@ -469,23 +591,13 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 	_last_event = {"kind": &"explosion", "cause": info.kind, "weapon_id": info.weapon_id,
 			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"pos": info.pos, "radius": info.radius, "effect": info.effect}
-	var is_collapse := info.effect == &"echo_collapse"
-	# Preserve the event's authoritative identity colour above; its paper-collapse art uses ink.
-	var feedback_color := ArenaPainter.INK if is_collapse else info.color
-	var ring := _spark(info.pos, feedback_color, 0.0, 0.35)
+	var ring := _spark(info.pos, info.color, 0.0, 0.35)
 	if ring != null:
 		ring.ring = true
 		ring.radius = maxf(2.0, info.radius * 0.4)
-	var spark_count := (4 if reduced_effects else 18) if is_collapse else (2 if reduced_effects else 5)
+	var spark_count := 2 if reduced_effects else 5
 	for i in spark_count:
-		var fragment_color := info.color
-		if is_collapse:
-			fragment_color = ArenaPainter.PAPER
-			if i % 4 == 0:
-				fragment_color = ArenaPainter.INK
-			elif i % 4 == 3:
-				fragment_color = ArenaPainter.DANGER
-		_spark(info.pos, fragment_color, 60.0 + _noise01(i + 21) * 90.0,
+		_spark(info.pos, info.color, 60.0 + _noise01(i + 21) * 90.0,
 				0.2 + _noise01(i + 31) * 0.15)
 
 
@@ -526,6 +638,7 @@ func event_last_data() -> Dictionary:
 
 func motion_stats() -> Dictionary:
 	return {"moving": _motion_amount > 0.05, "amount": _motion_amount, "speed": _motion_speed,
+			"gait_phase": float(_actor_motion.get(-1, {}).get("phase", 0.0)),
 			"visual_time": _visual_time, "paused": _paused, "reduced": reduced_effects,
 			"max_recoil": recoil_amount()}
 
@@ -576,9 +689,10 @@ func _on_wave_phase(_wave: int) -> void:
 func _on_wave_started(_wave: int) -> void:
 	_clear_feedback()
 	_director.clear()
-	_last_player_pos = sim.player.pos if sim != null else Vector2.ZERO
 	_motion_amount = 0.0
 	_motion_speed = 0.0
+	_reset_motion()
+	_update_camera()
 	if sim == null:
 		_paths.clear()
 		_reveal.clear()

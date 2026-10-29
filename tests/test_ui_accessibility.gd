@@ -10,9 +10,8 @@ func _take(wave: int = 1) -> EchoTake:
 	take.wave = wave
 	take.weapons.append(Content.weapon(&"pistol"))
 	take.levels.append(0)
-	take.samples = PackedVector2Array([
-		Vector2(400.0, 300.0), Vector2(520.0, 340.0), Vector2(640.0, 390.0),
-	])
+	for i in 13:
+		take.samples.append(Vector2(400.0, 300.0).lerp(Vector2(640.0, 390.0), float(i) / 12.0))
 	return take
 
 
@@ -77,10 +76,15 @@ func test_echo_merge_cancel_and_reduced_paths_return_to_rest(c: Check) -> void:
 	panel.theme = UiTheme.build()
 	_root().add_child(panel)
 	var sim := _shop_sim()
+	# Match the actual arrival event: the newest recording belongs to this wave.
+	sim.wave = sim.bank.takes.back().wave
 	panel.refresh(sim, true)
 	c.ok(panel.find_children("*", "PathPreview", true, false).any(
 			func(node: Node) -> bool: return (node as PathPreview).is_animating()),
 			"normal mode traces the newest path")
+	var previews := panel.find_children("*", "PathPreview", true, false)
+	c.ok((previews[0] as PathPreview)._points.size() >= 2, "new recording has a real drawable route")
+	c.ok(not (previews[1] as PathPreview).is_animating(), "older recording does not replay its arrival trace")
 	panel.set_reduced_effects(true)
 	for preview in panel.find_children("*", "PathPreview", true, false):
 		c.ok(not (preview as PathPreview).is_animating(), "reduced effects finishes path traces")
@@ -95,7 +99,7 @@ func test_echo_merge_cancel_and_reduced_paths_return_to_rest(c: Check) -> void:
 func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Check) -> void:
 	var sim := _shop_sim()
 	sim.bank.takes[0].merged = true
-	sim.bank.takes[0].age = 1
+	sim.bank.takes[0].condition = 60.0
 	var ui := ShopUi.new()
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
@@ -112,7 +116,7 @@ func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Chec
 				"merge action stays in view")
 	for discard in ui.echo_panel.discard_buttons:
 		c.ok(viewport.encloses(discard.get_global_rect()), "discard action stays in view")
-	for refresh in ui.echo_panel.refresh_buttons:
+	for refresh in ui.echo_panel.repair_buttons:
 		c.ok(viewport.encloses(refresh.get_global_rect()), "refresh action stays in view")
 	ui.close_session()
 	ui.free()
@@ -141,7 +145,7 @@ func test_main_propagates_reduced_effects_and_restores_modal_focus(c: Check) -> 
 	main.free()
 
 
-func test_active_run_locks_language_and_pause_mute_tracks_audio(c: Check) -> void:
+func test_active_run_can_change_language_and_pause_mute_tracks_audio(c: Check) -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	_root().add_child(main)
 	main.new_run(52)
@@ -152,7 +156,7 @@ func test_active_run_locks_language_and_pause_mute_tracks_audio(c: Check) -> voi
 	c.ok(main.audio.is_muted(), "pause mute action reaches audio")
 	c.eq(main.pause_ui.mute_button.text, Loc.t("pause.unmute"), "pause action changes to Unmute")
 	main.pause_ui.settings_button.pressed.emit()
-	c.ok(main.settings_ui.language_option.disabled, "active run cannot reload language")
+	c.ok(not main.settings_ui.language_option.disabled, "active run can reload language through exact snapshot")
 	main.settings_ui.close()
 	c.ok(main.pause_ui.resume_button.has_focus(), "closing nested settings restores pause focus")
 	main.pause_ui.history_button.pressed.emit()
@@ -176,11 +180,11 @@ func test_modal_focus_cycles_never_escape_to_the_underlay(c: Check) -> void:
 	var settings := SettingsUi.new()
 	settings.theme = UiTheme.build()
 	_root().add_child(settings)
-	settings.open(Settings.new("user://test_ui_focus_settings.json"), false)
+	settings.open(Settings.new("user://test_ui_focus_settings.json"))
 	c.eq(_neighbor(settings.volume_slider, settings.volume_slider.focus_neighbor_top),
 			settings.close_button, "settings wraps around its enabled controls")
 	c.eq(_neighbor(settings.close_button, settings.close_button.focus_neighbor_bottom),
-			settings.volume_slider, "settings never enters the disabled language option")
+			settings.volume_slider, "settings wraps from Close to the first independent sound control")
 	settings.free()
 	var codex := CodexUi.new()
 	codex.theme = UiTheme.build()

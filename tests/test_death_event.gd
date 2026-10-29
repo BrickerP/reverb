@@ -48,18 +48,18 @@ func test_contact_snapshot_does_not_add_an_attack_delay(c: Check) -> void:
 	var sim := Sim.new(9)
 	sim.start_run()
 	sim._plan.clear()
-	var e := _enemy(sim, &"runner", 901, sim.player.pos)
+	var e := _enemy(sim, &"grunt", 901, sim.player.pos)
 	sim.player.iframes = 0.0
 	e.damage = 7.0
 	e.speed = 0.0
 	var events: Array[PlayerHurtInfo] = []
 	sim.player_hurt_info.connect(func(info: PlayerHurtInfo) -> void: events.append(info))
 	var before := sim.player.hp
-	sim._move_enemies(0.0)
+	sim._move_enemies(1.0 / 60.0)
 	c.near(sim.player.hp, before - 7.0, 0.001, "contact damage still happens immediately")
 	c.eq(events.size(), 1, "one contact emits one rich hurt event")
 	c.eq(events[0].source_uid, 901, "view can animate the exact contact body")
-	c.eq(events[0].source, &"runner", "existing death-cause identity is retained")
+	c.eq(events[0].source, &"grunt", "actual contact body identity is retained")
 	c.eq(events[0].effect, &"contact", "contact is not confused with an explosion")
 
 
@@ -76,23 +76,32 @@ func test_non_actor_hurt_and_death_audio_have_safe_semantics(c: Check) -> void:
 	c.ok(pitches.size() >= 5, "body types have distinct existing-cue cadence")
 
 
-func test_silence_snapshot_distinguishes_real_contact_from_boss_cast(c: Check) -> void:
+func test_local_seal_hurt_is_distinct_from_global_boss_silence(c: Check) -> void:
 	var sim := Sim.new(11)
 	sim.start_run()
 	sim._plan.clear()
 	sim.player.iframes = 0.0
-	var bottle := _enemy(sim, &"silencer", 1101, sim.player.pos)
+	var bottle := _enemy(sim, &"silencer", 1101, sim.player.pos + Vector2(-300.0, 0.0))
 	bottle.damage = 1.0
 	bottle.speed = 0.0
 	var events: Array[EchoSilenceInfo] = []
+	var hurts: Array[PlayerHurtInfo] = []
 	sim.echoes_silenced.connect(func(info: EchoSilenceInfo) -> void: events.append(info))
+	sim.player_hurt_info.connect(func(info: PlayerHurtInfo) -> void: hurts.append(info))
 	var rng_before: int = sim.rng.state
-	sim._move_enemies(0.0)
-	c.eq(events.size(), 1, "contact silence has one authoritative source event")
-	c.eq(events[0].kind, EchoSilenceInfo.CONTACT, "a bottle cannot be misread as a boss roar")
-	c.eq(events[0].source_uid, 1101, "the exact silencing body is identified")
-	c.eq(events[0].enemy_id, &"silencer", "silence preserves the existing content identity")
-	c.near(sim.echo_silenced, bottle.def.silence_time, 0.001, "existing contact duration is unchanged")
+	var hp := sim.player.hp
+	sim._move_enemies(1.0 / 60.0)
+	c.eq(sim.enemy_zones.size(), 1, "ranged silencer creates a real fixed warning zone")
+	c.eq(hurts.size(), 0, "the warning is harmless")
+	c.eq(sim.player.hp, hp, "warning metadata cannot cause damage")
+	EnemyBrain.step_zones(sim, EnemyZone.WARNING_TIME + 0.01)
+	c.eq(hurts.size(), 1, "the active local seal emits one actual hurt snapshot")
+	if not hurts.is_empty():
+		c.eq(hurts[0].source_uid, 1101, "the seal identifies its actual casting body")
+		c.eq(hurts[0].source, &"silencer", "seal damage retains the content identity")
+		c.eq(hurts[0].effect, &"seal", "local seal damage is not contact damage")
+	c.eq(events.size(), 0, "local seals never emit a global silence or boss roar")
+	c.eq(sim.echo_silenced, 0.0, "local seal leaves the global silence timer clear")
 	c.eq(sim.rng.state, rng_before, "source metadata consumes no simulation RNG")
 	var boss := _enemy(sim, &"paradox", 1102, sim.player.pos + Vector2(200.0, 0.0))
 	sim.boss = boss
@@ -100,7 +109,8 @@ func test_silence_snapshot_distinguishes_real_contact_from_boss_cast(c: Check) -
 	sim._boss_silence_cd = 0.0
 	sim._boss_minion_cd = 100.0
 	sim._boss_step(0.0)
-	c.eq(events.size(), 2, "actual boss cast emits its own event")
-	c.eq(events[1].kind, EchoSilenceInfo.BOSS, "roar is tied to the real boss cast")
-	c.eq(events[1].source_uid, 1102, "boss cast origin is not guessed from the nearest actor")
-	c.near(events[1].duration, Sim.BOSS_SILENCE_TIME, 0.001, "boss duration remains authoritative")
+	c.eq(events.size(), 1, "actual boss cast alone emits the global silence event")
+	if not events.is_empty():
+		c.eq(events[0].kind, EchoSilenceInfo.BOSS, "roar is tied to the real boss cast")
+		c.eq(events[0].source_uid, 1102, "boss cast origin is not guessed from the nearest actor")
+		c.near(events[0].duration, Sim.BOSS_SILENCE_TIME, 0.001, "boss duration remains authoritative")

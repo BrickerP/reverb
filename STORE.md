@@ -1,107 +1,92 @@
 # 商店页材料 / Store copy
 
-> 工作名：Take Stack / 回响。v0.1.14 起项目名、窗口名和导出包名已切换到 Take Stack；Reverb 因 Steam 冲突弃用。正式商标检索尚未完成，商店上架前仍需确认。以下为占位文案，当前公开构建为 v0.10.0-rc.1。
+工作名：**回响 / Take Stack**。以下文案对应 **0.14 开发预览**的实际内容；正式商标检索和真人体验验证尚未完成。具体下载版本与验证范围以[发布页](https://github.com/BrickerP/reverb/releases)为准。
 
-## 短描述
-
-**EN (under 160 chars)**  
-A Brotato-like arena roguelite. Every wave is recorded, and your past self fights beside you next wave — until you must choose which past to keep.
-
-**ZH**  
-单屏竞技场 roguelite。每波录下你的走位与武器，下一波让过去的自己替你打；槽位有限，你必须选择留下哪个过去。
-
-## 长描述
+## 短描述 / Short description
 
 **ZH**
 
-《回响》是一款 Brotato 式单屏竞技场 roguelite。
-
-每一波，游戏都会记录你的走位、武器和属性。下一波，这段录像会以“倒带循环”的方式重放：过去的你自动开火，替你清场。
-
-但回响不是免费的。槽位有限，寿命只有几波；每波结束你都会得到一张新录像，也必须决定丢掉哪一张。两张录像还可以合成一个「叠录」：走位与武器合并，只占一个槽，但少一个身体。
-
-- **四个角色，四种读法**：复读机堆数量，镜像实时复制当前 build，独行者放弃回响、只靠自己和一把枪，指挥用 4 个槽位把每张录像变成团队加成。
-- **20 波 + Boss「悖论」**：它会周期性沉默你的回响，并召唤跑者；半血分裂成两条时间线。只靠回响，最后一战会很难看。
-- **会打断核心机制的敌人**：第 8 波起出现静音者；第 10 波起精英会超频、盾墙、爆裂或分裂。
-- **每局可复现**：种子显示、历史回放、本地 run log；失败可以原样重开。
-- **每日挑战**：固定复读机、日期种子，和所有人玩同一局；每天一条异象，连续通关累计天数。
-- **打完之后还有终局**：无尽模式每 5 波重返 Boss，或选择 Boss Rush 直接连续打 Boss；苦行 0–3 级、物品套装与回响续录提供长线取舍。
+在废件回收局，录下走位，让过去的自己替你打。绕掩体、修补副本，或主动报废选中的回响，换取它最后一次技能。
 
 **EN**
 
-A Brotato-like single-screen arena roguelite.
+Record your route. Fight beside your past. Repair worn copies or retire one for a final skill in a hand-drawn office-waste roguelite.
 
-Every wave records your movement, weapons and stats. Next wave, that tape replays as a ping-ponging echo of your past self, firing on its own.
+## 长描述 / About the game
 
-Echoes are not free. Slots are scarce, each take expires after a few waves, and every wave hands you a new recording — so you must decide which past to keep. Two takes can be merged into an overdub: both routes and loadouts in one slot, but one fewer body.
+**ZH**
 
-- Four characters, four readings: Looper stacks quantity, Mirror copies your current build live, Soloist gives up echoes entirely, Conductor turns each echo into a team buff.
-- 20 waves and Paradox, a boss that mutes your echoes, summons runners and splits into two timelines at half health.
-- The Silencer from wave 8; from wave 10, elites can overclock, shield, explode or split.
-- Reproducible runs: seeds, replayable history, local run logs.
-- Daily challenge: fixed character, date seed and a date-seeded anomaly; win streak tracking.
-- Post-victory Endless and Boss Rush modes, plus Ascension 0–3, item sets and echo refresh for long-run decisions.
+昨天的你，会被复印、装订，再送回战场。
 
-## 卖点（按优先级）
+《回响》是一款纸偶与办公废件构成的自动射击 roguelite。你控制走位，武器自动攻击；每波结束，路线和装备被录成一张回响，下一波让过去的自己沿路线往返作战。
 
-1. **“留下哪个过去的自己”**：稀缺槽位 + 寿命 + 叠录 + 续录，构成录像层面的取舍，而不是免费分身。
-2. **四种角色读同一套系统**：数量、实时复制、完全放弃、团队协同。
-3. **Boss 与精英持续挑战核心机制**：不能只靠回响无脑推进。
-4. **可复现**：种子、历史、日志，适合社区比较和每日挑战。
-5. **完整的一局，也有终局**：20 波、商店、Boss、结算，以及无尽/Boss Rush 与苦行等级。
+副本会磨损，槽位也有限。花材料修补，叠录两张路线，或主动报废当前选中的副本，释放由主导武器决定的最后一击。按住打开暂停选择轮盘，松开只确认；轻按才消耗副本。自然耗尽不会替你释放完整技能。
 
-## 标签
+- **能绕行的回收工场**：2400×1200 世界、跟随镜头、五台真实掩体；三段进攻、喘息和限时补给让移动有短期目标。
+- **24 把武器，六个家族**：18 把商店武器和 6 把进化形态，11 种攻击类型。钉固接冲压、浸墨接奥术由实际命中触发；升级、同族专精和满槽替换支持转型。
+- **六种副本取舍**：折痕、拒收件、套印件、装订员、修补员、超载员，分别围绕数量、本体、实时装备、团队协同、维护和主动消耗展开。
+- **敌人有预警，也有空档**：锁向冲刺、扇形重击、固定封印区和缓慢转盾；20 波主线以「原件」及其真实碎片收尾，之后可继续无尽或 Boss Rush。
+- **中断后继续同一局**：保存战斗、商店与待选恩惠；切换语言或关闭窗口也保留对局。每日挑战、种子重试、苦行与本地历史提供其他玩法入口。
+- **报废单是谁签的？**：通过可跳过的短收据与档案寻找线索，伴随原创《Paperwork Waltz》的五个 96 秒完整编配，以及纸张与机器音效。
 
-Action Roguelike · Bullet Heaven · Arena Shooter · Singleplayer · 2D · Neon · Controller · Replayable · Daily Challenge
+**EN**
 
-（“Bullet Heaven” 是 Valve 2026 年 5 月新增的官方标签。）
+Yesterday's you gets copied, stapled, and sent back into the fight.
 
-## 操作
+Take Stack is an auto-firing roguelite set in a hand-drawn bureau of paper puppets and hostile office waste. Move through the workshop while your weapons attack automatically. Each wave records your route and loadout; next wave, a copy retraces that route and fights beside you.
 
-- 移动：WASD / 方向键 / 左摇杆 / 十字键
-- 开火：自动
-- 暂停：P / Esc / Start
-- 设置：O
-- 静音：M
-- 结算：R 重开、S 同种子重试、C 换角色
-- 商店：鼠标，或方向键/摇杆 + Enter/A
+Copies wear out, and slots are scarce. Pay for repairs, merge two recordings, or retire the selected copy for a final skill shaped by its dominant weapon. Hold to open a paused selection wheel; release only selects. Tap to spend the copy. Natural exhaustion does not award the full active skill.
 
-## 系统需求（占位）
+- **A workshop with room to maneuver:** a 2400×1200 world, follow camera, five cover machines, three attack cohorts, breathers, and optional timed supplies.
+- **24 weapons across six families:** 18 shop weapons, six evolutions, and 11 attack styles. Pin a target before a press hit, or ink it before an arcane attack to trigger real combinations.
+- **Six approaches to your past:** Creased, Reject, Misprint, Binder, Mender, and Overloader emphasize copy count, solo power, live equipment, team support, repair, and active retirement.
+- **Readable threats:** committed dashes, warned slams, fixed seal zones, and shields that take time to turn. Face the Original and its independent shards in a 20-wave campaign, then continue into Endless or Boss Rush.
+- **Continue the same run:** suspend combat, shops, or pending boon choices. Language changes and window-close saves preserve progress. Daily challenges, seed retries, Ascension, and local history remain available.
+- **Who signs your disposal orders?** Discover optional receipts and archived clues, accompanied by five complete 96-second arrangements of the original Paperwork Waltz score and dry paper-and-machine effects.
 
-- OS：macOS 11+ / Windows 10+ / Linux
-- 内存：2 GB
-- 存储：250 MB
-- 显卡：支持 OpenGL 3.3
-- 输入：键鼠或手柄
+## 宣传重点 / Positioning
 
-## 定价与定位
+1. **过去是可维护、可消耗的战友。** 默认 120 秒累计战斗磨损，单次修补最多 +40 耐久；选中副本决定六类主动技能，没有每波一次的限制。
+2. **构筑会改变攻击规则。** 弹道、连射、钉固、扇形、延迟重击、直线、墨池、胶带、回旋、传导和环绕，有实际状态互动。
+3. **空间与时间共同提供选择。** 掩体、预警、恢复窗口、三段进攻和可选补给，而不是只堆敌人数量。
+4. **一套完整的本地流程。** 战斗、商店、续局、短故事、原创配乐与终局模式可直接体验。
 
-- 建议：$4.99–6.99，垂直切片阶段不收费。
-- 定位：短局、可复现、偏硬核的 Brotato 变体；当前 RC 已包含每日、无尽、Boss Rush 与苦行，但不承诺 100+ 小时内容。
-- 不做的卖点：联机、程序化地图、在线排行榜、长剧情。
+描述词候选 / Suggested descriptors：Action Roguelike · Arena Shooter · Singleplayer · 2D · Hand-drawn · Auto-firing · Replayable · Daily Challenge。正式商店分类以平台实际提供的选项为准。
 
-## 预告片 30 秒节奏
+## 操作 / Controls
 
-1. 0–5s：玩家在竞技场走位，弹幕亮起；字幕“每一波都会被录下”。
-2. 5–12s：波末路径收束，商店打开，新录像飞入；字幕“下一波，过去的你替你打”。
-3. 12–18s：三个回响同屏，颜色路径交错；快速剪辑商店留/丢/叠录。
-4. 18–24s：静音者碰触，回响打叉；Boss 沉默，弹幕环。
-5. 24–30s：Boss 击杀白闪，结算页“最强回响”；标题与 wishlist。
+- 移动 / Move：WASD、方向键 / arrows、左摇杆 / left stick、十字键 / d-pad。
+- 自动开火 / Auto-fire。
+- 轻按 Space / RB：报废选中副本 / retire the selected copy。
+- 按住 Space / RB：暂停选择，松开只确认 / hold for the paused selection wheel; release only selects。
+- 暂停 / Pause：P、Esc、Start；暂停时 Q 保存并返回 / Q while paused saves and returns。
+- 设置 / Settings：O；静音 / Mute：M。
+- 菜单使用鼠标、键盘焦点与确认，或手柄十字键、A 确认、B 返回 / mouse, keyboard focus and confirm, or d-pad with A/B。
 
-## Press kit 清单
+## 30 秒预告片分镜 / Trailer outline
 
-- 标题：`回响 / Take Stack (working title)`
-- 一句话、长描述：本文件
-- 截图：`docs/wave.png`、`docs/shop.png`、`docs/reveal.png`、`docs/boss.png`、`docs/end.png`、`docs/select.png`、`docs/shop_merge.png`
-- 构建：<https://github.com/BrickerP/reverb/releases/tag/v0.10.0-rc.1>
-- 代码与设计：<https://github.com/BrickerP/reverb>、`DESIGN.md`、`RELEASE_NOTES.md`
-- 联系方式：yplmicro@gmail.com
+1. **0-5 秒**：玩家绕过机器，镜头跟随；字幕「昨天的你，会被送回战场 / Yesterday returns to work」。
+2. **5-11 秒**：波末录制进入商店，下一波副本沿旧路线开火；字幕「录下路线，部署过去 / Record a route. Deploy your past」。
+3. **11-18 秒**：钉固接冲压、浸墨接电弧，穿插敌人预警与恢复；展示实际触发。
+4. **18-25 秒**：耐久降低、商店修补、按住轮盘选中副本，再轻按释放技能；字幕「修补它，还是最后用一次？ / Repair it, or spend its final shot?」。
+5. **25-30 秒**：原件撕裂、短收据、标题与实际试玩入口。配乐取自当前原创编配。
 
-## 发布前必须解决
+分镜是制作方案；宣传片应使用实际录制的对应状态，不把脚本摆场说成真人通关。
 
-1. **英文更名（已完成，待商标）**：v0.1.14 起项目/构建名是 `Take Stack`，旧 `Reverb` 用户目录会自动迁移。`Take Stack` 检索未发现同名 Steam 游戏；`Ghost Take`、`Take Twenty` 备选，`Last Take` 已有独立游戏概念，`Overdub` 与 `Paratopic: Overdub` 冲突，`Dead Take` 已被 Steam 3352690 占用。正式商标检索前不能作为最终上架名。
-2. **辨识度**：GRIMLOOP（4709620）已做“每 30 秒过去幽灵重放走位和攻击”，宣传必须落在稀缺、精选、叠录，而不是“回放”。
-3. **真人数据**：难度、防御流、Boss Rush、Daily 与 8–14 波墙都还没有真人验证。
-4. **音频**：目前是程序合成占位，需要至少一轮混音与音乐设计。
-5. **Steam Deck**：窗口、手柄、字体需要实机验证。
-6. **版本定位**：v0.10.0-rc.1 虽被标为 Latest，仍是候选版；稳定版需要先完成商标与真人验证。
+## Press kit
+
+- 标题 / Title：`回响 / Take Stack (working title)`。
+- 一句话、双语长描述与宣传重点：本文件 / this document。
+- 当前截图：从 [README](README.md) 展示的选角、世界、商店、选择轮盘、档案和 Boss 画面选取；避免混用旧界面。
+- 构建 / Builds：[GitHub Releases](https://github.com/BrickerP/reverb/releases)，以各发布页的版本与校验信息为准。
+- 代码与设计 / Source and design：[Repository](https://github.com/BrickerP/reverb)、[DESIGN.md](DESIGN.md)、[INTERFACES.md](INTERFACES.md)。
+- 图像与声音来源 / Provenance：[Art direction](docs/art-direction.md)、[Third-party notices](THIRD_PARTY.md)。
+- 联系 / Contact：yplmicro@gmail.com。
+
+## 发布表述边界 / Claims and validation
+
+Take Stack 是工作名，正式商标检索尚未完成。硬件最低配置、定价与商业发行时间尚未确定，不在此预填。Godot 4.7.2 Compatibility 是当前开发渲染路径，不等于已完成最低硬件认证。
+
+当前证据包括真实 macOS 窗口脚本取证、规则与保存恢复检查、音频生命周期、资源与导出审计。它们不证明已经“上瘾”、长期平衡定稿、主观听感获认可或所有设备稳定 60 FPS。实体手柄、Steam Deck、低端硬件和 Windows/Linux 图形界面仍需对应实机验证。
+
+The title is provisional; formal trademark clearance, minimum hardware requirements, pricing, and commercial release timing remain open. Scripted native captures and automated checks demonstrate implemented behavior, not proven addictiveness, final balance, listening approval, or a universal 60 FPS guarantee. Physical controllers, Steam Deck, lower-end hardware, and Windows/Linux GUI use still require device testing.

@@ -24,6 +24,7 @@ var _weapon_events: Array[Dictionary] = []
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_feedback_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://feedback_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://feedback_probe_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://feedback_probe_settings.json")

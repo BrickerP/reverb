@@ -19,6 +19,7 @@ var _peak_projectiles := 0
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_frame_probe_suspend.json")
 	RenderingServer.render_loop_enabled = false
 	OS.set_environment("REVERB_SAVE", "user://frame_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://frame_probe_runs.jsonl")

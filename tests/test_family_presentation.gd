@@ -88,11 +88,14 @@ func test_shop_transactions_toggle_every_mastery_summary_and_arcane_core(c: Chec
 		{"weapon": &"shotgun", "key": "shop.family_mastery_scatter"},
 		{"weapon": &"rifle", "key": "shop.family_mastery_marksman"},
 		{"weapon": &"orb", "key": "shop.family_mastery_arcane"},
+		{"weapon": &"stamp", "key": "shop.family_mastery_press"},
+		{"weapon": &"tape_spool", "key": "shop.family_mastery_salvage"},
 	]
 	for data: Dictionary in cases:
 		var weapon_id: StringName = data["weapon"]
 		var mastery_text := Loc.t(str(data["key"]))
 		var sim := _family_sim(weapon_id)
+		var echo_power := sim.echo_power()
 		var panel := BuildPanel.new()
 		_root().add_child(panel)
 		_refresh(panel, sim)
@@ -108,8 +111,10 @@ func test_shop_transactions_toggle_every_mastery_summary_and_arcane_core(c: Chec
 		c.ok(_has_label(panel, mastery_text),
 				"four %s weapons show their mastery" % String(weapon_id))
 		if weapon_id == &"orb":
-			c.ok(_has_label(panel, Loc.t("shop.echo_value", [2, 58]), true),
-					"arcane mastery updates core echo power by eight percentage points")
+			c.ok(_has_label(panel, Loc.t("shop.echo_value", [2, 50]), true),
+					"conduction mastery keeps the actual core echo power unchanged")
+			c.near(sim.echo_power(), echo_power, 0.0001,
+					"arcane mastery improves wet-target conduction instead of echo damage")
 		elif weapon_id == &"shotgun":
 			var flat_dps := OfferCard.total_dps(sim.player)
 			var near_dps := flat_dps * Combat.family_mastery_damage(

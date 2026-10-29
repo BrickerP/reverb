@@ -16,7 +16,8 @@ var weapons: Array[WeaponDef] = []
 var levels: Array[int] = []
 var stats: Stats = Stats.new()
 var wave: int = 0
-var age: int = 0
+var uid: int = 0
+var condition: float = 100.0
 var tint_index: int = 0
 var merged: bool = false
 

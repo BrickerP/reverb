@@ -51,10 +51,8 @@ static func dps_with_added(pl: PlayerState, added: WeaponDef) -> float:
 
 static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
 		family_damage: float = 1.0, family_cooldown: float = 1.0) -> float:
-	var pellets := float(maxi(1, w.pellets))
 	var crit := 1.0 + maxf(0.0, stats.get_stat(Stats.CRIT_CHANCE))
-	var rate := 1.0 / maxf(0.01, w.cooldown * stats.cooldown_mult() * family_cooldown)
-	return w.damage * w.level_mult(level) * pellets * stats.damage_mult() * crit * family_damage * rate
+	return w.level_dps(level) * stats.damage_mult() * crit * family_damage / maxf(0.01, stats.cooldown_mult() * family_cooldown)
 
 
 func setup(o: Offer, sim: Sim, selected: bool = false,

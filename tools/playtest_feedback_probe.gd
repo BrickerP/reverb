@@ -14,6 +14,7 @@ var _failed := false
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_playtest_feedback_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://playtest_feedback_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", RUN_PATH)
 	OS.set_environment("REVERB_FEEDBACK_LOG", FEEDBACK_PATH)

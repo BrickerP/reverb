@@ -117,84 +117,169 @@ static func _character(id: StringName, props: Dictionary) -> void:
 static func _build_weapons() -> void:
 	_weapon(&"pistol", {
 		"family": &"sidearm", "rarity": &"common", "drop_weight": 2.5,
-		"evolves_to": &"twin_fangs",
+		"evolves_to": &"twin_fangs", "attack_style": &"projectile",
 		"damage": 7.0, "cooldown": 0.5, "reach": 300.0, "projectile_speed": 720.0,
 		"knockback": 80.0, "price": 14, "color": Color(0.45, 0.95, 1.0),
 	})
 	_weapon(&"smg", {
 		"family": &"sidearm", "rarity": &"common", "drop_weight": 2.0,
-		"evolves_to": &"twin_fangs",
-		"damage": 3.2, "cooldown": 0.16, "reach": 240.0, "projectile_speed": 780.0,
-		"projectile_radius": 3.5, "spread_deg": 8.0, "knockback": 25.0, "price": 24,
-		"color": Color(0.55, 1.0, 0.6),
+		"evolves_to": &"twin_fangs", "attack_style": &"burst",
+		"damage": 2.5, "cooldown": 0.65, "reach": 260.0, "projectile_speed": 780.0,
+		"burst_count": 3, "burst_interval": 0.07, "projectile_radius": 3.5,
+		"spread_deg": 8.0, "knockback": 25.0, "price": 24, "color": Color(0.55, 1.0, 0.6),
+	})
+	_weapon(&"stapler", {
+		"family": &"sidearm", "rarity": &"uncommon", "drop_weight": 1.6,
+		"evolves_to": &"twin_fangs", "attack_style": &"pin",
+		"damage": 7.0, "cooldown": 0.8, "reach": 310.0, "projectile_speed": 680.0,
+		"pin_duration": 1.2, "homing_turn": 1.2, "projectile_radius": 5.0, "knockback": 15.0,
+		"price": 26, "color": Color(0.45, 0.85, 0.9),
 	})
 	_weapon(&"shotgun", {
 		"family": &"scatter", "rarity": &"uncommon", "drop_weight": 2.0,
-		"evolves_to": &"flak_crown",
-		"damage": 3.5, "cooldown": 1.0, "reach": 200.0, "projectile_speed": 650.0,
-		"projectile_radius": 3.5, "pellets": 5, "spread_deg": 30.0, "knockback": 70.0,
+		"evolves_to": &"flak_crown", "attack_style": &"cone",
+		"damage": 14.0, "cooldown": 0.95, "reach": 170.0,
+		"spread_deg": 60.0, "knockback": 110.0,
 		"price": 30, "color": Color(1.0, 0.7, 0.3),
+	})
+	_weapon(&"flechette", {
+		"family": &"scatter", "rarity": &"uncommon", "drop_weight": 1.5,
+		"evolves_to": &"flak_crown", "attack_style": &"projectile",
+		"damage": 4.0, "cooldown": 0.8, "reach": 260.0, "projectile_speed": 800.0,
+		"projectile_radius": 3.0, "pellets": 3, "spread_deg": 16.0, "pierce": 1,
+		"knockback": 35.0, "price": 28, "color": Color(1.0, 0.8, 0.5),
+		"explosion_radius": 24.0, "explosion_damage": 0.35,
+	})
+	_weapon(&"paper_saw", {
+		"family": &"scatter", "rarity": &"rare", "drop_weight": 1.0,
+		"evolves_to": &"flak_crown", "attack_style": &"boomerang",
+		"damage": 9.0, "cooldown": 1.1, "reach": 240.0, "projectile_speed": 540.0,
+		"projectile_radius": 13.0, "pierce": 5, "return_time": 0.35,
+		"knockback": 45.0, "price": 34, "color": Color(0.95, 0.75, 0.45),
 	})
 	_weapon(&"rifle", {
 		"family": &"marksman", "rarity": &"uncommon", "drop_weight": 1.5,
-		"evolves_to": &"rail_spike",
+		"evolves_to": &"rail_spike", "attack_style": &"projectile",
 		"damage": 16.0, "cooldown": 1.05, "reach": 420.0, "projectile_speed": 1000.0,
 		"projectile_radius": 4.0, "pierce": 2, "knockback": 120.0, "price": 34,
 		"color": Color(1.0, 0.45, 0.6),
 	})
-	_weapon(&"orb", {
-		"family": &"arcane", "rarity": &"rare", "drop_weight": 1.0,
-		"evolves_to": &"nova_core",
-		"damage": 9.0, "cooldown": 1.3, "reach": 270.0, "projectile_speed": 240.0,
-		"projectile_radius": 11.0, "pierce": 99, "knockback": 20.0, "price": 38,
-		"color": Color(0.75, 0.55, 1.0),
-	})
-	_weapon(&"flechette", {
-		"family": &"scatter", "rarity": &"uncommon", "drop_weight": 1.5,
-		"evolves_to": &"flak_crown",
-		"damage": 4.0, "cooldown": 0.8, "reach": 260.0, "projectile_speed": 800.0,
-		"projectile_radius": 3.0, "pellets": 3, "spread_deg": 16.0, "pierce": 1,
-		"knockback": 35.0, "price": 28, "color": Color(1.0, 0.8, 0.5),
-	})
 	_weapon(&"longbow", {
 		"family": &"marksman", "rarity": &"uncommon", "drop_weight": 1.2,
-		"evolves_to": &"rail_spike",
+		"evolves_to": &"rail_spike", "attack_style": &"pin",
 		"damage": 20.0, "cooldown": 1.4, "reach": 480.0, "projectile_speed": 1100.0,
-		"projectile_radius": 3.5, "pierce": 3, "knockback": 100.0, "price": 36,
-		"color": Color(1.0, 0.75, 0.55),
+		"projectile_radius": 3.5, "pierce": 3, "pin_duration": 1.6,
+		"knockback": 100.0, "price": 36, "color": Color(1.0, 0.75, 0.55),
+	})
+	_weapon(&"hole_punch", {
+		"family": &"marksman", "rarity": &"rare", "drop_weight": 1.0,
+		"evolves_to": &"rail_spike", "attack_style": &"line",
+		"damage": 3.0, "cooldown": 1.5, "reach": 400.0, "field_duration": 0.6,
+		"tick_interval": 0.12, "line_width": 14.0,
+		"knockback": 25.0, "price": 38, "color": Color(0.95, 0.55, 0.65),
+	})
+	_weapon(&"orb", {
+		"family": &"arcane", "rarity": &"rare", "drop_weight": 1.0,
+		"evolves_to": &"nova_core", "attack_style": &"orbit",
+		"damage": 3.2, "cooldown": 1.5, "reach": 270.0, "field_duration": 1.5,
+		"tick_interval": 0.3, "field_radius": 25.0, "orbit_radius": 100.0,
+		"orbit_speed": 3.6, "knockback": 20.0, "price": 38,
+		"color": Color(0.75, 0.55, 1.0),
 	})
 	_weapon(&"hex_bolt", {
 		"family": &"arcane", "rarity": &"rare", "drop_weight": 1.5,
-		"evolves_to": &"nova_core",
-		"damage": 7.0, "cooldown": 0.9, "reach": 300.0, "projectile_speed": 420.0,
-		"projectile_radius": 7.0, "pierce": 2, "knockback": 20.0, "price": 30,
-		"color": Color(0.65, 0.8, 1.0),
+		"evolves_to": &"nova_core", "attack_style": &"chain",
+		"damage": 7.0, "cooldown": 0.9, "reach": 300.0,
+		"chain_count": 3, "chain_radius": 100.0,
+		"knockback": 20.0, "price": 30, "color": Color(0.65, 0.8, 1.0),
 	})
-	# Evolution forms are not offered in the shop; they only come from a maxed weapon.
+	_weapon(&"ink_bottle", {
+		"family": &"arcane", "rarity": &"uncommon", "drop_weight": 1.5,
+		"evolves_to": &"nova_core", "attack_style": &"ink",
+		"damage": 2.8, "cooldown": 1.6, "reach": 280.0, "field_duration": 2.0,
+		"tick_interval": 0.4, "field_radius": 80.0, "ink_duration": 2.0,
+		"knockback": 0.0, "price": 28, "color": Color(0.55, 0.5, 0.8),
+	})
+	_weapon(&"stamp", {
+		"family": &"press", "rarity": &"uncommon", "drop_weight": 1.8,
+		"evolves_to": &"hydraulic_press", "attack_style": &"slam",
+		"damage": 24.0, "cooldown": 1.6, "reach": 180.0,
+		"windup": 0.4, "field_radius": 70.0, "knockback": 180.0,
+		"price": 30, "color": Color(0.85, 0.35, 0.3),
+	})
+	_weapon(&"mallet", {
+		"family": &"press", "rarity": &"common", "drop_weight": 2.0,
+		"evolves_to": &"hydraulic_press", "attack_style": &"slam",
+		"damage": 16.0, "cooldown": 1.05, "reach": 125.0,
+		"windup": 0.2, "field_radius": 44.0, "knockback": 240.0,
+		"price": 22, "color": Color(0.85, 0.5, 0.4),
+	})
+	_weapon(&"cutter", {
+		"family": &"press", "rarity": &"rare", "drop_weight": 1.0,
+		"evolves_to": &"hydraulic_press", "attack_style": &"line",
+		"damage": 4.0, "cooldown": 0.9, "reach": 190.0, "field_duration": 0.45,
+		"tick_interval": 0.15, "line_width": 10.0,
+		"knockback": 30.0, "price": 34, "color": Color(0.95, 0.6, 0.5),
+	})
+	_weapon(&"tape_spool", {
+		"family": &"salvage", "rarity": &"uncommon", "drop_weight": 1.8,
+		"evolves_to": &"redaction_engine", "attack_style": &"tape",
+		"damage": 2.2, "cooldown": 1.8, "reach": 260.0, "field_duration": 2.4,
+		"tick_interval": 0.4, "field_radius": 95.0, "pin_duration": 0.28,
+		"knockback": 0.0, "price": 26, "color": Color(0.8, 0.75, 0.45),
+	})
+	_weapon(&"rubber_band", {
+		"family": &"salvage", "rarity": &"common", "drop_weight": 2.0,
+		"evolves_to": &"redaction_engine", "attack_style": &"boomerang",
+		"damage": 6.0, "cooldown": 0.8, "reach": 210.0, "projectile_speed": 630.0,
+		"projectile_radius": 8.0, "pierce": 2, "return_time": 0.25,
+		"knockback": 65.0, "price": 20, "color": Color(0.9, 0.8, 0.55),
+	})
+	_weapon(&"paper_plane", {
+		"family": &"salvage", "rarity": &"rare", "drop_weight": 1.0,
+		"evolves_to": &"redaction_engine", "attack_style": &"boomerang",
+		"damage": 10.0, "cooldown": 1.5, "reach": 390.0, "projectile_speed": 650.0,
+		"projectile_radius": 6.0, "pierce": 3, "return_time": 0.6,
+		"knockback": 40.0, "price": 34, "color": Color(0.75, 0.85, 0.7),
+	})
+	# Evolution forms are earned from a maxed weapon, never offered as drops.
 	_weapon(&"twin_fangs", {
 		"family": &"sidearm", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
-		"damage": 3.5, "cooldown": 0.2, "reach": 300.0, "projectile_speed": 820.0,
-		"projectile_radius": 4.0, "pellets": 2, "spread_deg": 6.0, "pierce": 1,
+		"attack_style": &"burst", "damage": 3.0, "cooldown": 0.5, "reach": 300.0,
+		"projectile_speed": 820.0, "projectile_radius": 4.0, "pellets": 2,
+		"burst_count": 3, "burst_interval": 0.055, "spread_deg": 6.0, "pierce": 1,
 		"knockback": 35.0, "price": 34, "color": Color(0.65, 1.0, 1.0),
 	})
 	_weapon(&"flak_crown", {
 		"family": &"scatter", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
-		"damage": 4.0, "cooldown": 0.9, "reach": 230.0, "projectile_speed": 680.0,
-		"projectile_radius": 4.0, "pellets": 8, "spread_deg": 38.0, "pierce": 1,
-		"knockback": 90.0, "price": 45, "color": Color(1.0, 0.85, 0.4),
-		"explosion_radius": 48.0, "explosion_damage": 0.5,
+		"attack_style": &"cone", "damage": 26.0, "cooldown": 0.85, "reach": 220.0,
+		"spread_deg": 80.0, "knockback": 160.0,
+		"price": 45, "color": Color(1.0, 0.85, 0.4),
 	})
 	_weapon(&"rail_spike", {
 		"family": &"marksman", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
-		"damage": 24.0, "cooldown": 0.9, "reach": 460.0, "projectile_speed": 1200.0,
-		"projectile_radius": 4.0, "pierce": 4, "knockback": 150.0, "price": 48,
-		"color": Color(1.0, 0.55, 0.8),
+		"attack_style": &"line", "damage": 4.0, "cooldown": 0.9, "reach": 510.0,
+		"field_duration": 0.6, "tick_interval": 0.1, "line_width": 20.0,
+		"knockback": 80.0, "price": 48, "color": Color(1.0, 0.55, 0.8),
 	})
 	_weapon(&"nova_core", {
 		"family": &"arcane", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
-		"damage": 12.0, "cooldown": 1.0, "reach": 300.0, "projectile_speed": 280.0,
-		"projectile_radius": 14.0, "pierce": 99, "knockback": 25.0, "price": 50,
-		"color": Color(0.9, 0.6, 1.0), "homing_turn": 3.0,
+		"attack_style": &"chain", "damage": 14.0, "cooldown": 1.1, "reach": 340.0,
+		"chain_count": 5, "chain_radius": 150.0, "knockback": 25.0,
+		"price": 50, "color": Color(0.9, 0.6, 1.0),
+	})
+	_weapon(&"hydraulic_press", {
+		"family": &"press", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
+		"attack_style": &"slam", "damage": 46.0, "cooldown": 1.6, "reach": 225.0,
+		"windup": 0.55, "field_radius": 112.0, "knockback": 280.0,
+		"price": 50, "color": Color(0.95, 0.3, 0.25),
+	})
+	_weapon(&"redaction_engine", {
+		"family": &"salvage", "rarity": &"evolved", "drops": false, "drop_weight": 0.0,
+		"attack_style": &"orbit", "damage": 4.0, "cooldown": 1.4, "reach": 330.0,
+		"field_duration": 2.1, "tick_interval": 0.3, "field_radius": 40.0,
+		"orbit_radius": 130.0, "orbit_speed": -5.5, "ink_duration": 0.8,
+		"knockback": 40.0, "price": 52, "color": Color(0.6, 0.75, 0.55),
 	})
 
 
@@ -213,7 +298,7 @@ static func _build_items() -> void:
 		"mods": {Stats.ECHO_SLOTS: 1.0}, "price": 40, "max_stack": 2, "color": echo, "echo_item": true,
 	})
 	_item(&"long_play", {
-		"mods": {Stats.ECHO_LIFESPAN: 1.0}, "price": 28, "max_stack": 3, "color": echo, "echo_item": true,
+		"mods": {Stats.ECHO_DURATION: 40.0}, "price": 28, "max_stack": 3, "color": echo, "echo_item": true,
 	})
 	_item(&"loud_speaker", {
 		"mods": {Stats.ECHO_POWER: 0.25}, "price": 26, "max_stack": 4, "color": echo, "echo_item": true,
@@ -289,4 +374,21 @@ static func _build_characters() -> void:
 		"synergy_damage_per_echo": 0.045,
 		"synergy_haste_per_echo": 0.025,
 		"unlock_wave": 15,
+	})
+	_character(&"mender", {
+		"color": Color(0.9, 0.8, 0.55),
+		"starting_weapon": &"tape_spool",
+		"overrides": {Stats.ECHO_SLOTS: 3.0, Stats.ECHO_POWER: 0.4},
+		"mods": {Stats.MAX_HP: 5.0},
+		"repair_discount": 0.25,
+		"pickup_repair": 0.6,
+		"unlock_wave": 5,
+	})
+	_character(&"overloader", {
+		"color": Color(0.95, 0.45, 0.35),
+		"starting_weapon": &"stamp",
+		"mods": {Stats.MAX_HP: 5.0},
+		"wear_rate_mult": 1.35,
+		"retirement_mult": 1.5,
+		"unlock_wave": 12,
 	})

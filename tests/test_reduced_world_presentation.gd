@@ -83,7 +83,7 @@ func test_midcombat_reduced_toggle_clears_decorative_motion_only(c: Check) -> vo
 	view.set_reduced_effects(true)
 	c.ok(view.reduced_effects, "canonical setter enables reduced effects")
 	c.eq(view._shake, 0.0, "midcombat toggle clears shake trauma")
-	c.eq(view.position, Vector2.ZERO, "midcombat toggle clears shake offset")
+	c.eq(view.position, WorldArena.camera_offset(sim.player.pos), "midcombat toggle clears shake while preserving camera offset")
 	c.eq(view.feedback_counts()["muzzles"], 0, "midcombat toggle clears stale muzzle and recoil")
 	c.eq(view.feedback_counts()["sparks"], 0, "midcombat toggle clears decorative sparks")
 	c.eq(view.recoil_amount(), 0.0, "midcombat toggle returns mounted weapons to rest")

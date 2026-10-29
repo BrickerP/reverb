@@ -23,6 +23,7 @@ var _shots_dir := ""
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_presentation_preview_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://presentation_preview_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://presentation_preview_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://presentation_preview_settings.json")
@@ -78,7 +79,7 @@ func _play_stage() -> void:
 	if _frame == 150:
 		_save("combat")
 	elif _frame == 240:
-		sim.collapse_oldest_echo()
+		sim.retire_selected_echo()
 	elif _frame == 244:
 		_save("collapse")
 	elif _frame == 360:

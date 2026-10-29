@@ -38,26 +38,61 @@ func _finish_wave(s: Sim) -> void:
 	_run(s, 5)
 
 
-func test_silencer_touch_silences_echoes(c: Check) -> void:
+func test_silencer_seal_suppresses_only_inside_echoes_after_warning(c: Check) -> void:
 	var s := _sim()
 	_immortal(s)
 	s.player.weapons.clear()
+	s.player.weapon_levels.clear()
 	s.player.cooldowns.clear()
+	s._plan.clear()
+	for position: Vector2 in [s.player.pos, s.player.pos + Vector2(0.0, 200.0)]:
+		var take := EchoTake.new()
+		take.samples.append(position)
+		take.weapons.append(Content.weapon(&"pistol"))
+		take.levels.append(0)
+		s.bank.add(take)
+		s.echoes.append(EchoActor.new(take, s.echoes.size()))
 	var e := EnemyState.new()
 	e.uid = 4242
 	e.def = Content.enemy(&"silencer")
-	e.pos = s.player.pos
+	e.pos = s.player.pos + Vector2(300.0, 0.0)
 	e.radius = e.def.radius
 	e.max_hp = 100.0
 	e.hp = 100.0
 	e.damage = 0.0
 	e.speed = 0.0
 	s.enemies.append(e)
+	_spawn(s, s.player.pos + Vector2(110.0, 0.0), 1000.0)
+	_spawn(s, s.player.pos + Vector2(110.0, 200.0), 1000.0)
 	var silences := [0]
+	var fired: Array[int] = []
 	s.echoes_silenced.connect(func(_info: EchoSilenceInfo) -> void: silences[0] += 1)
+	s.shot_fired_info.connect(func(info: ShotInfo) -> void: fired.append(info.actor_token))
+	var inside := s.echoes[0]
+	var outside := s.echoes[1]
 	s.step(DT, Vector2.ZERO)
-	c.ok(s.echo_silenced >= 2.0, "the touch silences echoes")
-	c.eq(silences[0], 1, "the silence signal fires")
+	c.eq(s.enemy_zones.size(), 1, "ranged silencer creates its fixed seal warning")
+	c.ok(fired.has(inside.take.uid) and fired.has(outside.take.uid),
+			"both inside and outside echoes can fire during the warning")
+	EnemyBrain.step_zones(s, EnemyZone.WARNING_TIME + 0.01)
+	var playback := inside.t
+	var condition := inside.take.condition
+	inside.cooldowns[0] = 0.0
+	outside.cooldowns[0] = 0.0
+	fired.clear()
+	s.step(DT, Vector2.ZERO)
+	c.ok(not fired.has(inside.take.uid), "active seal suppresses the inside echo's real shot")
+	c.ok(fired.has(outside.take.uid), "outside echo keeps firing during the same seal")
+	c.ok(inside.t > playback and inside.take.condition < condition,
+			"local silence does not pause playback or deployed wear")
+	c.eq(s.echo_silenced, 0.0, "local seal does not set the boss global silence timer")
+	c.eq(silences[0], 0, "local seal never emits the global boss silence event")
+	EnemyBrain.step_zones(s, EnemyZone.ACTIVE_TIME + 0.1)
+	inside.cooldowns[0] = 0.0
+	outside.cooldowns[0] = 0.0
+	fired.clear()
+	s.step(DT, Vector2.ZERO)
+	c.ok(fired.has(inside.take.uid), "inside echo resumes real fire when the seal expires")
 
 
 func test_player_moves_and_stays_in_arena(c: Check) -> void:
@@ -379,6 +414,7 @@ func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
 	e.max_hp = 100.0
 	e.hp = 100.0
 	e.radius = e.def.radius
+	e.attack_direction = Vector2.LEFT
 	s.enemies.append(e)
 	var hits: Array[DamageInfo] = []
 	s.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
@@ -388,6 +424,7 @@ func test_warden_shield_reduces_front_hits_only(c: Check) -> void:
 	e.hp = 100.0
 	s.damage_enemy(e, 10.0, Vector2.ZERO, false, -1, Vector2.LEFT, &"pistol", &"hit")
 	c.near(e.hp, 90.0, 0.01, "back hit takes full damage")
+	c.ok(not hits[1].reduced, "rear hit is not marked as shielded")
 
 
 func test_combat_events_carry_source_data(c: Check) -> void:

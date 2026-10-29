@@ -44,3 +44,18 @@ paper synthesis. Original clip names, checksum-pinned source archives, preserved
 development inputs and reproduction are recorded in `audio/presentation/SOURCES.md`.
 License: https://creativecommons.org/publicdomain/zero/1.0/ . Development source
 snapshots are excluded from game exports; the provenance notice is included.
+
+## Original score
+
+**Paperwork Waltz** is original melodic material authored for Take Stack with
+Codex. Its score, synthesizer recipe and five 96-second arrangement files follow
+the repository [MIT license](LICENSE). They use no commercial composition, stock
+MIDI, SoundFont or sampled acoustic instrument. The synthesized piano/reed voices
+are not claimed to be recordings of acoustic instruments.
+
+Each arrangement includes the existing quiet room layer; its Kenney CC0 object
+recording and original synthesis provenance remains in
+`audio/presentation/SOURCES.md`. The complete score recipe, source hash and
+finished-track hashes are in `audio/music/SOURCES.md` and `audio/music/score.json`.
+NumPy 2.0.2 is a development-only generation/test dependency in
+`tools/requirements-audio.txt`; Python and NumPy are not required by the game.

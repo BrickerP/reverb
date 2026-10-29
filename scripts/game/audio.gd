@@ -5,7 +5,11 @@ const POOL := 12
 const COMMON_POOL := 7
 const PROTECTED_POOL := 5
 const PRESENTATION_DIR := "res://audio/presentation"
-const AMBIENT_DB := -24.0
+const MUSIC_DB := -9.0
+const MUSIC_DIR := "res://audio/music"
+const MUSIC_MODES: Array[StringName] = [&"menu", &"shop", &"battle", &"pressure", &"boss"]
+const MUSIC_SECONDS := 96.0
+const MUSIC_FADE_SECONDS := 1.2
 const TRANSITION_DUCK_DB := -8.0
 const NAMES: Array[StringName] = [
 	&"shoot", &"hit", &"kill", &"pickup", &"buy", &"hurt", &"echo",
@@ -40,6 +44,18 @@ const WEAPON_PROFILES := {
 	&"flak_crown": {"cue": &"weapon_flak_crown", "volume": 1.0, "pitch": 0.92},
 	&"rail_spike": {"cue": &"weapon_rail_spike", "volume": 1.0, "pitch": 0.88},
 	&"nova_core": {"cue": &"weapon_nova_core", "volume": 1.0, "pitch": 0.86},
+	&"stapler": {"cue": &"weapon_pistol", "volume": -1.0, "pitch": 0.73, "gate": 0.10},
+	&"paper_saw": {"cue": &"weapon_flechette", "volume": 0.0, "pitch": 0.74, "gate": 0.22},
+	&"hole_punch": {"cue": &"weapon_rifle", "volume": 0.5, "pitch": 0.72, "gate": 0.16},
+	&"ink_bottle": {"cue": &"weapon_orb", "volume": -1.5, "pitch": 0.68, "gate": 0.34},
+	&"stamp": {"cue": &"weapon_rail_spike", "volume": 0.0, "pitch": 0.78, "gate": 0.18},
+	&"mallet": {"cue": &"weapon_shotgun", "volume": 0.5, "pitch": 0.64, "gate": 0.23},
+	&"cutter": {"cue": &"weapon_flechette", "volume": -1.0, "pitch": 1.26, "gate": 0.12},
+	&"tape_spool": {"cue": &"weapon_longbow", "volume": -2.0, "pitch": 0.68, "gate": 0.24},
+	&"rubber_band": {"cue": &"weapon_longbow", "volume": -1.0, "pitch": 1.31, "gate": 0.16},
+	&"paper_plane": {"cue": &"weapon_hex_bolt", "volume": -3.0, "pitch": 1.27, "gate": 0.28},
+	&"hydraulic_press": {"cue": &"weapon_rail_spike", "volume": 1.5, "pitch": 0.55, "gate": 0.37},
+	&"redaction_engine": {"cue": &"weapon_nova_core", "volume": -0.5, "pitch": 0.64, "gate": 0.44},
 }
 const VOLUMES := {
 	&"shoot": -15.0,
@@ -148,6 +164,20 @@ var _silent := false
 var _bound: Sim
 var _bound_shop: Shop
 var _music: AudioStreamPlayer
+var _music_players: Array[AudioStreamPlayer] = []
+var _music_streams: Dictionary = {}
+var _music_mode: StringName = &"menu"
+var _music_previous: AudioStreamPlayer
+var _music_cursor := 0.0
+var _music_fade := 0.0
+var _music_hold := 0.0
+var _music_poll := 0.0
+var _music_intensity := 0.0
+var _music_enabled := true
+var _music_volume := 0.8
+var _effects_volume := 1.0
+var _voice_base_db: Dictionary = {}
+var _voice_left: Dictionary = {}
 var _duck_remaining := 0.0
 
 
@@ -161,38 +191,153 @@ func _ready() -> void:
 		_add_player(_common_players)
 	for _i in PROTECTED_POOL:
 		_add_player(_protected_players)
-	_music = AudioStreamPlayer.new()
-	var ambient := load("res://audio/ambient.wav") as AudioStreamWAV
-	if ambient != null:
-		ambient.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		ambient.loop_begin = 0
-		ambient.loop_end = int(ambient.get_length() * float(ambient.mix_rate))
-		_music.stream = ambient
-		_music.volume_db = AMBIENT_DB
-		add_child(_music)
-		if not _silent:
-			_music.play()
+	for mode in MUSIC_MODES:
+		var stream := load("%s/%s.wav" % [MUSIC_DIR, mode]) as AudioStreamWAV
+		if stream != null:
+			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			stream.loop_begin = 0
+			stream.loop_end = int(stream.get_length() * float(stream.mix_rate))
+			_music_streams[mode] = stream
+	for _i in 2:
+		var player := AudioStreamPlayer.new()
+		player.volume_db = -80.0
+		add_child(player)
+		_music_players.append(player)
+	_music = _music_players[0]
+	_start_music(&"menu", true)
 
 
 func _process(delta: float) -> void:
 	if _paused:
 		return
 	_duck_remaining = maxf(0.0, _duck_remaining - delta)
-	_update_ambient_level()
+	_update_effect_envelopes(delta)
+	if _music_enabled:
+		_music_cursor = fposmod(_music_cursor + delta, MUSIC_SECONDS)
+		_music_hold = maxf(0.0, _music_hold - delta)
+		_music_poll -= delta
+		if _music_poll <= 0.0:
+			_music_poll = 0.25
+			var state := music_profile(_bound, _music_mode)
+			_music_intensity = float(state["intensity"])
+			var mode: StringName = state["mode"]
+			if mode != _music_mode and (mode not in [&"battle", &"pressure"] or _music_hold <= 0.0) and _music_fade <= 0.0:
+				_start_music(mode)
+		if _music_fade > 0.0:
+			_music_fade = maxf(0.0, _music_fade - delta)
+			if _music_fade <= 0.0 and _music_previous != null:
+				_music_previous.stop()
+				_music_previous = null
+	_update_music_levels()
 
 
 func _duck_room(seconds: float) -> void:
 	if _paused:
 		return
 	_duck_remaining = maxf(_duck_remaining, seconds)
-	_update_ambient_level()
+	_update_music_levels()
 
 
-func _update_ambient_level() -> void:
-	if _music != null:
-		# A short release makes major paper actions readable without a new voice,
-		# audio bus, timer node or mutable simulation state.
-		_music.volume_db = AMBIENT_DB + TRANSITION_DUCK_DB * minf(1.0, _duck_remaining / 0.16)
+func _update_music_levels() -> void:
+	var level := MUSIC_DB + _gain_db(_music_volume)
+	level += TRANSITION_DUCK_DB * minf(1.0, _duck_remaining / 0.16)
+	var blend := 1.0 - _music_fade / MUSIC_FADE_SECONDS
+	for player in _music_players:
+		var gain := blend if player == _music else 1.0 - blend if player == _music_previous else 0.0
+		player.volume_db = level + _gain_db(gain)
+
+
+func _start_music(mode: StringName, immediate: bool = false) -> void:
+	if not _music_streams.has(mode) or _music_players.is_empty():
+		return
+	_music_enabled = true
+	if immediate:
+		for player in _music_players:
+			player.stop()
+		_music = _music_players[0]
+		_music_previous = null
+		_music_fade = 0.0
+	else:
+		_music_previous = _music
+		_music = _music_players[1] if _music == _music_players[0] else _music_players[0]
+		_music.stop()
+		_music_fade = MUSIC_FADE_SECONDS
+	_music_mode = mode
+	_music_hold = 3.0 if mode in [&"battle", &"pressure"] else 0.0
+	_music.stream = _music_streams[mode]
+	_music.stream_paused = _paused
+	if not _silent:
+		# All arrangements share the complete harmonic map. Start the incoming
+		# arrangement at the current audible phrase, never back at its intro.
+		var position := _music_previous.get_playback_position() if _music_previous != null else _music_cursor
+		_music.play(fposmod(position, MUSIC_SECONDS))
+	_update_music_levels()
+
+
+static func _gain_db(value: float) -> float:
+	return linear_to_db(value) if value > 0.0001 else -80.0
+
+
+func set_music_volume(value: float) -> void:
+	_music_volume = clampf(value, 0.0, 1.0)
+	_update_music_levels()
+
+
+func set_effects_volume(value: float) -> void:
+	_effects_volume = clampf(value, 0.0, 1.0)
+	_update_effect_envelopes(0.0)
+
+
+func _update_effect_envelopes(delta: float) -> void:
+	for player in _players:
+		var gain := 1.0
+		if _voice_left.has(player):
+			var left := maxf(0.0, float(_voice_left[player]) - delta)
+			if left <= 0.0:
+				player.stop()
+				_voice_left.erase(player)
+			else:
+				_voice_left[player] = left
+				gain = minf(1.0, left / 0.025)
+		player.volume_db = float(_voice_base_db.get(player, -80.0)) + _gain_db(_effects_volume * gain)
+
+
+static func music_profile(sim: Sim, current: StringName = &"battle") -> Dictionary:
+	if sim == null or sim.phase in [Sim.Phase.LOST, Sim.Phase.WON]:
+		return {"mode": &"menu", "intensity": 0.0, "nearby": 0, "attacks": 0}
+	if sim.phase == Sim.Phase.SHOP:
+		return {"mode": &"shop", "intensity": 0.0, "nearby": 0, "attacks": 0}
+	var nearby := 0
+	var attacks := 0
+	var boss_active := false
+	for enemy in sim.enemies:
+		if enemy.dead:
+			continue
+		if enemy.def != null and enemy.def.id == &"paradox":
+			boss_active = true
+		if enemy.pos.distance_squared_to(sim.player.pos) <= 420.0 * 420.0:
+			nearby += 1
+			if enemy.brain_state in [&"warn", &"dash", &"slam", &"seal"]:
+				attacks += 1
+	boss_active = boss_active or (sim.boss != null and not sim.boss.dead)
+	var pacing := WaveDirector.phase_profile(sim.wave_time, sim.wave_duration)
+	var intensity := float(nearby) * 0.4 + float(attacks) * 1.2 + float(pacing["intensity"]) * 1.1
+	if sim.player.hp < sim.player.max_hp() * 0.3:
+		intensity += 1.5
+	var pressure := intensity >= (3.5 if current == &"pressure" else 6.0)
+	return {"mode": &"boss" if boss_active else &"pressure" if pressure else &"battle",
+		"intensity": intensity, "nearby": nearby, "attacks": attacks, "wave_phase": pacing["id"]}
+
+
+func music_state() -> Dictionary:
+	var active := 0
+	for player in _music_players:
+		if player.playing:
+			active += 1
+	return {"mode": _music_mode, "intensity": _music_intensity, "cursor": _music_cursor,
+		"crossfade_remaining": _music_fade, "nodes": _music_players.size(), "active_voices": active,
+		"arrangements": _music_streams.size(), "paused": _paused, "enabled": _music_enabled,
+		"music_volume": _music_volume, "effects_volume": _effects_volume}
 
 
 func _exit_tree() -> void:
@@ -210,17 +355,21 @@ func _add_player(pool: Array[AudioStreamPlayer]) -> void:
 
 func stop_all() -> void:
 	_duck_remaining = 0.0
-	_update_ambient_level()
-	if _music != null:
-		_music.stop()
+	_music_enabled = false
+	_music_fade = 0.0
+	_music_previous = null
+	_update_music_levels()
+	for player in _music_players:
+		player.stop()
 	for player in _players:
 		player.stop()
+	_voice_left.clear()
 
 
 func set_paused(on: bool) -> void:
 	_paused = on
-	if _music != null:
-		_music.stream_paused = on
+	for player in _music_players:
+		player.stream_paused = on
 	if not on:
 		return
 	for player in _common_players:
@@ -253,6 +402,7 @@ func bind(sim: Sim) -> void:
 	sim.enemy_killed.connect(_on_kill)
 	sim.material_collected.connect(_on_pickup)
 	sim.echo_spawned.connect(_on_echo)
+	sim.echo_retired.connect(_on_echo_retired)
 	sim.wave_started.connect(_on_wave_start)
 	sim.wave_ended.connect(_on_wave_end)
 	sim.purchased.connect(_on_purchase)
@@ -260,6 +410,7 @@ func bind(sim: Sim) -> void:
 	sim.run_won.connect(_on_won)
 	sim.echoes_silenced.connect(_on_silence)
 	_bound_shop.shop_action_resolved.connect(_on_shop_action)
+	_start_music(music_profile(sim)["mode"], true)
 
 
 func _disconnect_bound() -> void:
@@ -271,6 +422,7 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.enemy_killed, _on_kill)
 		_disconnect_signal(_bound.material_collected, _on_pickup)
 		_disconnect_signal(_bound.echo_spawned, _on_echo)
+		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
 		_disconnect_signal(_bound.wave_started, _on_wave_start)
 		_disconnect_signal(_bound.wave_ended, _on_wave_end)
 		_disconnect_signal(_bound.purchased, _on_purchase)
@@ -295,9 +447,15 @@ func _reset_session_state() -> void:
 	_play_serial = 0
 	_paused = false
 	_duck_remaining = 0.0
-	_update_ambient_level()
-	if _music != null:
-		_music.stream_paused = false
+	_voice_left.clear()
+	_voice_base_db.clear()
+	_music_cursor = 0.0
+	_music_hold = 0.0
+	_music_poll = 0.0
+	_music_intensity = 0.0
+	for player in _music_players:
+		player.stream_paused = false
+	_start_music(&"menu", true)
 
 
 func _disconnect_signal(signal_value: Signal, handler: Callable) -> void:
@@ -305,7 +463,7 @@ func _disconnect_signal(signal_value: Signal, handler: Callable) -> void:
 		signal_value.disconnect(handler)
 
 
-func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0) -> bool:
+func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0) -> bool:
 	var stream: AudioStream = _streams.get(name)
 	if stream == null or _players.is_empty():
 		return false
@@ -323,7 +481,11 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0) -> b
 	if player == null:
 		return false
 	player.stream = stream
-	player.volume_db = float(VOLUMES.get(name, -14.0)) + volume_offset
+	_voice_base_db[player] = float(VOLUMES.get(name, -14.0)) + volume_offset
+	_voice_left.erase(player)
+	if gate > 0.0:
+		_voice_left[player] = maxf(0.04, gate)
+	player.volume_db = float(_voice_base_db[player]) + _gain_db(_effects_volume)
 	player.pitch_scale = clampf(pitch, 0.5, 2.0)
 	_player_cues[player] = name
 	player.play()
@@ -393,9 +555,9 @@ func binding_state() -> Dictionary:
 		"active_sfx": active_sfx,
 		"cooldowns": _last.size(),
 		"routed_voices": _player_cues.size(),
-		"ambient_playing": _music != null and _music.playing,
-		"ambient_paused": _music != null and _music.stream_paused,
-		"ambient_volume_db": _music.volume_db if _music != null else AMBIENT_DB,
+		"music_playing": _music != null and _music.playing,
+		"music_paused": _music != null and _music.stream_paused,
+		"music_volume_db": _music.volume_db if _music != null else MUSIC_DB,
 		"duck_remaining": _duck_remaining,
 	}
 
@@ -449,7 +611,7 @@ func _on_shot_info(info: ShotInfo) -> void:
 	var volume := float(profile["volume"]) - (3.0 if info.source >= 0 else 0.0)
 	var variation := float(posmod(info.sequence, 3) - 1) * 0.015
 	var pitch := float(profile["pitch"]) + variation - (0.04 if info.source >= 0 else 0.0)
-	play(cue, volume, pitch)
+	play(cue, volume, pitch, float(profile.get("gate", 0.0)))
 
 
 func _on_damage_info(info: DamageInfo) -> void:
@@ -465,12 +627,6 @@ func _on_damage_info(info: DamageInfo) -> void:
 
 
 func _on_explosion_info(info: ExplosionInfo) -> void:
-	if info.effect == &"echo_collapse":
-		# The same physical burst is stretched into a large discarded paper sheet.
-		# Source statistics and collision timing remain owned by the simulation.
-		play(&"weapon_explosion", 1.5, 0.66)
-		_duck_room(0.42)
-		return
 	var cue := &"bomber_explosion" if info.kind == ExplosionInfo.BOMBER else &"weapon_explosion"
 	play(cue, -2.0 if info.source >= 0 else 0.0, 1.0)
 
@@ -504,8 +660,29 @@ func _on_pickup(amount: int) -> void:
 
 
 func _on_echo(actor: EchoActor) -> void:
-	var pitch := 1.03 if actor.take.merged else clampf(0.98 - float(actor.take.age) * 0.025, 0.72, 0.98)
+	var pitch := 1.03 if actor.take.merged else lerpf(0.74, 0.98, clampf(actor.take.condition / 100.0, 0.0, 1.0))
 	play(&"echo", 0.5 if actor.take.merged else 0.0, pitch)
+
+
+func _on_echo_retired(info: EchoRetirementInfo) -> void:
+	if info.exhausted or info.reason == EchoRetirementInfo.EXHAUSTED:
+		play(&"echo", -5.0, 0.58, 0.18)
+		return
+	# The recorded skill determines its material accent. There is no universal
+	# explosion sound, and exhaustion cannot borrow the active skill's weight.
+	var cue := &"echo"
+	var pitch := 0.86
+	match info.kind:
+		&"pin": cue = &"weapon_longbow"; pitch = 0.81
+		&"stamp": cue = &"weapon_rail_spike"; pitch = 0.71
+		&"cut": cue = &"weapon_flechette"; pitch = 0.69
+		&"ink": cue = &"weapon_orb"; pitch = 0.70
+		&"arc": cue = &"weapon_nova_core"; pitch = 0.76
+	# This explicit player action must not disappear behind the same weapon's
+	# preceding shot cooldown. It still uses the existing bounded common pool.
+	_last.erase(cue)
+	play(cue, 1.0, pitch, 0.32)
+	_duck_room(0.32)
 
 
 func _on_wave_start(_wave: int) -> void:
@@ -549,4 +726,5 @@ func _on_silence(info: EchoSilenceInfo) -> void:
 		play(&"boss", 1.5, 1.0)
 		_duck_room(0.8)
 		return
-	play(&"silence")
+	if info.kind == EchoSilenceInfo.BOSS:
+		play(&"silence")

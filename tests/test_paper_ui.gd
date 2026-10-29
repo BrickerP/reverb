@@ -52,7 +52,7 @@ func test_bilingual_character_cards_preserve_choice_and_lock_semantics(c: Check)
 		select.theme = UiTheme.build()
 		_root().add_child(select)
 		select.refresh(meta)
-		c.eq(select._cards.size(), 4, "%s has all four identities" % language)
+		c.eq(select._cards.size(), 6, "%s has all six identities" % language)
 		c.ok(select._cards[0].has_focus(), "%s starts at an available character" % language)
 		c.ok(select._cards[2].disabled, "%s keeps locked characters unavailable" % language)
 		for card in select._cards:
@@ -95,8 +95,15 @@ func test_boon_cards_keep_their_action_and_empty_input_cannot_trap_focus(c: Chec
 	ui.open([Boon.DAMAGE, Boon.HASTE, Boon.FORTUNE])
 	c.eq(ui.choice_buttons.size(), 3, "all salvage choices are actual controls")
 	c.ok(ui.choice_buttons[0].has_focus(), "first salvage card receives controller focus")
+	c.eq(ui.save_button.get_theme_color("font_color"), UiTheme.CARD, "save action is light on the dark boon backdrop")
+	c.eq(ui.save_button.get_theme_color("font_focus_color"), UiTheme.CARD, "controller focus keeps save action legible")
 	c.eq(ui.choice_buttons[0].get_node(ui.choice_buttons[0].focus_neighbor_top),
-			ui.choice_buttons[2], "salvage choices wrap inside the modal")
+			ui.save_button, "salvage choices wrap through the Save and Return action")
+	c.eq(ui.save_button.get_node(ui.save_button.focus_neighbor_bottom), ui.choice_buttons[0], "save action returns focus to actual choices")
+	var saves: Array[bool] = []
+	ui.save_requested.connect(func() -> void: saves.append(true))
+	ui.save_button.pressed.emit()
+	c.eq(saves.size(), 1, "boon save action is reachable without choosing a reward")
 	var chosen: Array[int] = []
 	ui.chosen.connect(func(index: int) -> void: chosen.append(index))
 	ui.choice_buttons[1].pressed.emit()

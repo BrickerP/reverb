@@ -6,8 +6,8 @@ const MAX_CORPSES := 24
 const REDUCED_CORPSES := 8
 const MAX_REACTIONS := 96
 const MAX_SHOT_ACTORS := 9
-const SHOT_TIME := 0.13
-const SHOT_INTERVAL := 0.29
+const SHOT_TIME := 0.18
+const SHOT_INTERVAL := 0.55
 const HURT_TIME := 0.10
 const HURT_INTERVAL := 0.24
 const CONTACT_TIME := 0.24
@@ -100,7 +100,12 @@ func terminal_active() -> bool:
 
 func shot(info: ShotInfo) -> bool:
 	var token := info.actor_token
-	if token == 0 or (token == -1 and info.source >= 0):
+	if (token != -1 and not is_copy_token(token)) or (token == -1 and info.source >= 0):
+		return false
+	var weapon := Content.weapon(info.weapon_id)
+	# Light fire belongs to the independently mounted weapon. Only a substantial
+	# cone/slam gets a whole-body action, so automatic fire cannot consume the gait.
+	if weapon == null or weapon.attack_style not in [&"slam", &"cone"]:
 		return false
 	if _shots.has(token) and float(_shots[token]["cooldown"]) > 0.0:
 		return false
@@ -216,40 +221,54 @@ func enemy_died(info: EnemyDeathInfo, reduced: bool = false) -> void:
 	_enemy_contacts.erase(info.target_uid)
 
 
-func player_pose(key: StringName, clock: float, moving: bool, reduced: bool) -> int:
+func player_pose(key: StringName, gait_phase: float, moving: bool, reduced: bool) -> int:
 	if not player_death.is_empty():
 		return _frame(key, 6 if float(player_death["age"]) < PLAYER_DEATH_TIME * 0.38 else 7)
 	if _player_hurt > 0.0:
 		return _frame(key, 3)
-	return _action_or_walk(key, -1, clock, moving, reduced)
+	return _action_or_walk(key, -1, gait_phase, moving, reduced)
 
 
-func echo_pose(key: StringName, token: int, clock: float, moving: bool, reduced: bool) -> int:
-	return _action_or_walk(key, token, clock, moving, reduced)
+func echo_pose(key: StringName, token: int, gait_phase: float, moving: bool, reduced: bool) -> int:
+	return _action_or_walk(key, token, gait_phase, moving, reduced)
 
 
-func enemy_pose(key: StringName, uid: int, clock: float, moving: bool, reduced: bool) -> int:
+func enemy_pose(key: StringName, uid: int, gait_phase: float, moving: bool, reduced: bool) -> int:
 	if _enemy_hurts.has(uid) and float(_enemy_hurts[uid]["left"]) > 0.0:
 		return _frame(key, 3)
 	if _enemy_contacts.has(uid) and float(_enemy_contacts[uid]["left"]) > 0.0:
 		if reduced:
 			return _frame(key, 5)
 		return _frame(key, 5 if float(_enemy_contacts[uid]["left"]) > CONTACT_TIME * 0.55 else 4)
-	return walk_pose(key, clock, moving, reduced)
+	return walk_pose(key, gait_phase, moving, reduced)
 
 
-func _action_or_walk(key: StringName, token: int, clock: float, moving: bool, reduced: bool) -> int:
+func _action_or_walk(key: StringName, token: int, gait_phase: float, moving: bool, reduced: bool) -> int:
 	if not reduced and _shots.has(token) and float(_shots[token]["left"]) > 0.0:
 		return _frame(key, 5 if float(_shots[token]["left"]) > SHOT_TIME * 0.55 else 4)
-	return walk_pose(key, clock, moving, reduced)
+	return walk_pose(key, gait_phase, moving, reduced)
 
 
-static func walk_pose(key: StringName, clock: float, moving: bool, reduced: bool = false) -> int:
+static func walk_pose(key: StringName, gait_phase: float, moving: bool, _reduced: bool = false) -> int:
 	if not moving:
 		return 0
 	var sequence: Array[int] = [0, 1, 0, 2]
-	var index := posmod(int(floor(maxf(0.0, clock) * (5.0 if reduced else 8.0))), sequence.size())
+	var phase := fposmod(maxf(0.0, gait_phase), TAU) if is_finite(gait_phase) else 0.0
+	var index := mini(sequence.size() - 1, int(floor(phase / TAU * float(sequence.size()))))
 	return _frame(key, sequence[index])
+
+
+# Phase is accumulated from actual distance by ArenaView: one full left/right
+# stride is TAU. Frame, lift and lean sample that same phase, never elapsed time.
+static func gait_profile(gait_phase: float, amount: float, moving: bool, reduced: bool = false) -> Dictionary:
+	var phase := fposmod(maxf(0.0, gait_phase), TAU) if is_finite(gait_phase) else 0.0
+	var weight := clampf(amount, 0.0, 1.0) if is_finite(amount) else 0.0
+	if not moving:
+		return {"phase": phase, "bob": 0.0, "lean": 0.0, "scale": Vector2.ONE}
+	var amplitude := weight * (0.3 if reduced else 1.0)
+	var lift := absf(sin(phase)) * amplitude
+	return {"phase": phase, "bob": -lift * 0.9, "lean": sin(phase) * amplitude * 0.018,
+		"scale": Vector2(1.0 + lift * 0.008, 1.0 - lift * 0.008)}
 
 
 static func death_kind(id: StringName) -> StringName:
@@ -321,9 +340,9 @@ static func _frame(key: StringName, frame: int) -> int:
 
 
 static func is_copy_token(token: int) -> bool:
-	# RefCounted instance IDs can use the signed high bit. Only the explicit
-	# player/unknown sentinels are special; an identity is never a slot number.
-	return token != -1 and token != 0
+	# EchoBank assigns persistent positive UIDs; negative keys belong to the
+	# player/enemy presentation lanes and never identify a recorded copy.
+	return token > 0
 
 
 func _insert_reaction(queue: Dictionary, token: int, left: float, cooldown: float, cap: int) -> void:

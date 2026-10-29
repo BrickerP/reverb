@@ -51,7 +51,7 @@ func test_delayed_shot_keeps_removed_copy_identity_through_direct_and_aoe_kills(
 	sim.damage_event.connect(func(info: DamageInfo) -> void: hits.append(info))
 	sim.enemy_killed.connect(func(info: EnemyDeathInfo) -> void: deaths.append(info))
 	sim.explosion_info.connect(func(info: ExplosionInfo) -> void: blasts.append(info))
-	var token: int = a.get_instance_id()
+	var token: int = a.uid
 	var tint := a.tint()
 	var weapons: Array[WeaponDef] = [weapon]
 	var levels: Array[int] = [0]
@@ -64,7 +64,8 @@ func test_delayed_shot_keeps_removed_copy_identity_through_direct_and_aoe_kills(
 	c.eq(sim.projectiles.size(), 1, "one real delayed projectile is in flight")
 	var projectile := sim.projectiles[0]
 	c.eq(projectile.actor_token, token, "projectile carries its original take")
-	c.ok(sim.collapse_oldest_echo(), "the firing copy is genuinely removed before impact")
+	sim.echoes[0].pos -= Vector2(300.0, 0.0)
+	c.ok(sim.retire_selected_echo(), "the moving firing copy is genuinely removed before impact")
 	c.eq(sim.echoes.size(), 1, "one copy survives")
 	c.eq(sim.echoes[0].take, b, "old slot zero now belongs to a different copy")
 	a.tint_index = 4

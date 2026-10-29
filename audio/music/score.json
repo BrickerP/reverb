@@ -1,0 +1,77 @@
+{
+  "title": "Paperwork Waltz",
+  "composer": "Original score authored for this repository with Codex",
+  "license": "Repository LICENSE; no third-party musical material or soundfont",
+  "recipe": "python3 tools/build_original_score.py",
+  "bpm": 90,
+  "meter": "3/4",
+  "bars": 48,
+  "seconds": 96.0,
+  "sample_rate": 22050,
+  "format": "mono PCM16",
+  "room_source": {
+    "path": "audio/ambient.wav",
+    "sha256": "b4e37167c39d097df19318ac2ec2fa4e32aef7b7033e5a0d3a13cbd276636d4f",
+    "license": "Existing documented CC0 objects and original synthesis; see audio/presentation/SOURCES.md"
+  },
+  "form": [
+    "A: unsigned form",
+    "A2: duplicate reply",
+    "B: borrowed daylight",
+    "C: red ink",
+    "A3: carbon reprise",
+    "turnaround: file still open"
+  ],
+  "tracks": [
+    {
+      "file": "menu.wav",
+      "sha256": "d89fb1ce1db7fd3271321ad51bdce36e2aed5a9e9a9a2e959e1113f6f6e37032",
+      "notes": 596,
+      "seconds": 96.0,
+      "peak": 0.580718994140625,
+      "rms": 0.15548964832684642,
+      "dc": 8.207942533024495e-07,
+      "seam_delta": 0.0
+    },
+    {
+      "file": "shop.wav",
+      "sha256": "4b0543de1ef9e90603316833b2a794cb06fd6ece036671b6f8ecd330abc91c07",
+      "notes": 796,
+      "seconds": 96.0,
+      "peak": 0.582366943359375,
+      "rms": 0.15100658547334558,
+      "dc": -3.1068301615351e-07,
+      "seam_delta": 0.0
+    },
+    {
+      "file": "battle.wav",
+      "sha256": "181e81005dffa88c537bcd618f8bd3c81f48aeed471ad7aa769db58897feacbf",
+      "notes": 740,
+      "seconds": 96.0,
+      "peak": 0.583160400390625,
+      "rms": 0.1433728609625176,
+      "dc": -9.981502841479473e-07,
+      "seam_delta": 0.0
+    },
+    {
+      "file": "pressure.wav",
+      "sha256": "f29c6814b28ba6aefd792a8439afb5788b4fe5c446b639a3800d54549da41ee1",
+      "notes": 1130,
+      "seconds": 96.0,
+      "peak": 0.592926025390625,
+      "rms": 0.12577068658923243,
+      "dc": -6.961606257086168e-07,
+      "seam_delta": 0.0
+    },
+    {
+      "file": "boss.wav",
+      "sha256": "9b85f3b672a012443578a0e9f1052185ba74240003b3f025ba8952de90fac0d9",
+      "notes": 1190,
+      "seconds": 96.0,
+      "peak": 0.584747314453125,
+      "rms": 0.13130237048733912,
+      "dc": -6.904515549709467e-07,
+      "seam_delta": 0.0
+    }
+  ]
+}

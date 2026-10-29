@@ -26,6 +26,7 @@ var _metrics := {
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_shop_interaction_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://shop_interaction_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://shop_interaction_probe_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://shop_interaction_probe_settings.json")

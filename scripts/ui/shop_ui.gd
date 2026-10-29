@@ -2,6 +2,7 @@ class_name ShopUi
 extends Control
 
 signal start_requested
+signal receipt_requested
 
 const MAX_PENDING_FEEDBACK := 8
 const FEEDBACK_EXPIRY_MSEC := 800
@@ -13,6 +14,7 @@ var offers_box: GridContainer
 var reroll_button: Button
 var undo_button: Button
 var start_button: Button
+var receipt_button: Button
 var echo_panel: EchoPanel
 var build_panel: BuildPanel
 
@@ -88,7 +90,7 @@ func _ready() -> void:
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
 	echo_panel.merge_requested.connect(_on_merge)
-	echo_panel.refresh_requested.connect(_on_refresh_echo)
+	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	root.add_child(_build_footer())
 	_overlay = Control.new()
@@ -144,6 +146,8 @@ func close_session() -> void:
 		UiTheme.clear(_overlay)
 	if _footer != null:
 		_footer.text = Loc.t("shop.keys")
+	if receipt_button != null:
+		receipt_button.visible = false
 
 
 func refresh(animate_echo: bool = false) -> void:
@@ -183,6 +187,7 @@ func refresh(animate_echo: bool = false) -> void:
 				if sim.last_contract_success else Loc.t("contract.result_fail"))
 	_warning.text = "\n".join(notices)
 	_refresh_contract()
+	refresh_receipt()
 	var replace_with := ""
 	var chooser := Callable()
 	if _replacing != null:
@@ -213,6 +218,11 @@ func _build_footer() -> Control:
 	_warning.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	actions.add_child(_warning)
+	receipt_button = Button.new()
+	receipt_button.custom_minimum_size = Vector2(0.0, 38.0)
+	receipt_button.add_theme_font_size_override("font_size", 14)
+	receipt_button.pressed.connect(func() -> void: receipt_requested.emit())
+	actions.add_child(receipt_button)
 	for button: Button in [reroll_button, undo_button, start_button]:
 		actions.add_child(button)
 	_footer = UiTheme.label(Loc.t("shop.keys"), 13, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
@@ -355,8 +365,8 @@ func _refresh_contract() -> void:
 			text += Loc.t("contract.clear", [contract.target, contract.deposit, contract.reward])
 		AnomalyContract.HUNT:
 			text += Loc.t("contract.hunt", [contract.deposit, contract.reward])
-		AnomalyContract.COLLAPSE:
-			text += Loc.t("contract.collapse", [contract.deposit, contract.reward])
+		AnomalyContract.RETIRE:
+			text += Loc.t("contract.retire", [contract.deposit, contract.reward])
 	var active := contract.accepted or sim.active_contract == contract
 	if active:
 		text += " · " + Loc.t("contract.active")
@@ -605,7 +615,7 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 			ShopResult.SELL: _react_vendor(&"sell", result)
 			ShopResult.ECHO_MERGE: _react_vendor(&"merge", result)
 			ShopResult.ECHO_DISCARD: _react_vendor(&"discard", result)
-			ShopResult.ECHO_REFRESH: _react_vendor(&"refresh", result)
+			ShopResult.ECHO_REPAIR: _react_vendor(&"repair", result)
 			ShopResult.BUY, ShopResult.REPLACE, ShopResult.UPGRADE, ShopResult.EVOLVE:
 				_react_vendor(&"buy", result)
 	var reverse := result.action == ShopResult.UNDO
@@ -660,7 +670,7 @@ func _vendor_text(kind: StringName) -> String:
 		&"sell": return Loc.t("shop.vendor_sell")
 		&"merge": return Loc.t("shop.vendor_merge")
 		&"discard": return Loc.t("shop.vendor_discard")
-		&"refresh": return Loc.t("shop.vendor_refresh")
+		&"repair": return Loc.t("shop.vendor_repair")
 	return Loc.t("shop.vendor_idle")
 
 
@@ -979,8 +989,8 @@ func _on_discard(take: EchoTake) -> void:
 		echo_panel.focus_first_discard()
 
 
-func _on_refresh_echo(take: EchoTake) -> void:
-	var result := sim.shop.refresh_echo(sim, take)
+func _on_repair_echo(take: EchoTake) -> void:
+	var result := sim.shop.repair_echo(sim, take)
 	if not result.ok:
 		return
 	refresh()
@@ -1044,10 +1054,17 @@ func focus_default() -> void:
 func _fly_take_token() -> void:
 	if reduced_effects or not is_inside_tree() or _overlay == null:
 		return
-	var session_epoch := _feedback_epoch
-	await get_tree().process_frame
-	await get_tree().process_frame
-	if reduced_effects or session_epoch != _feedback_epoch or not visible or sim == null:
+	_fly_take_token_after_layout(_feedback_epoch, 2)
+
+
+func _fly_take_token_after_layout(session_epoch: int, frames: int) -> void:
+	if not is_inside_tree() or is_queued_for_deletion() or reduced_effects \
+			or session_epoch != _feedback_epoch or not visible or sim == null:
+		return
+	if frames > 0:
+		var next_frame := _fly_take_token_after_layout.bind(session_epoch, frames - 1)
+		if not get_tree().process_frame.is_connected(next_frame):
+			get_tree().process_frame.connect(next_frame, CONNECT_ONE_SHOT)
 		return
 	var arrival := echo_panel.arrival_point()
 	if arrival == Vector2.ZERO:
@@ -1078,4 +1095,19 @@ func _arrival_origin() -> Vector2:
 						* ((child as ArenaView).get_global_transform_with_canvas() * Sim.ARENA.get_center())
 		ancestor = ancestor.get_parent()
 	return _overlay.get_global_transform_with_canvas().affine_inverse() \
-			* (get_global_transform_with_canvas() * Sim.ARENA.get_center())
+			* (get_global_transform_with_canvas() * Sim.VIEWPORT.get_center())
+
+
+func refresh_receipt() -> void:
+	if receipt_button == null:
+		return
+	var receipt := StoryLedger.receipt(sim)
+	receipt_button.visible = not receipt.is_empty()
+	if receipt.is_empty():
+		return
+	var title := Loc.t(receipt.name_key)
+	var body := Loc.t(receipt.body_key)
+	receipt_button.text = Loc.t("story.read_receipt", [title])
+	receipt_button.tooltip_text = body
+	receipt_button.accessibility_name = title
+	receipt_button.accessibility_description = body

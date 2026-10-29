@@ -68,7 +68,8 @@ func test_rebind_disconnects_old_sim_and_is_idempotent(c: Check) -> void:
 
 func test_all_weapon_feedback_profiles_are_explicit(c: Check) -> void:
 	var styles := {&"sidearm": &"sidearm", &"scatter": &"scatter",
-			&"marksman": &"marksman", &"arcane": &"arcane"}
+			&"marksman": &"marksman", &"arcane": &"arcane",
+			&"press": &"press", &"salvage": &"salvage"}
 	for weapon: WeaponDef in Content.weapons().values():
 		var profile := ArenaPainter.weapon_feedback_profile(weapon.id)
 		c.eq(profile["weapon_id"], weapon.id, "%s feedback retains weapon ID" % weapon.id)
@@ -235,13 +236,15 @@ func test_pause_reduced_effects_motion_and_state_are_independent(c: Check) -> vo
 	view._process(0.05)
 	c.ok(not view.motion_stats()["moving"], "persistent facing alone does not create movement")
 	sim.player.pos += Vector2(12.0, 0.0)
+	sim.wave_time += 0.05
 	view._process(0.05)
 	c.ok(view.motion_stats()["moving"], "actual position delta starts gait")
 	for _i in 20:
+		sim.wave_time += 0.05
 		view._process(0.05)
 	c.ok(not view.motion_stats()["moving"], "gait settles after position stops")
 	c.eq(sim.rng.state, rng_state, "presentation never advances simulation RNG")
-	c.eq(sim.wave_time, wave_time, "presentation never advances simulation time")
+	c.near(sim.wave_time, wave_time + 1.05, 0.0001, "only the explicit simulation ticks advance time")
 	c.eq(sim.player.hp, hp, "presentation never changes player health")
 	c.eq(sim.player.cooldowns, cooldowns, "presentation never changes weapon cooldowns")
 	view.free()

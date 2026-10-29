@@ -2,6 +2,8 @@ class_name SettingsUi
 extends Control
 
 signal volume_changed(value: float)
+signal music_volume_changed(value: float)
+signal effects_volume_changed(value: float)
 signal shake_changed(on: bool)
 signal reduced_effects_changed(on: bool)
 signal fullscreen_changed(on: bool)
@@ -10,11 +12,15 @@ signal closed
 
 var volume_slider: HSlider
 var volume_value: Label
+var music_volume_slider: HSlider
+var effects_volume_slider: HSlider
+var music_volume_value: Label
+var effects_volume_value: Label
 var shake_check: CheckButton
 var reduced_effects_check: CheckButton
 var fullscreen_check: CheckButton
 var language_option: OptionButton
-var language_lock_hint: Label
+var error_label: Label
 var close_button: Button
 
 var _syncing := false
@@ -67,6 +73,14 @@ func _ready() -> void:
 	volume_value.custom_minimum_size = Vector2(56.0, 0.0)
 	volume_row.add_child(volume_value)
 	box.add_child(volume_row)
+	music_volume_slider = HSlider.new()
+	effects_volume_slider = HSlider.new()
+	music_volume_value = UiTheme.label("", 16, UiTheme.INK)
+	effects_volume_value = UiTheme.label("", 16, UiTheme.INK)
+	box.add_child(_audio_row("settings.music_volume", music_volume_slider, music_volume_value))
+	box.add_child(_audio_row("settings.effects_volume", effects_volume_slider, effects_volume_value))
+	music_volume_slider.value_changed.connect(_on_music_volume)
+	effects_volume_slider.value_changed.connect(_on_effects_volume)
 
 	box.add_child(UiTheme.label(Loc.t("settings.motion_group"), 22, UiTheme.INK))
 	shake_check = CheckButton.new()
@@ -107,10 +121,10 @@ func _ready() -> void:
 	language_option.item_selected.connect(_on_language)
 	language_row.add_child(language_option)
 	box.add_child(language_row)
-	language_lock_hint = UiTheme.label(Loc.t("settings.language_locked"), 13, UiTheme.WARN)
-	language_lock_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	language_lock_hint.visible = false
-	box.add_child(language_lock_hint)
+	error_label = UiTheme.label("", 13, UiTheme.WARN)
+	error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	error_label.visible = false
+	box.add_child(error_label)
 
 	close_button = Button.new()
 	close_button.text = Loc.t("settings.close")
@@ -121,23 +135,26 @@ func _ready() -> void:
 	box.add_child(close_button)
 
 
-func open(settings: Settings, language_enabled: bool = true) -> void:
+func open(settings: Settings) -> void:
 	_aside.text = Loc.t("settings.aside")
 	_syncing = true
 	volume_slider.value = settings.volume
 	volume_value.text = "%d%%" % int(round(settings.volume * 100.0))
+	music_volume_slider.value = settings.music_volume
+	effects_volume_slider.value = settings.effects_volume
+	music_volume_value.text = "%d%%" % int(round(settings.music_volume * 100.0))
+	effects_volume_value.text = "%d%%" % int(round(settings.effects_volume * 100.0))
 	shake_check.button_pressed = settings.shake
 	reduced_effects_check.button_pressed = settings.reduced_effects
 	fullscreen_check.button_pressed = settings.fullscreen
 	var index := 0 if settings.language == "" else (1 if settings.language == "en" else 2)
 	language_option.select(index)
-	language_option.disabled = not language_enabled
-	language_option.tooltip_text = "" if language_enabled else Loc.t("settings.language_locked")
-	language_option.accessibility_description = language_option.tooltip_text
-	language_lock_hint.visible = not language_enabled
+	language_option.disabled = false
+	error_label.visible = false
+	error_label.text = ""
 	_syncing = false
 	visible = true
-	UiFocus.cycle([volume_slider, shake_check, reduced_effects_check, fullscreen_check,
+	UiFocus.cycle([volume_slider, music_volume_slider, effects_volume_slider, shake_check, reduced_effects_check, fullscreen_check,
 			language_option, close_button])
 	volume_slider.grab_focus()
 	UiTheme.animate_open(self, settings.reduced_effects)
@@ -177,3 +194,41 @@ func _on_language(index: int) -> void:
 	if not _syncing:
 		_aside.text = Loc.t("settings.changed")
 		language_changed.emit(str(language_option.get_item_metadata(index)))
+
+
+func _audio_row(key: String, slider: HSlider, value: Label) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var label := UiTheme.label(Loc.t(key), 18, UiTheme.DIM)
+	label.custom_minimum_size.x = 114.0
+	row.add_child(label)
+	slider.min_value = 0.0
+	slider.max_value = 1.0
+	slider.step = 0.05
+	slider.custom_minimum_size = Vector2(260.0, 28.0)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.accessibility_name = Loc.t(key)
+	row.add_child(slider)
+	value.custom_minimum_size.x = 56.0
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(value)
+	return row
+
+
+func _on_music_volume(value: float) -> void:
+	music_volume_value.text = "%d%%" % int(round(value * 100.0))
+	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
+		music_volume_changed.emit(value)
+
+
+func _on_effects_volume(value: float) -> void:
+	effects_volume_value.text = "%d%%" % int(round(value * 100.0))
+	if not _syncing:
+		_aside.text = Loc.t("settings.changed")
+		effects_volume_changed.emit(value)
+
+
+func show_error(message: String) -> void:
+	error_label.text = message
+	error_label.visible = not message.is_empty()

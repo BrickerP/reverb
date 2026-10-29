@@ -17,6 +17,7 @@ import stat
 import subprocess
 import tarfile
 import time
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -26,6 +27,8 @@ PRESETS = {
     "Windows": "TakeStack.exe",
     "Linux": "TakeStack.x86_64",
 }
+PREVIEW_USER_DIR = "TakeStack Preview"
+PROFILE_FILES = ("reverb_save.json", "settings.json", "runs.jsonl", "feedback.jsonl", "suspended_run.json")
 PROVENANCE_FILES = [
     "LICENSE",
     "THIRD_PARTY.md",
@@ -50,6 +53,8 @@ PROVENANCE_FILES = [
     "assets/presentation/weapons/SOURCES.md",
     "assets/presentation/weapons/manifest.json",
     "audio/presentation/SOURCES.md",
+    "audio/music/SOURCES.md",
+    "audio/music/score.json",
 ]
 FORBIDDEN_PATHS = [
     "assets/presentation/surfaces/panel_skin.png",
@@ -171,8 +176,8 @@ def cue_names(audio_source: str) -> list[str]:
 
 def expected_inventory(stage: Path) -> dict[str, Any]:
     pngs = sorted(path.relative_to(stage).as_posix() for path in (stage / "assets/presentation").rglob("*.png"))
-    if len(pngs) != 43:
-        raise RuntimeError(f"expected 43 presentation PNGs, found {len(pngs)}")
+    if len(pngs) != 48:
+        raise RuntimeError(f"expected 48 presentation PNGs, found {len(pngs)}")
     names = cue_names((stage / "scripts/game/audio.gd").read_text())
     cues: list[str] = []
     for name in names:
@@ -191,6 +196,11 @@ def expected_inventory(stage: Path) -> dict[str, Any]:
     resources.extend(f"res://{path}" for path in fonts)
     resources.extend(f"res://{path}" for path in cues)
     resources.append("res://audio/ambient.wav")
+    music = [f"audio/music/{name}.wav" for name in ["menu", "shop", "battle", "pressure", "boss"]]
+    for path in music:
+        if not (stage / path).is_file():
+            raise RuntimeError(f"missing original score arrangement: {path}")
+    resources.extend(f"res://{path}" for path in music)
     return {
         "resources": resources,
         "files": [f"res://{path}" for path in PROVENANCE_FILES],
@@ -200,6 +210,7 @@ def expected_inventory(stage: Path) -> dict[str, Any]:
             "font": len(fonts),
             "runtime_cues": len(cues),
             "ambient": 1,
+            "music": len(music),
             "provenance": len(PROVENANCE_FILES),
         },
         "runtime_cue_paths": cues,
@@ -238,6 +249,16 @@ def tree_fingerprint(directory: Path) -> dict[str, Any]:
     return {"exists": True, "files": artifact_records(directory)}
 
 
+def profile_fingerprint(directory: Path) -> dict[str, Any]:
+    """Protect real preview progress while allowing separately named audit logs."""
+    return {
+        name: {"bytes": (directory / name).stat().st_size,
+               "sha256": sha256(directory / name),
+               "mtime_ns": (directory / name).stat().st_mtime_ns}
+        for name in PROFILE_FILES if (directory / name).is_file()
+    }
+
+
 def extract_macos(zip_path: Path, smoke_dir: Path, logs: Path) -> dict[str, Path]:
     ditto = shutil.which("ditto")
     if ditto is None:
@@ -261,6 +282,19 @@ def extract_macos(zip_path: Path, smoke_dir: Path, logs: Path) -> dict[str, Path
     if len(packs) != 1:
         raise RuntimeError(f"expected one delivered macOS PCK, found {len(packs)}")
     return {"app": applications[0], "executable": executables[0], "pack": packs[0]}
+
+
+def add_macos_instructions(zip_path: Path, instructions: Path) -> None:
+    """Append user guidance outside the signed app, before auditing the ZIP."""
+    with zipfile.ZipFile(zip_path, "a", compression=zipfile.ZIP_DEFLATED) as archive:
+        if "MAC_START_HERE.txt" in archive.namelist():
+            raise RuntimeError("macOS export already contains first-open instructions")
+        info = zipfile.ZipInfo("MAC_START_HERE.txt")
+        info.external_attr = (stat.S_IFREG | 0o644) << 16
+        info.compress_type = zipfile.ZIP_DEFLATED
+        archive.writestr(info, instructions.read_bytes())
+        if archive.testzip() is not None:
+            raise RuntimeError("macOS export failed ZIP integrity after adding instructions")
 
 
 def verify_macos_signature(
@@ -312,30 +346,43 @@ def verify_macos_signature(
 
 
 def macos_smoke(
-    macos: dict[str, Path], smoke_dir: Path, logs: Path, custom_name: str,
+    macos: dict[str, Path], smoke_dir: Path, logs: Path, custom_name: str, audit_key: str,
 ) -> dict[str, Any]:
     normal_user_dir = Path.home() / "Library/Application Support/Godot/app_userdata/Take Stack"
     isolated_user_dir = Path.home() / "Library/Application Support" / custom_name
-    isolated_log = isolated_user_dir / "export-audit.log"
+    log_name = f"export-audit-{audit_key}.log"
+    gui_log_name = f"export-gui-{audit_key}.log"
+    isolated_log = isolated_user_dir / log_name
     if isolated_log.exists():
         raise RuntimeError(f"isolated export smoke log already exists: {isolated_log}")
     if isolated_user_dir.resolve() not in isolated_log.resolve().parents:
         raise RuntimeError("isolated export smoke log escaped its exact custom user directory")
     normal_before = tree_fingerprint(normal_user_dir)
+    preview_before = profile_fingerprint(isolated_user_dir)
     environment = os.environ.copy()
     environment.update({
-        "REVERB_SAVE": "user://export_audit_save.json",
-        "REVERB_RUN_LOG": "user://export_audit_runs.jsonl",
-        "REVERB_SETTINGS": "user://export_audit_settings.json",
+        "REVERB_SAVE": f"user://audit_{audit_key}_save.json",
+        "REVERB_RUN_LOG": f"user://audit_{audit_key}_runs.jsonl",
+        "REVERB_SETTINGS": f"user://audit_{audit_key}_settings.json",
+        "REVERB_FEEDBACK_LOG": f"user://audit_{audit_key}_feedback.jsonl",
+        "REVERB_SUSPEND": f"user://audit_{audit_key}_suspend.json",
     })
     run_checked(
-        [str(macos["executable"]), "--headless", "--log-file", "user://export-audit.log",
+        [str(macos["executable"]), "--headless", "--log-file", f"user://{log_name}",
          "--quit-after", "30"],
         smoke_dir,
         logs / "macos-smoke.log",
         timeout=60,
         environment=environment,
     )
+    launch = ["/usr/bin/open", "-n", "-W"]
+    for key in ["REVERB_SAVE", "REVERB_RUN_LOG", "REVERB_SETTINGS", "REVERB_FEEDBACK_LOG", "REVERB_SUSPEND"]:
+        launch.extend(["--env", f"{key}={environment[key]}"])
+    launch.extend([str(macos["app"]), "--args", "--log-file", f"user://{gui_log_name}", "--quit-after", "120"])
+    run_checked(launch, smoke_dir, logs / "macos-launchservices.log", timeout=60)
+    gui_log = isolated_user_dir / gui_log_name
+    if not gui_log.is_file() or ENGINE_ERRORS.search(gui_log.read_text(errors="replace")):
+        raise RuntimeError("exported macOS app did not complete clean LaunchServices startup")
     normal_after = tree_fingerprint(normal_user_dir)
     if not isolated_log.is_file():
         raise RuntimeError(
@@ -346,6 +393,8 @@ def macos_smoke(
         raise RuntimeError(f"exported macOS app logged an engine error: {isolated_log}")
     if normal_before != normal_after:
         raise RuntimeError("exported preview changed the normal Take Stack user-data directory")
+    if preview_before != profile_fingerprint(isolated_user_dir):
+        raise RuntimeError("export audit changed the stable preview's real player files")
     return {
         "app": str(macos["app"]),
         "executable": str(macos["executable"]),
@@ -354,7 +403,10 @@ def macos_smoke(
         "isolated_user_dir": str(isolated_user_dir),
         "isolated_log": artifact_record(isolated_log),
         "normal_user_dir_unchanged": True,
+        "preview_player_files_unchanged": True,
         "frames": 30,
+        "launchservices_requested_frames": 120,
+        "launchservices_log": artifact_record(gui_log),
         "log": str(logs / "macos-smoke.log"),
     }
 
@@ -380,7 +432,7 @@ def main() -> None:
 
     short = commit[:12]
     created_at = int(time.time())
-    custom_name = f"Codex/TakeStack-ExportAudit-{short}-{created_at}"
+    custom_name = PREVIEW_USER_DIR
     overlay = inject_isolated_user_dir(stage / "project.godot", custom_name, commit)
     expected = expected_inventory(stage)
     # Keep every audit script, pack and binary outside res:// so `all_resources`
@@ -411,6 +463,7 @@ def main() -> None:
             logs / f"export-{preset.lower()}.log",
         )
 
+    add_macos_instructions(artifacts / "macos" / PRESETS["macOS"], stage / "tools/macos_first_open.txt")
     smoke_dir = audit_dir / "macos-smoke"
     macos = extract_macos(artifacts / "macos" / PRESETS["macOS"], smoke_dir, logs)
     signature = verify_macos_signature(macos["app"], logs, "com.brickerp.takestack")
@@ -437,7 +490,7 @@ def main() -> None:
             "audit": json.loads(audit_result.read_text()),
         }
 
-    smoke = macos_smoke(macos, smoke_dir, logs, custom_name)
+    smoke = macos_smoke(macos, smoke_dir, logs, custom_name, f"{short}-{created_at}")
     result = {
         "commit": commit,
         "source_repo": str(repo),

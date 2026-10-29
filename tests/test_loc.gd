@@ -28,6 +28,8 @@ func _is_content_key(key: String) -> bool:
 	var id := StringName(parts[1])
 	match parts[0]:
 		"weapon":
+			if parts[1].begins_with("desc."):
+				return Content.weapons().has(StringName(parts[1].trim_prefix("desc.")))
 			if parts[1].begins_with("family."):
 				var family := StringName(parts[1].trim_prefix("family."))
 				for w: WeaponDef in Content.weapons().values():
@@ -44,8 +46,20 @@ func _is_content_key(key: String) -> bool:
 			return false
 		"item":
 			return Content.items().has(id)
+		"wave":
+			if WaveDirector.phase_profile(0.0, 0.0)["name_key"] == key:
+				return true
+			for sample: float in [0.0, 25.0, 40.0, 65.0, 75.0, 95.0, 100.0]:
+				if WaveDirector.phase_profile(sample, 100.0)["name_key"] == key:
+					return true
+			return false
+		"story":
+			for clue in StoryLedger.ALL:
+				if parts[1] in [String(clue) + "_name", String(clue) + "_body"]:
+					return true
+			return false
 		"stat":
-			return Stats.ORDER.has(id)
+			return id == &"seconds" or Stats.ORDER.has(id)
 	return false
 
 
@@ -128,7 +142,7 @@ func test_formatters(c: Check) -> void:
 	c.eq(Loc.stat_value(Stats.CRIT_CHANCE, 0.05, false), "5%", "unsigned percent")
 	c.eq(Loc.stat_value(Stats.MOVE_SPEED, -10.0), "-10", "negative stat")
 	c.eq(Loc.item_desc(Content.item(&"sharp_edge")), "+10% Damage", "item description")
-	c.ok(Loc.weapon_line(Content.weapon(&"shotgun")).contains("3.5x5"), "pellets are shown")
+	c.ok(not Loc.weapon_desc(&"shotgun").is_empty(), "actual cone behavior is described")
 	c.ok(Loc.weapon_line(Content.weapon(&"rifle")).contains("Pierce 2"), "pierce count is shown")
-	c.ok(Loc.weapon_line(Content.weapon(&"orb")).contains("Pierces all"), "unlimited pierce is worded")
+	c.ok(Loc.weapon_desc(&"orb").contains("orbits"), "orbit behavior is worded")
 	Loc.lang = prev

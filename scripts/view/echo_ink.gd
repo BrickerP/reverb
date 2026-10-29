@@ -1,7 +1,7 @@
 class_name EchoInk
 extends RefCounted
 
-# A copy's wear comes from the simulation's age, not elapsed render time. The
+# A copy's wear comes from authoritative condition, never elapsed render time. The
 # overlay stays readable when paused, silenced, rewinding, or effects are reduced.
 const PAPER := Color("e5d8b8")
 const INK := Color("292720")
@@ -17,8 +17,8 @@ static func identity_color(identity: Color) -> Color:
 
 static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		reduced: bool = false) -> Dictionary:
-	var result := {"valid": false, "visible": false, "lifespan": 1, "remaining": 0,
-		"age": 0, "age_ratio": 0.0, "expiring": false, "expired": true,
+	var result := {"valid": false, "visible": false, "duration": 120.0, "remaining": 0.0,
+		"condition": 0.0, "wear_ratio": 1.0, "expiring": false, "expired": true,
 		"merged": false, "muted": false, "rewinding": false, "slot": 0,
 		"identity_pattern": 0, "tint": PAPER, "body_tint": PAPER,
 		"state_priority": &"expired",
@@ -28,18 +28,18 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		"crowded": false, "reduced": reduced}
 	if actor == null or actor.take == null or sim == null or not actor.pos.is_finite():
 		return result
-	var lifetime := maxi(1, sim.echo_lifespan())
-	var age := maxi(0, actor.take.age)
-	var left := maxi(0, lifetime - age)
-	var wear := clampf(float(age) / float(maxi(1, lifetime - 1)), 0.0, 1.0)
-	var expired := left == 0
-	var expiring := left == 1
-	var muted := sim.echo_silenced > 0.0
+	var duration := sim.echo_duration()
+	var condition := clampf(actor.take.condition, 0.0, 100.0)
+	var left := duration * condition / 100.0 / maxf(0.001, sim.wear_rate_mult)
+	var wear := 1.0 - condition / 100.0
+	var expired := condition <= 0.0
+	var expiring := condition > 0.0 and condition <= EchoSystem.LOW_CONDITION
+	var muted := sim.echo_silenced > 0.0 or EnemyBrain.echo_is_sealed(sim, actor.pos)
 	var crowded := sim.echoes.size() > 4
 	var tint := identity_color(actor.take.tint())
 	var alpha := lerpf(0.80, 0.67, wear)
 	var body := PAPER.lerp(tint, 0.18).lerp(OLD_INK, wear * 0.18)
-	var state_priority: StringName = &"worn" if age > 0 else &"fresh"
+	var state_priority: StringName = &"worn" if wear > 0.0 else &"fresh"
 	if actor.take.merged:
 		state_priority = &"merged"
 	if expiring:
@@ -63,10 +63,10 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		creases = mini(2, creases)
 		tears = mini(1, tears)
 	var slot := clampi(actor.index, 0, MAX_SLOTS - 1)
-	result.merge({"valid": true, "visible": not expired, "lifespan": lifetime,
-		"remaining": left, "age": age, "age_ratio": wear, "expiring": expiring,
+	result.merge({"valid": true, "visible": not expired, "duration": duration,
+		"remaining": left, "condition": condition, "wear_ratio": wear, "expiring": expiring,
 		"expired": expired, "merged": actor.take.merged, "muted": muted,
-		"rewinding": actor.rewinding, "slot": slot, "identity_pattern": slot,
+		"rewinding": actor.rewinding, "slot": slot, "identity_pattern": posmod(actor.take.tint_index, MAX_SLOTS),
 		"tint": tint, "body_tint": body, "alpha": alpha, "state_priority": state_priority,
 		"offset_alpha": alpha * (0.12 if muted else (0.20 if reduced else 0.28)),
 		"print_offset": Vector2(1.4 + wear * 2.0, 0.45 if slot % 2 else -0.45),
@@ -104,8 +104,8 @@ static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 			Vector2(0.84, 0.15), Vector2(0.86, 0.35)]), bounds))
 		punctures.append(_point(Vector2(0.14, 0.35), bounds))
 		punctures.append(_point(Vector2(0.86, 0.35), bounds))
-	# Three physical punch positions identify the eight current slots even if two
-	# palette entries repeat. These are slot marks, not a claim of permanent identity.
+	# Three punch positions follow the take's immutable print tint, so selecting
+	# or removing another copy cannot change this copy's physical identity.
 	var identity: Array[Dictionary] = []
 	var pattern := clampi(int(data.get("identity_pattern", 0)), 0, MAX_SLOTS - 1)
 	for bit in 3:

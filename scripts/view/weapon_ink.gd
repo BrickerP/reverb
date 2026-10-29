@@ -11,7 +11,9 @@ const MAX_MUZZLE_MARKS := 32
 const MAX_HIT_MARKS := 48
 const MAX_BLAST_MARKS := 12
 const IDS: Array[StringName] = [&"pistol", &"smg", &"shotgun", &"rifle", &"orb",
-	&"flechette", &"longbow", &"hex_bolt", &"twin_fangs", &"flak_crown", &"rail_spike", &"nova_core"]
+	&"flechette", &"longbow", &"hex_bolt", &"twin_fangs", &"flak_crown", &"rail_spike", &"nova_core", &"stapler", &"paper_saw", &"hole_punch", &"ink_bottle",
+	&"stamp", &"mallet", &"cutter", &"tape_spool", &"rubber_band", &"paper_plane",
+	&"hydraulic_press", &"redaction_engine"]
 
 static var _batches: Dictionary = {}
 static var _last_render: Dictionary = {"projectiles": 0, "groups": 0, "draw_calls": 0, "trails": 0}
@@ -58,6 +60,41 @@ static func profile(id: StringName) -> Dictionary:
 		&"nova_core":
 			result.merge({"style": &"arcane", "color": Color("8f7a95"), "length": 18.0,
 				"recoil": 4.0, "evolved": true, "glyph": &"nova", "muzzle": &"nova", "impact": &"nova"}, true)
+		&"stapler":
+			result.merge({"length": 17.0, "recoil": 5.0, "glyph": &"clamp", "muzzle": &"clamp", "impact": &"clamp"}, true)
+		&"paper_saw":
+			result.merge({"style": &"scatter", "color": Color("c78346"), "length": 20.0, "recoil": 5.0,
+				"glyph": &"saw", "muzzle": &"saw", "impact": &"saw"}, true)
+		&"hole_punch":
+			result.merge({"style": &"marksman", "color": Color("be5749"), "length": 28.0, "recoil": 6.0,
+				"glyph": &"perforate", "muzzle": &"perforate", "impact": &"perforate"}, true)
+		&"ink_bottle":
+			result.merge({"style": &"arcane", "color": Color("8f7a95"), "length": 13.0, "recoil": 4.0,
+				"glyph": &"blot", "muzzle": &"blot", "impact": &"blot"}, true)
+		&"stamp":
+			result.merge({"style": &"press", "color": Color("b75b45"), "length": 18.0, "recoil": 7.0,
+				"glyph": &"stamp", "muzzle": &"stamp", "impact": &"stamp"}, true)
+		&"mallet":
+			result.merge({"style": &"press", "color": Color("b75b45"), "length": 23.0, "recoil": 8.0,
+				"glyph": &"mallet", "muzzle": &"mallet", "impact": &"mallet"}, true)
+		&"cutter":
+			result.merge({"style": &"press", "color": Color("b75b45"), "length": 30.0, "recoil": 4.0,
+				"glyph": &"blade", "muzzle": &"blade", "impact": &"blade"}, true)
+		&"tape_spool":
+			result.merge({"style": &"salvage", "color": Color("729585"), "length": 16.0, "recoil": 3.0,
+				"glyph": &"adhesive", "muzzle": &"adhesive", "impact": &"adhesive"}, true)
+		&"rubber_band":
+			result.merge({"style": &"salvage", "color": Color("729585"), "length": 17.0, "recoil": 6.0,
+				"glyph": &"elastic", "muzzle": &"elastic", "impact": &"elastic"}, true)
+		&"paper_plane":
+			result.merge({"style": &"salvage", "color": Color("729585"), "length": 24.0, "recoil": 3.0,
+				"glyph": &"plane", "muzzle": &"plane", "impact": &"plane"}, true)
+		&"hydraulic_press":
+			result.merge({"style": &"press", "color": Color("b75b45"), "length": 26.0, "recoil": 9.0, "evolved": true,
+				"glyph": &"hydraulic", "muzzle": &"hydraulic", "impact": &"hydraulic"}, true)
+		&"redaction_engine":
+			result.merge({"style": &"salvage", "color": Color("729585"), "length": 22.0, "recoil": 5.0, "evolved": true,
+				"glyph": &"redact", "muzzle": &"redact", "impact": &"redact"}, true)
 	return result
 
 
@@ -85,6 +122,30 @@ static func glyph_outline(id: StringName) -> PackedVector2Array:
 			return PackedVector2Array([Vector2(-0.8, -0.25), Vector2(-0.45, -0.66), Vector2(-0.1, -0.1), Vector2(0.15, -0.82), Vector2(0.4, -0.18), Vector2(0.75, -0.5), Vector2(0.58, 0.68), Vector2(-0.63, 0.68)])
 		&"rail_spike":
 			return PackedVector2Array([Vector2(0.96, 0), Vector2(0.25, 0.2), Vector2(0.25, 0.48), Vector2(-0.1, 0.3), Vector2(-0.1, 0.15), Vector2(-0.88, 0.15), Vector2(-0.88, -0.15), Vector2(-0.1, -0.15), Vector2(-0.1, -0.3), Vector2(0.25, -0.48), Vector2(0.25, -0.2)])
+		&"stapler":
+			return PackedVector2Array([Vector2(-0.7,-0.6),Vector2(0.6,-0.6),Vector2(0.6,0.6),Vector2(0.3,0.6),Vector2(0.3,-0.2),Vector2(-0.4,-0.2),Vector2(-0.4,0.6),Vector2(-0.7,0.6)])
+		&"paper_saw":
+			return PackedVector2Array([Vector2(0.95,0),Vector2(0.45,0.24),Vector2(0.47,0.82),Vector2(0,0.5),Vector2(-0.47,0.82),Vector2(-0.45,0.24),Vector2(-0.95,0),Vector2(-0.45,-0.24),Vector2(-0.47,-0.82),Vector2(0,-0.5),Vector2(0.47,-0.82),Vector2(0.45,-0.24)])
+		&"hole_punch":
+			return PackedVector2Array([Vector2(-0.7,-0.42),Vector2(0.7,-0.42),Vector2(0.9,0),Vector2(0.7,0.42),Vector2(-0.7,0.42),Vector2(-0.4,0),Vector2(-0.7,-0.42)])
+		&"ink_bottle":
+			return PackedVector2Array([Vector2(0.92,0),Vector2(0.2,0.55),Vector2(-0.5,0.7),Vector2(-0.88,0.2),Vector2(-0.8,-0.45),Vector2(-0.25,-0.68),Vector2(0.2,-0.5)])
+		&"stamp":
+			return PackedVector2Array([Vector2(-0.6,-0.6),Vector2(0.6,-0.6),Vector2(0.6,0.6),Vector2(-0.6,0.6)])
+		&"mallet":
+			return PackedVector2Array([Vector2(-0.8,-0.2),Vector2(0.1,-0.2),Vector2(0.1,-0.8),Vector2(0.55,-0.8),Vector2(0.55,0.8),Vector2(0.1,0.8),Vector2(0.1,0.2),Vector2(-0.8,0.2)])
+		&"cutter":
+			return PackedVector2Array([Vector2(0.97,0),Vector2(-0.8,0.5),Vector2(-0.55,-0.25)])
+		&"tape_spool":
+			return PackedVector2Array([Vector2(-0.7,-0.45),Vector2(0.4,-0.45),Vector2(0.9,-0.1),Vector2(0.4,0.45),Vector2(-0.7,0.45),Vector2(-0.4,0)])
+		&"rubber_band":
+			return PackedVector2Array([Vector2(0.8,-0.25),Vector2(0.4,0.65),Vector2(-0.65,0.5),Vector2(-0.8,-0.25),Vector2(-0.4,-0.65),Vector2(0.4,-0.65)])
+		&"paper_plane":
+			return PackedVector2Array([Vector2(0.98,0),Vector2(-0.72,0.6),Vector2(-0.3,0),Vector2(-0.72,-0.6)])
+		&"hydraulic_press":
+			return PackedVector2Array([Vector2(-0.6,-0.65),Vector2(0.6,-0.65),Vector2(0.6,-0.35),Vector2(0.2,-0.35),Vector2(0.2,0.35),Vector2(0.6,0.35),Vector2(0.6,0.65),Vector2(-0.6,0.65),Vector2(-0.6,0.35),Vector2(-0.2,0.35),Vector2(-0.2,-0.35),Vector2(-0.6,-0.35)])
+		&"redaction_engine":
+			return PackedVector2Array([Vector2(-0.85,-0.35),Vector2(0.65,-0.35),Vector2(0.85,0),Vector2(0.65,0.35),Vector2(-0.85,0.35),Vector2(-0.55,0)])
 	var points := PackedVector2Array()
 	var count := 20 if id == &"orb" else (18 if id == &"nova_core" else 12)
 	for index in count:
@@ -288,6 +349,26 @@ static func _draw_muzzle(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Di
 	var small := maxf(1.0, length * 0.36 * t)
 	var normal := Vector2(-direction.y, direction.x)
 	match p["muzzle"]:
+		&"clamp", &"stamp", &"mallet", &"hydraulic":
+			var height := 0.5 if p["muzzle"] == &"clamp" else (0.9 if p["muzzle"] == &"hydraulic" else 0.7)
+			_polyline(ci, pos, direction, PackedVector2Array([Vector2(-0.5,-height),Vector2(0.5,-height),Vector2(0.5,height),Vector2(-0.5,height)]), small * 1.5, color, 2.7)
+			if p["muzzle"] in [&"mallet", &"hydraulic"]:
+				ci.draw_line(pos-direction*small*1.6,pos-direction*small*0.3,color,3.0,true)
+		&"saw", &"perforate", &"blade", &"redact":
+			var count := 5 if p["muzzle"] == &"perforate" else (3 if p["muzzle"] == &"saw" else 1)
+			for index in count:
+				var anchor := pos + direction * (float(index) * 4.0)
+				ci.draw_line(anchor-normal*small,anchor+direction*small+normal*small,color,3.2 if p["muzzle"] == &"redact" else 1.7,true)
+		&"blot", &"adhesive", &"elastic", &"plane":
+			if p["muzzle"] == &"blot":
+				ci.draw_circle(pos,small*0.7,color)
+			elif p["muzzle"] == &"adhesive":
+				ci.draw_line(pos-normal*small,pos+direction*small*2.0-normal*small,color,3.0,true)
+				ci.draw_line(pos+normal*small,pos+direction*small*2.0+normal*small,color,3.0,true)
+			elif p["muzzle"] == &"elastic":
+				ci.draw_arc(pos,small,0.0,TAU,14,color,2.5,true)
+			else:
+				_polyline(ci,pos,direction,PackedVector2Array([Vector2(-1,-0.6),Vector2(1,0),Vector2(-1,0.6),Vector2(-0.3,0),Vector2(-1,-0.6)]),small,color)
 		&"staple", &"twin":
 			var marks := 2 if p["muzzle"] == &"twin" else 1
 			for index in marks:
@@ -328,11 +409,39 @@ static func _draw_muzzle(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Di
 static func _draw_hit(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Dictionary,
 		t: float, crit: bool, shielded: bool, reduced: bool) -> void:
 	var color := Color(GOLD if crit else PAPER, t)
-	var size := (8.0 if crit else 5.0) * t
+	var size := hit_mark_size(p["impact"], t, reduced) * (1.25 if crit else 1.0)
+	if p["impact"] in [&"stamp", &"mallet", &"hydraulic"]:
+		# A floor imprint is legible even when the authoritative hit has no vector.
+		direction = Vector2.RIGHT
+		ci.draw_rect(Rect2(pos - Vector2(size, size * 0.58), Vector2(size * 2.0, size * 1.16)), Color(INK, t * 0.88))
+		ci.draw_rect(Rect2(pos - Vector2(size * 0.85, size * 0.44), Vector2(size * 1.7, size * 0.88)), Color(p["color"], t * 0.7), false, 2.5)
+		ci.draw_line(pos - Vector2(size * 0.65, 0), pos + Vector2(size * 0.65, 0), Color(PAPER, t * 0.8), 2.0, true)
 	if direction == Vector2.ZERO:
 		ci.draw_arc(pos, maxf(0.75, size * 0.7), 0.0, TAU, 12, color, 1.5, true)
 	else:
 		match p["impact"]:
+			&"clamp", &"stamp", &"mallet", &"hydraulic":
+				var corners := PackedVector2Array([Vector2(-0.8,-0.6),Vector2(0.8,-0.6),Vector2(0.8,0.6),Vector2(-0.8,0.6),Vector2(-0.8,-0.6)])
+				_polyline(ci,pos,direction,corners,size,color,3.0 if p["impact"] == &"hydraulic" else 1.8)
+				if p["impact"] == &"mallet":
+					ci.draw_line(pos-direction*size*1.8,pos,color,3.0,true)
+				elif p["impact"] == &"clamp":
+					ci.draw_line(pos-direction*size,pos+direction*size,color,1.5,true)
+			&"saw", &"perforate", &"blade", &"redact":
+				var strokes := 3 if p["impact"] in [&"saw", &"perforate"] else 1
+				var normal := Vector2(-direction.y,direction.x)
+				for index in strokes:
+					var anchor := pos+normal*(float(index)-float(strokes-1)*0.5)*3.0
+					ci.draw_line(anchor-direction*size,anchor+direction*size,color,3.5 if p["impact"] == &"redact" else 1.7,true)
+			&"blot", &"adhesive", &"elastic", &"plane":
+				if p["impact"] == &"blot":
+					ci.draw_circle(pos,maxf(0.75,size),Color(p["color"],t*0.8))
+				elif p["impact"] == &"elastic":
+					ci.draw_arc(pos,maxf(0.75,size),0.0,TAU,12,color,2.0,true)
+				elif p["impact"] == &"plane":
+					_polyline(ci,pos,direction,PackedVector2Array([Vector2(-1,-1),Vector2(0,0),Vector2(-1,1)]),size,color)
+				else:
+					_polyline(ci,pos,direction,PackedVector2Array([Vector2(-1,-0.5),Vector2(1,-0.5),Vector2(1,0.5),Vector2(-1,0.5)]),size,color,2.5)
 			&"stitch", &"twin":
 				var count := 2 if p["impact"] == &"twin" else 1
 				var normal := Vector2(-direction.y, direction.x)
@@ -386,3 +495,197 @@ static func _draw_blast(ci: CanvasItem, data: Dictionary, reduced: bool) -> bool
 		var center := pos + direction * radius * (0.15 + 0.65 * (1.0 - t))
 		_polyline(ci, center, direction, PackedVector2Array([Vector2(-0.6, -0.4), Vector2(0.4, -0.2), Vector2(0.7, 0.4)]), minf(8.0, radius * 0.12) * t, color, 2.0)
 	return true
+
+
+# Only reads authoritative attack geometry. Windup remains visible for its full
+# real duration, including offscreen attacks once the camera reaches them.
+static func field_bounds(field: AttackField) -> Rect2:
+	if field == null or field.dead or not field.pos.is_finite() or not field.origin.is_finite():
+		return Rect2()
+	match field.style:
+		&"slam":
+			var extent := maxf(1.0, field.radius) + 4.0
+			var floor_bounds := Rect2(field.pos - Vector2.ONE * extent, Vector2.ONE * extent * 2.0)
+			var projection := press_projection(field)
+			var art_size := Vector2(projection["width"], projection["height"])
+			var static_projection := press_projection(field, true)
+			return floor_bounds.merge(Rect2(projection["center"] - art_size * 0.5, art_size).grow(4.0)).merge(Rect2(static_projection["center"] - art_size * 0.5, art_size).grow(4.0))
+		&"ink", &"tape":
+			var extent := maxf(1.0, field.radius) + 3.0
+			return Rect2(field.pos - Vector2.ONE * extent, Vector2.ONE * extent * 2.0)
+		&"line":
+			# Cover can shorten this line. Its full proposed extent is a safe early
+			# rejection, without calculating the same covered endpoint twice.
+			var extent := maxf(1.0, field.width * 0.5 * maxf(1.0, field.direction.length())) + 3.0
+			return _segment_bounds(field.origin, field.origin + field.direction * field.reach, extent)
+		&"orbit":
+			var orbit := maxf(1.0, field.orbit_radius) + 3.0
+			var satellite := maxf(1.0, field.radius) + 3.0
+			var minimum := Vector2(minf(field.origin.x - orbit, field.pos.x - satellite),
+				minf(field.origin.y - orbit, field.pos.y - satellite))
+			var maximum := Vector2(maxf(field.origin.x + orbit, field.pos.x + satellite),
+				maxf(field.origin.y + orbit, field.pos.y + satellite))
+			return Rect2(minimum, maximum - minimum)
+		&"chain_flash":
+			return _segment_bounds(field.origin, field.pos, 6.0)
+		&"cone_flash":
+			var bounds := ThreatInk.sector_bounds(field.origin, field.direction, field.reach, field.spread * 0.5)
+			var first := field.origin + field.direction.rotated(-field.spread * 0.5) * field.reach
+			var last := field.origin + field.direction.rotated(field.spread * 0.5) * field.reach
+			var tips := _segment_bounds(first, last, 3.0)
+			var minimum := Vector2(minf(bounds.position.x, tips.position.x), minf(bounds.position.y, tips.position.y))
+			var maximum := Vector2(maxf(bounds.end.x, tips.end.x), maxf(bounds.end.y, tips.end.y))
+			return Rect2(minimum, maximum - minimum)
+	return Rect2()
+
+
+static func _segment_bounds(from: Vector2, to: Vector2, margin: float) -> Rect2:
+	var minimum := Vector2(minf(from.x, to.x), minf(from.y, to.y))
+	var maximum := Vector2(maxf(from.x, to.x), maxf(from.y, to.y))
+	return Rect2(minimum, maximum - minimum).grow(margin)
+
+
+static func field_in_view(field: AttackField, view: Rect2) -> bool:
+	var bounds := field_bounds(field)
+	return bounds.has_area() and bounds.intersects(view)
+
+
+static func hit_mark_size(glyph: StringName, strength: float, reduced: bool = false) -> float:
+	var base := 5.0
+	match glyph:
+		&"stamp": base = 19.0
+		&"mallet": base = 17.0
+		&"hydraulic": base = 22.0
+		&"blade", &"perforate", &"blot", &"redact": base = 10.0
+	# Reduced effects keeps the identifying mark, without a large shrinking burst.
+	return base * (1.0 if reduced else 0.7 + 0.3 * clampf(strength, 0.0, 1.0))
+
+
+static func press_projection(field: AttackField, reduced: bool = false) -> Dictionary:
+	var weapon := Content.weapon(field.weapon_id)
+	var duration := weapon.windup if weapon != null and weapon.windup > 0.0 else 0.3
+	var progress := clampf(1.0 - field.windup / duration, 0.0, 1.0)
+	var height := 58.0 if field.weapon_id == &"hydraulic_press" else 48.0
+	var width := 58.0 if field.weapon_id == &"hydraulic_press" else 48.0
+	if field.weapon_id == &"mallet":
+		width = 60.0
+	var drop := 28.0 if reduced else 12.0 + 46.0 * (1.0 - progress * progress)
+	if field.windup <= 0.0:
+		height *= 0.5
+		drop = 3.0
+	return {"center": field.pos - Vector2(0.0, drop + height * 0.5),
+		"width": width, "height": height, "drop": drop, "progress": progress}
+
+
+static func _draw_press(ci: CanvasItem, field: AttackField, reduced: bool) -> void:
+	var r := maxf(1.0, field.radius)
+	var active := field.windup <= 0.0
+	var accent := profile(field.weapon_id)["color"] as Color
+	# Friendly registration marks use paper and ink; red belongs to enemy warnings.
+	ci.draw_circle(field.pos, r, Color(INK, 0.06 if not active else 0.14))
+	ci.draw_arc(field.pos, r, 0.0, TAU, 40, Color(PAPER, 0.9), 3.0, true)
+	ci.draw_arc(field.pos, r, 0.0, TAU, 40, Color(INK, 0.85), 1.2, true)
+	for index in 4:
+		var radial := Vector2.from_angle(float(index) * PI * 0.5)
+		ci.draw_line(field.pos + radial * (r - 7.0), field.pos + radial * r, Color(INK, 0.8), 3.0, true)
+	var stamp_size := Vector2(minf(52.0, r * 1.15), minf(26.0, r * 0.55))
+	ci.draw_rect(Rect2(field.pos - stamp_size * 0.5, stamp_size), Color(INK, 0.8), false, 2.0)
+	ci.draw_line(field.pos - Vector2(stamp_size.x * 0.3, 0), field.pos + Vector2(stamp_size.x * 0.3, 0), Color(accent, 0.9), 3.0, true)
+	var projection := press_projection(field, reduced)
+	var size := Vector2(projection["width"], projection["height"])
+	var key := StringName("weapon_" + String(field.weapon_id))
+	var texture := PresentationAssets.texture(key)
+	var region := PresentationAssets.region(key)
+	if texture != null and region.has_area():
+		ci.draw_texture_rect_region(texture, Rect2(projection["center"] - size * 0.5, size), region, Color(1, 1, 1, 0.95))
+	if active:
+		var text := Loc.t("combat.press_impact")
+		var font := UiTheme.font()
+		var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16)
+		var label := field.pos + Vector2(-text_size.x * 0.5, 15.0)
+		ci.draw_rect(Rect2(label + Vector2(-4.0, -17.0), text_size + Vector2(8.0, 4.0)), Color(INK, 0.85))
+		ci.draw_string(font, label, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16, Color(PAPER, 0.95))
+
+
+static func _draw_pool(ci: CanvasItem, field: AttackField, reduced: bool) -> void:
+	var r := maxf(1.0, field.radius)
+	if field.style == &"tape":
+		for index in 5:
+			var y := (float(index) - 2.0) * r * 0.31
+			var half := sqrt(maxf(0.0, r * r - y * y)) * 0.9
+			ci.draw_line(field.pos + Vector2(-half, y), field.pos + Vector2(half, y + 2.0), Color(PAPER, 0.55), 6.0, true)
+			ci.draw_line(field.pos + Vector2(-half, y), field.pos + Vector2(half, y), Color(INK, 0.6), 1.0, true)
+	else:
+		var edge := PackedVector2Array()
+		for index in 28:
+			var rag := 0.87 + 0.11 * sin(float(index) * 2.4) + 0.02 * cos(float(index) * 1.7)
+			edge.append(field.pos + Vector2.from_angle(TAU * float(index) / 28.0) * r * rag)
+		ci.draw_colored_polygon(edge, Color(INK.lerp(field.color, 0.15), 0.62 if not reduced else 0.45))
+		edge.append(edge[0])
+		ci.draw_polyline(edge, Color(INK, 0.8), 2.0, true)
+		for index in 5:
+			var droplet := field.pos + Vector2.from_angle(float(index) * 2.4) * r * (0.24 + float(index) * 0.1)
+			ci.draw_circle(droplet, 2.0 + float(index % 3), Color(PAPER, 0.38))
+	ci.draw_arc(field.pos, r, 0.0, TAU, 32, Color(INK, 0.7), 1.2, true)
+
+
+static func _draw_cut(ci: CanvasItem, field: AttackField, reduced: bool) -> void:
+	var end := Combat._clear_endpoint(field.origin, field.origin + field.direction * field.reach, maxf(1.0, field.width * 0.5))
+	var delta := end - field.origin
+	var direction := delta.normalized()
+	var normal := Vector2(-direction.y, direction.x)
+	var half := maxf(1.0, field.width * 0.5)
+	ci.draw_line(field.origin, end, Color(PAPER, 0.42), maxf(1.0, field.width), true)
+	ci.draw_line(field.origin + normal * half, end + normal * half, Color(INK, 0.8), 1.5, true)
+	ci.draw_line(field.origin - normal * half, end - normal * half, Color(INK, 0.8), 1.5, true)
+	var count := clampi(int(delta.length() / 17.0), 1, 18)
+	for index in count:
+		var center := field.origin.lerp(end, (float(index) + 0.5) / float(count))
+		if field.weapon_id == &"hole_punch":
+			ci.draw_circle(center, minf(5.0, half * 0.65), Color(INK, 0.95))
+			ci.draw_arc(center, minf(5.0, half * 0.65), 0.0, TAU, 12, Color(PAPER, 0.8), 1.1, true)
+		else:
+			ci.draw_line(center - direction * 5.0 - normal * half * 0.65, center + direction * 5.0 + normal * half * 0.65, Color(INK, 0.85), 2.0, true)
+	if not reduced:
+		ci.draw_line(field.origin, end, Color(field.color, 0.85), 1.3, true)
+
+
+static func draw_fields(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
+	if ci == null or sim == null:
+		return
+	var view := ArenaPainter.render_view(sim)
+	for f in sim.attack_fields:
+		if not field_in_view(f, view):
+			continue
+		var color := Color(f.color, 0.75 if f.windup > 0.0 else 0.5)
+		var width := 1.4 if reduced else 2.0
+		match f.style:
+			&"slam":
+				_draw_press(ci, f, reduced)
+			&"ink", &"tape":
+				_draw_pool(ci, f, reduced)
+			&"line":
+				_draw_cut(ci, f, reduced)
+			&"orbit":
+				ci.draw_arc(f.origin,maxf(1.0,f.orbit_radius),0.0,TAU,32,Color(f.color,0.15),1.0,true)
+				ci.draw_circle(f.pos,maxf(1.0,f.radius),Color(f.color,0.25))
+				ci.draw_arc(f.pos,maxf(1.0,f.radius),0.0,TAU,16,color,width,true)
+			&"chain_flash":
+				var direction := (f.pos - f.origin).normalized()
+				var normal := Vector2(-direction.y, direction.x)
+				ci.draw_line(f.origin, f.pos, Color(PAPER, 0.8), 5.0, true)
+				ci.draw_line(f.origin, f.pos, Color(INK, 0.9), 1.4, true)
+				for index in 5:
+					var anchor := f.origin.lerp(f.pos, (float(index) + 0.5) / 5.0)
+					ci.draw_line(anchor - normal * 4.0, anchor + normal * 4.0, Color(f.color, 0.8), 2.0, true)
+			&"cone_flash":
+				var a := f.direction.rotated(-f.spread*0.5)
+				var b := f.direction.rotated(f.spread*0.5)
+				ci.draw_line(f.origin,f.origin+a*f.reach,Color(INK,0.75),width,true)
+				ci.draw_line(f.origin,f.origin+b*f.reach,Color(INK,0.75),width,true)
+				ci.draw_arc(f.origin,maxf(1.0,f.reach),a.angle(),a.angle()+f.spread,24,color,width,true)
+				for index in 7:
+					var direction := f.direction.rotated(lerpf(-f.spread * 0.47, f.spread * 0.47, float(index) / 6.0))
+					var anchor := f.origin + direction * f.reach * (0.55 + float(index % 3) * 0.1)
+					ci.draw_line(anchor - direction * 10.0, anchor + direction * 7.0, Color(PAPER, 0.85), 4.0, true)
+					ci.draw_line(anchor - direction * 10.0, anchor + direction * 7.0, Color(INK, 0.8), 1.2, true)

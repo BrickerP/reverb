@@ -9,7 +9,7 @@ func _take(s: Sim, wave: int = 1) -> EchoTake:
 	t.stats = s.player.stats.copy()
 	t.stats.add(Stats.DAMAGE_PCT, 0.2)
 	t.wave = wave
-	t.age = 1
+	t.condition = 65.0
 	return t
 
 
@@ -26,7 +26,7 @@ func test_discard_echo_is_exact_undo(c: Check) -> void:
 	var gone := _take(s, 2)
 	s.bank.add(keep)
 	s.bank.add(gone)
-	gone.age = 1
+	gone.condition = 65.0
 	var before := ShopState.capture(s)
 	var result := s.shop.discard_echo(s, gone)
 	c.ok(result.ok, "discard applies")
@@ -44,7 +44,8 @@ func test_discard_echo_is_exact_undo(c: Check) -> void:
 	c.eq(restored.weapons[0].id, &"pistol", "weapon restored")
 	c.eq(restored.level_at(0), 2, "level restored")
 	c.near(restored.stats.get_stat(Stats.DAMAGE_PCT), 0.2, 0.001, "stats restored")
-	c.eq(restored.age, 1, "age restored")
+	c.eq(restored.condition, 65.0, "condition restored")
+	c.eq(restored.uid, gone.uid, "stable identity restored")
 	c.eq(restored.tint_index, gone.tint_index, "tint restored")
 	c.eq(ShopState.capture(s).to_dict(), before.to_dict(), "state restores exactly")
 
@@ -69,7 +70,7 @@ func test_merge_echoes_is_exact_undo(c: Check) -> void:
 	c.eq(ShopState.capture(s).to_dict(), before.to_dict(), "merged state undoes exactly")
 
 
-func test_existing_echo_compatibility_methods_still_work(c: Check) -> void:
+func test_discard_take_uses_shop_transaction(c: Check) -> void:
 	var s := _shop_sim()
 	var t := _take(s)
 	s.bank.add(t)

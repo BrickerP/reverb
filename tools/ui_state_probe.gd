@@ -14,6 +14,7 @@ var _summary: Dictionary = {"states": {}, "geometry": {}, "screenshots": {}}
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_ui_state_probe_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://ui_state_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://ui_state_probe_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://ui_state_probe_settings.json")

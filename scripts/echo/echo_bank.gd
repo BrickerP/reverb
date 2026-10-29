@@ -6,12 +6,16 @@ const BRIDGE_SAMPLES := 12
 
 var takes: Array[EchoTake] = []
 var _tint_counter: int = 0
+var _next_uid: int = 1
 
 
 func add(take: EchoTake) -> void:
+	if take == null or takes.has(take):
+		return
+	take.uid = _next_uid
+	_next_uid += 1
 	take.tint_index = _tint_counter
 	_tint_counter += 1
-	take.age = 0
 	takes.append(take)
 
 
@@ -21,6 +25,23 @@ func set_tint_counter(value: int) -> void:
 
 func tint_counter() -> int:
 	return _tint_counter
+
+
+func next_uid() -> int:
+	return _next_uid
+
+
+func set_next_uid(value: int) -> void:
+	_next_uid = maxi(1, value)
+	for take in takes:
+		_next_uid = maxi(_next_uid, take.uid + 1)
+
+
+func find_uid(uid: int) -> EchoTake:
+	for take in takes:
+		if take.uid == uid:
+			return take
+	return null
 
 
 # Overdub: two takes become one echo that walks both recorded routes and keeps both loadouts.
@@ -40,11 +61,11 @@ func merge(a: EchoTake, b: EchoTake) -> EchoTake:
 	for level: Variant in best_levels:
 		out.levels.append(int(level))
 	out.stats = (a.stats if a.power() >= b.power() else b.stats).copy()
-	var keep_age := maxi(a.age, b.age)
+	var keep_condition := minf(a.condition, b.condition)
 	takes.erase(a)
 	takes.erase(b)
 	add(out)
-	out.age = keep_age
+	out.condition = keep_condition
 	out.merged = true
 	return out
 
@@ -75,19 +96,6 @@ func _best_loadout(a: EchoTake, b: EchoTake) -> Array:
 		weapons.append(entry["weapon"])
 		levels.append(int(entry["level"]))
 	return [weapons, levels]
-
-
-func age_after_wave(lifespan: int) -> Array[EchoTake]:
-	var expired: Array[EchoTake] = []
-	var kept: Array[EchoTake] = []
-	for t in takes:
-		t.age += 1
-		if t.age >= lifespan:
-			expired.append(t)
-		else:
-			kept.append(t)
-	takes = kept
-	return expired
 
 
 func overflow(capacity: int) -> int:

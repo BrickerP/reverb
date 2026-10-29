@@ -1,6 +1,28 @@
 class_name Controls
 extends RefCounted
 
+static var using_gamepad := false
+
+
+static func note_event(event: InputEvent) -> void:
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		if not (event is InputEventJoypadMotion) or absf(event.axis_value) > 0.3:
+			using_gamepad = true
+	elif event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
+		using_gamepad = false
+
+
+static func retire_label() -> String:
+	return "RB" if using_gamepad else "SPACE"
+
+
+static func move_label() -> String:
+	return "LS" if using_gamepad else "WASD"
+
+
+static func pause_label() -> String:
+	return "MENU" if using_gamepad else "P"
+
 
 static func register() -> void:
 	_gamepad_ui()
@@ -17,7 +39,7 @@ static func register() -> void:
 	_bind(&"character", [_key(KEY_C)])
 	_bind(&"mute", [_key(KEY_M)])
 	_bind(&"debug", [_key(KEY_F3), _button(JOY_BUTTON_BACK)])
-	_bind(&"collapse_echo", [_key(KEY_SPACE), _button(JOY_BUTTON_RIGHT_SHOULDER)])
+	_bind(&"retire_echo", [_key(KEY_SPACE), _button(JOY_BUTTON_RIGHT_SHOULDER)])
 
 
 # Godot's built-in UI actions are keyboard-only by default. Steam Deck and a standard

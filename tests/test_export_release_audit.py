@@ -96,5 +96,41 @@ class MacSignatureAuditTest(unittest.TestCase):
         run.assert_not_called()
 
 
+    def test_first_open_guidance_never_changes_app_payload_or_modes(self):
+        import zipfile
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            archive = root / "TakeStack.zip"
+            guide = root / "guide.txt"
+            guide.write_text("Verified local signature; Apple notarization is separate.\n")
+            with zipfile.ZipFile(archive, "w") as output:
+                executable = zipfile.ZipInfo("Take Stack.app/Contents/MacOS/Take Stack")
+                executable.external_attr = 0o100755 << 16
+                output.writestr(executable, b"original signed executable")
+                output.writestr("Take Stack.app/Contents/_CodeSignature/CodeResources", b"original seal")
+            AUDIT.add_macos_instructions(archive, guide)
+            with zipfile.ZipFile(archive) as output:
+                self.assertIsNone(output.testzip())
+                self.assertEqual(output.read(executable.filename), b"original signed executable")
+                self.assertEqual(output.read("Take Stack.app/Contents/_CodeSignature/CodeResources"), b"original seal")
+                self.assertTrue(output.getinfo(executable.filename).external_attr >> 16 & 0o111)
+                self.assertEqual(output.read("MAC_START_HERE.txt"), guide.read_bytes())
+            with self.assertRaisesRegex(RuntimeError, "already contains"):
+                AUDIT.add_macos_instructions(archive, guide)
+
+
+    def test_preview_player_progress_has_stable_location_and_separate_audit_files(self):
+        self.assertEqual(AUDIT.PREVIEW_USER_DIR, "TakeStack Preview")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "suspended_run.json").write_text("saved progress")
+            (root / "settings.json").write_text("player preferences")
+            before = AUDIT.profile_fingerprint(root)
+            (root / "export-gui-test.log").write_text("new audit output")
+            self.assertEqual(AUDIT.profile_fingerprint(root), before)
+            (root / "suspended_run.json").write_text("changed progress")
+            self.assertNotEqual(AUDIT.profile_fingerprint(root), before)
+
+
 if __name__ == "__main__":
     unittest.main()

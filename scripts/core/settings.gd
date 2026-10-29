@@ -5,6 +5,8 @@ const DEFAULT_PATH := "user://settings.json"
 
 var path: String
 var volume: float = 0.8
+var music_volume: float = 0.8
+var effects_volume: float = 1.0
 var shake: bool = true
 var reduced_effects: bool = false
 var fullscreen: bool = false
@@ -30,6 +32,8 @@ func _load() -> void:
 		return
 	var values: Dictionary = data
 	volume = clampf(float(values.get("volume", volume)), 0.0, 1.0)
+	music_volume = clampf(float(values.get("music_volume", music_volume)), 0.0, 1.0)
+	effects_volume = clampf(float(values.get("effects_volume", effects_volume)), 0.0, 1.0)
 	shake = bool(values.get("shake", shake))
 	reduced_effects = bool(values.get("reduced_effects", reduced_effects))
 	fullscreen = bool(values.get("fullscreen", fullscreen))
@@ -43,6 +47,8 @@ func save() -> void:
 		return
 	file.store_string(JSON.stringify({
 		"volume": volume,
+		"music_volume": music_volume,
+		"effects_volume": effects_volume,
 		"shake": shake,
 		"reduced_effects": reduced_effects,
 		"fullscreen": fullscreen,

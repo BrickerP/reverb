@@ -4,14 +4,19 @@ extends Control
 signal resume_requested
 signal settings_requested
 signal history_requested
+signal story_requested
 signal mute_requested
 signal quit_requested
+signal save_requested
 
 var resume_button: Button
 var settings_button: Button
 var history_button: Button
+var story_button: Button
 var mute_button: Button
 var quit_button: Button
+var save_button: Button
+var error_label: Label
 
 
 func _ready() -> void:
@@ -59,13 +64,27 @@ func _ready() -> void:
 	history_button.flat = true
 	history_button.pressed.connect(func() -> void: history_requested.emit())
 	secondary.add_child(history_button)
+	story_button = _button(Loc.t("select.story"))
+	story_button.custom_minimum_size = Vector2(130.0, 36.0)
+	story_button.add_theme_font_size_override("font_size", 14)
+	story_button.flat = true
+	story_button.pressed.connect(func() -> void: story_requested.emit())
+	secondary.add_child(story_button)
 	box.add_child(secondary)
 	mute_button = _button(Loc.t("hud.mute"))
 	mute_button.custom_minimum_size = Vector2(220.0, 34.0)
 	mute_button.flat = true
 	mute_button.pressed.connect(func() -> void: mute_requested.emit())
 	box.add_child(mute_button)
-	quit_button = _button(Loc.t("hud.quit"))
+	save_button = _button(Loc.t("pause.save_return"))
+	save_button.pressed.connect(func() -> void: save_requested.emit())
+	box.add_child(save_button)
+	error_label = UiTheme.label("", 14, UiTheme.WARN, HORIZONTAL_ALIGNMENT_CENTER)
+	error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	error_label.custom_minimum_size = Vector2(400.0, 0.0)
+	error_label.visible = false
+	box.add_child(error_label)
+	quit_button = _button(Loc.t("pause.abandon"))
 	quit_button.custom_minimum_size = Vector2(280.0, 34.0)
 	quit_button.flat = true
 	quit_button.pressed.connect(func() -> void: quit_requested.emit())
@@ -88,7 +107,7 @@ func _button(text: String) -> Button:
 func open(muted: bool = false) -> void:
 	set_muted(muted)
 	visible = true
-	UiFocus.cycle([resume_button, settings_button, history_button, mute_button, quit_button])
+	UiFocus.cycle([resume_button, settings_button, history_button, story_button, mute_button, save_button, quit_button])
 	resume_button.grab_focus()
 
 
@@ -99,8 +118,16 @@ func set_muted(muted: bool) -> void:
 	mute_button.accessibility_name = mute_button.text
 
 
+func show_error(message: String) -> void:
+	error_label.text = message
+	error_label.visible = not message.is_empty()
+	if visible and not message.is_empty():
+		save_button.grab_focus()
+
+
 func close() -> void:
 	visible = false
+	show_error("")
 
 
 func _unhandled_input(event: InputEvent) -> void:

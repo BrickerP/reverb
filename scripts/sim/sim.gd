@@ -10,8 +10,8 @@ signal enemy_hit(pos: Vector2, amount: float, crit: bool, source: int)
 signal player_hurt(amount: float)
 signal player_hurt_info(info: PlayerHurtInfo)
 signal echo_spawned(actor: EchoActor)
-signal echo_recorded(take: EchoTake)
-signal echo_collapsed(pos: Vector2, color: Color, radius: float)
+signal echo_retired(info: EchoRetirementInfo)
+signal combo_triggered(info: ComboInfo)
 signal shot_fired(source: int)
 signal shot_fired_info(info: ShotInfo)
 signal damage_event(info: DamageInfo)
@@ -34,7 +34,8 @@ signal rift_ended(rift: TemporalRift)
 
 enum Phase { WAVE, SHOP, LOST, WON }
 
-const ARENA := Rect2(40.0, 80.0, 1200.0, 600.0)
+const ARENA := WorldArena.BOUNDS
+const VIEWPORT := WorldArena.VIEWPORT
 const MAX_ENEMY_RADIUS := 32.0
 const SPAWN_TELEGRAPH := 0.8
 const IFRAME_TIME := 0.45
@@ -112,7 +113,17 @@ var pickups: Array[Pickup] = []
 var pending: Array[PendingSpawn] = []
 var echoes: Array[EchoActor] = []
 var rifts: Array[TemporalRift] = []
-var collapse_used: bool = false
+var selected_echo_uid: int = 0
+var retire_cooldown: float = 0.0
+var retirements: int = 0
+var wave_retirements: int = 0
+var repair_discount: float = 0.0
+var wear_rate_mult: float = 1.0
+var retirement_mult: float = 1.0
+var pickup_repair: float = 0.0
+var story_progress: Dictionary = {}
+var attack_fields: Array[AttackField] = []
+var enemy_zones: Array[EnemyZone] = []
 var boss: EnemyState
 var boss_phase: int = 1
 var boss_shards: Array[EnemyState] = []
@@ -140,6 +151,8 @@ var _boss_silence_cd := 0.0
 var _boss_minion_cd := 0.0
 var _boss_enraged := false
 var _rift_cd := 0.0
+var _supply_spawned := false
+var supply_claims := 0
 
 
 func _init(seed_value: int = 1) -> void:
@@ -149,6 +162,7 @@ func _init(seed_value: int = 1) -> void:
 	player.hp = player.max_hp()
 	player.materials = START_MATERIALS
 	player.add_weapon(Content.weapon(Content.STARTER_WEAPON))
+	echo_retired.connect(_on_echo_retired)
 
 
 func start_run() -> void:
@@ -180,8 +194,8 @@ func echo_capacity() -> int:
 	return mini(MAX_ECHO_CAPACITY, maxi(0, int(round(player.stats.get_stat(Stats.ECHO_SLOTS)))))
 
 
-func echo_lifespan() -> int:
-	return maxi(1, int(round(player.stats.get_stat(Stats.ECHO_LIFESPAN))))
+func echo_duration() -> float:
+	return maxf(10.0, player.stats.get_stat(Stats.ECHO_DURATION))
 
 
 func material_drop_multiplier() -> float:
@@ -202,8 +216,6 @@ func daily_enemy_damage_multiplier() -> float:
 
 func echo_power() -> float:
 	var power := player.stats.get_stat(Stats.ECHO_POWER)
-	if Combat.family_count(player.weapons, &"arcane") >= 4:
-		power += Combat.FAMILY_MASTERY_ARCANE_ECHO
 	if daily_modifier == DailyAnomaly.ECHO_SURGE:
 		power += DailyAnomaly.ECHO_BONUS
 	return maxf(0.0, power)
@@ -343,7 +355,11 @@ func start_wave(n: int) -> void:
 	last_contract_done = false
 	last_contract_success = false
 	last_contract_reward = 0
-	collapse_used = false
+	_supply_spawned = false
+	wave_retirements = 0
+	retire_cooldown = 0.0
+	attack_fields.clear()
+	enemy_zones.clear()
 	rifts.clear()
 	_rift_cd = RIFT_FIRST_DELAY if n >= ascension_rift_wave() and (n < WaveDirector.FINAL_WAVE or endless) else 0.0
 	shop.clear_history()
@@ -373,7 +389,7 @@ func start_wave(n: int) -> void:
 	projectiles.clear()
 	pickups.clear()
 	pending.clear()
-	player.pos = ARENA.get_center()
+	player.pos = ARENA.get_center() if n == 1 or player.pos == Vector2.ZERO else WorldArena.move_body(player.pos, Vector2.ZERO, PlayerState.RADIUS)
 	player.shield = player.max_shield()
 	player.iframes = 0.0
 	for i in player.cooldowns.size():
@@ -386,6 +402,8 @@ func start_wave(n: int) -> void:
 		echo_spawned.emit(actor)
 	recorder.begin(player.pos)
 	phase = Phase.WAVE
+	EchoSystem.ensure_selection(self)
+	_commit_repair_story()
 	wave_started.emit(n)
 
 
@@ -396,9 +414,9 @@ func step(delta: float, move_dir: Vector2) -> void:
 	echo_silenced = maxf(0.0, echo_silenced - delta)
 	_move_player(delta, move_dir)
 	recorder.record(player.pos, delta)
-	for actor in echoes:
-		actor.step(delta)
+	EchoSystem.step(self, delta)
 	_spawn_enemies(delta)
+	_step_supply()
 	_move_enemies(delta)
 	_boss_step(delta)
 	_step_rifts(delta)
@@ -406,16 +424,19 @@ func step(delta: float, move_dir: Vector2) -> void:
 			player.cooldowns, 1.0, delta, -1, Color.WHITE, synergy_damage_mult(), synergy_cooldown_mult())
 	if echo_silenced <= 0.0:
 		for actor in echoes:
+			if EnemyBrain.echo_is_sealed(self, actor.pos):
+				continue
 			if live_echo:
 				_fit_echo_cooldowns(actor)
 				Combat.step_weapons(self, actor.pos, player.stats, player.weapons, player.weapon_levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
-						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.get_instance_id())
+						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.uid)
 			else:
 				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons, actor.take.levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
-						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.get_instance_id())
+						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.uid)
 	Combat.step_projectiles(self, delta)
+	Combat.tick_fields(self, delta)
 	_update_pickups(delta)
 	_compact()
 	if player.hp <= 0.0:
@@ -481,7 +502,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	var reduced := false
 	var shield_arc := e.shield_arc_value()
 	if shield_arc > 0.0 and hit_dir != Vector2.ZERO:
-		var front := (player.pos - e.pos).normalized()
+		var front := e.attack_direction if e.def.id == &"warden" else (player.pos - e.pos).normalized()
 		if (-hit_dir.normalized()).dot(front) >= cos(deg_to_rad(shield_arc * 0.5)):
 			actual *= 1.0 - clampf(e.shield_reduction_value(), 0.0, 1.0)
 			reduced = true
@@ -578,16 +599,25 @@ func _begin_boss_phase2() -> void:
 	shard.damage = boss.damage
 	shard.radius = boss.radius
 	shard.flash = 0.18
-	var center := ARENA.get_center()
-	shard.pos = center * 2.0 - boss.pos
 	var pad := shard.radius + 16.0
-	shard.pos = shard.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
-	if shard.pos.distance_to(player.pos) < 140.0:
-		var away := (shard.pos - player.pos).normalized()
-		if away == Vector2.ZERO:
-			away = Vector2.RIGHT
-		shard.pos = (player.pos + away * 180.0).clamp(
-				ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	var view := WorldArena.camera_rect(player.pos).grow(-pad)
+	var best_distance := -1.0
+	var best_visible := false
+	# Keep the tear's original body fixed. A local ring offers an inward side at
+	# every world edge without changing either RNG stream or the attack cadence.
+	for index in 32:
+		var offset := Vector2.from_angle(float(index) * TAU / 32.0) * 260.0
+		var candidate := WorldArena.move_body(boss.pos + offset, Vector2.ZERO, pad)
+		var separation := candidate.distance_to(boss.pos)
+		var clearance := candidate.distance_to(player.pos)
+		if separation < 240.0 or separation > 280.0 or clearance < 140.0:
+			continue
+		var visible := view.has_point(candidate)
+		if best_distance < 0.0 or (visible and not best_visible) \
+				or (visible == best_visible and clearance > best_distance):
+			shard.pos = candidate
+			best_distance = clearance
+			best_visible = visible
 	boss_shards.append(shard)
 	enemies.append(shard)
 	echo_silenced = maxf(echo_silenced, BOSS_PHASE2_SILENCE)
@@ -699,95 +729,43 @@ func discard_take(take: EchoTake) -> void:
 	bank.discard(take)
 
 
-func can_collapse_echo() -> bool:
-	return phase == Phase.WAVE and not collapse_used and not echoes.is_empty()
+func can_retire_echo() -> bool:
+	return EchoSystem.can_retire(self)
 
 
-func boon_reroll_cost() -> int:
-	return 15 + 10 * boon_rerolls
+func retire_selected_echo() -> bool:
+	return EchoSystem.retire(self)
 
 
-func reroll_boons() -> bool:
-	if pending_boons.is_empty():
-		return false
-	var cost := boon_reroll_cost()
-	if player.materials < cost:
-		return false
-	player.materials -= cost
-	boon_rerolls += 1
-	pending_boons = Boon.roll(rng, 3, self)
-	return true
+func select_echo(uid: int) -> bool:
+	return EchoSystem.select(self, uid)
 
 
-func choose_boon(index: int) -> bool:
-	if pending_boons.is_empty() or index < 0 or index >= pending_boons.size():
-		return false
-	if not Boon.apply(self, pending_boons[index]):
-		return false
-	boons_taken.append(pending_boons[index])
-	if boss_rush_bonus_boon:
-		boss_rush_bonus_boon = false
-		pending_boons = Boon.roll(rng, 3, self)
-	else:
-		pending_boons.clear()
-	return true
+func cycle_echo(direction: int) -> bool:
+	return EchoSystem.cycle(self, direction)
 
 
-# Sacrifice the oldest active echo: a one-per-wave burst at its last position plus
-# a small heal. This is deliberately permanent and removes the take from the bank.
-func collapse_oldest_echo() -> bool:
-	if not can_collapse_echo():
-		return false
-	var actor := echoes[0]
-	var take := actor.take
-	var pos := actor.pos
-	var tint := take.tint()
-	var damage := maxf(12.0, take.power() * echo_power() * 3.0 * synergy_damage_mult())
-	var radius := 180.0
-	if not bank.discard(take):
-		return false
-	echoes.remove_at(0)
-	for i in echoes.size():
-		echoes[i].index = i
-	collapse_used = true
-	for e: EnemyState in enemies.duplicate():
-		if e.dead:
-			continue
-		if pos.distance_to(e.pos) > radius + e.radius:
-			continue
-		var knock := (e.pos - pos).normalized() * 160.0
-		if knock == Vector2.ZERO:
-			knock = Vector2.RIGHT * 160.0
-		damage_enemy(e, damage, knock, false, -1, Vector2.ZERO, &"", &"echo_collapse",
-				take.get_instance_id(), tint)
-	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * 0.15)
-	explosion.emit(pos, radius, tint)
-	var info := ExplosionInfo.new()
-	info.kind = ExplosionInfo.WEAPON
-	info.pos = pos
-	info.radius = radius
-	info.color = tint
-	info.effect = &"echo_collapse"
-	info.actor_token = take.get_instance_id()
-	info.source_tint = tint
-	explosion_info.emit(info)
-	echo_collapsed.emit(pos, tint, radius)
-	return true
+func _on_echo_retired(info: EchoRetirementInfo) -> void:
+	if not info.exhausted:
+		retirements += 1
+		wave_retirements += 1
+	StoryLedger.on_retire(self, info)
 
 
-func merge_takes(a: EchoTake, b: EchoTake) -> EchoTake:
-	if phase != Phase.SHOP:
-		return null
-	return bank.merge(a, b)
+func _commit_repair_story() -> void:
+	var previous := int(story_progress.get("committed_repairs", 0))
+	if echo_refreshes > previous:
+
+		for _repair in echo_refreshes - previous:
+			StoryLedger.on_repair(self)
+	story_progress["committed_repairs"] = echo_refreshes
 
 
 func _move_player(delta: float, move_dir: Vector2) -> void:
 	var dir := move_dir.limit_length(1.0)
 	if dir != Vector2.ZERO:
 		player.facing = dir.normalized()
-	var box := ARENA.grow(-PlayerState.RADIUS)
-	player.pos += dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta
-	player.pos = player.pos.clamp(box.position, box.end)
+	player.pos = WorldArena.move_body(player.pos, dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta, PlayerState.RADIUS)
 	player.iframes = maxf(0.0, player.iframes - delta)
 	player.hp = minf(player.max_hp(), player.hp + player.stats.get_stat(Stats.HP_REGEN) * delta)
 
@@ -856,6 +834,7 @@ func _materialize(ps: PendingSpawn) -> void:
 	if ps.def.is_boss:
 		var pad := e.radius + 16.0
 		e.pos = e.pos.clamp(ARENA.position + Vector2(pad, pad), ARENA.end - Vector2(pad, pad))
+	e.attack_direction = (player.pos - e.pos).normalized()
 	enemies.append(e)
 	if ps.def.is_boss:
 		boss = e
@@ -870,20 +849,13 @@ func _materialize(ps: PendingSpawn) -> void:
 
 
 func _move_enemies(delta: float) -> void:
+	EnemyBrain.step_zones(self, delta)
 	grid.clear()
 	for e in enemies:
-		var to_player := player.pos - e.pos
-		e.pos += to_player.normalized() * e.speed * delta + e.knock * delta
-		e.knock = e.knock.move_toward(Vector2.ZERO, 900.0 * delta)
-		e.flash = maxf(0.0, e.flash - delta)
+		if e.dead:
+			continue
+		EnemyBrain.step(self, e, delta)
 		grid.insert(e)
-		var touch := e.radius + PlayerState.RADIUS
-		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
-			_hurt_player(e.damage, e.def.id, &"contact", player.pos,
-					(player.pos - e.pos).normalized(), true, e.uid)
-			if e.def.silence_time > echo_silenced:
-				echo_silenced = e.def.silence_time
-				_emit_echo_silence(e.def.silence_time, e, EchoSilenceInfo.CONTACT)
 	_separate_boss_shards()
 
 
@@ -960,10 +932,21 @@ func _damage_rift(r: TemporalRift) -> void:
 func _update_pickups(delta: float) -> void:
 	var pull := player.stats.get_stat(Stats.PICKUP_RANGE)
 	for pk in pickups:
+		if pk.kind == &"supply":
+			pk.life = maxf(0.0, pk.life - delta)
+			if pk.life <= 0.0:
+				pk.value = 0
+				continue
 		var to_player := player.pos - pk.pos
 		var d2 := to_player.length_squared()
 		if d2 <= COLLECT_RADIUS * COLLECT_RADIUS:
 			player.materials += pk.value
+			if pk.kind == &"supply":
+				supply_claims += 1
+			if pickup_repair > 0.0:
+				var take := bank.find_uid(selected_echo_uid)
+				if take != null:
+					take.condition = minf(100.0, take.condition + float(pk.value) * pickup_repair)
 			material_collected.emit(pk.value)
 			pk.value = 0
 			continue
@@ -998,7 +981,8 @@ func _compact() -> void:
 func _end_wave() -> void:
 	echo_silenced = 0.0
 	for pk in pickups:
-		player.materials += pk.value
+		if pk.kind != &"supply":
+			player.materials += pk.value
 	pickups.clear()
 	if active_contract != null:
 		var contract := active_contract
@@ -1023,11 +1007,14 @@ func _end_wave() -> void:
 	pending.clear()
 	rifts.clear()
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * WAVE_END_HEAL)
-	bank.age_after_wave(echo_lifespan())
+	echoes.clear()
+	attack_fields.clear()
+	enemy_zones.clear()
 	if echo_capacity() > 0:
 		var take := recorder.finish(wave, player.weapons, player.stats, player.weapon_levels)
 		bank.add(take)
-		echo_recorded.emit(take)
+	_commit_repair_story()
+	StoryLedger.on_wave(self)
 	wave_ended.emit(wave)
 	if wave >= WaveDirector.FINAL_WAVE and not endless:
 		phase = Phase.WON
@@ -1038,3 +1025,52 @@ func _end_wave() -> void:
 		if endless and is_boss_wave():
 			boon_rerolls = 0
 			pending_boons = Boon.roll(rng, 3, self)
+
+
+func boon_reroll_cost() -> int:
+	return 15 + 10 * boon_rerolls
+
+
+func reroll_boons() -> bool:
+	if pending_boons.is_empty():
+		return false
+	var cost := boon_reroll_cost()
+	if player.materials < cost:
+		return false
+	player.materials -= cost
+	boon_rerolls += 1
+	pending_boons = Boon.roll(rng, 3, self)
+	return true
+
+
+func choose_boon(index: int) -> bool:
+	if pending_boons.is_empty() or index < 0 or index >= pending_boons.size():
+		return false
+	if not Boon.apply(self, pending_boons[index]):
+		return false
+	boons_taken.append(pending_boons[index])
+	if boss_rush_bonus_boon:
+		boss_rush_bonus_boon = false
+		pending_boons = Boon.roll(rng, 3, self)
+	else:
+		pending_boons.clear()
+	return true
+
+
+
+
+func _step_supply() -> void:
+	if _supply_spawned or wave % 3 != 0 or is_boss_wave() or wave_time < wave_duration * 0.45:
+		return
+	_supply_spawned = true
+	for offset: Vector2 in [Vector2(330.0, 150.0), Vector2(-330.0, -150.0), Vector2(0.0, 250.0), Vector2(0.0, -250.0)]:
+		var pos := WorldArena.move_body(player.pos, offset, 22.0)
+		if pos.distance_to(player.pos) < 100.0 or not WorldArena.body_clear(pos, 22.0):
+			continue
+		var supply := Pickup.new()
+		supply.pos = pos
+		supply.value = 15 + wave
+		supply.kind = &"supply"
+		supply.life = Pickup.SUPPLY_LIFETIME
+		pickups.append(supply)
+		return

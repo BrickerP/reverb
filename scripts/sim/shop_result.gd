@@ -8,7 +8,7 @@ const EVOLVE := &"evolve"
 const SELL := &"sell"
 const ECHO_DISCARD := &"echo_discard"
 const ECHO_MERGE := &"echo_merge"
-const ECHO_REFRESH := &"echo_refresh"
+const ECHO_REPAIR := &"echo_repair"
 const REROLL := &"reroll"
 const UNDO := &"undo"
 

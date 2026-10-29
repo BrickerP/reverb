@@ -9,8 +9,8 @@ const WEAPON_CHANCE := 0.4
 const RESALE_RATE := 0.5
 const EVOLVE_FAMILY_COUNT := 3
 const MAX_UNDO := 32
-const ECHO_REFRESH_BASE := 5
-const ECHO_REFRESH_PER_AGE := 2
+const ECHO_REPAIR_AMOUNT := 40.0
+const ECHO_REPAIR_PER_CONDITION := 0.25
 
 var offers: Array[Offer] = []
 var rerolls: int = 0
@@ -163,41 +163,61 @@ func accept_contract(sim: Sim) -> bool:
 	return true
 
 
-func echo_refresh_cost(take: EchoTake, sim: Sim = null) -> int:
-	if take == null:
+func echo_repair_amount(take: EchoTake) -> float:
+	return minf(ECHO_REPAIR_AMOUNT, maxf(0.0, 100.0 - take.condition)) if take != null else 0.0
+
+
+func echo_repair_cost(take: EchoTake, sim: Sim = null) -> int:
+	var amount := echo_repair_amount(take)
+	if amount <= 0.0:
 		return 0
-	var cost := ECHO_REFRESH_BASE + ECHO_REFRESH_PER_AGE * maxi(0, take.age)
-	if sim != null and bool(sim.player.set_bonus_applied.get(&"echo", false)):
-		cost = maxi(1, cost - 2)
-	return cost
+	var cost := ceili(amount * ECHO_REPAIR_PER_CONDITION)
+	if sim != null:
+		if bool(sim.player.set_bonus_applied.get(&"echo", false)):
+			cost = maxi(1, cost - 2)
+		cost = ceili(float(cost) * (1.0 - clampf(sim.repair_discount, 0.0, 1.0)))
+	return maxi(1, cost)
 
 
-func echo_refresh_block_reason(sim: Sim, take: EchoTake) -> StringName:
+func echo_repair_block_reason(sim: Sim, take: EchoTake) -> StringName:
 	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
 		return &"invalid"
-	if take.age <= 0:
-		return &"new"
-	if sim.player.materials < echo_refresh_cost(take, sim):
+	if echo_repair_amount(take) <= 0.0:
+		return &"full"
+	if sim.player.materials < echo_repair_cost(take, sim):
 		return &"poor"
 	return &""
 
 
-func refresh_echo(sim: Sim, take: EchoTake) -> ShopResult:
-	var reason := echo_refresh_block_reason(sim, take)
+func echo_repair_quote(sim: Sim, take: EchoTake) -> ShopResult:
+	var reason := echo_repair_block_reason(sim, take)
+	var cost := echo_repair_cost(take, sim)
 	if reason != &"":
-		return ShopResult.failure(ShopResult.ECHO_REFRESH, reason,
-				echo_refresh_cost(take, sim))
+		return ShopResult.failure(ShopResult.ECHO_REPAIR, reason, cost)
+	return ShopResult.success(ShopResult.ECHO_REPAIR, cost)
+
+
+func repair_echo(sim: Sim, take: EchoTake) -> ShopResult:
+	var quoted := echo_repair_quote(sim, take)
+	if not quoted.ok:
+		return quoted
 	var before := ShopState.capture(sim)
-	var cost := echo_refresh_cost(take, sim)
-	sim.player.materials -= cost
+	sim.player.materials -= quoted.cost
 	sim.echo_refreshes += 1
-	take.age -= 1
+	take.condition = minf(100.0, take.condition + echo_repair_amount(take))
 	_push_history(before)
 	var after := ShopState.capture(sim)
-	var result := ShopResult.success(ShopResult.ECHO_REFRESH, cost, -1, &"", before, after)
+	var result := ShopResult.success(ShopResult.ECHO_REPAIR, quoted.cost, -1, &"", before, after)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
+
+
+func echo_merge_quote(sim: Sim, a: EchoTake, b: EchoTake) -> ShopResult:
+	if sim.phase != Sim.Phase.SHOP or a == null or b == null or a == b \
+			or not sim.bank.takes.has(a) or not sim.bank.takes.has(b):
+		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	return ShopResult.success(ShopResult.ECHO_MERGE, 0)
 
 
 func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
@@ -206,6 +226,9 @@ func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
 	var before := ShopState.capture(sim)
 	if not sim.bank.discard(take):
 		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
+	_remove_shop_actor(sim, take.uid)
+	if sim.selected_echo_uid == take.uid:
+		sim.selected_echo_uid = sim.bank.takes[0].uid if not sim.bank.takes.is_empty() else 0
 	_push_history(before)
 	var after := ShopState.capture(sim)
 	var result := ShopResult.success(ShopResult.ECHO_DISCARD, 0, -1, &"", before, after)
@@ -215,17 +238,31 @@ func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
 
 
 func merge_echoes(sim: Sim, a: EchoTake, b: EchoTake) -> ShopResult:
-	if sim.phase != Sim.Phase.SHOP or a == null or b == null or a == b:
-		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	var quoted := echo_merge_quote(sim, a, b)
+	if not quoted.ok:
+		return quoted
 	var before := ShopState.capture(sim)
-	if sim.bank.merge(a, b) == null:
+	var merged := sim.bank.merge(a, b)
+	if merged == null:
 		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	_remove_shop_actor(sim, a.uid)
+	_remove_shop_actor(sim, b.uid)
+	if sim.selected_echo_uid == a.uid or sim.selected_echo_uid == b.uid:
+		sim.selected_echo_uid = merged.uid
 	_push_history(before)
 	var after := ShopState.capture(sim)
 	var result := ShopResult.success(ShopResult.ECHO_MERGE, 0, -1, &"", before, after)
 	shop_action_resolved.emit(result)
 	shop_history_changed.emit(can_undo())
 	return result
+
+
+func _remove_shop_actor(sim: Sim, uid: int) -> void:
+	for actor: EchoActor in sim.echoes.duplicate():
+		if actor.take.uid == uid:
+			sim.echoes.erase(actor)
+	for i in sim.echoes.size():
+		sim.echoes[i].index = i
 
 
 func clear_history() -> void:
@@ -500,8 +537,7 @@ func _maxed(sim: Sim, it: ItemDef) -> bool:
 
 func _random_offer(sim: Sim) -> Offer:
 	var o := Offer.new()
-	var weapons_open := sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS
-	if weapons_open and sim.rng.randf() < WEAPON_CHANCE:
+	if sim.rng.randf() < WEAPON_CHANCE:
 		var wdefs: Array[WeaponDef] = []
 		var total := 0.0
 		for w: WeaponDef in Content.weapons().values():

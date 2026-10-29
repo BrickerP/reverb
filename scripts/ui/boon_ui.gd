@@ -3,8 +3,11 @@ extends Control
 
 signal chosen(index: int)
 signal reroll_requested
+signal save_requested
 
 var reroll_button: Button
+var save_button: Button
+var error_label: Label
 var choice_buttons: Array[Button] = []
 
 var _choice_note: Label
@@ -129,19 +132,41 @@ func open(boons: Array[StringName], sim: Sim = null) -> void:
 		reroll_button.disabled = sim.player.materials < cost
 		reroll_button.pressed.connect(func() -> void: reroll_requested.emit())
 		_box.add_child(reroll_button)
+	save_button = StitchedAction.new()
+	save_button.text = Loc.t("pause.save_return")
+	save_button.custom_minimum_size = Vector2(260.0, 36.0)
+	save_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		save_button.add_theme_color_override(state, UiTheme.CARD)
+	save_button.add_theme_color_override("font_disabled_color", Color(UiTheme.CARD, 0.55))
+	save_button.pressed.connect(func() -> void: save_requested.emit())
+	_box.add_child(save_button)
+	error_label = UiTheme.label("", 14, UiTheme.WARN, HORIZONTAL_ALIGNMENT_CENTER)
+	error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	error_label.visible = false
+	_box.add_child(error_label)
 	visible = true
 	var focus_controls: Array[Control] = []
 	for choice in choice_buttons:
 		focus_controls.append(choice)
 	if reroll_button != null:
 		focus_controls.append(reroll_button)
+	focus_controls.append(save_button)
 	UiFocus.cycle(focus_controls)
 	if row.get_child_count() > 0:
 		(row.get_child(0) as Button).grab_focus()
 
 
+func show_error(message: String) -> void:
+	if error_label != null:
+		error_label.text = message
+		error_label.visible = not message.is_empty()
+
+
 func close() -> void:
 	visible = false
+	save_button = null
+	error_label = null
 	reroll_button = null
 	choice_buttons.clear()
 	UiTheme.clear(_box)

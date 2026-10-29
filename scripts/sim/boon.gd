@@ -115,7 +115,7 @@ static func apply(sim: Sim, id: StringName) -> bool:
 		MAGNET:
 			sim.player.stats.add(Stats.PICKUP_RANGE, 30.0)
 		ETERNITY:
-			sim.player.stats.add(Stats.ECHO_LIFESPAN, 1.0)
+			sim.player.stats.add(Stats.ECHO_DURATION, 40.0)
 		SECOND_WIND:
 			sim.second_wind_charges += 1
 		RESERVOIR:

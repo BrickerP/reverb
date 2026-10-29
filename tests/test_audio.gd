@@ -41,14 +41,15 @@ func test_every_stream_uses_one_complete_paperbureau_palette(c: Check) -> void:
 func test_all_weapons_have_explicit_distinct_profiles(c: Check) -> void:
 	var weapons := Content.weapons()
 	c.eq(GameAudio.WEAPON_PROFILES.size(), weapons.size(), "all weapon ids mapped")
-	var cues := {}
+	var profiles := {}
 	for id: StringName in weapons:
 		var profile := GameAudio.weapon_profile(id)
 		c.ok(not profile.is_empty(), "profile %s" % id)
 		var cue: StringName = profile.get("cue", &"")
 		c.ok(GameAudio.FEEDBACK_NAMES.has(cue), "profile stream %s" % id)
-		c.ok(not cues.has(cue), "dedicated cue %s" % id)
-		cues[cue] = true
+		var signature := "%s/%s/%s" % [cue, profile["pitch"], profile.get("gate", 0.0)]
+		c.ok(not profiles.has(signature), "distinct material pitch/envelope %s" % id)
+		profiles[signature] = true
 	c.eq(GameAudio.weapon_profile(&"longbow")["cue"], &"weapon_longbow", "longbow uses its pluck asset")
 	c.ok(GameAudio.weapon_profile(&"missing").is_empty(), "unknown weapons use the generic fallback")
 
@@ -113,6 +114,7 @@ func test_remaining_existing_events_stay_bound(c: Check) -> void:
 	sim.run_won.emit()
 	sim.boss_spawned.emit(EnemyState.new())
 	var silence := EchoSilenceInfo.new()
+	silence.kind = EchoSilenceInfo.BOSS
 	silence.duration = 2.0
 	sim.echoes_silenced.emit(silence)
 	c.ok(audio.play(&"click"), "UI click stays public")
@@ -282,7 +284,7 @@ func test_mute_toggles_the_master_bus(c: Check) -> void:
 	audio.free()
 
 
-func test_phase_tear_and_contact_silence_have_separate_causal_cues(c: Check) -> void:
+func test_phase_tear_and_global_silence_have_separate_causal_cues(c: Check) -> void:
 	var audio := _audio()
 	var sim := Sim.new(18)
 	sim.start_run()
@@ -293,26 +295,26 @@ func test_phase_tear_and_contact_silence_have_separate_causal_cues(c: Check) -> 
 	var contact := EchoSilenceInfo.new()
 	contact.kind = EchoSilenceInfo.CONTACT
 	sim.echoes_silenced.emit(contact)
-	c.eq(audio.play_count(&"silence"), 1, "contact clamps copies with the silence cue")
+	c.eq(audio.play_count(&"silence"), 0, "local seal cannot manufacture global silence audio")
 	c.eq(audio.play_count(&"boss"), 0, "contact cannot manufacture a boss tear")
 	c.eq(audio._duck_remaining, 0.0, "contact silence does not create a major transition duck")
 	var cast := EchoSilenceInfo.new()
 	cast.kind = EchoSilenceInfo.BOSS
 	sim.echoes_silenced.emit(cast)
-	c.eq(audio.play_count(&"silence"), 2, "boss cast keeps the ordinary silence cue")
+	c.eq(audio.play_count(&"silence"), 1, "boss cast owns the global silence cue")
 	c.eq(audio.play_count(&"boss"), 0, "boss cast is distinct from phase tearing")
 	c.eq(audio._duck_remaining, 0.0, "boss cast does not duck the transition mix")
 	var phase := EchoSilenceInfo.new()
 	phase.kind = EchoSilenceInfo.PHASE
 	sim.echoes_silenced.emit(phase)
 	c.eq(audio.play_count(&"boss"), 1, "actual phase event selects the tension and tear recording")
-	c.eq(audio.play_count(&"silence"), 2, "phase does not add another ambiguous silence sound")
+	c.eq(audio.play_count(&"silence"), 1, "phase does not add another ambiguous silence sound")
 	c.ok(audio._duck_remaining >= 0.8, "phase gives its seam snap room in the ambience")
 	var state := sim.rng.state
 	audio._process(0.7)
-	c.ok(audio._music.volume_db < GameAudio.AMBIENT_DB, "short release remains after the snap")
+	c.ok(audio._music.volume_db < (GameAudio.MUSIC_DB + linear_to_db(0.8)), "short release remains after the snap")
 	audio._process(0.2)
-	c.eq(audio._music.volume_db, GameAudio.AMBIENT_DB, "ambient returns exactly to its mix level")
+	c.near(audio._music.volume_db, (GameAudio.MUSIC_DB + linear_to_db(0.8)), 0.0001, "score returns to its mix level")
 	c.eq(sim.rng.state, state, "transition mix changes no simulation RNG")
 	audio.bind(null)
 	sim.echoes_silenced.emit(phase)
@@ -324,7 +326,7 @@ func test_ambient_duck_freezes_on_pause_and_clears_on_rebind(c: Check) -> void:
 	var audio := _audio()
 	audio._on_lost()
 	c.eq(audio._duck_remaining, 0.82, "death crumple owns a bounded bed duck")
-	c.eq(audio._music.volume_db, GameAudio.AMBIENT_DB + GameAudio.TRANSITION_DUCK_DB,
+	c.near(audio._music.volume_db, (GameAudio.MUSIC_DB + linear_to_db(0.8)) + GameAudio.TRANSITION_DUCK_DB, 0.0001,
 			"dramatic cue ducks the quiet room rather than adding a new voice")
 	audio.set_paused(true)
 	audio._process(20.0)
@@ -333,7 +335,7 @@ func test_ambient_duck_freezes_on_pause_and_clears_on_rebind(c: Check) -> void:
 	sim.start_run()
 	audio.bind(sim)
 	c.eq(audio._duck_remaining, 0.0, "new session cannot inherit an old death duck")
-	c.eq(audio._music.volume_db, GameAudio.AMBIENT_DB, "rebind restores the room")
+	c.near(audio._music.volume_db, (GameAudio.MUSIC_DB + linear_to_db(0.8)), 0.0001, "rebind restores the score")
 	audio.set_paused(true)
 	var phase := EchoSilenceInfo.new()
 	phase.kind = EchoSilenceInfo.PHASE
@@ -341,24 +343,4 @@ func test_ambient_duck_freezes_on_pause_and_clears_on_rebind(c: Check) -> void:
 	c.eq(audio.play_count(&"boss"), 0, "paused combat transition cannot play")
 	c.eq(audio._duck_remaining, 0.0, "blocked transition does not alter the bed")
 	c.ok(audio.play(&"click"), "UI keeps its physical paper click while paused")
-	audio.free()
-
-
-func test_collapse_uses_heavy_paper_mix_without_extra_voice_or_rule_changes(c: Check) -> void:
-	var audio := _audio()
-	var sim := Sim.new(43)
-	sim.start_run()
-	audio.bind(sim)
-	var before := sim.rng.state
-	var collapse := ExplosionInfo.new()
-	collapse.effect = &"echo_collapse"
-	sim.explosion_info.emit(collapse)
-	c.eq(audio.play_count(&"weapon_explosion"), 1, "collapse reuses one stretched physical burst")
-	c.eq(audio.play_count(&"echo"), 0, "collapse cannot trigger spawn twice")
-	c.eq(audio._duck_remaining, 0.42, "collapse has a short isolated mix envelope")
-	c.eq(audio._players.size(), GameAudio.POOL, "paper feedback adds no voice nodes")
-	c.eq(sim.rng.state, before, "collapse sound leaves gameplay RNG untouched")
-	audio.stop_all()
-	c.eq(audio._duck_remaining, 0.0, "stop clears the release tail")
-	c.eq(audio._music.volume_db, GameAudio.AMBIENT_DB, "stop restores the room level")
 	audio.free()

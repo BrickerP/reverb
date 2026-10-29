@@ -495,15 +495,15 @@ func test_hud_weapon_slots_show_cooldown_readiness(c: Check) -> void:
 	h.free()
 
 
-func test_hud_echo_chips_count_remaining_waves(c: Check) -> void:
+func test_hud_echo_chips_count_remaining_seconds(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()
 	var h := Hud.new()
 	h.bind(s)
 	var take := EchoTake.new()
-	take.age = 1
-	c.eq(h.echo_remaining(take), s.echo_lifespan() - 1, "age eats one wave of life")
-	take.age = 99
+	take.condition = 60.0
+	c.eq(h.echo_remaining(take), ceili(s.echo_duration() * 0.6), "wear reduces playback seconds")
+	take.condition = 0.0
 	c.eq(h.echo_remaining(take), 0, "expired takes never go negative")
 	h.free()
 
@@ -613,7 +613,8 @@ func test_echo_kills_use_the_echo_tint(c: Check) -> void:
 	view.bind(s)
 	var info := EnemyDeathInfo.new()
 	info.source = 0
-	info.actor_token = take.get_instance_id()
+	s.bank.add(take)
+	info.actor_token = take.uid
 	info.source_tint = take.tint()
 	info.color = Color.WHITE
 	c.ok(view.kill_color(info) != Color.WHITE, "echo kills borrow the captured echo colour")
@@ -698,24 +699,24 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 	main.free()
 
 
-func test_shop_refresh_button_spends_and_undoes(c: Check) -> void:
+func test_shop_repair_button_spends_and_undoes(c: Check) -> void:
 	var s := _shop_sim(50, 3)
 	for existing: EchoTake in s.bank.takes:
-		existing.age = 0
+		existing.condition = 100.0
 	var take := s.bank.takes[0]
-	take.age = 1
+	take.condition = 30.0
 	var ui := _open_shop(s)
-	c.eq(ui.echo_panel.refresh_buttons.size(), 1, "one refresh action for the aged take")
-	var button := ui.echo_panel.refresh_buttons[0]
-	c.ok(not button.disabled, "refresh is affordable")
+	c.eq(ui.echo_panel.repair_buttons.size(), 3, "one repair action per copy")
+	var button: Button = ui.echo_panel.repair_buttons.back()
+	c.ok(not button.disabled, "repair is affordable")
 	var before := s.player.materials
-	var cost := s.shop.echo_refresh_cost(take)
+	var cost := s.shop.echo_repair_cost(take, s)
 	button.pressed.emit()
-	c.eq(take.age, 0, "refresh removes one wave of age")
-	c.eq(s.player.materials, before - cost, "refresh spends materials")
-	c.ok(not ui.undo_button.disabled, "refresh is undoable")
+	c.near(take.condition, 70.0, 0.001, "repair restores up to forty condition")
+	c.eq(s.player.materials, before - cost, "repair spends materials")
+	c.ok(not ui.undo_button.disabled, "repair is undoable")
 	ui.undo_button.pressed.emit()
-	c.eq(s.bank.takes[0].age, 1, "undo restores the age")
+	c.near(s.bank.takes[0].condition, 30.0, 0.001, "undo restores condition")
 	c.eq(s.player.materials, before, "undo restores materials")
 	ui.free()
 
@@ -898,8 +899,15 @@ func test_main_runs_the_whole_loop(c: Check) -> void:
 		main._physics_process(DT)
 	c.ok(main.shop_ui.visible, "the shop opens after the beat")
 	c.ok(not main.hud.visible, "the HUD gives way to the shop")
+	var shop_before := ShopState.capture(s).to_dict()
 	main.toggle_pause()
-	c.ok(not main.paused, "cannot pause inside the shop")
+	c.ok(main.paused and main.pause_ui.visible, "shop can pause for save and return")
+	c.ok(main.pause_ui.save_button.visible and not main.pause_ui.save_button.disabled, "shop exposes an available save and return action")
+	main._physics_process(DT)
+	c.eq(ShopState.capture(s).to_dict(), shop_before, "paused shop keeps offers, prices, materials and undo state")
+	main.pause_ui.resume_button.pressed.emit()
+	c.ok(not main.paused and main.shop_ui.visible, "resuming restores the same shop")
+	c.eq(main.shop_ui.reroll_button.text, Loc.t("shop.reroll", [s.shop.reroll_cost(s.wave)]), "resumed shop keeps its actual reroll quote")
 	main.shop_ui.start_button.pressed.emit()
 	c.eq(s.phase, Sim.Phase.WAVE, "wave two started")
 	c.ok(main.hud.visible, "the HUD is back during the wave")

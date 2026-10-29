@@ -29,15 +29,15 @@ func test_contract_generation_window(c: Check) -> void:
 			"non-endless wave 21 has no contract")
 	var c10 := AnomalyContract.make(10, rng)
 	c.ok(c10 != null and c10.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR,
-			AnomalyContract.HUNT, AnomalyContract.COLLAPSE],
+			AnomalyContract.HUNT, AnomalyContract.RETIRE],
 			"wave 10 can offer all contract kinds")
 	var c3 := AnomalyContract.make(3, rng)
 	c.ok(c3 != null and c3.kind in [AnomalyContract.CLEAN, AnomalyContract.CLEAR,
-			AnomalyContract.COLLAPSE],
+			AnomalyContract.RETIRE],
 			"early waves do not offer the elite hunt")
 	for i in 20:
 		var no_collapse := AnomalyContract.make(3, rng, false, false)
-		c.ok(no_collapse.kind != AnomalyContract.COLLAPSE,
+		c.ok(no_collapse.kind != AnomalyContract.RETIRE,
 				"contracts can exclude collapse when no echo is available")
 	for i in 10:
 		c.ok(AnomalyContract.make(3, rng).deposit > 0, "contract has a deposit")
@@ -51,11 +51,11 @@ func test_contract_generation_window(c: Check) -> void:
 	c.ok(s.shop.contract == null, "the shop after wave 19 does not offer a boss-wave contract")
 
 
-func test_collapse_contract_completes_after_echo_collapse(c: Check) -> void:
+func test_retirement_contract_completes_after_active_retirement(c: Check) -> void:
 	var s := _shop_sim(100)
-	var contract := _contract(AnomalyContract.COLLAPSE, 8, 24)
+	var contract := _contract(AnomalyContract.RETIRE, 8, 24)
 	c.ok(not contract.is_complete(s), "collapse contract starts incomplete")
-	s.collapse_used = true
+	s.wave_retirements = 1
 	c.ok(contract.is_complete(s), "collapse contract completes after a collapse")
 
 

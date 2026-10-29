@@ -3,7 +3,7 @@
 All 35 routed cues now live in this directory. The old tonal placeholder WAVs
 and their runtime fallback have been removed. `audio/ambient.wav` is a separate
 16-second quiet room/feed-roller loop. This batch designs material and machine
-sound, not a composed music soundtrack.
+sound. The original melodic soundtrack is documented in `../music/SOURCES.md`.
 
 ## Recorded source objects (CC0)
 
@@ -70,15 +70,17 @@ The actual PHASE silence event owns the Boss tear cue; ordinary contact silence
 does not trigger it. Major paper actions briefly duck the quiet room bed.
 The twelve-voice pool, protected priorities, cooldowns, pause and mute paths stay
 bounded. Rapid weapon and hit levels are lower than transition/player signals.
-Age/merge spawn pitch and collapse stretching use existing event snapshots and
-never consume simulation randomness.
+Condition/merge spawn pitch and six retirement material accents use existing
+event snapshots and never consume simulation randomness. Exhaustion uses a
+quiet feed-out accent; active retirement no longer has a universal burst cue.
 
 ## Room loop and validation
 
 The ambient loop uses low, whole-cycle motor modes, filtered air, and four sparse
 recorded feed/soft-object movements. It has no musical melody or bright constant
-buzz. It runs at -24 dB; both endpoints and their nearby slopes are zero. It is
-paused by the existing game pause path. Normalized preview playback is louder
+buzz. Its standalone reference mix was -24 dB; both endpoints and their nearby slopes
+are zero. The new score recipe embeds this retained quiet room layer into all
+five arrangements, which pause together through the game pause path. Normalized preview playback is louder
 than its runtime level and is clearly labeled in the audition timeline.
 
 All production files are mono, 44.1 kHz, 16-bit PCM. Cue durations range from

@@ -14,7 +14,7 @@ func _sim_with_takes(count: int) -> Sim:
 	for i in count:
 		var take := EchoTake.new()
 		take.wave = i + 1
-		take.age = 1
+		take.condition = 60.0
 		take.weapons.append(Content.weapon(&"pistol"))
 		take.samples = PackedVector2Array([Vector2(200.0, 200.0), Vector2(500.0, 400.0)])
 		sim.bank.add(take)
@@ -57,12 +57,18 @@ func test_eight_copies_are_scrollable_and_overflow_still_blocks_start(c: Check) 
 	ui.free()
 
 
-func test_long_lived_copy_meter_never_expands_the_card(c: Check) -> void:
+func test_long_lived_copy_still_uses_exact_seconds_and_condition(c: Check) -> void:
+	var sim := _sim_with_takes(1)
+	sim.player.stats.add(Stats.ECHO_DURATION, 280.0)
 	var panel := EchoPanel.new()
-	var pips := panel._pips(24, 40, Color.WHITE)
-	c.eq(pips.get_child_count(), 9, "long-life copies use eight pips and an exact count")
-	c.eq((pips.get_child(8) as Label).text, "24/40", "compressed pips retain exact lifespan")
-	pips.free()
+	_root().add_child(panel)
+	panel.refresh(sim)
+	var found := false
+	for label: Label in panel.find_children("*", "Label", true, false):
+		if label.text == Loc.t("echo.condition", [60, 240]):
+			found = true
+	c.ok(found, "long playback is an exact condition and seconds label")
+	c.eq(panel.discard_buttons.size(), 1, "duration never creates extra meter controls")
 	panel.free()
 
 

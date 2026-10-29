@@ -3,7 +3,7 @@ extends Control
 
 signal closed
 
-const FAMILIES: Array[StringName] = [&"sidearm", &"scatter", &"marksman", &"arcane"]
+const FAMILIES: Array[StringName] = [&"sidearm", &"scatter", &"marksman", &"arcane", &"press", &"salvage"]
 
 var close_button: Button
 var _cards: Array[PanelContainer] = []
@@ -48,6 +48,9 @@ func _ready() -> void:
 	book.name = "SupplyChapters"
 	book.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	book.add_theme_constant_override("separation", 26)
+	var interactions := UiTheme.label(Loc.t("combo.pin_press.desc") + "\n" + Loc.t("combo.ink_arc.desc"), 15, UiTheme.DIM)
+	interactions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	book.add_child(interactions)
 	archive_scroll.add_child(book)
 	var total_weight := 0.0
 	for weapon: WeaponDef in Content.weapons().values():
@@ -169,7 +172,7 @@ func _card(weapon: WeaponDef, total_weight: float, featured: bool = false) -> Pa
 
 
 func _stats_line(weapon: WeaponDef) -> String:
-	var line := Loc.weapon_line(weapon)
+	var line := Loc.weapon_desc(weapon.id) + "\n" + Loc.weapon_line(weapon)
 	if weapon.explosion_radius > 0.0:
 		line += " · " + Loc.t("weapon.explosion", [int(weapon.explosion_radius)])
 	if weapon.homing_turn > 0.0:

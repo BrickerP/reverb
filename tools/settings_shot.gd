@@ -9,6 +9,7 @@ var _dir := ""
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_settings_shot_suspend.json")
 	OS.set_environment("REVERB_SAVE", "user://settings_shot_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://settings_shot_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://settings_shot_settings.json")

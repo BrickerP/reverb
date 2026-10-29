@@ -48,6 +48,7 @@ func test_shields_face_the_real_target_and_latent_blast_is_not_a_countdown(c: Ch
 	for id: StringName in [&"warden", &"grunt"]:
 		var enemy := _enemy(id, &"bulwark" if id == &"grunt" else &"")
 		for direction: Vector2 in [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]:
+			enemy.attack_direction = direction
 			var p := ThreatInk.profile(enemy, enemy.pos + direction * 100.0, 0.0)
 			c.ok(Vector2.from_angle(float(p["shield_center"])).dot(direction) > 0.999,
 					"front plate follows the direction used by damage reduction")
@@ -55,6 +56,10 @@ func test_shields_face_the_real_target_and_latent_blast_is_not_a_countdown(c: Ch
 					deg_to_rad(enemy.shield_arc_value()), 0.0001, "shield angle is exact")
 			c.near(float(p["shield_radius"]), enemy.radius + 6.0, 0.0001,
 					"front band is registered to the actual enemy center")
+			if id == &"warden":
+				var turned_target := ThreatInk.profile(enemy, enemy.pos - direction * 100.0, 0.0)
+				c.near(float(turned_target["shield_center"]), direction.angle(), 0.0001,
+					"warden warning follows its inertial shield front, including a target behind it")
 	var bomber := _enemy(&"bomber")
 	var volatile := _enemy(&"grunt", &"volatile")
 	for enemy: EnemyState in [bomber, volatile]:

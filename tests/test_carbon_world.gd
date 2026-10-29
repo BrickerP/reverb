@@ -6,23 +6,23 @@ func test_walk_uses_drawn_poses_and_returns_to_idle(c: Check) -> void:
 	c.ok(PresentationAssets.frame_count(key) >= 3, "paper protagonist has distinct drawn walk poses")
 	var seen: Array[int] = []
 	for i in 8:
-		var frame := ArenaPainter.actor_frame(key, float(i) / 8.0, true)
+		var frame := ArenaPainter.actor_frame(key, float(i) * TAU / 8.0, true)
 		c.ok(frame >= 0 and frame < PresentationAssets.frame_count(key), "walk pose stays in its atlas")
 		if not seen.has(frame):
 			seen.append(frame)
 	c.ok(seen.size() >= 3, "walking changes the actual source frame, not just the transform")
 	c.eq(ArenaPainter.actor_frame(key, 100.0, false), 0, "stopping restores the neutral pose")
-	c.eq(ArenaPainter.actor_frame(key, -1.0, true), 0, "negative visual clock starts at neutral")
+	c.eq(ArenaPainter.actor_frame(key, -1.0, true), 0, "negative gait phase starts at neutral")
 	c.eq(ArenaPainter.actor_frame(&"weapon_pistol", 2.0, true, true), 0,
 			"single-frame equipment never reads beyond its source")
 
 
-func test_reduced_walk_keeps_readable_poses_at_a_slower_rate(c: Check) -> void:
+func test_reduced_walk_keeps_the_same_distance_contacts(c: Check) -> void:
 	var key: StringName = &"character_looper_front"
-	c.eq(ArenaPainter.actor_frame(key, 0.15, true, false, true), 0,
-			"reduced motion holds the first pose longer")
-	c.ok(ArenaPainter.actor_frame(key, 0.25, true, false, true) > 0,
-			"reduced motion still advances the foot pose")
+	c.eq(ArenaPainter.actor_frame(key, PI * 0.25, true, false, true), 0,
+			"reduced motion uses the planted quarter-cycle pose")
+	c.ok(ArenaPainter.actor_frame(key, PI * 0.5, true, false, true) > 0,
+			"reduced motion preserves the same physical contact phase")
 	c.eq(ArenaPainter.actor_frame(key, 0.0, false, true, true),
 			mini(3, PresentationAssets.frame_count(key) - 1), "hurt pose remains visible with reduced effects")
 
@@ -68,7 +68,7 @@ func test_pause_freezes_art_clocks_and_keeps_simulation_untouched(c: Check) -> v
 	view.set_paused(true)
 	view._process(3.0)
 	c.eq(view.motion_stats()["visual_time"], before["visual_time"], "pause freezes source-frame clock")
-	c.eq(view.position, Vector2.ZERO, "pause removes any screen displacement")
+	c.eq(view.position, WorldArena.camera_offset(sim.player.pos), "pause removes shake while preserving world framing")
 	c.eq(sim.rng.state, rng_state, "art animation never consumes simulation randomness")
 	c.eq(sim.wave_time, wave_time, "view animation never advances gameplay time")
 	c.eq(sim.player.pos, player_pos, "art animation never moves the collision body")
@@ -85,22 +85,22 @@ func test_pause_freezes_art_clocks_and_keeps_simulation_untouched(c: Check) -> v
 	view.free()
 
 
-func test_collapse_has_distinct_paper_feedback_and_expires(c: Check) -> void:
+func test_retirement_has_bounded_identity_fragments_and_expires(c: Check) -> void:
 	var sim := Sim.new(42)
 	sim.start_run()
 	var view := ArenaView.new()
 	view.bind(sim)
-	var collapse := ExplosionInfo.new()
-	collapse.effect = &"echo_collapse"
-	collapse.pos = sim.player.pos
-	collapse.radius = 180.0
-	view._on_explosion_info(collapse)
-	c.eq(view._explosions[0]["effect"], &"echo_collapse", "collapse retains its own paper-fold animation cause")
-	c.near(view._explosions[0]["radius"], 180.0, 0.001, "ink impact uses the authoritative collapse radius")
-	c.ok(view._sparks.size() >= 18, "collapse visibly releases paper fragments")
+	var info := EchoRetirementInfo.new()
+	info.uid = 7
+	info.actor_token = 7
+	info.kind = &"pin"
+	info.pos = sim.player.pos
+	view.react_retirement(info)
+	c.eq(view.event_last_data()["skill"], &"pin", "retirement carries the actual weapon-derived skill")
+	c.eq(view.event_last_data()["actor_token"], 7, "retirement keeps stable take identity")
+	c.eq(view._sparks.size(), 9, "active retirement has a bounded paper fragment budget")
 	view._process(1.0)
-	c.eq(view._explosions.size(), 0, "collapse stamp ends instead of becoming permanent noise")
-	c.eq(view._sparks.size(), 0, "paper fragments expire")
+	c.eq(view._sparks.size(), 0, "retirement fragments expire")
 	view.free()
 
 
@@ -145,61 +145,48 @@ func _luminance(color: Color) -> float:
 	return linear.r * 0.2126 + linear.g * 0.7152 + linear.b * 0.0722
 
 
-func test_collapse_action_hint_has_opaque_contrast_in_both_languages(c: Check) -> void:
+func test_retirement_selection_has_opaque_contrast_in_both_languages(c: Check) -> void:
 	var hud := Hud.new()
 	var old_lang := Loc.lang
 	for lang: String in ["en", "zh"]:
 		Loc.lang = lang
-		var profile := hud.collapse_hint_profile(Loc.t("hud.collapse"))
+		var profile := hud.retirement_hint_profile()
 		var foreground: Color = profile["foreground"]
 		var background: Color = profile["background"]
 		var light := maxf(_luminance(foreground), _luminance(background))
 		var dark := minf(_luminance(foreground), _luminance(background))
 		c.ok((light + 0.05) / (dark + 0.05) >= 7.0,
-				"%s small collapse label exceeds readable contrast on its actual drawing stock" % lang)
+				"%s selected copy label exceeds readable contrast on its actual drawing stock" % lang)
 		c.eq(background.a, 1.0, "%s hint does not inherit the dark floor through transparency" % lang)
 		var rect: Rect2 = profile["rect"]
-		c.ok(rect.end.x < Sim.ARENA.end.x and rect.end.y <= Sim.ARENA.end.y,
+		c.ok(rect.end.x < WorldArena.VIEWPORT.end.x and rect.end.y <= WorldArena.VIEWPORT.end.y,
 				"%s full key and translated caption remain in the existing bottom hint band" % lang)
-		c.ok(rect.position.y >= 650.0 and rect.size.y <= 28.0,
-				"%s hint does not grow upward into the fighting area" % lang)
+		c.ok(rect.position.y >= 590.0 and rect.size.y <= 88.0,
+				"%s selection and predicted skill stay inside the lower fighting-safe band" % lang)
 	Loc.lang = old_lang
 	hud.free()
 
 
-func test_collapse_particles_use_paper_ink_without_rewriting_event_colour(c: Check) -> void:
+func test_retirement_preserves_identity_tint_and_exhaustion_is_quiet(c: Check) -> void:
 	var sim := Sim.new(91)
 	sim.start_run()
 	var source_color := Color(0.2, 0.95, 1.0)
-	for reduced in [false, true]:
-		var view := ArenaView.new()
-		view.bind(sim)
-		view.set_reduced_effects(reduced)
-		var collapse := ExplosionInfo.new()
-		collapse.effect = &"echo_collapse"
-		collapse.pos = sim.player.pos
-		collapse.color = source_color
-		collapse.radius = 180.0
-		view._on_explosion_info(collapse)
-		c.eq(view._explosions[0]["color"], source_color,
-				"collapse event retains its authoritative echo colour")
-		c.eq(collapse.color, source_color, "presentation does not rewrite the original rich event")
-		c.eq(view._sparks[0].color, ArenaPainter.INK, "collapse's actual outer ring uses dark ink")
-		var outside_palette := false
-		for spark: Spark in view._sparks:
-			if spark.color not in [ArenaPainter.PAPER, ArenaPainter.INK, ArenaPainter.DANGER]:
-				outside_palette = true
-		c.ok(not outside_palette, "all actual collapse particles stay in the paper/ink/stamp palette")
-		c.eq(view._sparks.size(), 5 if reduced else 19, "reduced mode keeps its restrained fragment budget")
-		view.free()
-	var regular := ArenaView.new()
-	regular.bind(sim)
-	var blast := ExplosionInfo.new()
-	blast.color = source_color
-	regular._on_explosion_info(blast)
-	c.eq(regular._sparks[0].color, source_color, "ordinary explosion ring colour remains unchanged")
-	c.eq(regular._sparks[1].color, source_color, "ordinary explosion particles retain their existing contract")
-	regular.free()
+	for exhausted in [false, true]:
+		for reduced in [false, true]:
+			var view := ArenaView.new()
+			view.bind(sim)
+			view.set_reduced_effects(reduced)
+			var info := EchoRetirementInfo.new()
+			info.pos = sim.player.pos
+			info.tint = source_color
+			info.exhausted = exhausted
+			view.react_retirement(info)
+			c.eq(view.event_last_data()["source_tint"], source_color, "retirement retains its original copy color")
+			c.eq(info.tint, source_color, "presentation leaves the authoritative event unchanged")
+			c.eq(view._sparks.size(), 3 if exhausted or reduced else 9, "exhaustion and Reduced use quiet fragment budgets")
+			for spark in view._sparks:
+				c.ok(spark.color in [ArenaPainter.PAPER, source_color], "paper fragments preserve copy identity")
+			view.free()
 
 
 func test_fading_hit_star_skips_the_exact_large_coordinate_triangulation_failure(c: Check) -> void:

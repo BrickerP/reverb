@@ -1,14 +1,15 @@
 class_name RecyclingDepot
 extends Node2D
 
-# Shallow edge landmarks. They sit underneath actors and never create collision.
+# Edge illustrations sit beneath actors. The five interior machine footprints
+# come directly from WorldArena, the same geometry used by bodies and bullets.
 const ATLAS_PATH := "res://assets/presentation/environment/depot_landmarks.png"
 const ATLAS_SOURCE_SIZE := Vector2(1881.0, 836.0)
 const CONVEYOR_SOURCE := Rect2(28.0, 272.0, 721.0, 449.0)
 const WORKSTATION_SOURCE := Rect2(774.0, 59.0, 519.0, 673.0)
 const NOTICE_SOURCE := Rect2(1332.0, 117.0, 525.0, 629.0)
 const EDGE_DEPTH := 136.0
-const QUIET_CENTER := Rect2(260.0, 220.0, 860.0, 320.0)
+const QUIET_CENTER := Rect2(650.0, 530.0, 1000.0, 320.0)
 const INK := Color("37362d")
 const PAPER := Color("d1c5a4")
 const METAL := Color("6c6a59")
@@ -40,11 +41,11 @@ func set_presentation(time: float, reduced: bool, paused: bool) -> void:
 static func landmark_rects() -> Dictionary:
 	return {
 		&"returns": Rect2(60.0, 92.0, 330.0, 118.0),
-		&"notice": Rect2(516.0, 86.0, 248.0, 60.0),
-		&"workstation": Rect2(1128.0, 538.0, 100.0, 130.0),
-		&"scrap_tag": Rect2(1140.0, 506.0, 88.0, 27.0),
-		&"poster": Rect2(48.0, 550.0, 80.0, 96.0),
-		&"chute": Rect2(44.0, 378.0, 60.0, 110.0),
+		&"notice": Rect2(1116.0, 86.0, 248.0, 60.0),
+		&"workstation": Rect2(2328.0, 1138.0, 100.0, 130.0),
+		&"scrap_tag": Rect2(2340.0, 1106.0, 88.0, 27.0),
+		&"poster": Rect2(48.0, 1150.0, 80.0, 96.0),
+		&"chute": Rect2(44.0, 678.0, 60.0, 110.0),
 	}
 
 
@@ -71,10 +72,44 @@ static func notice_text_rect() -> Rect2:
 func _draw() -> void:
 	var profile := motion_profile(float(maxi(0, _draw_tick)) / DRAW_HZ, _reduced_effects)
 	_draw_returns(profile)
+	draw_set_transform(Vector2(600.0, 0.0))
 	_draw_notice()
+	draw_set_transform(Vector2(1200.0, 600.0))
 	_draw_workstation(profile)
+	draw_set_transform(Vector2(0.0, 300.0))
 	_draw_chute()
+	draw_set_transform(Vector2(0.0, 600.0))
 	_draw_poster()
+	draw_set_transform(Vector2.ZERO)
+	_draw_machines(profile)
+
+
+func _draw_machines(profile: Dictionary) -> void:
+	for index in WorldArena.MACHINES.size():
+		var machine: Rect2 = WorldArena.MACHINES[index]
+		var outline := PackedVector2Array([
+			machine.position + Vector2(-3.0, 3.0),
+			Vector2(machine.end.x + 2.0, machine.position.y - 2.0),
+			machine.end + Vector2(3.0, -2.0),
+			Vector2(machine.position.x - 2.0, machine.end.y + 2.0)])
+		draw_colored_polygon(outline, Color(INK, 0.25))
+		draw_polyline(_closed(outline), Color(INK, 0.62), 2.0, true)
+		var is_press := index % 2 == 0
+		var source := WORKSTATION_SOURCE if is_press else CONVEYOR_SOURCE
+		var height := machine.size.y + (46.0 if is_press else 24.0)
+		var width := minf(machine.size.x + 10.0, height * source.size.x / source.size.y)
+		var art := Rect2(Vector2(machine.get_center().x - width * 0.5, machine.end.y - height), Vector2(width, height))
+		_draw_region(source, art)
+		var tag := Rect2(Vector2(machine.get_center().x - 56.0, machine.end.y - 7.0), Vector2(112.0, 22.0))
+		draw_colored_polygon(PackedVector2Array([tag.position + Vector2(0.0, 2.0),
+			tag.position + Vector2(tag.size.x - 3.0, 0.0), tag.end,
+			Vector2(tag.position.x + 3.0, tag.end.y - 1.0)]), Color(PAPER, 0.92))
+		_draw_label(Loc.t("world.cover_press" if is_press else "world.cover_returns"), tag.grow(-3.0), 12, INK)
+		var lamp := Vector2(art.end.x - 7.0, art.position.y + art.size.y * 0.5)
+		draw_circle(lamp, 2.0, Color(ACCENT, float(profile["lamp"])))
+		for stripe in 4:
+			var mark := machine.position + Vector2(12.0 + float(stripe) * 12.0, machine.size.y + 5.0)
+			draw_line(mark, mark + Vector2(7.0, 5.0), Color(INK, 0.32), 2.0, true)
 
 
 func _draw_returns(profile: Dictionary) -> void:

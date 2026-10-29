@@ -6,6 +6,8 @@ signal settings_requested
 signal history_requested
 signal daily_requested
 signal codex_requested
+signal continue_requested
+signal story_requested
 
 # The click area stays still. Only the drawn ink, labels and portraits are offset.
 class CastButton extends Button:
@@ -72,6 +74,10 @@ class CastButton extends Button:
 			draw_polyline(ink, paper_color, 2.0, true)
 
 var _cards_box: HBoxContainer
+var continue_button: Button
+var resume_error: Label
+var _resume_available := false
+var _resume_error := ""
 var _summary: Label
 var _detail: Label
 var _selection_note: Label
@@ -100,16 +106,28 @@ func _ready() -> void:
 	var stage := MarginContainer.new()
 	stage.custom_minimum_size = Vector2(1160.0, 0.0)
 	for side in ["left", "right", "top", "bottom"]:
-		stage.add_theme_constant_override("margin_" + side, 12)
+		stage.add_theme_constant_override("margin_" + side, 8)
 	center.add_child(stage)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 5)
+	box.add_theme_constant_override("separation", 3)
 	stage.add_child(box)
-	var logotype := UiTheme.label(Loc.t("select.title"), 50, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	var logotype := UiTheme.label(Loc.t("select.title"), 44, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	logotype.add_theme_font_override("font", load(UiTheme.TITLE_EN) as Font)
 	box.add_child(logotype)
 	box.add_child(UiTheme.label(Loc.t("brand.department"), 17, UiTheme.WARN, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UiTheme.label(Loc.t("select.subtitle"), 15, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	continue_button = Button.new()
+	continue_button.text = Loc.t("select.continue")
+	continue_button.custom_minimum_size = Vector2(230.0, 36.0)
+	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	continue_button.visible = _resume_available
+	continue_button.pressed.connect(func() -> void: continue_requested.emit())
+	UiTheme.stamp_button(continue_button)
+	box.add_child(continue_button)
+	resume_error = UiTheme.label(_resume_error, 14, UiTheme.WARN, HORIZONTAL_ALIGNMENT_CENTER)
+	resume_error.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	resume_error.visible = not _resume_error.is_empty()
+	box.add_child(resume_error)
 	_cards_box = HBoxContainer.new()
 	_cards_box.add_theme_constant_override("separation", 6)
 	_cards_box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -136,11 +154,11 @@ func _ready() -> void:
 	_ascension_button.add_theme_font_size_override("font_size", 12)
 	_ascension_button.pressed.connect(_cycle_ascension)
 	footer.add_child(_ascension_button)
-	for key in ["select.codex", "select.settings", "select.history"]:
+	for key in ["select.codex", "select.settings", "select.history", "select.story"]:
 		var button := StitchedAction.new()
 		button.text = Loc.t(key)
 		button.flat = true
-		button.custom_minimum_size = Vector2(138.0, 34.0)
+		button.custom_minimum_size = Vector2(108.0, 34.0)
 		button.add_theme_font_size_override("font_size", 16)
 		button.pressed.connect(_secondary_action.bind(key))
 		footer.add_child(button)
@@ -162,6 +180,7 @@ func _secondary_action(key: String) -> void:
 		"select.codex": codex_requested.emit()
 		"select.settings": settings_requested.emit()
 		"select.history": history_requested.emit()
+		"select.story": story_requested.emit()
 
 
 func refresh(meta: Meta, daily_seed: int = 0, daily_best: int = 0) -> void:
@@ -205,6 +224,8 @@ func _rebuild_focus() -> void:
 		if not card.disabled:
 			controls.append(card)
 			available.append(card)
+	if continue_button.visible:
+		controls.append(continue_button)
 	controls.append(seed_edit)
 	controls.append(_ascension_button)
 	controls.append_array(_secondary_actions)
@@ -215,7 +236,21 @@ func _rebuild_focus() -> void:
 		available[i].focus_neighbor_bottom = available[i].get_path_to(seed_edit)
 
 
+func set_resume_available(available: bool, error: String = "") -> void:
+	_resume_available = available
+	_resume_error = error
+	if continue_button == null:
+		return
+	continue_button.visible = available
+	resume_error.text = error
+	resume_error.visible = not error.is_empty()
+	_rebuild_focus()
+
+
 func focus_default() -> void:
+	if continue_button != null and continue_button.visible:
+		continue_button.grab_focus()
+		return
 	for card in _cards:
 		if not card.disabled:
 			card.grab_focus()
@@ -253,8 +288,8 @@ func _cycle_ascension() -> void:
 func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 	var locked := not meta.is_unlocked(def.id)
 	var card := CastButton.new()
-	card.custom_minimum_size = Vector2(274.0, 326.0)
-	card.rise = [14.0, 0.0, 24.0, 7.0][index % 4]
+	card.custom_minimum_size = Vector2(182.0, 314.0)
+	card.rise = [8.0, 0.0, 12.0, 3.0, 9.0, 0.0][index % 6]
 	card.paper_color = UiTheme.character_color(def.id)
 	card.disabled = locked
 	card.set_meta(&"character_id", def.id)
@@ -290,7 +325,7 @@ func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 	card.portrait = UiTheme.character_icon(def.id, Vector2(158.0, 184.0))
 	card.portrait.modulate.a = 0.48 if locked else 1.0
 	card.add_child(card.portrait)
-	card.name_label = UiTheme.label(Loc.character_name(def.id), 29, card.paper_color, HORIZONTAL_ALIGNMENT_CENTER)
+	card.name_label = UiTheme.label(Loc.character_name(def.id), 24, card.paper_color, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(card.name_label)
 	var slots := int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS]))
 	var power := float(def.overrides.get(Stats.ECHO_POWER, Stats.DEFAULTS[Stats.ECHO_POWER]))
@@ -299,19 +334,23 @@ func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 		core = Loc.t("select.solo_core")
 	elif def.live_echo:
 		core = Loc.t("select.live_echo")
+	elif def.id == &"mender":
+		core = Loc.t("select.mender_core")
+	elif def.id == &"overloader":
+		core = Loc.t("select.overloader_core")
 	elif def.id == &"conductor":
 		core = Loc.t("select.conductor_core")
 	else:
 		core = Loc.t("select.echo_line", [slots, int(round(power * 100.0))])
-	card.trait_label = UiTheme.label(core, 15, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
-	card.trait_label.custom_minimum_size = Vector2(250.0, 0.0)
+	card.trait_label = UiTheme.label(core, 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	card.trait_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.trait_label)
 	var status := Loc.t("select.ready")
 	if locked:
 		status = Loc.t("select.locked_wins") if def.unlock_wins > 0 else Loc.t("select.locked", [def.unlock_wave])
 	card.status_label = UiTheme.label(status, 13, UiTheme.WARN if locked else UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
-	card.status_label.custom_minimum_size = Vector2(254.0, 0.0)
+	card.status_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.status_label)
 	card.tooltip_text = Loc.character_desc(def.id)

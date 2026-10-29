@@ -66,14 +66,14 @@ func test_ui_reports_changes(c: Check) -> void:
 	ui.free()
 
 
-func test_active_run_locks_language_without_hiding_the_reason(c: Check) -> void:
+func test_language_stays_available_and_reload_errors_are_visible(c: Check) -> void:
 	var ui := SettingsUi.new()
 	ui.theme = UiTheme.build()
 	(Engine.get_main_loop() as SceneTree).root.add_child(ui)
-	ui.open(Settings.new(PATH), false)
-	c.ok(ui.language_option.disabled, "language is locked during an active run")
-	c.ok(ui.language_lock_hint.visible, "the language lock explains when it is available")
-	c.ok(not ui.language_option.accessibility_description.is_empty(),
-			"the language lock has an accessible explanation")
+	ui.open(Settings.new(PATH))
+	c.ok(not ui.language_option.disabled, "language remains available during a run")
+	ui.show_error(Loc.t("suspend.write_failed"))
+	c.ok(ui.error_label.visible, "a failed exact reload gives a visible error")
+	c.ok(not ui.error_label.text.is_empty(), "reload error is readable text")
 	ui.close()
 	ui.free()

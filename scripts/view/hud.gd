@@ -25,6 +25,8 @@ var _flash: Array[float] = []
 var _prev_materials := 0
 var _mat_pulse := 0.0
 var _hint_time := 0.0
+var _last_combo: StringName = &""
+var _combo_left := 0.0
 
 
 func _ready() -> void:
@@ -49,6 +51,8 @@ func bind(s: Sim) -> void:
 	_prev_materials = s.player.materials
 	_mat_pulse = 0.0
 	_hint_time = 0.0
+	_last_combo = &""
+	_combo_left = 0.0
 	_visual_time = 0.0
 
 
@@ -63,6 +67,8 @@ func unbind() -> void:
 	_prev_materials = 0
 	_mat_pulse = 0.0
 	_hint_time = 0.0
+	_last_combo = &""
+	_combo_left = 0.0
 	_visual_time = 0.0
 	queue_redraw()
 
@@ -81,7 +87,7 @@ func weapon_ready(index: int) -> float:
 func echo_remaining(take: EchoTake) -> int:
 	if sim == null:
 		return 0
-	return maxi(0, sim.echo_lifespan() - take.age)
+	return ceili(maxf(0.0, take.condition) / 100.0 * sim.echo_duration() / maxf(0.01, sim.wear_rate_mult))
 
 
 # First minutes of a run; fades out on its own so it never becomes UI noise.
@@ -95,6 +101,7 @@ func _process(delta: float) -> void:
 	if sim == null or paused:
 		return
 	_visual_time += delta
+	_combo_left = maxf(0.0, _combo_left - delta)
 	var ratio := clampf(sim.player.hp / maxf(1.0, sim.player.max_hp()), 0.0, 1.0)
 	if ratio < 0.3 and ratio < _last_health_ratio and not reduced_effects:
 		_critical_poke = 1.0
@@ -132,6 +139,7 @@ func _draw() -> void:
 	_draw_health()
 	_draw_echo_chips()
 	_draw_wave()
+	_draw_wave_phase()
 	_draw_materials()
 	_draw_weapons()
 	_draw_gunsmith_charge()
@@ -149,6 +157,7 @@ func layout_regions() -> Dictionary:
 	return {
 		"health": Rect2(23.0, 5.0, 340.0, 65.0),
 		"wave": Rect2(640.0 - wave_width * 0.5, 7.0, wave_width, 61.0),
+		"phase": Rect2(850.0, 19.0, 210.0, 38.0),
 		"materials": Rect2(1084.0, 9.0, 162.0, 59.0),
 		"weapons": Rect2(34.0, 683.0, 268.0, 36.0),
 	}
@@ -190,7 +199,6 @@ func _draw_echo_chips() -> void:
 	if sim.echo_capacity() <= 0:
 		return
 	_text(Loc.t("hud.echo"), Vector2(39.0, 62.0), 13, UiTheme.DIM)
-	var lifespan := maxi(1, sim.echo_lifespan())
 	var muted := sim.echo_silenced > 0.0
 	for i in sim.echo_capacity():
 		var chip := Rect2(112.0 + float(i) * 28.0, 45.0 + float(i % 2), 22.0, 17.0)
@@ -199,14 +207,13 @@ func _draw_echo_chips() -> void:
 		stock.border_color = Color(ArenaPainter.INK, 0.45)
 		if i < sim.echoes.size():
 			var take := sim.echoes[i].take
-			var remaining := echo_remaining(take)
 			var tint := ArenaPainter.paper_echo_color(take.tint())
 			stock.bg_color = ArenaPainter.PAPER.lerp(tint, 0.35 if muted else 0.72)
-			stock.border_color = ArenaPainter.DANGER if remaining <= 1 else ArenaPainter.INK
+			stock.border_color = UiTheme.ACCENT if take.uid == sim.selected_echo_uid else (ArenaPainter.DANGER if take.condition <= 25.0 else ArenaPainter.INK)
 			stock.draw(get_canvas_item(), chip)
-			var segments := mini(6, lifespan)
+			var segments := 6
 			for k in segments:
-				var filled := float(k) / float(segments) < float(remaining) / float(lifespan)
+				var filled := float(k) / float(segments) < take.condition / 100.0
 				var point := chip.position + Vector2(3.0 + float(k) * 16.0 / float(maxi(1, segments - 1)), 12.0)
 				draw_circle(point, 1.2, ArenaPainter.PAPER if filled else Color(ArenaPainter.INK, 0.45))
 			if muted:
@@ -276,6 +283,20 @@ func _draw_wave() -> void:
 		var current := i == sim.wave - 1
 		var color := field_ink if current else Color(field_ink, 0.6 if i < sim.wave - 1 else 0.20)
 		draw_circle(point, 2.6 if current else 1.7, color)
+
+
+func wave_phase_profile() -> Dictionary:
+	return WaveDirector.phase_profile(sim.wave_time, sim.wave_duration) if sim != null else WaveDirector.phase_profile(0.0, 0.0)
+
+
+func _draw_wave_phase() -> void:
+	if sim.is_boss_wave():
+		return
+	var profile := wave_phase_profile()
+	var rect: Rect2 = layout_regions()["phase"]
+	_stock(&"phase_tag", UiTheme.PAPER, InkStyleBox.Shape.TAG, 9).draw(get_canvas_item(), rect)
+	_text(Loc.t(profile["name_key"]), Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
+			13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
 
 
 func _draw_materials() -> void:
@@ -368,37 +389,79 @@ static func _weapon_thumbnail_rect(slot: Rect2, source_size: Vector2) -> Rect2:
 	return Rect2(area.get_center() - fitted * 0.5, fitted)
 
 
+func _input(event: InputEvent) -> void:
+	Controls.note_event(event)
+
+
+func set_combo_feedback(info: ComboInfo) -> void:
+	if info == null:
+		return
+	_last_combo = info.id
+	_combo_left = 2.5
+	queue_redraw()
+
+
+func selected_echo_profile() -> Dictionary:
+	if sim == null:
+		return {}
+	var actor := EchoSystem.selected_actor(sim)
+	if actor == null:
+		return {}
+	var profile := EchoSystem.skill_profile(actor.take, sim)
+	profile["seconds"] = echo_remaining(actor.take)
+	profile["wave"] = actor.take.wave
+	var camera := WorldArena.camera_rect(sim.player.pos)
+	var offscreen := not camera.has_point(actor.pos)
+	profile["offscreen"] = offscreen
+	profile["offscreen_direction"] = (actor.pos - camera.get_center()).normalized() if offscreen else Vector2.ZERO
+	return profile
+
+
+func retirement_hint_profile() -> Dictionary:
+	return {"rect": Rect2(36.0, 590.0, 568.0, 88.0),
+		"foreground": ArenaPainter.INK, "background": ArenaPainter.PAPER}
+
+
 func _draw_controls() -> void:
-	var size := 14
+	var profile := selected_echo_profile()
+	if not profile.is_empty():
+		var stock: Rect2 = retirement_hint_profile()["rect"]
+		_stock(&"retirement_hint", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), stock)
+		var status := Loc.t("echo.selected", [profile["uid"], int(ceil(profile["condition"])), profile["seconds"]])
+		_text(status, Vector2(50.0, 612.0), 14, UiTheme.INK)
+		_text(Loc.echo_profile(profile), Vector2(50.0, 635.0), 13, UiTheme.DIM)
+		var action := Loc.t("echo.input_hint", [Controls.retire_label()])
+		if not sim.can_retire_echo():
+			action = Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
+		_text(action, Vector2(50.0, 658.0), 12, UiTheme.INK)
+		if profile["offscreen"]:
+			var direction: Vector2 = profile["offscreen_direction"]
+			var center := Vector2(579.0, 611.0)
+			draw_line(center - direction * 8.0, center + direction * 9.0, UiTheme.ACCENT, 2.0, true)
+			var tip := center + direction * 9.0
+			draw_line(tip, tip - direction.rotated(0.6) * 7.0, UiTheme.ACCENT, 2.0, true)
+			draw_line(tip, tip - direction.rotated(-0.6) * 7.0, UiTheme.ACCENT, 2.0, true)
+	if _combo_left > 0.0:
+		var text := Loc.t("combo.triggered", [Loc.combo_name(_last_combo)])
+		var width := UiTheme.font().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14).x + 28.0
+		_stock(&"combo_receipt", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), Rect2(640.0, 646.0, width, 30.0))
+		_text(text, Vector2(654.0, 666.0), 14, UiTheme.ACCENT)
+	var font_size := 14
 	var label_w := UiTheme.font()
-	if sim.can_collapse_echo():
-		var hint := Loc.t("hud.collapse")
-		var profile := collapse_hint_profile(hint)
-		var rect: Rect2 = profile["rect"]
-		var foreground: Color = profile["foreground"]
-		_stock(&"collapse_hint", profile["background"], InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), rect)
-		_keycap("SPACE", Vector2(40.0, 654.0), 12)
-		_text(hint, Vector2(40.0 + _keycap_width("SPACE", 12) + 8.0, 670.0), 12, foreground)
 	var move_label := Loc.t("hud.move")
 	var pause_label := Loc.t("hud.pause")
-	var move_w := _keycap_width("WASD", size) + 8.0 + label_w.get_string_size(move_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
-	var pause_w := _keycap_width("P", size) + 8.0 + label_w.get_string_size(pause_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x
+	var move_key := Controls.move_label()
+	var pause_key := Controls.pause_label()
+	var move_w := _keycap_width(move_key, font_size) + 8.0 + label_w.get_string_size(move_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var pause_w := _keycap_width(pause_key, font_size) + 8.0 + label_w.get_string_size(pause_label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var x := 1240.0 - move_w - 18.0 - pause_w
 	_stock(&"controls_tag", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 4).draw(get_canvas_item(),
 			Rect2(x - 9.0, 687.0, move_w + pause_w + 36.0, 31.0))
-	_keycap("WASD", Vector2(x, 694.0), size)
-	_text(move_label, Vector2(x + _keycap_width("WASD", size) + 8.0, 709.0), size, UiTheme.DIM)
+	_keycap(move_key, Vector2(x, 694.0), font_size)
+	_text(move_label, Vector2(x + _keycap_width(move_key, font_size) + 8.0, 709.0), font_size, UiTheme.DIM)
 	x += move_w + 18.0
-	_keycap("P", Vector2(x, 694.0), size)
-	_text(pause_label, Vector2(x + _keycap_width("P", size) + 8.0, 709.0), size, UiTheme.DIM)
-
-
-# The entire action hint sits on opaque stock, so it stays readable over any arena art.
-func collapse_hint_profile(hint: String) -> Dictionary:
-	var label_width := UiTheme.font().get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12).x
-	var width := _keycap_width("SPACE", 12) + 8.0 + label_width + 12.0
-	return {"rect": Rect2(36.0, 650.0, width + 4.0, 28.0),
-		"foreground": ArenaPainter.INK, "background": ArenaPainter.PAPER}
+	_keycap(pause_key, Vector2(x, 694.0), font_size)
+	_text(pause_label, Vector2(x + _keycap_width(pause_key, font_size) + 8.0, 709.0), font_size, UiTheme.DIM)
 
 
 func _draw_onboarding() -> void:
@@ -407,15 +470,15 @@ func _draw_onboarding() -> void:
 	var alpha := hint_alpha()
 	if alpha <= 0.0:
 		return
-	var panel := Rect2(450.0, 604.0, 380.0, 48.0)
+	var panel := Rect2(450.0, 536.0, 380.0, 48.0)
 	var stock := _stock(&"onboarding", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 3)
 	stock.bg_color = Color(ArenaPainter.PAPER, alpha)
 	stock.border_color = Color(ArenaPainter.INK, alpha)
 	stock.draw(get_canvas_item(), panel)
 	var size := 16
 	var x := panel.position.x + 18.0
-	_keycap("WASD", Vector2(x, panel.position.y + 14.0), size, alpha)
-	x += _keycap_width("WASD", size) + 8.0
+	_keycap(Controls.move_label(), Vector2(x, panel.position.y + 14.0), size, alpha)
+	x += _keycap_width(Controls.move_label(), size) + 8.0
 	_text(Loc.t("hud.move"), Vector2(x, panel.position.y + 29.0), size, Color(UiTheme.DIM, alpha))
 	x += UiTheme.font().get_string_size(Loc.t("hud.move"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x + 22.0
 	# A small burst glyph reads as "this happens by itself".

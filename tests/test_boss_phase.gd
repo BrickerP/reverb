@@ -151,3 +151,97 @@ func test_phase_two_keeps_the_silence_cadence(c: Check) -> void:
 	_run(s, 2)
 	c.eq(silences[0], 1, "the split does not double the silence signal")
 	c.ok(s.echo_silenced > 0.0, "the boss can still silence in phase two")
+
+
+func _positioned_boss(seed_value: int, boss_pos: Vector2, player_pos: Vector2) -> Sim:
+	var s := _sim(seed_value)
+	s.start_wave(WaveDirector.FINAL_WAVE)
+	s._plan.clear()
+	s.player.pos = player_pos
+	var pending_boss := PendingSpawn.new()
+	pending_boss.def = Content.enemy(&"paradox")
+	pending_boss.pos = boss_pos
+	s._materialize(pending_boss)
+	return s
+
+
+func _check_local_split(c: Check, seed_value: int, boss_pos: Vector2, player_pos: Vector2) -> Vector2:
+	var s := _positioned_boss(seed_value, boss_pos, player_pos)
+	var original := s.boss
+	var before_pos := original.pos
+	var before_speed := original.speed
+	var before_damage := original.damage
+	var pad := original.radius + 16.0
+	var camera := WorldArena.camera_rect(s.player.pos).grow(-pad)
+	c.ok(WorldArena.body_clear(before_pos, pad), "fixture original has machine and wall clearance")
+	c.ok(camera.has_point(before_pos), "fixture original is in the player's current view")
+	c.ok(before_pos.distance_to(player_pos) >= 140.0, "fixture original is safely away from player contact")
+	var events: Array[StringName] = []
+	var silences: Array[EchoSilenceInfo] = []
+	s.echoes_silenced.connect(func(info: EchoSilenceInfo) -> void:
+		silences.append(info)
+		events.append(&"silence"))
+	s.boss_phase_changed.connect(func(_phase: int) -> void: events.append(&"phase"))
+	s.boss_shard_spawned.connect(func(_enemy: EnemyState) -> void: events.append(&"shard"))
+	var before_rng := s.rng.state
+	var before_hazard_rng := s.hazard_rng.state
+	var silence_cd := s._boss_silence_cd
+	var minion_cd := s._boss_minion_cd
+	original.hp = original.max_hp * 0.5 + 1.0
+	var remaining := original.hp - 2.0
+	s.damage_enemy(original, 2.0, Vector2.ZERO, false, -1)
+	c.eq(s.boss_phase, 2, "local hit enters boss phase two")
+	c.eq(s.boss_shards.size(), 2, "local split creates exactly one additional body")
+	c.eq(events, [&"silence", &"phase", &"shard"], "split preserves single silence, phase and shard signal order")
+	c.eq(silences.size(), 1, "phase transition announces silence exactly once")
+	if not silences.is_empty():
+		c.eq(silences[0].kind, EchoSilenceInfo.PHASE, "split keeps the phase-specific silence cause")
+		c.eq(silences[0].source_uid, original.uid, "original remains the silence source")
+		c.eq(silences[0].pos, before_pos, "silence event retains the real original position")
+	c.eq(original.pos, before_pos, "splitting never teleports the original boss")
+	c.eq(original.speed, before_speed, "splitting leaves original movement speed unchanged")
+	c.eq(s.rng.state, before_rng, "local placement consumes no gameplay RNG")
+	c.eq(s.hazard_rng.state, before_hazard_rng, "local placement consumes no hazard RNG")
+	c.eq(s._boss_silence_cd, silence_cd, "single-controller silence cadence remains unchanged")
+	c.eq(s._boss_minion_cd, minion_cd, "single-controller summon cadence remains unchanged")
+	c.near(_total_hp(s), remaining, 0.0001, "local placement preserves total remaining boss health")
+	if s.boss_shards.size() != 2:
+		return Vector2.ZERO
+	var shard: EnemyState = s.boss_shards[1]
+	var separation := shard.pos.distance_to(before_pos)
+	c.ok(separation >= 240.0 and separation <= 280.0, "new shard stays at the nearby split distance")
+	c.ok(camera.has_point(shard.pos), "new shard stays in the player's current camera with art clearance")
+	c.ok(WorldArena.body_clear(shard.pos, pad), "new shard clears machine cover and world boundaries")
+	c.ok(shard.pos.distance_to(player_pos) >= 140.0, "new shard cannot materialize into player contact")
+	c.near(shard.speed, before_speed * Sim.BOSS_PHASE2_SHARD_SPEED, 0.0001, "new shard preserves its existing speed ratio")
+	c.eq(shard.damage, before_damage, "position fix leaves shard damage unchanged")
+	c.near(original.hp, remaining * Sim.BOSS_PHASE2_SPLIT_SHARE, 0.0001, "original keeps its existing health share")
+	c.near(shard.hp, remaining * Sim.BOSS_PHASE2_SPLIT_SHARE, 0.0001, "new shard keeps its existing health share")
+	s._begin_boss_phase2()
+	c.eq(events, [&"silence", &"phase", &"shard"], "repeated transition call cannot duplicate the split cadence")
+	return shard.pos
+
+
+func test_split_stays_local_far_from_the_large_arena_center(c: Check) -> void:
+	var boss_pos := Vector2(390.0, 760.0)
+	var player_pos := Vector2(300.0, 930.0)
+	c.ok(boss_pos.distance_to(Sim.ARENA.get_center()) > 800.0, "regression starts far from the old reflection center")
+	var first := _check_local_split(c, 6105, boss_pos, player_pos)
+	var second := _check_local_split(c, 6106, boss_pos, player_pos)
+	c.eq(first, second, "same local geometry gives deterministic placement across run seeds")
+	c.near(first.distance_to(boss_pos), 260.0, 0.001, "ordinary split uses the intended local 260-pixel separation")
+
+
+func test_split_stays_visible_and_clear_at_world_edges_corners_and_machines(c: Check) -> void:
+	var fixtures: Array[Vector4] = [
+		Vector4(100.0, 140.0, 260.0, 300.0),
+		Vector4(2380.0, 1220.0, 2220.0, 1060.0),
+		Vector4(160.0, 460.0, 180.0, 280.0),
+		Vector4(2300.0, 920.0, 2280.0, 1110.0),
+		Vector4(100.0, 760.0, 280.0, 850.0),
+		Vector4(2360.0, 720.0, 2160.0, 700.0),
+		Vector4(1380.0, 370.0, 1320.0, 580.0),
+	]
+	for index in fixtures.size():
+		var fixture := fixtures[index]
+		_check_local_split(c, 6110 + index, Vector2(fixture.x, fixture.y), Vector2(fixture.z, fixture.w))

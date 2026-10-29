@@ -94,6 +94,8 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 			_box.add_child(empty_drop_target)
 		_box.add_child(UiTheme.label(Loc.t("shop.family"), 14, UiTheme.DIM))
 		_box.add_child(_family_summary(pl))
+		_box.add_child(UiTheme.label(Loc.t("combo.heading"), 14, UiTheme.DIM))
+		_box.add_child(_combo_summary(pl.weapons))
 		_selected = clampi(_selected, 0, maxi(0, _cards.size() - 1))
 		_select(_selected)
 	items_label = UiTheme.label(Loc.t("shop.items"), 16, UiTheme.DIM)
@@ -397,6 +399,7 @@ func _detail_text(index: int) -> String:
 func _detail_text_for(w: WeaponDef, level: int) -> String:
 	var text := Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1,
 			Loc.weapon_family(w.family), Loc.weapon_line(w)])
+	text += "  ·  " + Loc.weapon_desc(w.id)
 	text += "  ·  " + Loc.rarity_name(w.rarity)
 	if w.explosion_radius > 0.0:
 		text += "  ·  " + Loc.t("weapon.explosion", [int(w.explosion_radius)])
@@ -432,6 +435,10 @@ func _family_summary(pl: PlayerState) -> Control:
 					mastery_key = "shop.family_mastery_marksman"
 				&"arcane":
 					mastery_key = "shop.family_mastery_arcane"
+				&"press":
+					mastery_key = "shop.family_mastery_press"
+				&"salvage":
+					mastery_key = "shop.family_mastery_salvage"
 			if not mastery_key.is_empty():
 				parts.append(Loc.t(mastery_key))
 		if count >= 6:
@@ -521,3 +528,13 @@ func _counted(label: String, n: int) -> String:
 
 func _card_variant(id: StringName) -> int:
 	return absi(String(id).hash()) % 7
+
+
+func _combo_summary(weapons: Array[WeaponDef]) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	for profile in Combat.combo_profile(weapons):
+		var label := UiTheme.label(Loc.combo_line(profile), 12, UiTheme.ACCENT if profile["ready"] else UiTheme.DIM)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(label)
+	return box

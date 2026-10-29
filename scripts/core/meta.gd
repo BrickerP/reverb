@@ -4,6 +4,7 @@ extends RefCounted
 const DEFAULT_PATH := "user://reverb_save.json"
 
 var path: String
+var last_error: String = ""
 var best_wave: int = 0
 var best_endless: int = 0
 var best_boss_rush: int = 0
@@ -16,6 +17,7 @@ var daily_streak: int = 0
 var daily_last_win_seed: int = 0
 var ascension: int = 0
 var unlocked: Dictionary = {}
+var story_clues: Array[StringName] = []
 
 
 func _init(save_path: String = DEFAULT_PATH) -> void:
@@ -37,6 +39,7 @@ func _defaults() -> void:
 	daily_last_win_seed = 0
 	ascension = 0
 	unlocked = {}
+	story_clues.clear()
 	for def: CharacterDef in Content.characters().values():
 		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
 
@@ -65,6 +68,12 @@ func _load() -> void:
 	daily_streak = int(data.get("daily_streak", 0))
 	daily_last_win_seed = int(data.get("daily_last_win_seed", 0))
 	ascension = clampi(int(data.get("ascension", 0)), 0, max_ascension())
+	var saved_clues: Variant = data.get("story_clues", [])
+	if typeof(saved_clues) == TYPE_ARRAY:
+		for value: Variant in saved_clues:
+			var clue := StringName(str(value))
+			if StoryLedger.ALL.has(clue) and not story_clues.has(clue):
+				story_clues.append(clue)
 	var saved: Variant = data.get("unlocked", {})
 	if typeof(saved) == TYPE_DICTIONARY:
 		for key: Variant in (saved as Dictionary):
@@ -72,11 +81,19 @@ func _load() -> void:
 			if unlocked.has(id):
 				unlocked[id] = bool((saved as Dictionary)[key])
 
+	for def: CharacterDef in Content.characters().values():
+		if best_wave >= def.unlock_wave and wins >= def.unlock_wins:
+			unlocked[def.id] = true
 
-func save() -> void:
-	var file := FileAccess.open(path, FileAccess.WRITE)
+
+func save() -> bool:
+	last_error = ""
+	var absolute := ProjectSettings.globalize_path(path)
+	var temporary := absolute + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null:
-		return
+		last_error = "story.save_failed"
+		return false
 	var flags := {}
 	for id: StringName in unlocked:
 		flags[String(id)] = bool(unlocked[id])
@@ -93,7 +110,20 @@ func save() -> void:
 		"daily_last_win_seed": daily_last_win_seed,
 		"ascension": ascension,
 		"unlocked": flags,
+		"story_clues": story_clues,
 	}, "\t"))
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	if error != OK:
+		DirAccess.remove_absolute(temporary)
+		last_error = "story.save_failed"
+		return false
+	if DirAccess.rename_absolute(temporary, absolute) != OK:
+		DirAccess.remove_absolute(temporary)
+		last_error = "story.save_failed"
+		return false
+	return true
 
 
 func is_unlocked(id: StringName) -> bool:
@@ -162,3 +192,18 @@ func record_daily(sim: Sim, seed_value: int) -> void:
 			daily_streak = daily_streak + 1 if next_calendar_day(daily_last_win_seed, seed_value) else 1
 			daily_last_win_seed = seed_value
 	save()
+
+
+# Archive discoveries immediately; abandoning a run does not erase a clue.
+func discover_story(ids: Array[StringName]) -> bool:
+	last_error = ""
+	var before := story_clues.duplicate()
+	var changed := false
+	for id: StringName in ids:
+		if StoryLedger.ALL.has(id) and not story_clues.has(id):
+			story_clues.append(id)
+			changed = true
+	if changed and not save():
+		story_clues = before
+		return false
+	return changed

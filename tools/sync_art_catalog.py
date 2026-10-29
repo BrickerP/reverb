@@ -18,13 +18,31 @@ ART = ROOT / "assets/presentation"
 CATALOG = ROOT / "scripts/view/presentation_assets.gd"
 
 
-def measure(path: Path, columns: int = 1, rows: int = 1) -> dict:
+def measure(path: Path, columns: int = 1, rows: int = 1,
+            source_rect: tuple[int, int, int, int] | None = None) -> dict:
     with Image.open(path) as image:
         width, height = image.size
         if columns < 1 or rows < 1 or width % columns or height % rows:
             raise ValueError(f"unequal frame cells: {path}")
         alpha = image.getchannel("A") if "A" in image.getbands() else Image.new("L", image.size, 255)
         alpha = alpha.point(lambda a: 255 if a >= 20 else 0)
+        if source_rect is not None:
+            x, y, rect_width, rect_height = source_rect
+            if columns != 1 or rows != 1:
+                raise ValueError(f"static region cannot also be an animation: {path}")
+            if min(x, y) < 0 or min(rect_width, rect_height) <= 0 or x + rect_width > width or y + rect_height > height:
+                raise ValueError(f"source region outside image: {path}: {source_rect}")
+            visible = alpha.crop((x, y, x + rect_width, y + rect_height)).getbbox()
+            if visible is None:
+                raise ValueError(f"empty static region: {path}: {source_rect}")
+            left, top, right, bottom = visible
+            bounds = [x + left, y + top, x + right, y + bottom]
+            return {"file": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    "size": [width, height], "mode": image.mode, "visible_alpha_min": 20,
+                    "bounds_ltrb": bounds, "frame_union_ltrb": bounds,
+                    "frame_bounds_ltrb": [bounds],
+                    "frame_pivots": [[rect_width * 0.5 - left, bottom - top]],
+                    "frame_count": 1, "columns": 1, "rows": 1}
         cell = width // columns
         cell_height = height // rows
         bounds = [alpha.crop((column * cell, row * cell_height,
@@ -58,11 +76,27 @@ def authored_layouts() -> dict[Path, tuple[int, int]]:
     return layouts
 
 
+def authored_regions() -> dict[str, tuple[Path, tuple[int, int, int, int]]]:
+    """Static atlas regions are authored source-pixel XYWH rectangles per key."""
+    regions = {}
+    assets = json.loads((ART / "weapons" / "carbon_copy_assets.json").read_text())
+    for asset in assets:
+        for key, rect in asset.get("regions", {}).items():
+            if key in regions or len(rect) != 4 or any(type(value) is not int for value in rect):
+                raise ValueError(f"invalid or duplicate static region: {key}")
+            regions[key] = (ROOT / asset["path"], tuple(rect))
+    return regions
+
+
 def main() -> None:
     source = CATALOG.read_text()
     paths_block = source.split("const PATHS := {", 1)[1].split("\n}", 1)[0]
     pairs = re.findall(r'&"([^"]+)": "res://([^"]+)"', paths_block)
     layouts = authored_layouts()
+    regions = authored_regions()
+    if set(regions) - {key for key, _ in pairs}:
+        raise ValueError("authored static regions have no runtime identity")
+    region_paths = {path for path, _ in regions.values()}
     metadata, frames = [], []
     records: dict[Path, dict] = {}
     for key, relative in pairs:
@@ -70,8 +104,19 @@ def main() -> None:
         if (key.startswith("character_") or key.startswith("enemy_") or key == "shopkeeper") and path not in layouts:
             raise ValueError(f"animated identity has no authored layout: {key}")
         columns, rows = layouts.get(path, (1, 1))
-        record = measure(path, columns, rows)
-        records[path] = record
+        if path in region_paths and key not in regions:
+            raise ValueError(f"static atlas identity has no authored region: {key}")
+        if path not in records:
+            records[path] = measure(path, columns, rows)
+        record = records[path]
+        if key in regions:
+            region_path, rect = regions[key]
+            if region_path != path or columns * rows != 1:
+                raise ValueError(f"static atlas identity disagrees with its source: {key}")
+            record = measure(path, source_rect=rect)
+            records[path].setdefault("regions", {})[key] = {
+                "source_rect_xywh": list(rect), "bounds_ltrb": record["bounds_ltrb"],
+                "pivot": record["frame_pivots"][0]}
         width, height = record["size"]
         left, top, right, bottom = record["frame_union_ltrb"]
         il, it, ir, ib = record["frame_bounds_ltrb"][0]

@@ -19,6 +19,7 @@ var _failed := false
 
 
 func _initialize() -> void:
+	OS.set_environment("REVERB_SUSPEND", "user://dev_organic_shop_probe_suspend.json")
 	_started_msec = Time.get_ticks_msec()
 	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
 	OS.set_environment("REVERB_SAVE", "user://organic_shop_fixture_save.json")

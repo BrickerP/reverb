@@ -274,5 +274,132 @@
     ],
     "sha256": "09eb28a05279ab7b205ee760514ee9f4970ee7c0f415d213723812311b51d1d2",
     "prompt": "Use case: stylized-concept. Asset type: ONE standalone 2D weapon sprite for a top-down black-comedy arena game. Use the supplied concept board ONLY as a visual style reference. Create an original isolated prop, no part of the board layout.\nSTYLE: confident thick slightly irregular near-black ink outline, clean flat color fills, at most one cel shadow. Grotesque deadpan recycled-paper world. Palette charcoal #25221F, cream #E7D9B5, smoke-yellow #C5A14D, tiny dirty coral #BE5749 accent. Simple chunky strong silhouette legible at 48x32 gameplay pixels. Slight elevated three-quarter side view. Weapon points RIGHT. One complete object centered with generous transparent margin.\nConstraints: genuinely transparent background, no ground/cast shadow, no letters, no text, no hands, no character, no border, no UI, no muzzle flash or projectiles. Not 3D, not photoreal, not glossy, not polished metal, not sci-fi, no neon. Keep all contour lines solid black.\nSUBJECT: An evolved DOUBLE-JAW STAPLER PISTOL: two large black stapler jaws stacked like snarling crocodile fangs at the right-facing muzzle, a single chunky cream paper grip at left, smoke-yellow tape binding, one coral pressure lever. Clearly an upgraded twin-barrel stapler handgun with two aggressive distinct fangs. One integrated weapon, not two separate guns."
+  },
+  {
+    "id": "office_arsenal",
+    "path": "assets/presentation/weapons/office_arsenal.png",
+    "source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-75c2a72e-f0e3-499a-942e-607f7d7e0466.png",
+    "reference_sources": [
+      {
+        "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/weapons/smg.png",
+        "sha256": "4e75b52402c75ccc528f24a21ba9f6657bd2fb0c4e89e1f609a569998723e1f4"
+      }
+    ],
+    "prompt": "Use case: stylized-concept. Asset type: production transparent static sprite ATLAS containing exactly TWELVE different original office-junk weapons for a black-comedy paper-puppet game. Reference image (smg.png) supplies ONLY the chunky ink contour and flat paper-material palette. Create 12 NEW clearly recognizable office objects, not copies of that gun. CANVAS EXACTLY 1536x1152 px, FOUR EQUAL COLUMNS by THREE EQUAL ROWS, each cell384x384. One entire isolated object per cell. No labels, grid lines, borders, other objects, hands, people, scenery, shadows, glow or haze. Genuinely transparent RGBA background, outside hard contours fully transparent. STYLE thick slightly irregular near-black ink outlines, flat cream recycled-paper/sage/charcoal fills, smoke-yellow metal or rubber, tiny dirty coral accents, one cel shadow at most. Battered handmade objects, darkly funny, clean strong silhouette readable at48x32 game pixels. Slight elevated three-quarter side view, weapon working end generally points RIGHT. Each object centered in its OWN cell, entirely within cell x=45..339,y=45..339; empty gutters all around; NO object touches or crosses cell boundary. EXACT ROW-MAJOR CONTENT ORDER: Row1 cell0 STAPLER: a clearly recognizable open-jaw desktop stapler, long hinged charcoal upper jaw, cream base and tiny coral pressure tab, visibly different from a pistol; cell1 PAPER SAW: a compact circular toothed cream-paper cutting wheel with large jagged teeth, sage handle left; cell2 HOLE PUNCH: a heavy two-hole desktop punch with high smoke-yellow press bar and two dark punch cylinders above cream base, no pistol grip; cell3 INK BOTTLE: a squat crooked cream-and-charcoal glass bottle with black ink inside and a sage cork, simple black droplet emblem without letters. Row2 cell0 STAMP: a large classic wood-handled rubber office stamp, cream mushroom handle atop charcoal rectangular stamping foot; cell1 MALLET: a chunky rectangular smoke-yellow paper-worker mallet head and short charcoal handle, obviously a hammer; cell2 CUTTER: a long narrow cream utility knife with one protruding triangular black blade at RIGHT and coral slider; cell3 TAPE SPOOL: a thick round cream masking-tape roll with dark center and one small curled tape tail, recognizable circular silhouette. Row3 cell0 RUBBER BAND: a chunky charcoal slingshot-like office rubber-band launcher using two short sage binder prongs and stretched yellow rubber loop, one integrated object; cell1 PAPER PLANE: a simple sharply folded cream paper airplane pointing RIGHT, charcoal creases and tiny coral taped nose, no extra motion lines; cell2 HYDRAULIC PRESS: an absurd portable heavy sage C-frame press with yellow upper piston and huge charcoal rectangular pressing plate over cream base, one complete compact machine; cell3 REDACTION ENGINE: an evolved brutal compact cream office document-shredder engine with a thick black roller mouth lined with dark teeth, two coral binding bands and yellow crank, no separate paper scraps. All 12 objects fully visible and unmistakably different shapes. Do not add typography, numbers, logos, glowing magic, polished metal, realistic textures or particle effects.",
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "width": 1448,
+    "height": 1086,
+    "mode": "RGBA",
+    "alpha_range": [
+      0,
+      255
+    ],
+    "visible_alpha_min": 20,
+    "bounds_ltrb": [
+      79,
+      115,
+      1379,
+      980
+    ],
+    "sha256": "bd24e716ba25cbe09c6bfee7c399496e51a558f95f7cb29d3f5081ff1539278f",
+    "qa": {
+      "internal_grid_clear": true,
+      "all_frames_nonempty": true,
+      "unique_frames": 12
+    },
+    "generation_source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-3331f7a6-4192-4413-b32a-1cf91ac0da3f.png",
+    "refinement_prompt": "Use case: precise-object-edit. EDIT TARGET is this 12-object original office weapon sprite atlas. SPACING CORRECTION ONLY. Preserve these exact twelve designs and colors, thick charcoal ink, flat paper fills, perspective and ROW-MAJOR order. Keep the same 4:3 landscape canvas, EXACTLY FOUR equal columns and THREE equal rows; genuinely transparent RGBA. Reduce EVERY complete weapon to70percent of its current drawn size, each centered entirely within its OWN cell with generous transparent gutters at least40px inside every cell edge. The long mallet handle and utilityknife blade must NOT enter neighbouring cells. Bottom row press piston must NOT enter middle row. Do not expand the objects to fill empty space. One whole isolated prop in each cell, no grid or labels. Order row1 [desktop stapler,circular paper saw,desktop two-hole punch,inkbottle]; row2 [rubber stamp,mallet,utility cutter,tape roll]; row3 [rubberband slingshot,paperplane,hydraulicpress,redaction shredder]. Keep exactly12 props,no extras. Outside each solid antialiased black contour must be fully transparent: no soft haze, halo, floor, shadows or dark background. Do not repaint the designs or add details; only recompose each smaller within fixed4x3 cell layout.",
+    "atlas_columns": 4,
+    "atlas_rows": 3,
+    "regions": {
+      "weapon_stapler": [
+        79,
+        124,
+        235,
+        191
+      ],
+      "weapon_paper_saw": [
+        425,
+        121,
+        249,
+        191
+      ],
+      "weapon_hole_punch": [
+        777,
+        124,
+        255,
+        202
+      ],
+      "weapon_ink_bottle": [
+        1155,
+        115,
+        207,
+        206
+      ],
+      "weapon_stamp": [
+        94,
+        437,
+        203,
+        223
+      ],
+      "weapon_mallet": [
+        418,
+        441,
+        259,
+        201
+      ],
+      "weapon_cutter": [
+        775,
+        498,
+        275,
+        113
+      ],
+      "weapon_tape_spool": [
+        1152,
+        446,
+        227,
+        199
+      ],
+      "weapon_rubber_band": [
+        94,
+        750,
+        209,
+        210
+      ],
+      "weapon_paper_plane": [
+        423,
+        781,
+        252,
+        159
+      ],
+      "weapon_hydraulic_press": [
+        801,
+        742,
+        227,
+        238
+      ],
+      "weapon_redaction_engine": [
+        1138,
+        769,
+        240,
+        196
+      ]
+    },
+    "region_sha256": {
+      "stapler": "babbfba2980be78058b0192c0c049c12c8e66e274586395400b830530c08b710",
+      "paper_saw": "6451dfbd45e8355ab67bf88cfcc97fe9a053ffafc15a8e09f7046697aa352e3c",
+      "hole_punch": "73db1aab8bd71241cc78c09e23236ccb4b06261a08fbd7db4427209dbdd8ba70",
+      "ink_bottle": "ab0b31e7cb22a88d6e9c5c275de3e0dead1caa441d9536dd449be9ebeda88de2",
+      "stamp": "a84d3e3db579c47067ec69d3b3a2aa7a6a1b007ea94c8ece0e9b0807a2beaf61",
+      "mallet": "aa656eb02a46e18fa28c42bb9ae163c83dfd133a46e065db2631838c7b46fac0",
+      "cutter": "8ebf76b3af91dd03c9179de1afb9e7d629ed8edd6ac40151bc24446cf30ad936",
+      "tape_spool": "b3c4f534449e4173d5434689ac27eed32efa4045a38744cb5c94c5e0c2645160",
+      "rubber_band": "07fc2e9e64ee9dfbc582923359884955b1a93485952b2825e6e32b164d9c8306",
+      "paper_plane": "d4909ba9a5fda1b73716ef02e511a912264199b6f9a523fc7b855f8c3d09b60e",
+      "hydraulic_press": "ebdf362adda232ff6d19d4b517c0f143c157b8b30a891edc58d2bd5c69aed03e",
+      "redaction_engine": "f1154fa628c35fe38ccbbea4d110d7dc85ed32fa026c361c6285069ac10f1ca1"
+    }
   }
 ]

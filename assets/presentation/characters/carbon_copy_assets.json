@@ -1,6 +1,6 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-29",
+  "date": "2026-10-30",
   "assets": [
     {
       "id": "looper_front",
@@ -1099,6 +1099,590 @@
         "all_frames_nonempty": true,
         "unique_frames": 8
       }
+    },
+    {
+      "id": "mender_front",
+      "file": "assets/presentation/characters/mender_front.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-0e7aa95a-cbf7-4032-a3ee-9ebcb039095e.png",
+      "reference_sources": [
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/player.png",
+          "sha256": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+        },
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/characters/conductor_back.png",
+          "sha256": "c1947a1f2be98851275f572658017fc86897001a4a18c79b6fa764b45d8b5a71"
+        }
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production 2D character animation atlas for an original black-comedy office-survival game. Reference image 1 (player.png) supplies ONLY the ink drawing, paper palette, body scale and exact 4-by-2 atlas spacing. Reference image 2 (conductor_back.png) supplies ONLY the back-camera convention. Create a NEW original character, not a replacement of either reference. STYLE: thick imperfect near-black charcoal ink contours, flat creased recycled-cream paper fills, one restrained cel shadow, desaturated sage clothing, small dirty-coral and smoke-yellow repair accents. Deadpan reluctant paper-puppet acting. Simple strong silhouette visible at 48 game pixels. No glossy metal, 3D, realistic skin, neon, soft shading or gore. CANVAS MUST BE EXACTLY 1536x1024 pixels, genuinely transparent RGBA; EXACTLY 4 equal columns and 2 equal rows, each cell 384x512. There are exactly eight complete poses, one per cell. Horizontal cell centers x=192,576,960,1344. Whole character centered on that X; consistent body scale. All feet or bottom-most flattened remains end near y=440 top row / y=952 bottom row. Each standing pose fits within x=55..329 and y=100..440 relative to its own cell. Keep transparent gaps at ALL cell boundaries, no contours cross cell boundaries. No visible grid, text, labels, frames, shadows, floor, halo, outer glow or haze. Outside hard antialiased contour is fully transparent. EXACT ROW-MAJOR POSE ORDER: row 1 [0 neutral idle; 1 left-foot-forward walking with opposing arm swing; 2 right-foot-forward walking with opposing arm swing; 3 hurt squash and creased recoil]; row 2 [4 deliberate upper-body action gesture; 5 recovery/follow-through after that gesture, visibly different arm position; 6 death begins folding and crumpling downward with knees giving way; 7 final very flat crumpled-paper remains, still recognizable]. Death is paper being discarded, no injury gore. Empty hands: the game mounts weapons separately. No held weapon. Pose 4 and pose 5 must be distinct hand/body acting, not tilted duplicates. Poses 6 and 7 must fold the silhouette much shorter while remaining on the same baseline. IDENTITY: MENDER, a short, wide, exhausted paper repair worker with a squarish cream folded-paper head, dog-eared top-left corner, two large heavy-lidded eyes, small resigned frown, three chunky black staple stitches across one cheek. Two visibly stapled cream repair patches on a sage-green apron, apron reaches knees. A broad black tool belt with one tiny yellow tape spool and compact patch pouch; a rounded paper-patch backpack whose narrow shoulder straps remain recognizable. Short black boots and stubby mitten hands. Different silhouette from reference: apron is wider than shoulders, tape spool protrudes slightly from belt. No writing. VIEW: FRONT THREE-QUARTER, facing diagonally down-right, face visible in every live pose. Action 4 braces empty left forearm across apron and raises right empty hand to prepare a repair gesture; recovery 5 lowers right hand toward belt with sagging shoulders. The original tired face remains recognizable in crumple and flat poses.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        64,
+        100,
+        1498,
+        953
+      ],
+      "sha256": "91cb30c272e82640f83768964eb1df7dc62a01b24f85f399d107db56a45a3962",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      },
+      "idle_bounds_ltrb": [
+        64,
+        100,
+        325,
+        488
+      ],
+      "frame_bounds_ltrb": [
+        [
+          64,
+          100,
+          325,
+          488
+        ],
+        [
+          64,
+          102,
+          333,
+          498
+        ],
+        [
+          56,
+          102,
+          330,
+          496
+        ],
+        [
+          64,
+          161,
+          323,
+          488
+        ],
+        [
+          69,
+          50,
+          364,
+          436
+        ],
+        [
+          62,
+          55,
+          336,
+          436
+        ],
+        [
+          36,
+          184,
+          351,
+          439
+        ],
+        [
+          9,
+          294,
+          346,
+          441
+        ]
+      ],
+      "frame_union_ltrb": [
+        9,
+        50,
+        364,
+        498
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          488
+        ],
+        [
+          192.0,
+          498
+        ],
+        [
+          192.0,
+          496
+        ],
+        [
+          192.0,
+          488
+        ],
+        [
+          192.0,
+          436
+        ],
+        [
+          192.0,
+          436
+        ],
+        [
+          192.0,
+          439
+        ],
+        [
+          192.0,
+          441
+        ]
+      ],
+      "frame_sha256": [
+        "c44ea47f6431bd04e75f2b85e6638852a45abdf231bc865d1efb1fbe2ef1dcf7",
+        "00c7562ba723b69793c89e095f3a4ced4e58b5385569451199d2fc2fd2bd38ef",
+        "def8969f8bc487e2c2003562e4bef8bd20df0607238cd127ea96e3dddbd4deff",
+        "ff28468325469ed2c688282f25f2d2342272ba862dae1baec142f506825e27d2",
+        "6bd0553e1408ef916d50886c6a750d8a90faa8f807f214fff15aa15537f4e0dd",
+        "de299154bbb5509110bb1464cd82b9e6d9ab95ba2a9b6ec2233dc6cd43fb30c3",
+        "97f482bb8907400946da841655271dcc6caabef04a39411670d6d6eaa55aaf0a",
+        "3b0ef26f0be59a3c8ec04b2d01bf2c0fe423a111a9ab2307b759cc934ca2a711"
+      ]
+    },
+    {
+      "id": "mender_back",
+      "file": "assets/presentation/characters/mender_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-04d02e58-c1f5-4d56-bffa-aa0b03a77fd7.png",
+      "reference_sources": [
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/player.png",
+          "sha256": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+        },
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/characters/conductor_back.png",
+          "sha256": "c1947a1f2be98851275f572658017fc86897001a4a18c79b6fa764b45d8b5a71"
+        }
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production 2D character animation atlas for an original black-comedy office-survival game. Reference image 1 (player.png) supplies ONLY the ink drawing, paper palette, body scale and exact 4-by-2 atlas spacing. Reference image 2 (conductor_back.png) supplies ONLY the back-camera convention. Create a NEW original character, not a replacement of either reference. STYLE: thick imperfect near-black charcoal ink contours, flat creased recycled-cream paper fills, one restrained cel shadow, desaturated sage clothing, small dirty-coral and smoke-yellow repair accents. Deadpan reluctant paper-puppet acting. Simple strong silhouette visible at 48 game pixels. No glossy metal, 3D, realistic skin, neon, soft shading or gore. CANVAS MUST BE EXACTLY 1536x1024 pixels, genuinely transparent RGBA; EXACTLY 4 equal columns and 2 equal rows, each cell 384x512. There are exactly eight complete poses, one per cell. Horizontal cell centers x=192,576,960,1344. Whole character centered on that X; consistent body scale. All feet or bottom-most flattened remains end near y=440 top row / y=952 bottom row. Each standing pose fits within x=55..329 and y=100..440 relative to its own cell. Keep transparent gaps at ALL cell boundaries, no contours cross cell boundaries. No visible grid, text, labels, frames, shadows, floor, halo, outer glow or haze. Outside hard antialiased contour is fully transparent. EXACT ROW-MAJOR POSE ORDER: row 1 [0 neutral idle; 1 left-foot-forward walking with opposing arm swing; 2 right-foot-forward walking with opposing arm swing; 3 hurt squash and creased recoil]; row 2 [4 deliberate upper-body action gesture; 5 recovery/follow-through after that gesture, visibly different arm position; 6 death begins folding and crumpling downward with knees giving way; 7 final very flat crumpled-paper remains, still recognizable]. Death is paper being discarded, no injury gore. Empty hands: the game mounts weapons separately. No held weapon. Pose 4 and pose 5 must be distinct hand/body acting, not tilted duplicates. Poses 6 and 7 must fold the silhouette much shorter while remaining on the same baseline. IDENTITY: MENDER, a short, wide, exhausted paper repair worker with a squarish cream folded-paper head, dog-eared top-left corner, two large heavy-lidded eyes, small resigned frown, three chunky black staple stitches across one cheek. Two visibly stapled cream repair patches on a sage-green apron, apron reaches knees. A broad black tool belt with one tiny yellow tape spool and compact patch pouch; a rounded paper-patch backpack whose narrow shoulder straps remain recognizable. Short black boots and stubby mitten hands. Different silhouette from reference: apron is wider than shoulders, tape spool protrudes slightly from belt. No writing. VIEW: BACK THREE-QUARTER facing diagonally up-left, NO eyes or mouth visible, show folded paper back-of-head, broad crossed sage apron ties and the rounded patch backpack with three stapled cream patches. Preserve the same short wide Mender silhouette. Action 4 braces empty left forearm and raises right empty hand beside head; recovery 5 lowers right hand toward belt with sagging shoulders. Back view in all eight poses including crumpled and flat remains.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        48,
+        140,
+        1513,
+        963
+      ],
+      "sha256": "3f885a5de374682ae510c638d562860e332604a61a4e3bd0b656ba6157ad9de2",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      },
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-4fee8b94-b144-4405-bf44-799949d6f2df.png",
+      "refinement_prompt": "Use case: precise-object-edit. EDIT TARGET is this eight-pose Mender BACK character atlas. Preserve exact original Mender identity, all drawing/style/palette and canvas1536x1024, 4 equal columns by2 rows, transparent background. Make ONLY this animation correction: in row1 COLUMN3 (zero-based frame2, x768..1151,y0..511), show the OPPOSITE walking beat from column2. Column2 currently has the SCREEN-LEFT boot swinging outward. Column3 must visibly have SCREEN-RIGHT boot lifted and extended forward/outward to the right, with the screen-left boot firmly planted under left hip; opposing empty mitten arm swing. Do not mirror the head/backpack or change the camera; move the limbs into the opposite walking beat. Keep body/head scale and foot baseline aligned with existing cells. All seven other poses remain as drawn, all remain BACK view with no visible face, one complete pose per cell, no cell-boundary crossing. Genuinely transparent RGBA outside hard antialiased ink contours; no floor, halo, haze, glow, labels or grid.",
+      "idle_bounds_ltrb": [
+        67,
+        143,
+        350,
+        506
+      ],
+      "frame_bounds_ltrb": [
+        [
+          67,
+          143,
+          350,
+          506
+        ],
+        [
+          69,
+          143,
+          353,
+          504
+        ],
+        [
+          51,
+          140,
+          342,
+          506
+        ],
+        [
+          94,
+          167,
+          328,
+          505
+        ],
+        [
+          48,
+          87,
+          325,
+          444
+        ],
+        [
+          74,
+          112,
+          352,
+          444
+        ],
+        [
+          58,
+          200,
+          361,
+          448
+        ],
+        [
+          32,
+          318,
+          361,
+          451
+        ]
+      ],
+      "frame_union_ltrb": [
+        32,
+        87,
+        361,
+        506
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          506
+        ],
+        [
+          192.0,
+          504
+        ],
+        [
+          192.0,
+          506
+        ],
+        [
+          192.0,
+          505
+        ],
+        [
+          192.0,
+          444
+        ],
+        [
+          192.0,
+          444
+        ],
+        [
+          192.0,
+          448
+        ],
+        [
+          192.0,
+          451
+        ]
+      ],
+      "frame_sha256": [
+        "52c0274e142f1ec0100b90f506af03d6f3ed549751e470ec488efe9deddbd612",
+        "cd53b0712373267a8c62337f7d47dddda13201adc08f51d16ec490aa46be045b",
+        "d019a3348830d25cea6278474e06127e65a2ad44980214b6ce5de40a6033783d",
+        "184c83e13b35b0daaf3043097a785ec908c387d422f4537d9c20c1e575d01582",
+        "1ae06260c0655e7e4d0acb5a4477f1627b0552077bf0ef4c052b7eacb63efcfb",
+        "e9d65ccb06044e125862f1ec0b94ee185ccdb21a5aa71d8dc8342820c9a083b2",
+        "c467a006d901486ec779fe8244b7735d7de9ae38eda19f2f72ce4c95cd865dac",
+        "0fe989e2c83f11d698f8446d3d3769994526091fe34f9e56a5532d7e1e45d78f"
+      ]
+    },
+    {
+      "id": "overloader_front",
+      "file": "assets/presentation/characters/overloader_front.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-4f66b53a-d1be-4146-98df-1c0b3387d392.png",
+      "reference_sources": [
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/player.png",
+          "sha256": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+        },
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/characters/conductor_back.png",
+          "sha256": "c1947a1f2be98851275f572658017fc86897001a4a18c79b6fa764b45d8b5a71"
+        }
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production 2D character animation atlas for an original black-comedy office-survival game. Reference image 1 (player.png) supplies ONLY the ink drawing, paper palette, body scale and exact 4-by-2 atlas spacing. Reference image 2 (conductor_back.png) supplies ONLY the back-camera convention. Create a NEW original character, not a replacement of either reference. STYLE: thick imperfect near-black charcoal ink contours, flat creased recycled-cream paper fills, one restrained cel shadow, desaturated sage clothing, small dirty-coral and smoke-yellow repair accents. Deadpan reluctant paper-puppet acting. Simple strong silhouette visible at 48 game pixels. No glossy metal, 3D, realistic skin, neon, soft shading or gore. CANVAS MUST BE EXACTLY 1536x1024 pixels, genuinely transparent RGBA; EXACTLY 4 equal columns and 2 equal rows, each cell 384x512. There are exactly eight complete poses, one per cell. Horizontal cell centers x=192,576,960,1344. Whole character centered on that X; consistent body scale. All feet or bottom-most flattened remains end near y=440 top row / y=952 bottom row. Each standing pose fits within x=55..329 and y=100..440 relative to its own cell. Keep transparent gaps at ALL cell boundaries, no contours cross cell boundaries. No visible grid, text, labels, frames, shadows, floor, halo, outer glow or haze. Outside hard antialiased contour is fully transparent. EXACT ROW-MAJOR POSE ORDER: row 1 [0 neutral idle; 1 left-foot-forward walking with opposing arm swing; 2 right-foot-forward walking with opposing arm swing; 3 hurt squash and creased recoil]; row 2 [4 deliberate upper-body action gesture; 5 recovery/follow-through after that gesture, visibly different arm position; 6 death begins folding and crumpling downward with knees giving way; 7 final very flat crumpled-paper remains, still recognizable]. Death is paper being discarded, no injury gore. Empty hands: the game mounts weapons separately. No held weapon. Pose 4 and pose 5 must be distinct hand/body acting, not tilted duplicates. Poses 6 and 7 must fold the silhouette much shorter while remaining on the same baseline. IDENTITY: OVERLOADER, a slightly taller narrow burnt-paper worker with a tall angular cream folded-paper head; singed charcoal jagged top-left head edge, sharply folded top-right corner. Large tired half-lidded eyes and a tense resigned frown, tiny dirty-coral eye bags. Over-tight broad charcoal stamp-machine harness compresses sage-green jacket, one small round cream pressure gauge on chest with a black needle but NO numbers. Black crank collar and a large squared smoke-yellow stamp-mechanism backpack rise behind shoulders; two tight diagonal straps form an X on back. Charred paper hems, short black boots, empty mitten hands. Silhouette visibly taller and more top-heavy than Mender, narrow pinched waist. Tiny dirty-coral pressure lever on harness. No fire, smoke, sparks, text or lettering. VIEW: FRONT THREE-QUARTER, facing diagonally down-right, face visible in every live pose. Action 4 clenches both empty mitten hands outward while leaning into the too-tight harness; recovery 5 slumps and releases arms to sides. No separate effects or particles. Same strained tired expression remains recognizable in crumple and flat poses.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        43,
+        69,
+        1510,
+        972
+      ],
+      "sha256": "6f028f6a12708991e7b34177de6a55f1e5144becad088e0383c97d87d37b4694",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      },
+      "idle_bounds_ltrb": [
+        52,
+        69,
+        335,
+        487
+      ],
+      "frame_bounds_ltrb": [
+        [
+          52,
+          69,
+          335,
+          487
+        ],
+        [
+          59,
+          69,
+          346,
+          489
+        ],
+        [
+          61,
+          77,
+          349,
+          488
+        ],
+        [
+          52,
+          137,
+          358,
+          488
+        ],
+        [
+          43,
+          54,
+          383,
+          446
+        ],
+        [
+          76,
+          44,
+          375,
+          447
+        ],
+        [
+          29,
+          170,
+          363,
+          448
+        ],
+        [
+          21,
+          271,
+          358,
+          460
+        ]
+      ],
+      "frame_union_ltrb": [
+        21,
+        44,
+        383,
+        489
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          487
+        ],
+        [
+          192.0,
+          489
+        ],
+        [
+          192.0,
+          488
+        ],
+        [
+          192.0,
+          488
+        ],
+        [
+          192.0,
+          446
+        ],
+        [
+          192.0,
+          447
+        ],
+        [
+          192.0,
+          448
+        ],
+        [
+          192.0,
+          460
+        ]
+      ],
+      "frame_sha256": [
+        "be3b4128525312f18eb947df96dc7cc6bdb24fdbb31fdbe01c2b88beb86b8e78",
+        "0a094ebd6c7b4f77d085ca562b7bfca3c3ff7140b92665cbae5f433283346ff8",
+        "d80619d72be94599aa5fb9df3405724d44fed7a1cd01a27aa7969d42eb2b839c",
+        "bb05da63dc8df4d10c7ca235ebe4ac31b995a6ef99444f02cba7018f639dd000",
+        "f311735f5187c397f9653064b897cd91ef506979af4bb344caca571532265e35",
+        "7a8290df0561a73e606b9a7faaeb39dcc5b9bcf0c69fcf6a072b56df8598a272",
+        "39552f7b701cb51374ebd6a2d4cf7b1c72aa6ccc39cfec36512ce6bd611ff6f7",
+        "17da19d41484d463c8667e1f564f740d8c0b527c67f56a70f3b5af283ae9607a"
+      ]
+    },
+    {
+      "id": "overloader_back",
+      "file": "assets/presentation/characters/overloader_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-bc1bec09-9301-4e79-b8af-f05fbbde53bb.png",
+      "reference_sources": [
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/player.png",
+          "sha256": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+        },
+        {
+          "file": "/Users/yupeng/projects/personal/reverb-carbon-copy/assets/presentation/characters/conductor_back.png",
+          "sha256": "c1947a1f2be98851275f572658017fc86897001a4a18c79b6fa764b45d8b5a71"
+        }
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production 2D character animation atlas for an original black-comedy office-survival game. Reference image 1 (player.png) supplies ONLY the ink drawing, paper palette, body scale and exact 4-by-2 atlas spacing. Reference image 2 (conductor_back.png) supplies ONLY the back-camera convention. Create a NEW original character, not a replacement of either reference. STYLE: thick imperfect near-black charcoal ink contours, flat creased recycled-cream paper fills, one restrained cel shadow, desaturated sage clothing, small dirty-coral and smoke-yellow repair accents. Deadpan reluctant paper-puppet acting. Simple strong silhouette visible at 48 game pixels. No glossy metal, 3D, realistic skin, neon, soft shading or gore. CANVAS MUST BE EXACTLY 1536x1024 pixels, genuinely transparent RGBA; EXACTLY 4 equal columns and 2 equal rows, each cell 384x512. There are exactly eight complete poses, one per cell. Horizontal cell centers x=192,576,960,1344. Whole character centered on that X; consistent body scale. All feet or bottom-most flattened remains end near y=440 top row / y=952 bottom row. Each standing pose fits within x=55..329 and y=100..440 relative to its own cell. Keep transparent gaps at ALL cell boundaries, no contours cross cell boundaries. No visible grid, text, labels, frames, shadows, floor, halo, outer glow or haze. Outside hard antialiased contour is fully transparent. EXACT ROW-MAJOR POSE ORDER: row 1 [0 neutral idle; 1 left-foot-forward walking with opposing arm swing; 2 right-foot-forward walking with opposing arm swing; 3 hurt squash and creased recoil]; row 2 [4 deliberate upper-body action gesture; 5 recovery/follow-through after that gesture, visibly different arm position; 6 death begins folding and crumpling downward with knees giving way; 7 final very flat crumpled-paper remains, still recognizable]. Death is paper being discarded, no injury gore. Empty hands: the game mounts weapons separately. No held weapon. Pose 4 and pose 5 must be distinct hand/body acting, not tilted duplicates. Poses 6 and 7 must fold the silhouette much shorter while remaining on the same baseline. IDENTITY: OVERLOADER, a slightly taller narrow burnt-paper worker with a tall angular cream folded-paper head; singed charcoal jagged top-left head edge, sharply folded top-right corner. Large tired half-lidded eyes and a tense resigned frown, tiny dirty-coral eye bags. Over-tight broad charcoal stamp-machine harness compresses sage-green jacket, one small round cream pressure gauge on chest with a black needle but NO numbers. Black crank collar and a large squared smoke-yellow stamp-mechanism backpack rise behind shoulders; two tight diagonal straps form an X on back. Charred paper hems, short black boots, empty mitten hands. Silhouette visibly taller and more top-heavy than Mender, narrow pinched waist. Tiny dirty-coral pressure lever on harness. No fire, smoke, sparks, text or lettering. VIEW: BACK THREE-QUARTER facing diagonally up-left, NO eyes or mouth visible. Show folded singed back-of-head and large squared smoke-yellow stamp-mechanism backpack with one black crank and the broad over-tight diagonal X straps. Same narrow, tall, top-heavy silhouette. Action 4 clenches both empty mitten hands outward and leans into harness; recovery 5 slumps and releases arms to sides. Back view in all eight poses including crumpled and flat remains. No separate effects or particles.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        56,
+        60,
+        1498,
+        938
+      ],
+      "sha256": "145746b4cb0a0d07956a93be5a96d295d7244814fe02c0d5541e17ddd61a9807",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      },
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a188a1-e8aa-7c50-9d03-a5addf52b32d/exec-05c50507-f794-4849-8817-e72ad7d19b4c.png",
+      "refinement_prompt": "Use case: precise-object-edit. EDIT TARGET is this eight-pose Overloader BACK character atlas. Preserve exact original Overloader identity, all drawing/style/palette and canvas1536x1024,4 equal columns by2 rows, transparent background. Make ONLY this animation correction: in row1 COLUMN3 (zero-based frame2,x768..1151,y0..511), show the OPPOSITE walking beat from column2. Column2 currently has the SCREEN-LEFT boot swinging forward/left. Column3 must visibly have SCREEN-RIGHT boot lifted and extended forward/outward to the right, with screen-left boot firmly planted under left hip; opposing empty mitten arm swing. Do not mirror head/harness/backpack or change camera; move the limbs into opposite walking beat. Keep body/head scale and foot baseline aligned with existing cells. All seven other poses remain as drawn, all remain BACK view with no face, one complete pose percell, no cell-boundary crossing. Genuinely transparent RGBA outside hard antialiased ink contours; no floor, halo, haze, glow, labels or grid.",
+      "idle_bounds_ltrb": [
+        61,
+        60,
+        330,
+        467
+      ],
+      "frame_bounds_ltrb": [
+        [
+          61,
+          60,
+          330,
+          467
+        ],
+        [
+          49,
+          61,
+          326,
+          471
+        ],
+        [
+          34,
+          61,
+          308,
+          466
+        ],
+        [
+          44,
+          162,
+          317,
+          467
+        ],
+        [
+          56,
+          60,
+          367,
+          413
+        ],
+        [
+          79,
+          37,
+          347,
+          413
+        ],
+        [
+          70,
+          151,
+          340,
+          421
+        ],
+        [
+          24,
+          278,
+          346,
+          426
+        ]
+      ],
+      "frame_union_ltrb": [
+        24,
+        37,
+        367,
+        471
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          467
+        ],
+        [
+          192.0,
+          471
+        ],
+        [
+          192.0,
+          466
+        ],
+        [
+          192.0,
+          467
+        ],
+        [
+          192.0,
+          413
+        ],
+        [
+          192.0,
+          413
+        ],
+        [
+          192.0,
+          421
+        ],
+        [
+          192.0,
+          426
+        ]
+      ],
+      "frame_sha256": [
+        "ff8a6c1ee32a9041b3f7f90a8d783d8c93dba9ab67792c58fb26189d71c76d15",
+        "d934598aa32691b21ec08ce1b7d6f9e154336960a6c13d4d2315e6b69c5e733d",
+        "f9cae8909debbc2286ee83b6ccc9d653e5a4c2af8ad6b0670f2658be9eb82a8e",
+        "4a12eefa90bdffdf2dc7ff57ab5451d18f31e3de5522217ef994db663dede4a5",
+        "718cf56a2646547af1dc79235a1ebbf8addb01f42629ca1d10aac72259be21ab",
+        "d93c588aef122649ad2232f0bb3b4e9397458b06d8646a3a6219c78e05489277",
+        "6a335a385c7c9e13648bed3065154b2908d69f4849b805adac51f9f28167ebb5",
+        "088f52b0058c8080e3a30a2b505ce694f0b9d580962fac55a1cfb25e159e993c"
+      ]
     }
   ],
   "animation_layout": "4 columns x 2 rows, row-major frames 0..7",

@@ -3,10 +3,10 @@ extends PanelContainer
 
 signal discard_requested(take: EchoTake)
 signal merge_requested(a: EchoTake, b: EchoTake)
-signal refresh_requested(take: EchoTake)
+signal repair_requested(take: EchoTake)
 
 var discard_buttons: Array[Button] = []
-var refresh_buttons: Array[Button] = []
+var repair_buttons: Array[Button] = []
 var merge_button: Button
 var last_new_row: Control
 var last_new_tint: Color = Color.WHITE
@@ -95,7 +95,7 @@ func close_session() -> void:
 	_merge_mode = false
 	_merge_first = null
 	discard_buttons.clear()
-	refresh_buttons.clear()
+	repair_buttons.clear()
 	merge_button = null
 	last_new_row = null
 	last_new_tint = Color.WHITE
@@ -129,7 +129,7 @@ func _render() -> void:
 	_finish_new_row_animation()
 	UiTheme.clear(_box)
 	discard_buttons.clear()
-	refresh_buttons.clear()
+	repair_buttons.clear()
 	merge_button = null
 	if _sim == null:
 		return
@@ -179,7 +179,6 @@ func _render() -> void:
 	_takes_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_takes_box.add_theme_constant_override("separation", 9)
 	scroll.add_child(_takes_box)
-	var lifespan := sim.echo_lifespan()
 	var best := 1.0
 	for take: EchoTake in sim.bank.takes:
 		best = maxf(best, sim.echo_dps(take))
@@ -189,14 +188,14 @@ func _render() -> void:
 	last_new_row = null
 	last_new_tint = Color.WHITE
 	for take: EchoTake in newest_first:
-		var is_new := _animate_new and take.age == 0
-		var row := _row(take, sim, lifespan, best, is_new, take == _merge_first)
+		var is_new: bool = take.wave == sim.wave and take == sim.bank.takes.back()
+		var row := _row(take, sim, best, is_new, take == _merge_first)
 		_takes_box.add_child(row)
 		if is_new:
 			new_row = row
 			last_new_row = row
 			last_new_tint = take.tint()
-	if new_row != null:
+	if new_row != null and _animate_new:
 		_animate_new_row(new_row)
 
 
@@ -231,7 +230,7 @@ func confirm_merge() -> void:
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
-func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, selected: bool) -> Control:
+func _row(take: EchoTake, sim: Sim, best: float, is_new: bool, selected: bool) -> Control:
 	var row := PanelContainer.new()
 	var style := UiTheme.box(UiTheme.PAPER if selected else UiTheme.CARD,
 			UiTheme.ECHO if selected else Color(UiTheme.EDGE, 0.0), 2 if selected else 0, 20)
@@ -255,7 +254,7 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(strip)
 	var preview := PathPreview.new()
-	preview.setup(take, animate and not reduced_effects)
+	preview.setup(take, is_new and _animate_new and not reduced_effects)
 	var cartridge := UiTheme.cartridge_icon(Vector2(25.0, 18.0))
 	cartridge.position = Vector2(47.0, 2.0)
 	preview.add_child(cartridge)
@@ -268,10 +267,11 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	var meta := HFlowContainer.new()
 	meta.add_theme_constant_override("h_separation", 8)
 	meta.add_theme_constant_override("v_separation", 2)
-	meta.add_child(_pips(maxi(0, lifespan - take.age), lifespan, take.tint()))
+	meta.add_child(UiTheme.label(Loc.t("echo.condition", [int(ceil(take.condition)),
+			ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))]), 12, UiTheme.WARN if take.condition <= 25.0 else UiTheme.DIM))
 	if take.merged:
 		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.merged"), 12, UiTheme.COIN))
-	if take.age == 0:
+	if is_new:
 		meta.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 12, UiTheme.ACCENT))
 	meta.add_child(UiTheme.label(Loc.t("shop.take_dps", [dps]), 13, UiTheme.DIM))
 	info.add_child(meta)
@@ -284,19 +284,32 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	loadout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	loadout.custom_minimum_size = Vector2(180.0, 0.0)
 	sheet.add_child(loadout)
+	var skill := UiTheme.label(Loc.echo_profile(EchoSystem.skill_profile(take, sim), true), 12, UiTheme.DIM)
+	skill.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sheet.add_child(skill)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 8)
 	sheet.add_child(actions)
-	if not _merge_mode and take.age > 0:
-		var cost := sim.shop.echo_refresh_cost(take, sim)
-		var refresh := Button.new()
-		refresh.text = Loc.t("shop.refresh", [cost])
-		refresh.disabled = sim.player.materials < cost
-		refresh.custom_minimum_size = Vector2(0.0, 30.0)
-		refresh.add_theme_font_size_override("font_size", 13)
-		refresh.pressed.connect(_on_refresh.bind(take))
-		refresh_buttons.append(refresh)
-		actions.add_child(refresh)
+	if not _merge_mode:
+		var quote := sim.shop.echo_repair_quote(sim, take)
+		var repair := Button.new()
+		var amount := sim.shop.echo_repair_amount(take)
+		var amount_label := "<1" if amount > 0.0 and amount < 1.0 else Loc.number(amount)
+		repair.text = Loc.t("shop.repair", [amount_label, quote.cost])
+		repair.disabled = not quote.ok
+		repair.tooltip_text = Loc.t("shop.repair_full") if take.condition >= 100.0 else Loc.t("shop.repair_result", [int(ceil(minf(100.0, take.condition + sim.shop.echo_repair_amount(take))))])
+		if quote.reason == &"poor":
+			repair.tooltip_text = Loc.t("shop.drop_poor")
+		repair.custom_minimum_size = Vector2(0.0, 30.0)
+		repair.add_theme_font_size_override("font_size", 13)
+		repair.pressed.connect(_on_repair.bind(take))
+		repair_buttons.append(repair)
+		actions.add_child(repair)
+	elif _merge_first != null and _merge_first != take:
+		var quote := sim.shop.echo_merge_quote(sim, _merge_first, take)
+		var outcome := UiTheme.label(Loc.t("shop.merge_result", [Loc.number(minf(take.condition, _merge_first.condition)), quote.cost]), 12, UiTheme.DIM)
+		outcome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		actions.add_child(outcome)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -314,8 +327,8 @@ func _row(take: EchoTake, sim: Sim, lifespan: int, best: float, animate: bool, s
 	return row
 
 
-func _on_refresh(take: EchoTake) -> void:
-	refresh_requested.emit(take)
+func _on_repair(take: EchoTake) -> void:
+	repair_requested.emit(take)
 
 
 func _on_row(take: EchoTake) -> void:
@@ -391,32 +404,11 @@ func _finish_new_row_animation() -> void:
 func _title_line(take: EchoTake) -> Control:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 8)
-	line.add_child(UiTheme.label(Loc.t("shop.take", [take.wave]), 16))
+	line.add_child(UiTheme.label(Loc.t("echo.identity", [take.uid, take.wave]), 16))
 	if take.merged:
 		var staple := StapleMark.new()
 		staple.name = "StapleMark"
 		line.add_child(staple)
-	return line
-
-
-func _pips(remaining: int, total: int, tint: Color) -> Control:
-	var line := HBoxContainer.new()
-	line.add_theme_constant_override("separation", 3)
-	for k in clampi(total, 1, 8):
-		var pip := PanelContainer.new()
-		pip.custom_minimum_size = Vector2(10.0, 6.0)
-		pip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var fill := tint.lerp(UiTheme.INK, 0.4) if k < remaining else Color(UiTheme.EDGE, 0.16)
-		var dot := UiTheme.box(fill, Color.TRANSPARENT, 0, 8)
-		dot.shape = InkStyleBox.Shape.OVAL
-		dot.content_margin_left = 0.0
-		dot.content_margin_right = 0.0
-		dot.content_margin_top = 0.0
-		dot.content_margin_bottom = 0.0
-		pip.add_theme_stylebox_override("panel", dot)
-		line.add_child(pip)
-	if total > 8:
-		line.add_child(UiTheme.label("%d/%d" % [remaining, total], 12, UiTheme.DIM))
 	return line
 
 
