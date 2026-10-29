@@ -209,12 +209,22 @@ func _setup_run(reduced: bool, copies: int = 4) -> void:
 	sim.bank.takes.clear()
 	for i in copies:
 		var take := _echo_take(i)
+		sim.bank.add(take)
 		take.age = i if copies == 8 else 0
 		take.merged = copies == 8 and i % 3 == 0
-		sim.bank.add(take)
 	sim.start_wave(3)
 	if not _require(sim.echoes.size() == copies, "all requested copies exist in the real simulation"):
 		return
+	if copies == 8:
+		var merged := 0
+		for i in copies:
+			if not _require(sim.echoes[i].take.age == i, "eight-copy fixture retains every intended age"):
+				return
+			if sim.echoes[i].take.merged:
+				merged += 1
+		if not _require(merged == 3 and sim.bank.takes.size() == 8 and sim.echo_lifespan() == 12,
+				"mixed-wear fixture retains merged copies, lifespan and complete bank"):
+			return
 	sim.wave_duration = 120.0
 	sim._plan.clear()
 	sim._plan_idx = 0
