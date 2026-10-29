@@ -9,9 +9,7 @@ var _gamepad := false
 
 
 func _main() -> Node:
-	var temporary := OS.get_environment("TMPDIR")
-	if temporary == "":
-		temporary = "/tmp"
+	var temporary := ProjectSettings.globalize_path("user://closeout_test_workspaces")
 	_directory = temporary.path_join("reverb_closeout_main_%d_%d" % [OS.get_process_id(), Time.get_ticks_usec()])
 	DirAccess.make_dir_recursive_absolute(_directory)
 	for key: String in FILE_ENV:
