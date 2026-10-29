@@ -54,7 +54,7 @@ func test_silencer_touch_silences_echoes(c: Check) -> void:
 	e.speed = 0.0
 	s.enemies.append(e)
 	var silences := [0]
-	s.echoes_silenced.connect(func(_duration: float) -> void: silences[0] += 1)
+	s.echoes_silenced.connect(func(_info: EchoSilenceInfo) -> void: silences[0] += 1)
 	s.step(DT, Vector2.ZERO)
 	c.ok(s.echo_silenced >= 2.0, "the touch silences echoes")
 	c.eq(silences[0], 1, "the silence signal fires")

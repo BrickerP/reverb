@@ -1,0 +1,298 @@
+class_name BattleDirector
+extends RefCounted
+
+# This owns presentation snapshots only. No EnemyState/Sim reference survives an event.
+const MAX_CORPSES := 24
+const REDUCED_CORPSES := 8
+const MAX_REACTIONS := 96
+const MAX_SHOT_ACTORS := 9
+const SHOT_TIME := 0.13
+const SHOT_INTERVAL := 0.29
+const HURT_TIME := 0.10
+const HURT_INTERVAL := 0.24
+const CONTACT_TIME := 0.24
+const PLAYER_DEATH_TIME := 0.55
+const TEAR_TIME := 0.58
+
+var corpses: Array[Dictionary] = []
+var tear: Dictionary = {}
+var player_death: Dictionary = {}
+var _shots: Dictionary = {}
+var _enemy_hurts: Dictionary = {}
+var _enemy_contacts: Dictionary = {}
+var _player_hurt := 0.0
+var _player_hurt_cooldown := 0.0
+var _boss_roar := 0.0
+
+
+func clear() -> void:
+	corpses.clear()
+	tear.clear()
+	player_death.clear()
+	end_actions()
+
+
+func end_actions() -> void:
+	_shots.clear()
+	_enemy_hurts.clear()
+	_enemy_contacts.clear()
+	_player_hurt = 0.0
+	_player_hurt_cooldown = 0.0
+	_boss_roar = 0.0
+
+
+func settle(reduced: bool) -> void:
+	if not reduced:
+		return
+	_shots.clear()
+	_enemy_contacts.clear()
+	_boss_roar = 0.0
+	tear.clear()
+	while corpses.size() > REDUCED_CORPSES:
+		var discarded := 0
+		for index in corpses.size():
+			if corpses[index]["enemy_id"] != &"paradox":
+				discarded = index
+				break
+		corpses.remove_at(discarded)
+
+
+func step(delta: float) -> void:
+	if not is_finite(delta) or delta <= 0.0:
+		return
+	_player_hurt = maxf(0.0, _player_hurt - delta)
+	_player_hurt_cooldown = maxf(0.0, _player_hurt_cooldown - delta)
+	_boss_roar = maxf(0.0, _boss_roar - delta)
+	_tick_reactions(_shots, delta)
+	_tick_reactions(_enemy_hurts, delta)
+	_tick_reactions(_enemy_contacts, delta)
+	_tick_terminal(delta)
+
+
+func step_terminal(delta: float) -> void:
+	if is_finite(delta) and delta > 0.0:
+		_tick_terminal(delta)
+
+
+func _tick_terminal(delta: float) -> void:
+	var keep := 0
+	for corpse in corpses:
+		corpse["age"] = float(corpse["age"]) + delta
+		if float(corpse["age"]) < float(corpse["duration"]):
+			corpses[keep] = corpse
+			keep += 1
+	corpses.resize(keep)
+	if not tear.is_empty():
+		tear["age"] = float(tear["age"]) + delta
+		if float(tear["age"]) >= TEAR_TIME:
+			tear.clear()
+	if not player_death.is_empty():
+		player_death["age"] = minf(PLAYER_DEATH_TIME, float(player_death["age"]) + delta)
+
+
+func terminal_active() -> bool:
+	return not corpses.is_empty() or not tear.is_empty() or (not player_death.is_empty()
+			and float(player_death["age"]) < PLAYER_DEATH_TIME)
+
+
+func shot(info: ShotInfo) -> bool:
+	var token := info.actor_token
+	if token == 0 or (token == -1 and info.source >= 0):
+		return false
+	if _shots.has(token) and float(_shots[token]["cooldown"]) > 0.0:
+		return false
+	_insert_reaction(_shots, token, SHOT_TIME, SHOT_INTERVAL, MAX_SHOT_ACTORS)
+	return true
+
+
+func enemy_hit(uid: int) -> void:
+	if uid < 0:
+		return
+	if _enemy_hurts.has(uid) and float(_enemy_hurts[uid]["cooldown"]) > 0.0:
+		return
+	_insert_reaction(_enemy_hurts, uid, HURT_TIME, HURT_INTERVAL, MAX_REACTIONS)
+
+
+func player_hurt(uid: int) -> void:
+	if _player_hurt_cooldown <= 0.0:
+		_player_hurt = HURT_TIME
+		_player_hurt_cooldown = HURT_INTERVAL
+	if uid >= 0:
+		# The damaging contact has already happened. Start on the bite/impact pose,
+		# then recover; this is never an invulnerable anticipation window.
+		enemy_action(uid)
+
+
+func enemy_action(uid: int) -> bool:
+	if uid < 0:
+		return false
+	if _enemy_contacts.has(uid) and float(_enemy_contacts[uid]["cooldown"]) > 0.0:
+		return false
+	_insert_reaction(_enemy_contacts, uid, CONTACT_TIME, CONTACT_TIME + 0.10, MAX_REACTIONS)
+	return true
+
+
+func boss_roar() -> void:
+	_boss_roar = 0.32
+
+
+func is_boss_roaring() -> bool:
+	return _boss_roar > 0.0
+
+
+func begin_tear(origin: Vector2) -> void:
+	if origin.is_finite():
+		tear = {"pos": origin, "age": 0.0}
+
+
+func lose_player(position: Vector2, facing: Vector2, character: StringName) -> void:
+	end_actions()
+	player_death = {"pos": position, "facing": facing, "character": character, "age": 0.0}
+
+
+func enemy_died(info: EnemyDeathInfo, reduced: bool = false) -> void:
+	if not info.pos.is_finite() or not is_finite(info.radius) or info.radius <= 0.0:
+		return
+	var kind := death_kind(info.enemy_id)
+	var duration := death_duration(kind)
+	var cap := REDUCED_CORPSES if reduced else MAX_CORPSES
+	while corpses.size() >= cap:
+		var discarded := 0
+		for index in corpses.size():
+			if corpses[index]["enemy_id"] != &"paradox":
+				discarded = index
+				break
+		corpses.remove_at(discarded)
+	corpses.append({"uid": info.target_uid, "enemy_id": info.enemy_id, "pos": info.pos,
+		"radius": info.radius, "facing": info.facing, "hit_dir": info.hit_dir,
+		"source": info.source, "color": info.color, "actor_token": info.actor_token,
+		"source_tint": info.source_tint, "elite_kind": info.elite_kind,
+		"boss_phase": info.boss_phase, "shard_index": info.boss_shard_index,
+		"kind": kind, "age": 0.0, "duration": duration})
+	_enemy_hurts.erase(info.target_uid)
+	_enemy_contacts.erase(info.target_uid)
+
+
+func player_pose(key: StringName, clock: float, moving: bool, reduced: bool) -> int:
+	if not player_death.is_empty():
+		return _frame(key, 6 if float(player_death["age"]) < PLAYER_DEATH_TIME * 0.38 else 7)
+	if _player_hurt > 0.0:
+		return _frame(key, 3)
+	return _action_or_walk(key, -1, clock, moving, reduced)
+
+
+func echo_pose(key: StringName, token: int, clock: float, moving: bool, reduced: bool) -> int:
+	return _action_or_walk(key, token, clock, moving, reduced)
+
+
+func enemy_pose(key: StringName, uid: int, clock: float, moving: bool, reduced: bool) -> int:
+	if _enemy_hurts.has(uid) and float(_enemy_hurts[uid]["left"]) > 0.0:
+		return _frame(key, 3)
+	if _enemy_contacts.has(uid) and float(_enemy_contacts[uid]["left"]) > 0.0:
+		if reduced:
+			return _frame(key, 5)
+		return _frame(key, 5 if float(_enemy_contacts[uid]["left"]) > CONTACT_TIME * 0.55 else 4)
+	return walk_pose(key, clock, moving, reduced)
+
+
+func _action_or_walk(key: StringName, token: int, clock: float, moving: bool, reduced: bool) -> int:
+	if not reduced and _shots.has(token) and float(_shots[token]["left"]) > 0.0:
+		return _frame(key, 5 if float(_shots[token]["left"]) > SHOT_TIME * 0.55 else 4)
+	return walk_pose(key, clock, moving, reduced)
+
+
+static func walk_pose(key: StringName, clock: float, moving: bool, reduced: bool = false) -> int:
+	if not moving:
+		return 0
+	var sequence: Array[int] = [0, 1, 0, 2]
+	var index := posmod(int(floor(maxf(0.0, clock) * (5.0 if reduced else 8.0))), sequence.size())
+	return _frame(key, sequence[index])
+
+
+static func death_kind(id: StringName) -> StringName:
+	match id:
+		&"runner": return &"spring"
+		&"brute": return &"shred"
+		&"silencer": return &"spill"
+		&"bomber": return &"deflate"
+		&"warden": return &"topple"
+		&"paradox": return &"original"
+	return &"crumple"
+
+
+static func death_duration(kind: StringName) -> float:
+	match kind:
+		&"spring": return 0.50
+		&"shred": return 0.68
+		&"spill": return 0.56
+		&"deflate": return 0.36
+		&"topple": return 0.62
+		&"original": return 0.82
+	return 0.48
+
+
+static func corpse_profile(corpse: Dictionary, reduced: bool = false) -> Dictionary:
+	var duration := maxf(0.001, float(corpse["duration"]))
+	var progress := clampf(float(corpse["age"]) / duration, 0.0, 1.0)
+	var kind: StringName = corpse["kind"]
+	var direction: Vector2 = corpse["hit_dir"]
+	if direction == Vector2.ZERO or not direction.is_finite():
+		direction = Vector2.UP
+	direction = direction.normalized()
+	var frame := 6 if progress < 0.35 else 7
+	if kind == &"original" and int(corpse["boss_phase"]) >= 2:
+		frame = 2 + posmod(maxi(0, int(corpse["shard_index"])), 2) if progress < 0.22 else 7
+	var scale := Vector2.ONE
+	var turn := 0.0
+	var travel := 7.0
+	match kind:
+		&"spring":
+			scale = Vector2(1.0 + progress * 0.22, 1.0 - progress * 0.52)
+			turn = direction.x * progress * 0.4
+			travel = 15.0
+		&"shred": scale = Vector2(1.0 + progress * 0.05, 1.0 - progress * 0.30)
+		&"spill": scale = Vector2(1.0 + progress * 0.28, 1.0 - progress * 0.66)
+		&"deflate": scale = Vector2(1.0 + progress * 0.20, 1.0 - progress * 0.78)
+		&"topple":
+			turn = (0.8 if direction.x >= 0.0 else -0.8) * progress
+			travel = 5.0
+		&"original": scale = Vector2(1.0 + progress * 0.10, 1.0 - progress * 0.34)
+		_: scale = Vector2(1.0 + progress * 0.12, 1.0 - progress * 0.57)
+	if reduced:
+		scale = Vector2.ONE
+		turn = 0.0
+		travel = 0.0
+	return {"frame": frame, "progress": progress, "alpha": (1.0 - progress) * 0.9,
+		"scale": scale, "rotation": turn, "offset": direction * travel * progress,
+		"kind": kind}
+
+
+func counts() -> Dictionary:
+	return {"corpses": corpses.size(), "shots": _shots.size(), "hurt_actors": _enemy_hurts.size(),
+		"contacts": _enemy_contacts.size(), "boss_tear": 0 if tear.is_empty() else 1,
+		"player_terminal": not player_death.is_empty()}
+
+
+static func _frame(key: StringName, frame: int) -> int:
+	return clampi(frame, 0, maxi(0, PresentationAssets.frame_count(key) - 1))
+
+
+static func is_copy_token(token: int) -> bool:
+	# RefCounted instance IDs can use the signed high bit. Only the explicit
+	# player/unknown sentinels are special; an identity is never a slot number.
+	return token != -1 and token != 0
+
+
+func _insert_reaction(queue: Dictionary, token: int, left: float, cooldown: float, cap: int) -> void:
+	if not queue.has(token) and queue.size() >= cap:
+		queue.erase(queue.keys()[0])
+	queue[token] = {"left": left, "cooldown": cooldown}
+
+
+func _tick_reactions(queue: Dictionary, delta: float) -> void:
+	for token in queue.keys():
+		var state: Dictionary = queue[token]
+		state["left"] = maxf(0.0, float(state["left"]) - delta)
+		state["cooldown"] = maxf(0.0, float(state["cooldown"]) - delta)
+		if float(state["cooldown"]) <= 0.0 and float(state["left"]) <= 0.0:
+			queue.erase(token)

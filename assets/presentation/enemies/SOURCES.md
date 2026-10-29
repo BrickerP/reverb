@@ -1,33 +1,25 @@
-# Carbon Copy Purgatory enemy animation artwork
+# Enemy motion artwork
 
-Produced with the built-in image generation tool on 2026-10-28, using the approved
-Take Stack art-direction board as a style reference. These files replace the prior
-mechanical-scavenger artwork. Selected PNG files are unchanged copies of tool
-outputs; runtime pixel scanning or image manipulation is not required.
+Original creatures use the Carbon Copy Purgatory identity: cream paper, muted
+gray or red, thick ink contours, tired faces and small complete silhouettes.
+They are original eraser, clip, shredder, bottle, bag, stamp and paper creatures.
 
-`carbon_copy_assets.json` contains complete prompts, original output paths,
-SHA-256 hashes, dimensions, per-frame visible bounds, pivots and transparency QA
-for all seven enemies. `manifest.json` lists the five files in this directory;
-the two base enemy files remain in the parent presentation directory.
+`carbon_copy_assets.json` is the production source catalog. Each entry identifies
+the current PNG, original generated output, old identity reference, exact prompt
+and any refinement prompt, byte hash, columns/rows, local alpha bounds and pivots.
+PNG bytes are copied unchanged from the built-in image generation tool. No pixel
+repainting or resampling is performed by scripts.
 
-Every sheet has four equal columns and one row on a transparent 2172 x 724 canvas
-(543 x 724 per cell). Frame 0 is idle, frames 1 and 2 provide distinct foot/body
-or mouth poses, and frame 3 is a crushed or creased hurt pose. Paradox instead
-supplies intact, bellowing, left torn half and right torn half poses.
-At alpha >= 20/255 all three cell boundaries are clear in every sheet.
+All seven current PNGs are 1536 by 1024 RGBA eight-frame atlases. The format is
+row-major, four columns and two rows. Ordinary actors
+use idle, alternating steps, hurt, action start, followthrough and two death
+drawings. The Original boss has intact, roar, left half, right half, two tearing
+poses, whole crumple and torn-flat poses. The runtime reads the per-file grid
+dimensions, rather than guessing the sheet layout from its aspect ratio.
 
-| File | Identity |
-| --- | --- |
-| `../enemy_grunt.png` | Worn squat eraser scrap with a crooked grin |
-| `../enemy_runner.png` | Sharp V-shaped binder-clip bug with alternating long legs |
-| `brute.png` | Broad, tooth-slot shredder beast with chewing and crushing poses |
-| `silencer.png` | Narrow living ink bottle with its mouth sealed by a paper X |
-| `bomber.png` | Inflated discarded paper sack tied with a red drawstring |
-| `warden.png` | Rubber-stamp goblin behind a thick folded file-folder shield |
-| `paradox.png` | Smug Original paper figure stapled down the center, then torn in two |
-
-The shared visual contract is a thick irregular ink contour, flat cream/sage/
-charcoal/brick-red fills, restrained cel shadows and readable major shapes. No
-labels, gameplay hazard circles or new collision geometry are embedded in the art.
-Brute's accidental ground ellipses and Paradox's detached cross-cell reaction marks
-were removed by targeted built-in image edits. See the manifest for exact sources.
+All current accepted eight-frame sheets have nonempty poses and transparent
+internal grid lines at the visible-alpha threshold 20/255. Their frame pivot X
+is fixed at the cell center; pivot Y is the measured alpha-bottom, allowing the
+renderer to keep the actor's feet planted without altering source PNG pixels.
+`manifest.json` and runtime bounds are generated separately by the root asset
+catalog synchronizer from the actual file bytes.

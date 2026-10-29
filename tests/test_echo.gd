@@ -141,7 +141,7 @@ func test_echo_projectiles_tag_the_kill_source(c: Check) -> void:
 	s.grid.clear()
 	s.grid.insert(e)
 	var seen: Array[int] = []
-	s.enemy_killed.connect(func(_pos: Vector2, _color: Color, source: int) -> void: seen.append(source))
+	s.enemy_killed.connect(func(info: EnemyDeathInfo) -> void: seen.append(info.source))
 	Combat.step_projectiles(s, DT)
 	c.ok(e.dead, "the projectile killed the enemy")
 	c.eq(seen.size(), 1, "one kill signal")

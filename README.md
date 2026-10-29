@@ -8,7 +8,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、4 个角色、叠录、本地解锁记录和程序音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
 
-开发版本 **0.11.1-dev** 现采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。全部角色、敌人、武器、道具和场景已统一重绘，角色与敌人使用真实四帧图集；制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
+开发版本 **0.12.0-dev** 现采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。全部角色、敌人、武器、道具和场景已统一重绘，角色与敌人使用真实八帧图集；制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
 
 0.11.1 的界面改为有机手墨轮廓：开放纸偶舞台、供货摊与副本卷宗、会对实际交易作出反应的小商贩，以及卷轴/材料袋 HUD。鼠标和键盘焦点共用同一套手绘提示，减弱特效会直接落到最终状态。
 
@@ -196,7 +196,7 @@ tools/          烟测、平衡、性能探针、音效生成
 
 ## 已知限制
 
-- 音效与环境音是程序合成的占位，未做混音、动态范围与音乐设计。
+- 已有独立武器音效、CC0 机械与交互音；整体环境音、配乐和混音尚未统一到纸墨世界。
 - 角色只有 4 个；解锁看最佳波数（第 10/15 波）与通关次数（1 次），元进度只有最佳波数/通关数。
 - 难度和 Boss 只用 bot 验证过（封口墨加入后 30 种子 balanced：折痕 15、拒收件 22、套印件 16；防御流仍偏弱）。真人手感未调。
 - 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
@@ -210,3 +210,5 @@ tools/          烟测、平衡、性能探针、音效生成
 - 游戏代码与文档：MIT，见 [`LICENSE`](LICENSE)。
 - `.agents/skills/`：来自 gamedev 技能包，Apache-2.0，详见 [`THIRD_PARTY.md`](THIRD_PARTY.md)。属于开发工具，不参与游戏运行。
 - 内置 Noto Sans CJK SC（SIL OFL 1.1，见 `assets/fonts/OFL.txt`），系统字体仅作兜底。
+
+Battle actions, atlas anchors and causal rendering: [battle-direction.md](docs/battle-direction.md).

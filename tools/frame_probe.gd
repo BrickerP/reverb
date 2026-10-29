@@ -19,6 +19,7 @@ var _peak_projectiles := 0
 
 
 func _initialize() -> void:
+	RenderingServer.render_loop_enabled = false
 	OS.set_environment("REVERB_SAVE", "user://frame_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://frame_probe_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://frame_probe_settings.json")
@@ -44,6 +45,7 @@ func _process(_delta: float) -> bool:
 		if _main.character_select.visible:
 			_main.choose_character(&"looper")
 		return false
+	RenderingServer.force_draw()
 	var sim: Sim = _main.sim
 	var now := Time.get_ticks_usec()
 	if _case >= 0:

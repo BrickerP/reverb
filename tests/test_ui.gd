@@ -611,9 +611,20 @@ func test_echo_kills_use_the_echo_tint(c: Check) -> void:
 	s.echoes.append(EchoActor.new(take, 0))
 	var view := ArenaView.new()
 	view.bind(s)
-	c.ok(view.kill_color(0, Color.WHITE) != Color.WHITE, "echo kills borrow the echo colour")
-	c.eq(view.kill_color(-1, Color.RED), Color.RED, "player kills keep the enemy colour")
-	c.eq(view.kill_color(9, Color.RED), Color.RED, "a missing echo falls back safely")
+	var info := EnemyDeathInfo.new()
+	info.source = 0
+	info.actor_token = take.get_instance_id()
+	info.source_tint = take.tint()
+	info.color = Color.WHITE
+	c.ok(view.kill_color(info) != Color.WHITE, "echo kills borrow the captured echo colour")
+	s.echoes.clear()
+	c.ok(view.kill_color(info) != Color.WHITE, "a removed copy keeps its fired colour snapshot")
+	info.source = -1
+	info.actor_token = -1
+	info.color = Color.RED
+	c.eq(view.kill_color(info), Color.RED, "player kills keep the enemy colour")
+	info.source = 9
+	c.eq(view.kill_color(info), Color.RED, "an unidentified copy stays neutral instead of borrowing a live slot")
 	view.free()
 
 
@@ -896,6 +907,9 @@ func test_main_runs_the_whole_loop(c: Check) -> void:
 	s.player.hp = 0.0
 	main._physics_process(DT)
 	c.eq(s.phase, Sim.Phase.LOST, "player died")
+	c.ok(not main.end_ui.visible and main._recorded,
+			"loss is recorded immediately while the paper death remains visible")
+	main._physics_process(main.PLAYER_DEATH_BEAT + DT)
 	c.ok(main.end_ui.visible, "end screen shown")
 	main.end_ui.restart_button.pressed.emit()
 	c.ok(main.sim != s, "restart builds a fresh sim")

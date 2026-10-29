@@ -80,69 +80,72 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
-	&"shopkeeper": {"size": Vector2(2172, 724), "region": Rect2(50, 123, 419, 494)},
-	&"recording_cartridge": {"size": Vector2(1536, 1024), "region": Rect2(226, 29, 1116, 967)},
-	&"character_looper_front": {"size": Vector2(2172, 724), "region": Rect2(68, 110, 424, 521)},
-	&"character_looper_back": {"size": Vector2(2172, 724), "region": Rect2(70, 104, 416, 508)},
-	&"character_solo_front": {"size": Vector2(2172, 724), "region": Rect2(65, 70, 442, 575)},
-	&"character_solo_back": {"size": Vector2(2172, 724), "region": Rect2(63, 71, 433, 549)},
-	&"character_mirror_front": {"size": Vector2(2172, 724), "region": Rect2(39, 138, 464, 483)},
-	&"character_mirror_back": {"size": Vector2(2172, 724), "region": Rect2(57, 135, 395, 470)},
-	&"character_conductor_front": {"size": Vector2(2172, 724), "region": Rect2(24, 120, 485, 496)},
-	&"character_conductor_back": {"size": Vector2(2172, 724), "region": Rect2(46, 143, 460, 447)},
-	&"enemy_grunt": {"size": Vector2(2172, 724), "region": Rect2(45, 174, 477, 387)},
-	&"enemy_runner": {"size": Vector2(2172, 724), "region": Rect2(49, 93, 468, 516)},
-	&"enemy_brute": {"size": Vector2(2172, 724), "region": Rect2(27, 135, 492, 424)},
-	&"enemy_silencer": {"size": Vector2(2172, 724), "region": Rect2(92, 96, 401, 536)},
-	&"enemy_bomber": {"size": Vector2(2172, 724), "region": Rect2(26, 99, 497, 537)},
-	&"enemy_warden": {"size": Vector2(2172, 724), "region": Rect2(119, 174, 389, 421)},
-	&"enemy_paradox": {"size": Vector2(2172, 724), "region": Rect2(62, 70, 459, 573)},
-	&"weapon_pistol": {"size": Vector2(1536, 1024), "region": Rect2(191, 50, 1165, 914)},
-	&"weapon_smg": {"size": Vector2(1536, 1024), "region": Rect2(202, 34, 1142, 944)},
-	&"weapon_shotgun": {"size": Vector2(1536, 1024), "region": Rect2(124, 194, 1288, 646)},
-	&"weapon_rifle": {"size": Vector2(1774, 887), "region": Rect2(48, 269, 1685, 374)},
-	&"weapon_orb": {"size": Vector2(1536, 1024), "region": Rect2(292, 140, 974, 723)},
-	&"weapon_flechette": {"size": Vector2(1536, 1024), "region": Rect2(198, 192, 1154, 674)},
-	&"weapon_longbow": {"size": Vector2(1536, 1024), "region": Rect2(341, 18, 920, 984)},
-	&"weapon_hex_bolt": {"size": Vector2(1536, 1024), "region": Rect2(32, 208, 1478, 608)},
-	&"weapon_twin_fangs": {"size": Vector2(1536, 1024), "region": Rect2(155, 86, 1232, 851)},
-	&"weapon_flak_crown": {"size": Vector2(1536, 1024), "region": Rect2(25, 67, 1493, 805)},
-	&"weapon_rail_spike": {"size": Vector2(2175, 723), "region": Rect2(21, 152, 2136, 410)},
-	&"weapon_nova_core": {"size": Vector2(1536, 1024), "region": Rect2(277, 64, 980, 897)},
-	&"item_iron_heart": {"size": Vector2(1312, 1199), "region": Rect2(86, 125, 1148, 971)},
-	&"item_sneakers": {"size": Vector2(1536, 1024), "region": Rect2(65, 37, 1423, 957)},
-	&"item_sharp_edge": {"size": Vector2(1293, 1216), "region": Rect2(91, 162, 1150, 917)},
-	&"item_quick_trigger": {"size": Vector2(1312, 1199), "region": Rect2(104, 96, 1164, 1019)},
-	&"item_long_barrel": {"size": Vector2(1312, 1199), "region": Rect2(13, 228, 1290, 726)},
-	&"item_lucky_coin": {"size": Vector2(1312, 1199), "region": Rect2(146, 92, 1045, 1030)},
-	&"item_magnet": {"size": Vector2(1312, 1199), "region": Rect2(133, 80, 1070, 1037)},
-	&"item_regen_patch": {"size": Vector2(1312, 1199), "region": Rect2(42, 128, 1243, 954)},
-	&"item_spare_deck": {"size": Vector2(1312, 1199), "region": Rect2(126, 75, 1051, 1035)},
-	&"item_long_play": {"size": Vector2(1312, 1199), "region": Rect2(93, 51, 1176, 1104)},
-	&"item_loud_speaker": {"size": Vector2(1312, 1199), "region": Rect2(52, 83, 1212, 1033)},
+	&"shopkeeper": {"size": Vector2(2172, 724), "region": Rect2(50, 123, 419, 494), "idle": Rect2(87, 124, 347, 493), "pivots": [Vector2(221.5, 494), Vector2(221.5, 494), Vector2(221.5, 493), Vector2(221.5, 494)]},
+	&"recording_cartridge": {"size": Vector2(1536, 1024), "region": Rect2(226, 29, 1116, 967), "idle": Rect2(226, 29, 1116, 967), "pivots": [Vector2(542.0, 967)]},
+	&"character_looper_front": {"size": Vector2(1536, 1024), "region": Rect2(33, 88, 319, 360), "idle": Rect2(69, 128, 254, 313), "pivots": [Vector2(159.0, 353), Vector2(159.0, 360), Vector2(159.0, 357), Vector2(159.0, 353), Vector2(159.0, 297), Vector2(159.0, 296), Vector2(159.0, 306), Vector2(159.0, 310)]},
+	&"character_looper_back": {"size": Vector2(1536, 1024), "region": Rect2(41, 73, 333, 394), "idle": Rect2(66, 97, 279, 362), "pivots": [Vector2(151.0, 386), Vector2(151.0, 394), Vector2(151.0, 393), Vector2(151.0, 388), Vector2(151.0, 337), Vector2(151.0, 331), Vector2(151.0, 339), Vector2(151.0, 345)]},
+	&"character_solo_front": {"size": Vector2(1536, 1024), "region": Rect2(44, 88, 331, 395), "idle": Rect2(64, 129, 263, 344), "pivots": [Vector2(148.0, 385), Vector2(148.0, 395), Vector2(148.0, 395), Vector2(148.0, 386), Vector2(148.0, 325), Vector2(148.0, 324), Vector2(148.0, 328), Vector2(148.0, 330)]},
+	&"character_solo_back": {"size": Vector2(1536, 1024), "region": Rect2(67, 90, 278, 326), "idle": Rect2(83, 116, 233, 294), "pivots": [Vector2(125.0, 320), Vector2(125.0, 326), Vector2(125.0, 326), Vector2(125.0, 323), Vector2(125.0, 282), Vector2(125.0, 282), Vector2(125.0, 280), Vector2(125.0, 278)]},
+	&"character_mirror_front": {"size": Vector2(1536, 1024), "region": Rect2(2, 81, 377, 410), "idle": Rect2(45, 115, 283, 363), "pivots": [Vector2(190.0, 397), Vector2(190.0, 400), Vector2(190.0, 410), Vector2(190.0, 398), Vector2(190.0, 344), Vector2(190.0, 344), Vector2(190.0, 351), Vector2(190.0, 349)]},
+	&"character_mirror_back": {"size": Vector2(1536, 1024), "region": Rect2(19, 71, 357, 401), "idle": Rect2(70, 93, 277, 369), "pivots": [Vector2(173.0, 391), Vector2(173.0, 401), Vector2(173.0, 389), Vector2(173.0, 391), Vector2(173.0, 347), Vector2(173.0, 363), Vector2(173.0, 352), Vector2(173.0, 353)]},
+	&"character_conductor_front": {"size": Vector2(1536, 1024), "region": Rect2(36, 124, 309, 294), "idle": Rect2(74, 148, 236, 265), "pivots": [Vector2(156.0, 289), Vector2(156.0, 293), Vector2(156.0, 294), Vector2(156.0, 293), Vector2(156.0, 261), Vector2(156.0, 261), Vector2(156.0, 262), Vector2(156.0, 261)]},
+	&"character_conductor_back": {"size": Vector2(1536, 1024), "region": Rect2(51, 145, 299, 304), "idle": Rect2(90, 191, 242, 255), "pivots": [Vector2(141.0, 301), Vector2(141.0, 303), Vector2(141.0, 304), Vector2(141.0, 301), Vector2(141.0, 227), Vector2(141.0, 225), Vector2(141.0, 229), Vector2(141.0, 233)]},
+	&"enemy_grunt": {"size": Vector2(1536, 1024), "region": Rect2(19, 127, 354, 324), "idle": Rect2(40, 200, 295, 241), "pivots": [Vector2(173.0, 314), Vector2(173.0, 324), Vector2(173.0, 317), Vector2(173.0, 317), Vector2(173.0, 251), Vector2(173.0, 249), Vector2(173.0, 252), Vector2(173.0, 256)]},
+	&"enemy_runner": {"size": Vector2(1536, 1024), "region": Rect2(11, 93, 361, 386), "idle": Rect2(41, 140, 280, 328), "pivots": [Vector2(181.0, 375), Vector2(181.0, 386), Vector2(181.0, 377), Vector2(181.0, 376), Vector2(181.0, 345), Vector2(181.0, 351), Vector2(181.0, 346), Vector2(181.0, 353)]},
+	&"enemy_brute": {"size": Vector2(1536, 1024), "region": Rect2(75, 147, 256, 235), "idle": Rect2(75, 178, 230, 200), "pivots": [Vector2(117.0, 231), Vector2(117.0, 233), Vector2(117.0, 233), Vector2(117.0, 235), Vector2(117.0, 216), Vector2(117.0, 212), Vector2(117.0, 213), Vector2(117.0, 214)]},
+	&"enemy_silencer": {"size": Vector2(1536, 1024), "region": Rect2(1, 56, 355, 431), "idle": Rect2(59, 100, 261, 385), "pivots": [Vector2(191.0, 429), Vector2(191.0, 431), Vector2(191.0, 431), Vector2(191.0, 431), Vector2(191.0, 374), Vector2(191.0, 368), Vector2(191.0, 367), Vector2(191.0, 375)]},
+	&"enemy_bomber": {"size": Vector2(1536, 1024), "region": Rect2(4, 76, 349, 418), "idle": Rect2(56, 163, 266, 327), "pivots": [Vector2(188.0, 414), Vector2(188.0, 413), Vector2(188.0, 415), Vector2(188.0, 418), Vector2(188.0, 320), Vector2(188.0, 321), Vector2(188.0, 323), Vector2(188.0, 334)]},
+	&"enemy_warden": {"size": Vector2(1536, 1024), "region": Rect2(5, 84, 379, 412), "idle": Rect2(50, 128, 316, 362), "pivots": [Vector2(187.0, 406), Vector2(187.0, 406), Vector2(187.0, 412), Vector2(187.0, 406), Vector2(187.0, 331), Vector2(187.0, 332), Vector2(187.0, 331), Vector2(187.0, 335)]},
+	&"enemy_paradox": {"size": Vector2(1536, 1024), "region": Rect2(2, 75, 354, 410), "idle": Rect2(42, 77, 279, 405), "pivots": [Vector2(190.0, 407), Vector2(190.0, 410), Vector2(190.0, 408), Vector2(190.0, 407), Vector2(190.0, 355), Vector2(190.0, 320), Vector2(190.0, 352), Vector2(190.0, 357)]},
+	&"weapon_pistol": {"size": Vector2(1536, 1024), "region": Rect2(191, 50, 1165, 914), "idle": Rect2(191, 50, 1165, 914), "pivots": [Vector2(577.0, 914)]},
+	&"weapon_smg": {"size": Vector2(1536, 1024), "region": Rect2(202, 34, 1142, 944), "idle": Rect2(202, 34, 1142, 944), "pivots": [Vector2(566.0, 944)]},
+	&"weapon_shotgun": {"size": Vector2(1536, 1024), "region": Rect2(124, 194, 1288, 646), "idle": Rect2(124, 194, 1288, 646), "pivots": [Vector2(644.0, 646)]},
+	&"weapon_rifle": {"size": Vector2(1774, 887), "region": Rect2(48, 269, 1685, 374), "idle": Rect2(48, 269, 1685, 374), "pivots": [Vector2(839.0, 374)]},
+	&"weapon_orb": {"size": Vector2(1536, 1024), "region": Rect2(292, 140, 974, 723), "idle": Rect2(292, 140, 974, 723), "pivots": [Vector2(476.0, 723)]},
+	&"weapon_flechette": {"size": Vector2(1536, 1024), "region": Rect2(198, 192, 1154, 674), "idle": Rect2(198, 192, 1154, 674), "pivots": [Vector2(570.0, 674)]},
+	&"weapon_longbow": {"size": Vector2(1536, 1024), "region": Rect2(341, 18, 920, 984), "idle": Rect2(341, 18, 920, 984), "pivots": [Vector2(427.0, 984)]},
+	&"weapon_hex_bolt": {"size": Vector2(1536, 1024), "region": Rect2(32, 208, 1478, 608), "idle": Rect2(32, 208, 1478, 608), "pivots": [Vector2(736.0, 608)]},
+	&"weapon_twin_fangs": {"size": Vector2(1536, 1024), "region": Rect2(155, 86, 1232, 851), "idle": Rect2(155, 86, 1232, 851), "pivots": [Vector2(613.0, 851)]},
+	&"weapon_flak_crown": {"size": Vector2(1536, 1024), "region": Rect2(25, 67, 1493, 805), "idle": Rect2(25, 67, 1493, 805), "pivots": [Vector2(743.0, 805)]},
+	&"weapon_rail_spike": {"size": Vector2(2175, 723), "region": Rect2(21, 152, 2136, 410), "idle": Rect2(21, 152, 2136, 410), "pivots": [Vector2(1066.5, 410)]},
+	&"weapon_nova_core": {"size": Vector2(1536, 1024), "region": Rect2(277, 64, 980, 897), "idle": Rect2(277, 64, 980, 897), "pivots": [Vector2(491.0, 897)]},
+	&"item_iron_heart": {"size": Vector2(1312, 1199), "region": Rect2(86, 125, 1148, 971), "idle": Rect2(86, 125, 1148, 971), "pivots": [Vector2(570.0, 971)]},
+	&"item_sneakers": {"size": Vector2(1536, 1024), "region": Rect2(65, 37, 1423, 957), "idle": Rect2(65, 37, 1423, 957), "pivots": [Vector2(703.0, 957)]},
+	&"item_sharp_edge": {"size": Vector2(1293, 1216), "region": Rect2(91, 162, 1150, 917), "idle": Rect2(91, 162, 1150, 917), "pivots": [Vector2(555.5, 917)]},
+	&"item_quick_trigger": {"size": Vector2(1312, 1199), "region": Rect2(104, 96, 1164, 1019), "idle": Rect2(104, 96, 1164, 1019), "pivots": [Vector2(552.0, 1019)]},
+	&"item_long_barrel": {"size": Vector2(1312, 1199), "region": Rect2(13, 228, 1290, 726), "idle": Rect2(13, 228, 1290, 726), "pivots": [Vector2(643.0, 726)]},
+	&"item_lucky_coin": {"size": Vector2(1312, 1199), "region": Rect2(146, 92, 1045, 1030), "idle": Rect2(146, 92, 1045, 1030), "pivots": [Vector2(510.0, 1030)]},
+	&"item_magnet": {"size": Vector2(1312, 1199), "region": Rect2(133, 80, 1070, 1037), "idle": Rect2(133, 80, 1070, 1037), "pivots": [Vector2(523.0, 1037)]},
+	&"item_regen_patch": {"size": Vector2(1312, 1199), "region": Rect2(42, 128, 1243, 954), "idle": Rect2(42, 128, 1243, 954), "pivots": [Vector2(614.0, 954)]},
+	&"item_spare_deck": {"size": Vector2(1312, 1199), "region": Rect2(126, 75, 1051, 1035), "idle": Rect2(126, 75, 1051, 1035), "pivots": [Vector2(530.0, 1035)]},
+	&"item_long_play": {"size": Vector2(1312, 1199), "region": Rect2(93, 51, 1176, 1104), "idle": Rect2(93, 51, 1176, 1104), "pivots": [Vector2(563.0, 1104)]},
+	&"item_loud_speaker": {"size": Vector2(1312, 1199), "region": Rect2(52, 83, 1212, 1033), "idle": Rect2(52, 83, 1212, 1033), "pivots": [Vector2(604.0, 1033)]},
 }
 
-const FRAME_COUNTS := {
-	&"shopkeeper": 4,
-	&"character_looper_front": 4,
-	&"character_looper_back": 4,
-	&"character_solo_front": 4,
-	&"character_solo_back": 4,
-	&"character_mirror_front": 4,
-	&"character_mirror_back": 4,
-	&"character_conductor_front": 4,
-	&"character_conductor_back": 4,
-	&"enemy_grunt": 4,
-	&"enemy_runner": 4,
-	&"enemy_brute": 4,
-	&"enemy_silencer": 4,
-	&"enemy_bomber": 4,
-	&"enemy_warden": 4,
-	&"enemy_paradox": 4,
+const ATLAS_LAYOUTS := {
+	&"shopkeeper": Vector2i(4, 1),
+	&"character_looper_front": Vector2i(4, 2),
+	&"character_looper_back": Vector2i(4, 2),
+	&"character_solo_front": Vector2i(4, 2),
+	&"character_solo_back": Vector2i(4, 2),
+	&"character_mirror_front": Vector2i(4, 2),
+	&"character_mirror_back": Vector2i(4, 2),
+	&"character_conductor_front": Vector2i(4, 2),
+	&"character_conductor_back": Vector2i(4, 2),
+	&"enemy_grunt": Vector2i(4, 2),
+	&"enemy_runner": Vector2i(4, 2),
+	&"enemy_brute": Vector2i(4, 2),
+	&"enemy_silencer": Vector2i(4, 2),
+	&"enemy_bomber": Vector2i(4, 2),
+	&"enemy_warden": Vector2i(4, 2),
+	&"enemy_paradox": Vector2i(4, 2),
 }
 
 static var _textures: Dictionary = {}
 static var _regions: Dictionary = {}
+static var _idle_regions: Dictionary = {}
+static var _frame_regions: Dictionary = {}
+static var _frame_pivots: Dictionary = {}
 
 
 static func texture(key: StringName) -> Texture2D:
@@ -187,7 +190,8 @@ static func weapon_key(w: WeaponDef) -> StringName:
 static func frame_count(key: StringName) -> int:
 	if not PATHS.has(key):
 		return 0
-	return int(FRAME_COUNTS.get(key, 1))
+	var layout: Vector2i = ATLAS_LAYOUTS.get(key, Vector2i.ONE)
+	return layout.x * layout.y
 
 
 static func frame_region(key: StringName, index: int) -> Rect2:
@@ -195,9 +199,50 @@ static func frame_region(key: StringName, index: int) -> Rect2:
 	var count := frame_count(key)
 	if count <= 1 or not first.has_area():
 		return first
+	if not _frame_regions.has(key):
+		var tex := texture(key)
+		var layout: Vector2i = ATLAS_LAYOUTS.get(key, Vector2i.ONE)
+		var frames: Array[Rect2] = []
+		for frame in count:
+			var column := frame % layout.x
+			var row := int(frame / layout.x)
+			frames.append(Rect2(first.position + Vector2(float(column) * tex.get_width() / float(layout.x),
+					float(row) * tex.get_height() / float(layout.y)), first.size))
+		_frame_regions[key] = frames
+	var cached: Array = _frame_regions[key]
+	return cached[clampi(index, 0, count - 1)]
+
+
+static func idle_region(key: StringName) -> Rect2:
+	if _idle_regions.has(key):
+		return _idle_regions[key]
 	var tex := texture(key)
-	var frame := clampi(index, 0, count - 1)
-	return Rect2(first.position + Vector2(float(frame) * tex.get_width() / float(count), 0.0), first.size)
+	if tex == null or not SOURCE_METADATA.has(key):
+		return Rect2()
+	var data: Dictionary = SOURCE_METADATA[key]
+	var idle: Rect2 = data["idle"]
+	var size: Vector2 = data["size"]
+	var scale := tex.get_size() / size
+	var measured := Rect2(idle.position * scale, idle.size * scale)
+	_idle_regions[key] = measured
+	return measured
+
+
+static func frame_pivot(key: StringName, index: int) -> Vector2:
+	var count := frame_count(key)
+	var tex := texture(key)
+	if count == 0 or tex == null:
+		return Vector2.ZERO
+	if not _frame_pivots.has(key):
+		var data: Dictionary = SOURCE_METADATA[key]
+		var size: Vector2 = data["size"]
+		var scale := tex.get_size() / size
+		var measured: Array[Vector2] = []
+		for pivot: Vector2 in data["pivots"]:
+			measured.append(pivot * scale)
+		_frame_pivots[key] = measured
+	var cached: Array = _frame_pivots[key]
+	return cached[clampi(index, 0, count - 1)]
 
 
 static func item_key(item: ItemDef) -> StringName:

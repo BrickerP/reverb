@@ -5,7 +5,7 @@ signal wave_started(wave: int)
 signal wave_ended(wave: int)
 signal run_lost
 signal run_won
-signal enemy_killed(pos: Vector2, color: Color, source: int)
+signal enemy_killed(info: EnemyDeathInfo)
 signal enemy_hit(pos: Vector2, amount: float, crit: bool, source: int)
 signal player_hurt(amount: float)
 signal player_hurt_info(info: PlayerHurtInfo)
@@ -26,7 +26,7 @@ signal boss_shard_spawned(enemy: EnemyState)
 signal boss_shard_defeated(enemy: EnemyState, remaining: int)
 signal boss_enraged(enemy: EnemyState)
 signal boss_defeated
-signal echoes_silenced(duration: float)
+signal echoes_silenced(info: EchoSilenceInfo)
 signal contract_resolved(contract: AnomalyContract, success: bool, reward: int)
 signal rift_spawned(rift: TemporalRift)
 signal rift_activated(rift: TemporalRift)
@@ -410,11 +410,11 @@ func step(delta: float, move_dir: Vector2) -> void:
 				_fit_echo_cooldowns(actor)
 				Combat.step_weapons(self, actor.pos, player.stats, player.weapons, player.weapon_levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
-						synergy_damage_mult(), synergy_cooldown_mult())
+						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.get_instance_id())
 			else:
 				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons, actor.take.levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
-						synergy_damage_mult(), synergy_cooldown_mult())
+						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.get_instance_id())
 	Combat.step_projectiles(self, delta)
 	_update_pickups(delta)
 	_compact()
@@ -435,6 +435,18 @@ func _fit_echo_cooldowns(actor: EchoActor) -> void:
 		actor.cooldowns.resize(player.weapons.size())
 
 
+func _emit_echo_silence(duration: float, enemy: EnemyState, kind: StringName) -> void:
+	var info := EchoSilenceInfo.new()
+	info.duration = duration
+	info.kind = kind
+	if enemy != null:
+		info.source_uid = enemy.uid
+		info.pos = enemy.pos
+		if enemy.def != null:
+			info.enemy_id = enemy.def.id
+	echoes_silenced.emit(info)
+
+
 func _boss_step(delta: float) -> void:
 	var controller := _alive_boss()
 	if controller == null:
@@ -443,7 +455,7 @@ func _boss_step(delta: float) -> void:
 	if _boss_silence_cd <= 0.0:
 		_boss_silence_cd = BOSS_SILENCE_EVERY
 		echo_silenced = BOSS_SILENCE_TIME
-		echoes_silenced.emit(BOSS_SILENCE_TIME)
+		_emit_echo_silence(BOSS_SILENCE_TIME, controller, EchoSilenceInfo.BOSS)
 	_boss_minion_cd -= delta
 	if _boss_minion_cd <= 0.0:
 		_boss_minion_cd = BOSS_MINION_EVERY
@@ -463,7 +475,8 @@ func _alive_boss() -> EnemyState:
 
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
-		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit") -> void:
+		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit",
+		actor_token: int = -1, source_tint: Color = Color.WHITE) -> void:
 	var actual := amount
 	var reduced := false
 	var shield_arc := e.shield_arc_value()
@@ -478,6 +491,8 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	enemy_hit.emit(e.pos, actual, crit, source)
 	var info := DamageInfo.new()
 	info.source = source
+	info.actor_token = actor_token
+	info.source_tint = source_tint
 	info.weapon_id = weapon_id
 	info.target_uid = e.uid
 	info.pos = e.pos
@@ -500,7 +515,23 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	pk.pos = e.pos
 	pk.value = maxi(1, int(round(float(e.def.drop * e.drop_mult) * material_drop_multiplier())))
 	pickups.append(pk)
-	enemy_killed.emit(e.pos, e.def.color, source)
+	var death := EnemyDeathInfo.new()
+	death.target_uid = e.uid
+	death.enemy_id = e.def.id
+	death.pos = e.pos
+	death.radius = e.radius
+	death.color = e.def.color
+	death.elite_kind = e.elite_kind if e.elite else &""
+	death.source = source
+	death.actor_token = actor_token
+	death.source_tint = source_tint
+	death.weapon_id = weapon_id
+	death.hit_dir = hit_dir
+	death.facing = (player.pos - e.pos).normalized()
+	death.effect = effect
+	death.boss_phase = boss_phase if e.def.is_boss else 0
+	death.boss_shard_index = boss_shards.find(e)
+	enemy_killed.emit(death)
 	if boss_shards.has(e):
 		_handle_boss_shard_death(e)
 	if e.death_radius_value() > 0.0:
@@ -560,7 +591,7 @@ func _begin_boss_phase2() -> void:
 	boss_shards.append(shard)
 	enemies.append(shard)
 	echo_silenced = maxf(echo_silenced, BOSS_PHASE2_SILENCE)
-	echoes_silenced.emit(echo_silenced)
+	_emit_echo_silence(echo_silenced, boss, EchoSilenceInfo.PHASE)
 	boss_phase_changed.emit(2)
 	boss_shard_spawned.emit(shard)
 
@@ -632,7 +663,7 @@ func _bomber_explode(e: EnemyState) -> void:
 # All player damage goes through this shield-aware path. The shield absorbs the
 # incoming amount first; `PlayerHurtInfo.amount` remains the HP damage actually dealt.
 func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Vector2,
-		direction: Vector2, grant_iframes: bool = true) -> void:
+		direction: Vector2, grant_iframes: bool = true, source_uid: int = -1) -> void:
 	if amount <= 0.0:
 		return
 	var had_shield := player.shield > 0.0
@@ -654,6 +685,7 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	player_hurt.emit(dealt)
 	var hurt := PlayerHurtInfo.new()
 	hurt.source = source
+	hurt.source_uid = source_uid
 	hurt.amount = dealt
 	hurt.absorbed = absorbed
 	hurt.pos = pos
@@ -726,7 +758,8 @@ func collapse_oldest_echo() -> bool:
 		var knock := (e.pos - pos).normalized() * 160.0
 		if knock == Vector2.ZERO:
 			knock = Vector2.RIGHT * 160.0
-		damage_enemy(e, damage, knock, false, -1, Vector2.ZERO, &"", &"echo_collapse")
+		damage_enemy(e, damage, knock, false, -1, Vector2.ZERO, &"", &"echo_collapse",
+				take.get_instance_id(), tint)
 	player.hp = minf(player.max_hp(), player.hp + player.max_hp() * 0.15)
 	explosion.emit(pos, radius, tint)
 	var info := ExplosionInfo.new()
@@ -735,6 +768,8 @@ func collapse_oldest_echo() -> bool:
 	info.radius = radius
 	info.color = tint
 	info.effect = &"echo_collapse"
+	info.actor_token = take.get_instance_id()
+	info.source_tint = tint
 	explosion_info.emit(info)
 	echo_collapsed.emit(pos, tint, radius)
 	return true
@@ -845,10 +880,10 @@ func _move_enemies(delta: float) -> void:
 		var touch := e.radius + PlayerState.RADIUS
 		if player.iframes <= 0.0 and to_player.length_squared() <= touch * touch:
 			_hurt_player(e.damage, e.def.id, &"contact", player.pos,
-					(player.pos - e.pos).normalized())
+					(player.pos - e.pos).normalized(), true, e.uid)
 			if e.def.silence_time > echo_silenced:
 				echo_silenced = e.def.silence_time
-				echoes_silenced.emit(e.def.silence_time)
+				_emit_echo_silence(e.def.silence_time, e, EchoSilenceInfo.CONTACT)
 	_separate_boss_shards()
 
 

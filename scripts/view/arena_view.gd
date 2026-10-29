@@ -40,6 +40,7 @@ var _hurts: Array[Dictionary] = []
 var _weapon_changes: Array[Dictionary] = []
 var _last_event: Dictionary = {}
 var _noise_counter := 0
+var _director := BattleDirector.new()
 
 
 func _ready() -> void:
@@ -73,6 +74,7 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_paused = false
 	_noise_counter = 0
 	_clear_feedback()
+	_director.clear()
 	sim.enemy_killed.connect(_on_kill)
 	sim.shot_fired_info.connect(_on_shot_info)
 	sim.damage_event.connect(_on_damage_info)
@@ -101,6 +103,7 @@ func unbind() -> void:
 	_reveal.clear()
 	_sparks.clear()
 	_clear_feedback()
+	_director.clear()
 	_shake = 0.0
 	_beat_take = null
 	_beat_time = 0.0
@@ -124,6 +127,7 @@ func set_paused(on: bool) -> void:
 
 func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
+	_director.settle(on)
 	if not on:
 		return
 	_shake = 0.0
@@ -175,17 +179,25 @@ func clear_victory() -> void:
 
 
 func _process(delta: float) -> void:
-	if _paused or sim == null:
+	if sim == null or _paused:
 		return
-	_visual_time += delta
+	var running := sim.phase == Sim.Phase.WAVE
+	if running:
+		_director.step(delta)
+		_visual_time += delta
+	else:
+		_director.step_terminal(delta)
 	_shake = maxf(0.0, _shake - delta * 1.8)
 	var shake_amount := _shake * _shake * (0.35 if reduced_effects else 1.0)
 	position = Vector2(sin(_visual_time * 31.0), sin(_visual_time * 43.0 + 1.7)) * shake_amount * 9.0
-	if sim != null:
+	if running:
 		var distance := sim.player.pos.distance_to(_last_player_pos)
 		_motion_speed = minf(1.0, distance / maxf(1.0, delta * 180.0))
 		_motion_amount = move_toward(_motion_amount, _motion_speed, delta * (8.0 if _motion_speed > 0.02 else 5.0))
 		_last_player_pos = sim.player.pos
+	else:
+		_motion_amount = 0.0
+		_motion_speed = 0.0
 	var keep := 0
 	for s in _sparks:
 		s.life -= delta
@@ -226,10 +238,12 @@ func _draw() -> void:
 	ArenaPainter.pickup_range(self, sim)
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
-	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time)
-	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time)
+	ArenaPainter.actor_remains(self, _director, reduced_effects)
+	ArenaPainter.boss_tear(self, _director, reduced_effects)
+	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director)
+	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
-	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles)
+	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
 			reduced_effects)
 	ArenaPainter.sparks(self, _sparks)
@@ -238,8 +252,16 @@ func _draw() -> void:
 				_victory_time / VICTORY_BEAT, reduced_effects)
 
 
-func _on_kill(pos: Vector2, color: Color, source: int) -> void:
-	var tint := kill_color(source, color)
+func _on_kill(info: EnemyDeathInfo) -> void:
+	_director.enemy_died(info, reduced_effects)
+	var pos := info.pos
+	var color := info.color
+	var source := info.source
+	_last_event = {"kind": &"kill", "enemy_id": info.enemy_id, "target_uid": info.target_uid,
+		"pos": info.pos, "source": info.source, "weapon_id": info.weapon_id,
+		"actor_token": info.actor_token, "source_tint": info.source_tint,
+		"boss_phase": info.boss_phase, "shard_index": info.boss_shard_index}
+	var tint := kill_color(info)
 	var spark_count := 4 if reduced_effects else 8
 	for i in spark_count:
 		_spark(pos, tint, 90.0 + _noise01(i) * 160.0, 0.35 + _noise01(i + 9) * 0.25)
@@ -251,48 +273,59 @@ func _on_kill(pos: Vector2, color: Color, source: int) -> void:
 
 
 func _on_shot_info(info: ShotInfo) -> void:
+	var actor_token := info.actor_token
+	if not BattleDirector.is_copy_token(actor_token) and info.source >= 0:
+		actor_token = 0
+	if not reduced_effects:
+		_director.shot(info)
 	var profile := ArenaPainter.weapon_feedback_profile(info.weapon_id)
 	# Combat.fire guarantees RIGHT for a zero-length target vector. Rich shot feedback mirrors
 	# that projectile contract; damage/hurt events keep ZERO because AOE/overlap can be directionless.
 	if reduced_effects:
 		profile = profile.duplicate(true)
 		profile["recoil"] = float(profile["recoil"]) * 0.5
-	if info.source >= 0 and sim != null and info.source < sim.echoes.size():
+	if BattleDirector.is_copy_token(info.actor_token):
 		profile = profile.duplicate(true)
 		var profile_color: Color = profile["color"]
-		profile["color"] = profile_color.lerp(sim.echoes[info.source].take.tint(), 0.45)
+		profile["color"] = profile_color.lerp(info.source_tint, 0.45)
 	var direction := info.direction.normalized() if info.direction != Vector2.ZERO else Vector2.RIGHT
 	_push_feedback(_muzzles, {"life": 0.14, "max_life": 0.14, "pos": info.origin + direction * 14.0,
 			"origin": info.origin, "direction": direction, "source": info.source,
+			"actor_token": actor_token, "source_tint": info.source_tint,
 			"weapon_id": info.weapon_id, "level": info.level, "count": info.count,
 			"sequence": info.sequence, "profile": profile}, MAX_MUZZLES)
 	_last_event = {"kind": &"shot", "weapon_id": info.weapon_id, "direction": direction,
 			"origin": info.origin, "source": info.source, "count": info.count,
+			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"sequence": info.sequence, "profile": profile}
 
 
 func _on_damage_info(info: DamageInfo) -> void:
+	_director.enemy_hit(info.target_uid)
 	var has_direction := info.hit_dir != Vector2.ZERO
 	var direction := info.hit_dir.normalized() if has_direction else Vector2.ZERO
 	var hit_color := Color.WHITE
-	if info.source >= 0 and sim != null and info.source < sim.echoes.size():
-		hit_color = sim.echoes[info.source].take.tint()
+	if BattleDirector.is_copy_token(info.actor_token):
+		hit_color = info.source_tint
 	_push_feedback(_hits, {"life": 0.22 if info.crit else 0.15, "max_life": 0.22 if info.crit else 0.15,
 			"pos": info.pos, "direction": direction, "crit": info.crit, "reduced": info.reduced,
 			"weapon_id": info.weapon_id, "source": info.source, "effect": info.effect,
-			"color": hit_color, "has_direction": has_direction}, MAX_HITS)
+			"target_uid": info.target_uid, "actor_token": info.actor_token,
+			"source_tint": info.source_tint, "color": hit_color, "has_direction": has_direction}, MAX_HITS)
 	_last_event = {"kind": &"damage", "weapon_id": info.weapon_id, "direction": direction,
 			"pos": info.pos, "source": info.source, "crit": info.crit,
+			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"reduced": info.reduced, "effect": info.effect, "has_direction": has_direction}
 	var color := hit_color.lerp(Color(1.0, 1.0, 0.55), 0.8) if info.crit else hit_color
 	_spark(info.pos, color, 100.0 if info.crit else 65.0, 0.2 if info.crit else 0.14)
 
 
-# Echo kills burst in the echo's own colour; player kills keep the enemy colour.
-func kill_color(source: int, fallback: Color) -> Color:
-	if sim == null or source < 0 or source >= sim.echoes.size():
-		return fallback
-	return fallback.lerp(sim.echoes[source].take.tint(), 0.85)
+# Identity is captured when the projectile/ability fires. A removed or reordered
+# live slot cannot lend another copy's colour to this later kill.
+func kill_color(info: EnemyDeathInfo) -> Color:
+	if BattleDirector.is_copy_token(info.actor_token):
+		return info.color.lerp(info.source_tint, 0.85)
+	return info.color
 
 
 func _on_hurt(_amount: float) -> void:
@@ -312,11 +345,12 @@ func _on_hit(pos: Vector2, amount: float, crit: bool, source: int) -> void:
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
+	_director.player_hurt(info.source_uid if info.effect == &"contact" else -1)
 	var has_direction := info.direction != Vector2.ZERO
 	var direction := info.direction.normalized() if has_direction else Vector2.ZERO
 	_push_feedback(_hurts, {"life": 0.35 if info.lethal else 0.22, "max_life": 0.35 if info.lethal else 0.22,
 			"pos": info.pos, "direction": direction, "lethal": info.lethal, "effect": info.effect,
-			"source": info.source, "has_direction": has_direction}, MAX_HURTS)
+			"source": info.source, "source_uid": info.source_uid, "has_direction": has_direction}, MAX_HURTS)
 	_last_event = {"kind": &"hurt", "direction": direction, "lethal": info.lethal,
 			"pos": info.pos, "effect": info.effect, "source": info.source,
 			"has_direction": has_direction}
@@ -347,7 +381,8 @@ func _on_boss_spawned(enemy: EnemyState) -> void:
 func _on_boss_phase_changed(phase: int) -> void:
 	if sim == null or phase < 2:
 		return
-	var origin := sim.boss_origin()
+	var origin := sim.boss.pos if sim.boss != null else sim.boss_origin()
+	_director.begin_tear(origin)
 	var ring := _spark(origin, ArenaPainter.PAPER, 0.0, 1.1)
 	if ring != null:
 		ring.ring = true
@@ -387,13 +422,22 @@ func _on_boss_enraged(enemy: EnemyState) -> void:
 		_shake = minf(1.0, _shake + 0.5)
 
 
-func _on_echo_silence(_duration: float) -> void:
-	if sim == null or sim.boss_shards.is_empty():
+func _on_echo_silence(info: EchoSilenceInfo) -> void:
+	if sim == null:
 		return
-	var ring := _spark(sim.boss_origin(), Color("8f7a95"), 0.0, 0.8)
+	if info.kind == EchoSilenceInfo.CONTACT:
+		if not _director.enemy_action(info.source_uid):
+			return
+	elif info.kind == EchoSilenceInfo.BOSS:
+		_director.boss_roar()
+	else:
+		# Phase transition already has a tear snapshot. It is not another roar.
+		return
+	var definition := Content.enemy(info.enemy_id)
+	var ring := _spark(info.pos, Color("77755f"), 0.0, 0.36)
 	if ring != null:
 		ring.ring = true
-		ring.radius = sim.boss.radius
+		ring.radius = definition.radius if definition != null else 12.0
 
 
 func _on_explosion(pos: Vector2, radius: float, color: Color) -> void:
@@ -407,8 +451,10 @@ func _on_explosion(pos: Vector2, radius: float, color: Color) -> void:
 func _on_explosion_info(info: ExplosionInfo) -> void:
 	_push_feedback(_explosions, {"life": 0.42, "max_life": 0.42, "pos": info.pos,
 			"radius": info.radius, "color": info.color, "kind": info.kind,
-			"weapon_id": info.weapon_id, "effect": info.effect}, MAX_EXPLOSIONS)
+			"weapon_id": info.weapon_id, "actor_token": info.actor_token,
+			"source_tint": info.source_tint, "effect": info.effect}, MAX_EXPLOSIONS)
 	_last_event = {"kind": &"explosion", "cause": info.kind, "weapon_id": info.weapon_id,
+			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"pos": info.pos, "radius": info.radius, "effect": info.effect}
 	var is_collapse := info.effect == &"echo_collapse"
 	# Preserve the event's authoritative identity colour above; its paper-collapse art uses ink.
@@ -457,7 +503,8 @@ func _spark(pos: Vector2, color: Color, speed: float, life: float) -> Spark:
 func feedback_counts() -> Dictionary:
 	return {"muzzles": _muzzles.size(), "hits": _hits.size(), "explosions": _explosions.size(),
 			"hurts": _hurts.size(), "recoils": _muzzles.size(),
-			"weapon_changes": _weapon_changes.size(), "sparks": _sparks.size()}
+			"weapon_changes": _weapon_changes.size(), "sparks": _sparks.size(),
+			"corpses": _director.corpses.size(), "actor_actions": int(_director.counts()["shots"])}
 
 
 func event_last_data() -> Dictionary:
@@ -509,11 +556,13 @@ func _clear_feedback() -> void:
 
 func _on_wave_phase(_wave: int) -> void:
 	_clear_feedback()
+	_director.end_actions()
 	_sparks.clear()
 
 
 func _on_wave_started(_wave: int) -> void:
 	_clear_feedback()
+	_director.clear()
 	_last_player_pos = sim.player.pos if sim != null else Vector2.ZERO
 	_motion_amount = 0.0
 	_motion_speed = 0.0
@@ -530,6 +579,8 @@ func _on_wave_started(_wave: int) -> void:
 
 
 func _on_run_lost() -> void:
+	if sim != null:
+		_director.lose_player(sim.player.pos, sim.player.facing, character_id)
 	# Keep the final directional hurt/explosion long enough to render; discard routine combat cues.
 	_muzzles.clear()
 	_hits.clear()
@@ -539,6 +590,7 @@ func _on_run_lost() -> void:
 
 func _on_run_won() -> void:
 	_clear_feedback()
+	_director.end_actions()
 	_sparks.clear()
 
 

@@ -6,7 +6,7 @@ extends SceneTree
 
 const WARMUP_FRAMES := 120
 const MEASURED_FRAMES := 360
-const DEADLINE_FRAMES := 2400
+const DEADLINE_MSEC := 120000
 const LOADOUT: Array[StringName] = [
 	&"pistol", &"longbow", &"shotgun", &"twin_fangs", &"flak_crown", &"nova_core",
 ]
@@ -14,16 +14,20 @@ const CASES := [
 	{"name": "100_standard", "count": 100, "reduced": false},
 	{"name": "300_standard", "count": 300, "reduced": false},
 	{"name": "300_reduced", "count": 300, "reduced": true},
+	{"name": "300_eight_copies", "count": 300, "reduced": false, "echoes": 8},
+	{"name": "300_eight_reduced", "count": 300, "reduced": true, "echoes": 8},
 ]
 
 var _main: Node
 var _frames := 0
+var _started_msec := Time.get_ticks_msec()
 var _failed := false
 var _shots_dir := ""
 var _summary: Dictionary = {"cases": [], "screenshots": {}, "pure_view_tick": {}}
 
 
 func _initialize() -> void:
+	RenderingServer.render_loop_enabled = false
 	OS.set_environment("REVERB_SAVE", "user://presentation_stress_probe_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://presentation_stress_probe_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://presentation_stress_probe_settings.json")
@@ -37,8 +41,10 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	_frames += 1
-	if _frames > DEADLINE_FRAMES and not _failed:
+	if Time.get_ticks_msec() - _started_msec > DEADLINE_MSEC and not _failed:
 		_fail("deadline exceeded before stress probe completed")
+	if not _failed:
+		RenderingServer.force_draw()
 	return false
 
 
@@ -53,7 +59,7 @@ func _run() -> void:
 		return
 	for raw: Dictionary in CASES:
 		var result: Dictionary = await _measure_case(
-				String(raw["name"]), int(raw["count"]), bool(raw["reduced"]))
+				String(raw["name"]), int(raw["count"]), bool(raw["reduced"]), int(raw.get("echoes", 4)))
 		if result.is_empty():
 			return
 		(_summary["cases"] as Array).append(result)
@@ -129,8 +135,8 @@ func _edge_fixture(reduced: bool, name: String) -> bool:
 	return captured
 
 
-func _measure_case(name: String, count: int, reduced: bool) -> Dictionary:
-	_setup_run(reduced)
+func _measure_case(name: String, count: int, reduced: bool, copies: int = 4) -> Dictionary:
+	_setup_run(reduced, copies)
 	# Standard and reduced variants share the exact enemy layout seed so their
 	# timing difference measures presentation settings rather than placement.
 	_fill_enemies(count, 4100 + count)
@@ -173,15 +179,15 @@ func _measure_case(name: String, count: int, reduced: bool) -> Dictionary:
 	if not _require(peak_audio_voices <= GameAudio.POOL,
 			"%s audio voices stay within the fixed pool" % name):
 		return {}
-	if name in ["300_standard", "300_reduced"]:
-		if not (await _capture("dense_%s" % ("reduced" if reduced else "standard"))):
+	if count == 300:
+		if not (await _capture("dense_%s" % name)):
 			return {}
 	times.sort()
 	var total_us: int = 0
 	for elapsed: int in times:
 		total_us += elapsed
 	var p99_index: int = clampi(int(floor(0.99 * float(times.size() - 1))), 0, times.size() - 1)
-	return {"name": name, "enemy_target": count, "reduced_effects": reduced,
+	return {"name": name, "enemy_target": count, "reduced_effects": reduced, "echoes": sim.echoes.size(),
 		"frames": times.size(), "warmup_frames": WARMUP_FRAMES,
 		"frame_avg_ms": float(total_us) / float(times.size()) / 1000.0,
 		"frame_p99_ms": float(times[p99_index]) / 1000.0,
@@ -190,7 +196,7 @@ func _measure_case(name: String, count: int, reduced: bool) -> Dictionary:
 		"peak_feedback": peak_feedback, "peak_audio_voices": peak_audio_voices}
 
 
-func _setup_run(reduced: bool) -> void:
+func _setup_run(reduced: bool, copies: int = 4) -> void:
 	_main.new_run(20261023, &"looper")
 	var sim: Sim = _main.sim
 	sim.player.weapons.clear()
@@ -198,11 +204,17 @@ func _setup_run(reduced: bool) -> void:
 	sim.player.cooldowns.clear()
 	for id in LOADOUT:
 		sim.player.add_weapon(Content.weapon(id))
-	sim.player.stats.values[Stats.ECHO_SLOTS] = 4.0
+	sim.player.stats.values[Stats.ECHO_SLOTS] = float(copies)
+	sim.player.stats.values[Stats.ECHO_LIFESPAN] = 12.0
 	sim.bank.takes.clear()
-	for i in 4:
-		sim.bank.add(_echo_take(i))
+	for i in copies:
+		var take := _echo_take(i)
+		take.age = i if copies == 8 else 0
+		take.merged = copies == 8 and i % 3 == 0
+		sim.bank.add(take)
 	sim.start_wave(3)
+	if not _require(sim.echoes.size() == copies, "all requested copies exist in the real simulation"):
+		return
 	sim.wave_duration = 120.0
 	sim._plan.clear()
 	sim._plan_idx = 0
@@ -291,7 +303,7 @@ func _capture(name: String) -> bool:
 	_main._view.queue_redraw()
 	_main.hud.queue_redraw()
 	await process_frame
-	await RenderingServer.frame_post_draw
+	RenderingServer.force_draw()
 	var image: Image = root.get_texture().get_image()
 	if not _require(image != null and not image.is_empty(), "%s frame readback exists" % name):
 		return false
@@ -327,9 +339,9 @@ func _write_summary() -> void:
 		"adapter": RenderingServer.get_video_adapter_name(),
 		"logical_viewport": [root.get_visible_rect().size.x, root.get_visible_rect().size.y],
 		"window": [DisplayServer.window_get_size().x, DisplayServer.window_get_size().y]}
-	_summary["fixture"] = {"loadout": _string_names(LOADOUT), "echoes": 4,
+	_summary["fixture"] = {"loadout": _string_names(LOADOUT), "echoes": "4 and 8 per case",
 		"enemy_types": 7, "enemy_hp": "forced unkillable", "enemy_damage": 0,
-		"timing_scope": "fixed-fps vsync-off frame-production headroom; not universal FPS"}
+		"timing_scope": "fixed-fps vsync-off explicit one-draw-per-tick headroom; not universal FPS"}
 	var path: String = _shots_dir.path_join("presentation_stress_summary.json")
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:

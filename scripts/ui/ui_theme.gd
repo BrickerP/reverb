@@ -89,7 +89,7 @@ static func clear(node: Node) -> void:
 static func art_icon(key: StringName, icon_size: Vector2 = Vector2(48.0, 32.0)) -> TextureRect:
 	var icon := TextureRect.new()
 	var texture := PresentationAssets.texture(key)
-	var visible := PresentationAssets.region(key)
+	var visible := PresentationAssets.idle_region(key)
 	if texture != null and visible.has_area():
 		var atlas := AtlasTexture.new()
 		atlas.atlas = texture

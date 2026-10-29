@@ -224,7 +224,8 @@ func test_pause_reduced_effects_motion_and_state_are_independent(c: Check) -> vo
 	view.reduced_effects = true
 	view.set_paused(true)
 	sim.shot_fired_info.emit(_shot(&"flak_crown"))
-	c.near(view.recoil_amount(-1, &"flak_crown"), 3.0, 0.001,
+	c.near(view.recoil_amount(-1, &"flak_crown"),
+			float(ArenaPainter.weapon_feedback_profile(&"flak_crown")["recoil"]) * 0.5, 0.001,
 			"reduced effects halves mounted recoil")
 	view._process(1.0)
 	c.eq(view.feedback_counts()["muzzles"], 1, "paused visual cue does not age")

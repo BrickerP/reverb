@@ -145,7 +145,7 @@ func test_phase_two_keeps_the_silence_cadence(c: Check) -> void:
 	s.boss.hp = s.boss.max_hp * 0.5 + 1.0
 	s.damage_enemy(s.boss, 2.0, Vector2.ZERO, false, -1)
 	var silences := [0]
-	s.echoes_silenced.connect(func(_duration: float) -> void: silences[0] += 1)
+	s.echoes_silenced.connect(func(_info: EchoSilenceInfo) -> void: silences[0] += 1)
 	s.echo_silenced = 0.0
 	s._boss_silence_cd = 0.01
 	_run(s, 2)

@@ -17,13 +17,15 @@ their silhouettes, expressions and actions. Gameplay IDs and rules are unchanged
 
 ## Animation and simulation contract
 
-Eight character direction sheets, seven enemy sheets and the UI merchant each contain four drawn
-poses. Ordinary actors use idle, alternating steps and a compressed hurt pose.
-The Original instead has intact, bellowing, left-half and right-half drawings;
-phase one never samples torn poses. Phase-two shards select their own half from
-their persistent position in `Sim.boss_shards`.
+Eight character direction sheets and seven enemy sheets each contain eight drawn
+poses in a four-column, two-row atlas. The UI merchant retains four expressions.
+Ordinary actors add action/recovery and crumple/flatten to idle, alternating steps
+and hurt. The Original also has authored tear-transition drawings; phase one
+never samples torn live poses. Phase-two shards select their own half from their
+persistent position in `Sim.boss_shards`. See [battle-direction.md](battle-direction.md).
 
-`PresentationAssets.frame_region()` uses a shared per-sheet crop. `ArenaPainter`
+`PresentationAssets.frame_region()` uses a shared per-sheet crop; `idle_region()`
+calibrates live scale and `frame_pivot()` aligns each drawn foot baseline. `ArenaPainter`
 retains batch drawing without an animation node tree per enemy. Visual clocks
 stop on pause; reduced effects simplify optional motion. Recoil, paper fragments,
 recording arrival, stapling, collapse and victory stamps use existing events.

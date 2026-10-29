@@ -68,7 +68,8 @@ static func family_mastery_pierce(weapons: Array[WeaponDef], family: StringName)
 
 static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array[WeaponDef],
 		levels: Array[int], cooldowns: Array[float], power_mult: float, delta: float, source: int,
-		tint: Color, extra_damage: float = 1.0, extra_cooldown: float = 1.0) -> void:
+		tint: Color, extra_damage: float = 1.0, extra_cooldown: float = 1.0,
+		actor_token: int = -1) -> void:
 	for i in weapons.size():
 		cooldowns[i] -= delta
 		if cooldowns[i] > 0.0:
@@ -87,12 +88,14 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 				and (sim.player_shots + 1) % 6 == 0
 		fire(sim, origin, target.pos, w, level, shot_damage,
 				stats, power_mult, source, tint,
-				family_mastery_pierce(weapons, w.family), force_crit)
+				family_mastery_pierce(weapons, w.family), force_crit, actor_token)
 		if source < 0:
 			sim.player_shots += 1
 		sim.shot_sequence += 1
 		var info := ShotInfo.new()
 		info.source = source
+		info.actor_token = actor_token
+		info.source_tint = tint
 		info.weapon_id = w.id
 		info.origin = origin
 		info.direction = (target.pos - origin).normalized()
@@ -105,7 +108,7 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 
 static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, level: int,
 		family_mult: float, stats: Stats, power_mult: float, source: int, tint: Color,
-		bonus_pierce: int = 0, force_crit: bool = false) -> void:
+		bonus_pierce: int = 0, force_crit: bool = false, actor_token: int = -1) -> void:
 	var base_dir := (target_pos - origin).normalized()
 	if base_dir == Vector2.ZERO:
 		base_dir = Vector2.RIGHT
@@ -135,6 +138,8 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		p.life = reach / w.projectile_speed + 0.1
 		p.color = w.color if source < 0 else w.color.lerp(tint, 0.55)
 		p.source = source
+		p.actor_token = actor_token
+		p.source_tint = tint
 		p.weapon_id = w.id
 		sim.projectiles.append(p)
 	sim.shot_fired.emit(source)
@@ -166,7 +171,7 @@ static func step_projectiles(sim: Sim, delta: float) -> void:
 			if p.hit_uids.has(e.uid):
 				continue
 			sim.damage_enemy(e, p.damage, p.vel.normalized() * p.knockback, p.crit, p.source,
-					p.vel.normalized(), p.weapon_id, p.effect)
+					p.vel.normalized(), p.weapon_id, p.effect, p.actor_token, p.source_tint)
 			if p.explosion_radius > 0.0 and p.explosion_damage > 0.0:
 				_explode(sim, p, e)
 			if p.pierce_left > 0:
@@ -188,11 +193,13 @@ static func _explode(sim: Sim, p: Projectile, primary: EnemyState) -> void:
 			continue
 		var push := (e.pos - p.pos).normalized() * p.knockback
 		sim.damage_enemy(e, p.damage * p.explosion_damage, push, false, p.source,
-				Vector2.ZERO, p.weapon_id, &"explosion")
+				Vector2.ZERO, p.weapon_id, &"explosion", p.actor_token, p.source_tint)
 	sim.explosion.emit(p.pos, p.explosion_radius, p.color)
 	var info := ExplosionInfo.new()
 	info.kind = ExplosionInfo.WEAPON
 	info.source = p.source
+	info.actor_token = p.actor_token
+	info.source_tint = p.source_tint
 	info.weapon_id = p.weapon_id
 	info.pos = p.pos
 	info.radius = p.explosion_radius

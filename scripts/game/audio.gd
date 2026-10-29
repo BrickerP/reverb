@@ -465,8 +465,22 @@ func _on_hurt(_amount: float) -> void:
 	play(&"hurt")
 
 
-func _on_kill(_pos: Vector2, _color: Color, source: int) -> void:
-	play(&"kill", -1.0 if source >= 0 else 0.0, 0.96 if source >= 0 else 1.0)
+func _on_kill(info: EnemyDeathInfo) -> void:
+	var profile := death_profile(info.enemy_id)
+	play(&"kill", float(profile["volume"]) + (-1.0 if info.source >= 0 else 0.0),
+			float(profile["pitch"]) * (0.96 if info.source >= 0 else 1.0))
+
+
+static func death_profile(enemy_id: StringName) -> Dictionary:
+	# Same bounded voice/cooldown path, with a different paper-junk cadence per body.
+	match enemy_id:
+		&"runner": return {"pitch": 1.32, "volume": -1.5}
+		&"brute": return {"pitch": 0.76, "volume": 1.0}
+		&"silencer": return {"pitch": 0.86, "volume": -0.5}
+		&"bomber": return {"pitch": 1.14, "volume": -1.0}
+		&"warden": return {"pitch": 0.88, "volume": 0.5}
+		&"paradox": return {"pitch": 0.68, "volume": 1.0}
+	return {"pitch": 1.0, "volume": 0.0}
 
 
 func _on_pickup(amount: int) -> void:
@@ -514,5 +528,5 @@ func _on_boss(_enemy: EnemyState) -> void:
 	play(&"boss")
 
 
-func _on_silence(_duration: float) -> void:
+func _on_silence(_info: EchoSilenceInfo) -> void:
 	play(&"silence")

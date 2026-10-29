@@ -1,470 +1,1115 @@
 {
   "tool": "built-in imagegen",
-  "date": "2026-10-28",
+  "date": "2026-10-29",
   "assets": [
     {
       "id": "looper_front",
-      "path": "assets/presentation/player.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-6b58ecc1-514b-4b11-afa0-28251217bf99.png",
-      "prompt": "Use case: stylized-concept. Create a production PNG sprite animation strip for an original 2D top-down game. The attached image is STYLE REFERENCE ONLY, not an edit target. Use ONLY its exhausted paper-puppet characters: thick irregular near-black ink contour, flat recycled-paper cream and muted tobacco-yellow fills, one cel-shadow maximum, funny heavy-lidded eyes and tiny resigned mouth. Four equal-width cells in ONE horizontal row, transparent RGBA canvas, a wide 3:1 image. NO cell borders or labels. Exactly FOUR complete copies of the SAME character, one per quarter at x=12.5%,37.5%,62.5%,87.5%. Same body size and foot baseline at 87% height, each confined inside its quarter with 10% side clearance. Frame 0 neutral idle, frame 1 left foot steps forward with body weight left, frame 2 right foot steps forward with body weight right, frame 3 briefly squashed/creased from a hit. Feet and arms visibly change, but the identity stays identical. Full body all four cells, no clipping. Camera slightly elevated three-quarter view, front-facing toward down-right. NO weapons, guns, props held in hands, ground, cast shadow, glow, text, metallic armor, robots or photorealism. Genuine transparent background, not a checkerboard drawn into the image. SUBJECT: Looper, the ordinary tired rectangular creased paper doll from the left side of the reference. One bent top-right corner, asymmetrical folded square head/body, deadpan half-lidded eyes, little paper arms and short black stub feet. A tiny blank worn identification tag hangs on its chest. A small folded paper-feed satchel is visible at one side, not larger than its body. Pale cream dominates. Keep exactly the same face in all four frames.",
+      "file": "assets/presentation/player.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-5627a4bd-ee53-4654-bd73-8b1ecee5969c.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/player.png",
+      "prompt": "Use case: stylized-concept edit. The supplied image is the EDIT TARGET and exact identity/style reference: a four-frame strip of one ORIGINAL paper-puppet character for Take Stack. Expand it to a production-ready EIGHT-FRAME ANIMATION ATLAS, exactly FOUR EQUAL COLUMNS by TWO EQUAL ROWS, a 3:2 landscape canvas (ideally 1536x1024), genuinely transparent RGBA. Preserve this exact character design, face, costume, colors, thick imperfect charcoal ink outline and flat recycled-paper fills with one cel shadow. Do not redesign, add details, or change camera angle. Every one of the 8 cells must contain exactly ONE complete pose, at identical scale and aligned foot baseline. Cell centers horizontally 12.5%,37.5%,62.5%,87.5%; row centers 25%,75%. Feet baseline at 43% of whole canvas for top row and 93% for bottom row. Keep AT LEAST 12% of each cell transparent on all four edges: arms, cape, paper folds and fragments must never touch or cross the cell grid boundaries. No visible grid, frames, labels, numbers, words, floor, cast shadows, glow or external props. There are NO WEAPONS in the body artwork because weapons are mounted by the game. Row-major pose order must be EXACT: row 1 [0 neutral idle, 1 left-foot-forward walking weight shift, 2 right-foot-forward walking weight shift, 3 brief hurt squash/creased recoil] reproducing the existing four poses. Row 2 [4 upper-body action preparation, 5 strong action follow-through, 6 death begins folding/crumpling downward with limbs giving way, 7 final flattened crumpled paper remains with the identity/face still recognizable]. Poses 4 and 5 must actually change the arms/body gesture, not simply tilt or scale a copy. Poses 6 and 7 must actually fold/flatten the silhouette into discarded paper. This is darkly funny, reluctant disposable-paper acting, not gore or realistic injury. All cells remain centered on their own baseline even when the dead pose becomes shorter. SUBJECT: the tired cream rectangular paper doll Looper / Creased, with bent top-right corner, little chest ID tag, small side paper-feed satchel and stubby black feet. FRONT camera facing diagonally down-right. Keep the same heavily-lidded face. Pose4 grudgingly draws one empty arm back and braces shoulders; pose5 reluctantly flicks the arm outward with a small torso follow-through; empty hands. Death folds its head/body into itself before the final flat crumpled paper wad.",
+      "refinement_prompt": "Edit this exact eight-pose character atlas for PRODUCTION SPACING ONLY. Preserve the same original character, colors, thick ink drawing and all eight poses/order. Keep the canvas exactly 1536x1024 with 4 equal columns and 2 equal rows. Cells are exactly 384x512. UNIFORMLY SHRINK each full pose to about 78% of its current size, center it inside its OWN cell, and align the feet/bottom-most remains to y=440 in row1 and y=952 in row2. No pose or hand may cross or touch x=384,768,1152 or y=512. Every cell needs at least 45 pixels of fully transparent space on left/right, at least 60 pixels below the pose, and at least 55 pixels above it. Keep complete hands and cape tips inside these safe margins. Remove ALL gray/brown glow, soft haze, ground or cast shadows around characters: outside the hard antialiased ink outline must be genuinely transparent, not a translucent vignette. Row-major sequence remains idle, left step, right step, hurt; ready, follow-through, crumpling, flattened. Do not enlarge any pose to fill empty space. Do not add text, frames, marks, weapons or new objects. Keep the final flat pose shorter but at the same foot baseline, with the original face recognizable. Change only spacing/scale/transparent surround.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-03cb4181-bd47-4d79-af00-0735cded1e6c.png",
       "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "f294f469610b585a26b0aea3447a6c4668f7b3bed714f6e7e71030c5e2d5d446",
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
       "mode": "RGBA",
-      "visible_alpha_min": 20,
       "alpha_range": [
         0,
-        255
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        68,
+        128,
+        1487,
+        910
+      ],
+      "idle_bounds_ltrb": [
+        69,
+        128,
+        323,
+        441
       ],
       "frame_bounds_ltrb": [
-        [
-          68,
-          110,
-          489,
-          626
-        ],
         [
           69,
-          110,
-          485,
-          631
+          128,
+          323,
+          441
         ],
         [
-          70,
-          111,
-          485,
-          619
+          67,
+          128,
+          323,
+          448
         ],
         [
-          71,
-          176,
-          492,
-          619
-        ]
-      ],
-      "frame_union_ltrb": [
-        68,
-        110,
-        492,
-        631
-      ],
-      "bounds_ltrb": [
-        68,
-        110,
-        2121,
-        631
-      ]
-    },
-    {
-      "id": "solo_front",
-      "path": "assets/presentation/characters/solo_front.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-cf2471fc-f1d5-4849-9c4a-1b4ff9371a9a.png",
-      "prompt": "Use case: stylized-concept. Create a production PNG sprite animation strip for an original 2D top-down game. The attached image is STYLE REFERENCE ONLY, not an edit target. Use ONLY its exhausted paper-puppet characters: thick irregular near-black ink contour, flat recycled-paper cream and muted tobacco-yellow fills, one cel-shadow maximum, funny heavy-lidded eyes and tiny resigned mouth. Four equal-width cells in ONE horizontal row, transparent RGBA canvas, a wide 3:1 image. NO cell borders or labels. Exactly FOUR complete copies of the SAME character, one per quarter at x=12.5%,37.5%,62.5%,87.5%. Same body size and foot baseline at 87% height, each confined inside its quarter with 10% side clearance. Frame 0 neutral idle, frame 1 left foot steps forward with body weight left, frame 2 right foot steps forward with body weight right, frame 3 briefly squashed/creased from a hit. Feet and arms visibly change, but the identity stays identical. Full body all four cells, no clipping. Camera slightly elevated three-quarter view, front-facing toward down-right. NO weapons, guns, props held in hands, ground, cast shadow, glow, text, metallic armor, robots or photorealism. Genuine transparent background, not a checkerboard drawn into the image. SUBJECT: Soloist, the triangular paper-tape poncho character in the reference. A compact exhausted paper-doll face peeks out of a tall triangular mustard-yellow patched tape poncho with a slightly bent pointed top. Two short dark stub feet and little paper hands. Strong triangular silhouette, three large tape patch shapes maximum. NO stamp club or any other weapon. Clearly different from the square Looper while sharing its face and paper-world design.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "ec1bcee782c1a19b5a264588e636de13484e6663210723bcad1a35e475d48df8",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
-      ],
-      "frame_bounds_ltrb": [
-        [
-          65,
-          70,
-          500,
-          629
+          61,
+          128,
+          318,
+          445
         ],
         [
-          65,
-          78,
-          507,
-          645
+          63,
+          168,
+          316,
+          441
         ],
         [
-          72,
-          71,
-          499,
-          645
+          68,
+          88,
+          324,
+          385
         ],
         [
           74,
-          164,
-          499,
-          629
-        ]
-      ],
-      "frame_union_ltrb": [
-        65,
-        70,
-        507,
-        645
-      ],
-      "bounds_ltrb": [
-        65,
-        70,
-        2128,
-        645
-      ]
-    },
-    {
-      "id": "mirror_front",
-      "path": "assets/presentation/characters/mirror_front.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-d80bd630-38ae-49fb-8831-93609ec715e6.png",
-      "prompt": "Use case: stylized-concept. Production PNG animation strip for an original 2D arena roguelite. Attached board is STYLE REFERENCE ONLY. Four equal-width cells in ONE horizontal row on a genuine transparent RGBA 3:1 canvas, no drawn checkerboard. Exactly FOUR complete copies of the SAME character, centered one per quarter at x=12.5%,37.5%,62.5%,87.5%. Identical body proportions and same foot baseline at 87% height; each stays within its quarter with 10% side clearance. Frame 0 neutral idle; frame 1 left foot stepping with body weight left; frame 2 right foot stepping with body weight right; frame 3 squashed and visibly creased by a hit. Distinct feet/arm posture, not four identical poses. Full body, no clipping. Slightly elevated front-right/down-right three-quarter view. Thick slightly irregular near-black ink outlines; very simple clean flat paper fills, one cel-shadow only. Exhausted half-lidded eyes, tiny resigned mouth, short stub legs, funny grim deadpan paper doll, readable at 64px. NO weapons in body, no firearms, no floor/cast shadow, scene, text, labels, cells borders, glow, metallic armor or robots. SUBJECT: Mirror / Misprint, an exhausted pale cream paper doll with an asymmetrical rectangular folded head and body and one bent upper-right corner. The face is a double-printed offset face: a tiny bruised-purple duplicate contour beside the real black eyes and mouth, not two heads. Torn offset paper edges at one side and a small double folded-paper roll backpack. A few muted purple patches distinguish this character; cream still dominates. Blank rectangular chest tag. Keep the same mismatched face across all four frames. It should match the reference board's MISPRINT character.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "0576260f4b4625f0dd7444437fd5969cca1b7da356f0bd91cb82b819bcc34e9b",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
-      ],
-      "frame_bounds_ltrb": [
-        [
-          90,
-          146,
-          450,
-          609
+          88,
+          352,
+          384
         ],
         [
-          84,
-          138,
-          460,
-          612
-        ],
-        [
-          74,
-          143,
-          445,
-          621
-        ],
-        [
-          39,
-          218,
-          503,
-          606
-        ]
-      ],
-      "frame_union_ltrb": [
-        39,
-        138,
-        503,
-        621
-      ],
-      "bounds_ltrb": [
-        90,
-        138,
-        2132,
-        621
-      ]
-    },
-    {
-      "id": "conductor_front",
-      "path": "assets/presentation/characters/conductor_front.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-d3d4ab62-7a06-404d-aaf8-6984e712a4ca.png",
-      "prompt": "Use case: stylized-concept. Production PNG animation strip for an original 2D arena roguelite. Attached board is STYLE REFERENCE ONLY. Four equal-width cells in ONE horizontal row on a genuine transparent RGBA 3:1 canvas, no drawn checkerboard. Exactly FOUR complete copies of the SAME character, centered one per quarter at x=12.5%,37.5%,62.5%,87.5%. Identical body proportions and same foot baseline at 87% height; each stays within its quarter with 10% side clearance. Frame 0 neutral idle; frame 1 left foot stepping with body weight left; frame 2 right foot stepping with body weight right; frame 3 squashed and visibly creased by a hit. Distinct feet/arm posture, not four identical poses. Full body, no clipping. Slightly elevated front-right/down-right three-quarter view. Thick slightly irregular near-black ink outlines; very simple clean flat paper fills, one cel-shadow only. Exhausted half-lidded eyes, tiny resigned mouth, short stub legs, funny grim deadpan paper doll, readable at 64px. NO weapons in body, no firearms, no floor/cast shadow, scene, text, labels, cells borders, glow, metallic armor or robots. SUBJECT: Conductor, an exhausted broad-shouldered paper foreman puppet in the same universe. Compact square pale-cream face, eyes half-lidded with one crooked eyebrow, tiny downturned mouth. Wide paper shoulder pads form a flat broad silhouette; small folded paper collar like a theatrical conductor's cape, NO business suit or tie. A wide rectangular tobacco-yellow paper backpack has FOUR large vertical folded compartments visible around the shoulders; four blank index-card tips poke out. Short legs, little empty hands. Main accent muted sage green, simple cream folds, chunky black edges. Clearly a wider silhouette than the base paper doll and triangular tape poncho. No helmet, metal, baton, stamp or weapon.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "fdc44190da4eb1dec829b24072a3348ec58339e475729fa7c8ed868434babe10",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
-      ],
-      "frame_bounds_ltrb": [
-        [
-          32,
-          120,
-          492,
-          604
-        ],
-        [
-          24,
-          121,
-          495,
-          607
-        ],
-        [
-          60,
-          127,
-          491,
-          616
+          53,
+          162,
+          327,
+          394
         ],
         [
           33,
-          173,
-          509,
-          613
+          255,
+          335,
+          398
         ]
       ],
       "frame_union_ltrb": [
-        24,
-        120,
-        509,
-        616
+        33,
+        88,
+        352,
+        448
       ],
-      "bounds_ltrb": [
-        32,
-        120,
-        2138,
-        616
-      ]
+      "frame_pivots": [
+        [
+          192.0,
+          441
+        ],
+        [
+          192.0,
+          448
+        ],
+        [
+          192.0,
+          445
+        ],
+        [
+          192.0,
+          441
+        ],
+        [
+          192.0,
+          385
+        ],
+        [
+          192.0,
+          384
+        ],
+        [
+          192.0,
+          394
+        ],
+        [
+          192.0,
+          398
+        ]
+      ],
+      "frame_sha256": [
+        "57ab5c89c30ddbdbd04287e487d4db7f81f015fcd8b650545e2bb1fbe3e49201",
+        "1e7adf8ba2a169f20b7e33c096c3482d6e8729f478b1f6cc24b17e45cc5f91f6",
+        "54de7343c7257a8dde2e90ad484434aec4e37163f1dbe38c346dd37dd9ab3564",
+        "8bd95ab1b49308151568d16741ef8395c5dcd1cd60721f9f119d784481d321e5",
+        "e53d1d50f1220f3bbe72ea7f5fdf76a65ae24eb53b97dffb50e383d2a122999c",
+        "64707ff6875e019c77353a3b13269ca7a5c89331559bdee10fe97aaf33770a89",
+        "66c116df3a3449b85901adeb20ec278d1cc553e08673d073c18b612951397b84",
+        "b96f0e53ed8d65d7492cee3304b69918a579391fd1fdb32860943c864e2550e2"
+      ],
+      "sha256": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
     },
     {
       "id": "looper_back",
-      "path": "assets/presentation/characters/looper_back.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-665abcb3-53fe-4813-94d1-561e1e246fa8.png",
-      "prompt": "Use case: identity-preserve. Create the BACK-VIEW matching animation strip for the character in image 1. Image 1 is the exact identity/proportions/4-frame layout reference, image 2 is the style reference. Rotate the same character to face diagonally UP-RIGHT, seen from a slightly elevated REAR three-quarter camera; never show eyes, nose or mouth on the back of its head. Preserve its recognizable silhouette, proportions, clothing, palette and paper construction. This is a separate production game sprite strip: genuine transparent RGBA background, 3:1 canvas, FOUR equal-width cells in ONE horizontal row. Exactly one full body per quarter, centered at 12.5%,37.5%,62.5%,87.5%, same body size and foot baseline at 87% canvas height. Pose0 neutral standing, pose1 left foot steps with weight left, pose2 right foot steps with weight right, pose3 hurt/squashed with creased shoulders/head. Make feet and arms truly change. Keep each inside its quarter with 10% empty side clearance. Very thick clean black ink outline, flat cream/mustard fills, one shadow. Short black stub feet. NO weapons or props held in hands, no text, labels, cell lines, floor, shadow, light glow, robot, realistic metal or extra objects. The Looper is the square creased cream paper doll with one bent corner and a small rectangular olive-paper satchel/feeding pack. On the back, show that simple folded paper pack centered below the big plain head; a few flat paper tabs emerge from its paper slot. The back of the cream head has one large diagonal fold only, NO printed facial features. Simple broad shapes.",
+      "file": "assets/presentation/characters/looper_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-0ee8ec4a-9567-498e-a832-b752a2580d8b.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/looper_back.png",
+      "prompt": "Use case: stylized-concept edit. Expand the supplied exact ORIGINAL paper-puppet BACK-VIEW four-frame strip into an EIGHT-FRAME atlas, 4 columns by 2 rows, canvas exactly1536x1024, genuinely transparent RGBA. Preserve the character identity/costume/colors/thick ink/flat paper style and camera facing away diagonally UP-RIGHT. NO FACE, eyes or mouth on the back of the head in ANY pose. Do not turn toward viewer during action or death. Equal384x512 cells; each pose isolated and centered with AT LEAST50px transparent LEFT/RIGHT margin and55px TOP/BOTTOM margin inside its own cell. Outstretched arms/cape tips/fragments must not cross any column or row boundary. Keep ordinary body/head at one scale, no zoom, no visible grid/text/frames/ground/cast shadow/glow. Weapons are mounted separately: no gun, weapon or held prop. Exact row-major order: top row [0idle,1left-foot step,2right-foot step,3hurt/squashed shoulders] matching the existing back poses; bottom row [4real empty-arm/body action prep,5follow-through,6body begins folding/crumpling down,7flattened discarded-paper bundle from rear]. Different actions must have genuinely redrawn silhouette and hands, not just rotated copies. Keep dying remains within the cell, approximately no more than1.2 times the idle width. Baseline as consistent as possible but prioritize complete safe silhouettes.SUBJECT: Looper/Creased. Exact cream rectangular paper head with bent top-right fold and central seam on the rear, small boxy paper-feed satchel on back, black stub feet. The back head is blank paper with crease marks, no face. Pose4 pulls an empty arm back; pose5 pushes/flings the empty arm forward from the rear view; death folds the blank head over the pack and final flattened bundle still has the recognizable small satchel.",
       "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "4cd5cf072e4a531119b22b98b940bb8135cf027435405b8d65d732242206ce40",
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
       "mode": "RGBA",
-      "visible_alpha_min": 20,
       "alpha_range": [
         0,
-        255
+        254
       ],
-      "frame_bounds_ltrb": [
-        [
-          84,
-          104,
-          467,
-          607
-        ],
-        [
-          98,
-          106,
-          486,
-          612
-        ],
-        [
-          96,
-          106,
-          483,
-          611
-        ],
-        [
-          70,
-          152,
-          470,
-          604
-        ]
-      ],
-      "frame_union_ltrb": [
-        70,
-        104,
-        486,
-        612
-      ],
+      "visible_alpha_min": 20,
       "bounds_ltrb": [
-        84,
-        104,
-        2099,
-        612
-      ]
-    },
-    {
-      "id": "solo_back",
-      "path": "assets/presentation/characters/solo_back.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-cb834b37-8cf5-407b-bf4c-7df181c453ea.png",
-      "prompt": "Use case: identity-preserve. Create the BACK-VIEW matching animation strip for the character in image 1. Image 1 is the exact identity/proportions/4-frame layout reference, image 2 is the style reference. Rotate the same character to face diagonally UP-RIGHT, seen from a slightly elevated REAR three-quarter camera; never show eyes, nose or mouth on the back of its head. Preserve its recognizable silhouette, proportions, clothing, palette and paper construction. This is a separate production game sprite strip: genuine transparent RGBA background, 3:1 canvas, FOUR equal-width cells in ONE horizontal row. Exactly one full body per quarter, centered at 12.5%,37.5%,62.5%,87.5%, same body size and foot baseline at 87% canvas height. Pose0 neutral standing, pose1 left foot steps with weight left, pose2 right foot steps with weight right, pose3 hurt/squashed with creased shoulders/head. Make feet and arms truly change. Keep each inside its quarter with 10% empty side clearance. Very thick clean black ink outline, flat cream/mustard fills, one shadow. Short black stub feet. NO weapons or props held in hands, no text, labels, cell lines, floor, shadow, light glow, robot, realistic metal or extra objects. The Soloist is the tall TRIANGULAR patched tobacco-yellow paper-tape poncho. From the rear show one large plain triangular cape surface with at most three broad brown tape patches, a bent pointed top and a short split hem. No face visible. Preserve the tall triangular silhouette and short dark feet visible below the hem. The cape shifts slightly with the alternating feet; hurt pose folds the point lower.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "ce5771eec25702305fdbb0046d990d83a9e3a69d9a44212708b256c7292435eb",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
+        47,
+        97,
+        1490,
+        930
+      ],
+      "idle_bounds_ltrb": [
+        66,
+        97,
+        345,
+        459
       ],
       "frame_bounds_ltrb": [
         [
-          63,
-          71,
-          490,
-          614
+          66,
+          97,
+          345,
+          459
         ],
         [
-          64,
-          84,
-          496,
-          620
+          65,
+          97,
+          347,
+          467
         ],
         [
-          81,
-          87,
-          490,
-          618
+          60,
+          97,
+          340,
+          466
         ],
         [
-          90,
-          191,
-          482,
-          614
-        ]
-      ],
-      "frame_union_ltrb": [
-        63,
-        71,
-        496,
-        620
-      ],
-      "bounds_ltrb": [
-        63,
-        71,
-        2111,
-        620
-      ]
-    },
-    {
-      "id": "mirror_back",
-      "path": "assets/presentation/characters/mirror_back.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-35588097-a42f-4494-92d3-b4c4efe174e4.png",
-      "prompt": "Use case: identity-preserve. Create a matching BACK VIEW of the exact paper character in image 1; image 2 is only the broader style reference. Keep its same proportions, clothes, identity and palette but face diagonally UP-RIGHT from an elevated REAR three-quarter camera. NO eyes, face or mouth on its back. Production sprite animation strip: genuine transparent RGBA, wide 3:1 canvas, FOUR equal-width cells, one complete character centered in each quarter at 12.5%,37.5%,62.5%,87.5% width. Same camera and character size all frames, feet on same baseline at 87% height, 10% clearance each quarter. Frame0 neutral standing, frame1 left step/weight left, frame2 right step/weight right, frame3 squashed/creased hurt. Keep full body in all frames without clipping. Bold irregular black contour, flat fills, one cel-shadow only, no floor, cast shadow, cell borders, labels, text, weapons, helmets, metal, glow or scenery. Four true pose changes including feet and hands. The character is Mirror/Misprint: a pale cream crumpled square paper head with a bent top corner, bruised-purple offset-print stain patches, a tiny double folded-paper roll backpack and short dark stub feet. Show the back of its head as cream paper with one large purple registration-offset stripe, a few misaligned folded edges and the two simple paper rolls. No face visible. Retain the same asymmetric silhouette and dusty purple identification as the front reference.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "5dff9f3bf31c74963db2e6c1d01a471dcd94ef1a2787593a288d47633c549643",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
-      ],
-      "frame_bounds_ltrb": [
-        [
-          92,
-          137,
-          438,
-          592
-        ],
-        [
-          92,
-          137,
-          452,
-          605
-        ],
-        [
-          79,
-          135,
-          438,
-          589
-        ],
-        [
-          57,
-          180,
-          435,
-          590
-        ]
-      ],
-      "frame_union_ltrb": [
-        57,
-        135,
-        452,
-        605
-      ],
-      "bounds_ltrb": [
-        92,
-        135,
-        2064,
-        605
-      ]
-    },
-    {
-      "id": "conductor_back",
-      "path": "assets/presentation/characters/conductor_back.png",
-      "source": "/Users/yupeng/.codex/generated_images/01a182df-8d11-75b2-8706-4dc8bcaa176f/exec-4433ea1b-d1ab-4964-9290-10fa0eeb51b3.png",
-      "prompt": "Use case: identity-preserve. Create a matching BACK VIEW of the exact paper character in image 1; image 2 is only the broader style reference. Keep its same proportions, clothes, identity and palette but face diagonally UP-RIGHT from an elevated REAR three-quarter camera. NO eyes, face or mouth on its back. Production sprite animation strip: genuine transparent RGBA, wide 3:1 canvas, FOUR equal-width cells, one complete character centered in each quarter at 12.5%,37.5%,62.5%,87.5% width. Same camera and character size all frames, feet on same baseline at 87% height, 10% clearance each quarter. Frame0 neutral standing, frame1 left step/weight left, frame2 right step/weight right, frame3 squashed/creased hurt. Keep full body in all frames without clipping. Bold irregular black contour, flat fills, one cel-shadow only, no floor, cast shadow, cell borders, labels, text, weapons, helmets, metal, glow or scenery. Four true pose changes including feet and hands. The character is Conductor: broad compact paper foreman with wide muted-sage paper shoulder collar and a large rectangular tobacco-yellow backpack. From the back the backpack clearly has EXACTLY FOUR broad vertical folder compartments, four equal blank cream index-card tips protruding at the top. Preserve the squat broad silhouette, cream head, sage-green cape/collar and short dark feet. NO suit, tie, baton, weapon, helmet or facial features on the rear. Four folder/card columns must be countable in each frame, as this character leads four paper copies.",
-      "columns": 4,
-      "rows": 1,
-      "frame_count": 4,
-      "width": 2172,
-      "height": 724,
-      "frame_width": 543,
-      "frame_height": 724,
-      "sha256": "702224de47379d7d93eb747b4cdbd7057bc19498d5801a1f8cdcf206739a4ec1",
-      "mode": "RGBA",
-      "visible_alpha_min": 20,
-      "alpha_range": [
-        0,
-        255
-      ],
-      "frame_bounds_ltrb": [
-        [
-          53,
-          150,
-          490,
-          584
-        ],
-        [
-          46,
-          143,
-          505,
-          590
+          42,
+          131,
+          331,
+          461
         ],
         [
           47,
-          152,
-          506,
-          590
+          73,
+          368,
+          410
         ],
         [
-          49,
-          210,
-          498,
-          589
+          55,
+          78,
+          374,
+          404
+        ],
+        [
+          47,
+          169,
+          348,
+          412
+        ],
+        [
+          41,
+          257,
+          338,
+          418
         ]
       ],
       "frame_union_ltrb": [
-        46,
-        143,
-        506,
-        590
+        41,
+        73,
+        374,
+        467
       ],
+      "frame_pivots": [
+        [
+          192.0,
+          459
+        ],
+        [
+          192.0,
+          467
+        ],
+        [
+          192.0,
+          466
+        ],
+        [
+          192.0,
+          461
+        ],
+        [
+          192.0,
+          410
+        ],
+        [
+          192.0,
+          404
+        ],
+        [
+          192.0,
+          412
+        ],
+        [
+          192.0,
+          418
+        ]
+      ],
+      "frame_sha256": [
+        "d0c8ad2640465e22f9e9d9765d472c8de52ce210fe60268883207e4db4bf8cea",
+        "6bd52f1c9ef1d6651f613458e003fcbc957ca01c0b52002d3bbe25aeee176607",
+        "de67ed0d4ac6cf939f64434efeaece49faf5ff792d7a3d15f7bc1b43118a89d9",
+        "d1917d5fbfe49c804e67cc9c4ad9c239f810e4266b04517788cb941b2298d328",
+        "25f9b1dadb9d4a375d2e2f2b999dd13bfba38468f9f76d831ab634c38a37ac18",
+        "895c25541db7ffe579654c5c98da9e0296eb2dc94e08abe9050dff8ae9a2c541",
+        "fc4bf7f5d1f6ae10b8bbd530028743680574af8e42dd0f5db4ce8b7d1c4b7302",
+        "ebe9ba07fcb0710228fe113569349ab16be19be9fc03c961225759b81a1e2617"
+      ],
+      "sha256": "9be9e77c1b046dcc1450beb0d96303424d738353ba23aab8922d2eef3244d899",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "solo_front",
+      "file": "assets/presentation/characters/solo_front.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-a590cd14-7e85-4235-ae23-d0131c03a881.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/solo_front.png",
+      "prompt": "Use case: stylized-concept edit. The supplied image is the EDIT TARGET and exact identity/style reference: a four-frame strip of one ORIGINAL paper-puppet character for Take Stack. Expand it to a production-ready EIGHT-FRAME ANIMATION ATLAS, exactly FOUR EQUAL COLUMNS by TWO EQUAL ROWS, a 3:2 landscape canvas (ideally 1536x1024), genuinely transparent RGBA. Preserve this exact character design, face, costume, colors, thick imperfect charcoal ink outline and flat recycled-paper fills with one cel shadow. Do not redesign, add details, or change camera angle. Every one of the 8 cells must contain exactly ONE complete pose, at identical scale and aligned foot baseline. Cell centers horizontally 12.5%,37.5%,62.5%,87.5%; row centers 25%,75%. Feet baseline at 43% of whole canvas for top row and 93% for bottom row. Keep AT LEAST 12% of each cell transparent on all four edges: arms, cape, paper folds and fragments must never touch or cross the cell grid boundaries. No visible grid, frames, labels, numbers, words, floor, cast shadows, glow or external props. There are NO WEAPONS in the body artwork because weapons are mounted by the game. Row-major pose order must be EXACT: row 1 [0 neutral idle, 1 left-foot-forward walking weight shift, 2 right-foot-forward walking weight shift, 3 brief hurt squash/creased recoil] reproducing the existing four poses. Row 2 [4 upper-body action preparation, 5 strong action follow-through, 6 death begins folding/crumpling downward with limbs giving way, 7 final flattened crumpled paper remains with the identity/face still recognizable]. Poses 4 and 5 must actually change the arms/body gesture, not simply tilt or scale a copy. Poses 6 and 7 must actually fold/flatten the silhouette into discarded paper. This is darkly funny, reluctant disposable-paper acting, not gore or realistic injury. All cells remain centered on their own baseline even when the dead pose becomes shorter. SUBJECT: the tired little Soloist / Reject inside the distinctive triangular tobacco-yellow patched paper-and-tape poncho, cream face and stubby black feet. FRONT camera diagonally down-right. Keep the exact existing patched cape and eyes. Pose4 braces and twists its upper body under the cape; pose5 makes a forceful empty-handed side swing that whips the paper poncho. Death collapses the poncho into a bent triangle, then a flattened creased paper heap with the cream face recognizable. Do not add a hammer or any weapon.",
+      "refinement_prompt": "Edit this exact eight-pose character atlas for PRODUCTION SPACING ONLY. Preserve the same original character, colors, thick ink drawing and all eight poses/order. Keep the canvas exactly 1536x1024 with 4 equal columns and 2 equal rows. Cells are exactly 384x512. UNIFORMLY SHRINK each full pose to about 78% of its current size, center it inside its OWN cell, and align the feet/bottom-most remains to y=440 in row1 and y=952 in row2. No pose or hand may cross or touch x=384,768,1152 or y=512. Every cell needs at least 45 pixels of fully transparent space on left/right, at least 60 pixels below the pose, and at least 55 pixels above it. Keep complete hands and cape tips inside these safe margins. Remove ALL gray/brown glow, soft haze, ground or cast shadows around characters: outside the hard antialiased ink outline must be genuinely transparent, not a translucent vignette. Row-major sequence remains idle, left step, right step, hurt; ready, follow-through, crumpling, flattened. Do not enlarge any pose to fill empty space. Do not add text, frames, marks, weapons or new objects. Keep the final flat pose shorter but at the same foot baseline, with the original face recognizable. Change only spacing/scale/transparent surround.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-9d374ea0-6120-4c83-99a0-b61cc95473c5.png",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
       "bounds_ltrb": [
-        53,
-        143,
-        2127,
-        590
-      ]
+        64,
+        128,
+        1477,
+        930
+      ],
+      "idle_bounds_ltrb": [
+        64,
+        129,
+        327,
+        473
+      ],
+      "frame_bounds_ltrb": [
+        [
+          64,
+          129,
+          327,
+          473
+        ],
+        [
+          58,
+          130,
+          336,
+          483
+        ],
+        [
+          59,
+          128,
+          327,
+          483
+        ],
+        [
+          54,
+          194,
+          321,
+          474
+        ],
+        [
+          73,
+          89,
+          327,
+          413
+        ],
+        [
+          63,
+          88,
+          375,
+          412
+        ],
+        [
+          61,
+          182,
+          340,
+          416
+        ],
+        [
+          44,
+          293,
+          325,
+          418
+        ]
+      ],
+      "frame_union_ltrb": [
+        44,
+        88,
+        375,
+        483
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          473
+        ],
+        [
+          192.0,
+          483
+        ],
+        [
+          192.0,
+          483
+        ],
+        [
+          192.0,
+          474
+        ],
+        [
+          192.0,
+          413
+        ],
+        [
+          192.0,
+          412
+        ],
+        [
+          192.0,
+          416
+        ],
+        [
+          192.0,
+          418
+        ]
+      ],
+      "frame_sha256": [
+        "2df1fea2696565c36f22964998faf4c75d48f0f2fb9efd73df2e418d70f70eb9",
+        "2696fd3760f9811d91d20eb20c88ab6d531cce97842d71ed1116078fe24e17f3",
+        "fe838f15278313711ddfe9da4ae0b16822bc00f3c732535bcadb6680514dd08d",
+        "f6c48d3b778b16674ed006ecaf4d3992f06cc791c879240662af9e8202d076d2",
+        "83ed4d645c56a51f879cc8641caf5514d62324b69113523cbc7c26610b4d024a",
+        "5b45b34d5a9de3a439d7ce4cf7a194b6d69765c9d3523878bea0024d122fe4d0",
+        "963ac30361c31ac87fb6bd8f487e831883de462f501cd49781e522e64a5ed29f",
+        "9b4c3ed8fcf5e20eed5ea40dc125967339067a362af6567b3426c8af1198649b"
+      ],
+      "sha256": "c2e2e9d99c5cbf94cd7e153bf0c76679f47f63f6186f71b2b1f0e1ebe2a00209",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "solo_back",
+      "file": "assets/presentation/characters/solo_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-6b816a95-fb21-43d4-be25-06825d63fd96.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/solo_back.png",
+      "prompt": "Use case: stylized-concept edit. Expand the supplied exact ORIGINAL paper-puppet BACK-VIEW four-frame strip into an EIGHT-FRAME atlas, 4 columns by 2 rows, canvas exactly1536x1024, genuinely transparent RGBA. Preserve the character identity/costume/colors/thick ink/flat paper style and camera facing away diagonally UP-RIGHT. NO FACE, eyes or mouth on the back of the head in ANY pose. Do not turn toward viewer during action or death. Equal384x512 cells; each pose isolated and centered with AT LEAST50px transparent LEFT/RIGHT margin and55px TOP/BOTTOM margin inside its own cell. Outstretched arms/cape tips/fragments must not cross any column or row boundary. Keep ordinary body/head at one scale, no zoom, no visible grid/text/frames/ground/cast shadow/glow. Weapons are mounted separately: no gun, weapon or held prop. Exact row-major order: top row [0idle,1left-foot step,2right-foot step,3hurt/squashed shoulders] matching the existing back poses; bottom row [4real empty-arm/body action prep,5follow-through,6body begins folding/crumpling down,7flattened discarded-paper bundle from rear]. Different actions must have genuinely redrawn silhouette and hands, not just rotated copies. Keep dying remains within the cell, approximately no more than1.2 times the idle width. Baseline as consistent as possible but prioritize complete safe silhouettes.SUBJECT: Soloist/Reject. Exact rear of tobacco-yellow triangular patched paper poncho and tall bent cone hood, cream hands, black stub feet. No front face visible. Pose4 twists under the cape as if bracing; pose5 makes a forceful empty-handed side swing and cape flare, but all inside the safe cell. Death bends the rear hood over and crumples the whole paper cape; final discarded triangular bundle recognizable.",
+      "refinement_prompt": "Production spacing cleanup ONLY on this exact eight-frame atlas. Preserve all eight poses, the character identity, face/costume/colors, camera direction and ink artwork. Keep canvas1536x1024 and exactly4 equal columns x2 equal rows. Cell384x512. Make ALL eight full poses about20% smaller and center each in its own cell, so there are at least45 fully transparent pixels to LEFT and RIGHT and40 to TOP and BOTTOM of EACH cell, including long arms, cape tips, backpack tabs and flattened remains. Some lower-row arms/paper currently cross x=384,768,1152: pull the entire pose inward by uniform scale, do not clip or amputate it. No visible pixel may touch/cross any vertical grid line or y=512 middle line. Keep rear views faceless if the input is a rear view. Maintain the exact row-major pose order and genuine action/death shapes. Genuine transparent RGBA outside contours; no frame borders, text, ground, shadows, glow or new objects. Do not increase a dead pose to fill its empty cell.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-f47a324e-c1b2-4dd4-8506-c0bef6882175.png",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        77,
+        115,
+        1462,
+        884
+      ],
+      "idle_bounds_ltrb": [
+        83,
+        116,
+        316,
+        410
+      ],
+      "frame_bounds_ltrb": [
+        [
+          83,
+          116,
+          316,
+          410
+        ],
+        [
+          82,
+          115,
+          319,
+          416
+        ],
+        [
+          91,
+          116,
+          322,
+          416
+        ],
+        [
+          82,
+          164,
+          310,
+          413
+        ],
+        [
+          77,
+          96,
+          345,
+          372
+        ],
+        [
+          67,
+          90,
+          342,
+          372
+        ],
+        [
+          83,
+          171,
+          326,
+          370
+        ],
+        [
+          74,
+          207,
+          304,
+          368
+        ]
+      ],
+      "frame_union_ltrb": [
+        67,
+        90,
+        345,
+        416
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          410
+        ],
+        [
+          192.0,
+          416
+        ],
+        [
+          192.0,
+          416
+        ],
+        [
+          192.0,
+          413
+        ],
+        [
+          192.0,
+          372
+        ],
+        [
+          192.0,
+          372
+        ],
+        [
+          192.0,
+          370
+        ],
+        [
+          192.0,
+          368
+        ]
+      ],
+      "frame_sha256": [
+        "cffc26534270ab60f57224134bda1e7659121b0f41bd0872a4e710e80a75ea7f",
+        "adc0ce833f5cc80d31e344f192dcd1e2ca478476f563b7d7721905f7345f4349",
+        "53adc0f6f5a6a9f31080b4aa0c14e357274a68311cd27495fb2f935e5d100609",
+        "e42bc66cd7db69380ab98b3d22b24a6af8dee40ef3a54c4845f80d577dc1e263",
+        "fe139d986bf1839a5d5a9c8fd39471b4fda735be783f4b367c2e2e446a2b50c9",
+        "e707a6259d0383d0e45761784a2a0be956abd4d066887c00f4b09511638d0d3d",
+        "190f43f1d4615d0cbd84d0cae046f1e0c2d0e07a08a6974cc95ae6b109660e9b",
+        "f1fbf89c004edd133f112788e3d8557662e676c3adbb76338fad3762c03c8109"
+      ],
+      "sha256": "9f834a77a43a4cd1da756a9195c0b200251082ae56e5acc5d6c409f8829b82a8",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "mirror_front",
+      "file": "assets/presentation/characters/mirror_front.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-06b5b4f8-2027-4bc2-8804-2f84e198e7ac.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/mirror_front.png",
+      "prompt": "Use case: stylized-concept edit. Expand the attached exact ORIGINAL paper-character four-frame strip to an EIGHT-FRAME production animation atlas. Preserve the exact character, costume, face, colors, camera angle and flat thick-ink drawing style. Output exactly 1536x1024, FOUR equal columns x TWO equal rows, transparent RGBA, no text/grid/frame/scene/ground/glow/cast shadow. Every cell is exactly384x512 and contains one complete isolated pose. Draw the character SMALL ENOUGH to leave at least45px fully transparent on both sides of every cell, including outstretched arms and paper tips. IMPORTANT LOCAL ANCHOR: in BOTH rows the bottom of the feet/remains is at local y=430 pixels (top row canvas y=430; bottom row canvas y=942). Do not vertically center the short death pose; keep it on the same ground baseline. Body and head have identical scale throughout, except actual squashing/folding. Do not let any visible pixel touch the quarter-column or middle-row boundary. Keep all normal heads safely below local y=70. Row-major exact order: top row [idle, left foot walk, right foot walk, hurt squash] retaining the attached four poses; bottom row [real empty-arm/body action preparation, real forceful follow-through, folding/crumpling death beginning, flattened discarded-paper remains with recognizable identity]. The bottom row must have genuinely new drawings/silhouettes, not eight copies merely tilted or resized. Weapons are mounted separately by the game: NO weapon or object held in the hands.Subject Mirror/Misprint: cream rectangular tired paper doll with the exact muted mauve offset-print stripe on its face/body, one bent purple top corner, rolled-paper side backpack, ID tag, stub feet. FRONT three-quarter facing down-right. Retain heavy-lidded identical face. The action preparation/follow-through briefly misregisters the face/shoulders into two overlapping print layers while hands brace then push out; keep one character per cell. Death folds the misregistered layers into one rumpled paper pile; final paper face visible. No extra color glows or floating marks.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        42,
+        112,
+        1507,
+        944
+      ],
+      "idle_bounds_ltrb": [
+        45,
+        115,
+        328,
+        478
+      ],
+      "frame_bounds_ltrb": [
+        [
+          45,
+          115,
+          328,
+          478
+        ],
+        [
+          53,
+          112,
+          344,
+          481
+        ],
+        [
+          26,
+          113,
+          316,
+          491
+        ],
+        [
+          18,
+          172,
+          339,
+          479
+        ],
+        [
+          42,
+          86,
+          352,
+          425
+        ],
+        [
+          35,
+          81,
+          379,
+          425
+        ],
+        [
+          36,
+          148,
+          339,
+          432
+        ],
+        [
+          2,
+          280,
+          355,
+          430
+        ]
+      ],
+      "frame_union_ltrb": [
+        2,
+        81,
+        379,
+        491
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          478
+        ],
+        [
+          192.0,
+          481
+        ],
+        [
+          192.0,
+          491
+        ],
+        [
+          192.0,
+          479
+        ],
+        [
+          192.0,
+          425
+        ],
+        [
+          192.0,
+          425
+        ],
+        [
+          192.0,
+          432
+        ],
+        [
+          192.0,
+          430
+        ]
+      ],
+      "frame_sha256": [
+        "a535bb8bda595c743a09e0876736501a9944fc37fa3e6d25913d48d0cc685844",
+        "8846bfaf0fc4cc99506c25bf1df7b37f62d99930386b75783b15540d9488b675",
+        "88093916510911e4dfb59633d0ce2e72c0eb9acbc0b8f87ac8b311c1d76b863b",
+        "0b1cbe5ba3208eaceb0ca3e89dc5849416278431ca2184ea205e392976f095e4",
+        "2ff798f67818d0912aff632a6952e305b9840a6ddd1015fe15fd619212e638a6",
+        "c000a8370783dd50e77536c81d21e66ffcfc2c1e53f472d22616c74c72ab76d5",
+        "e188bc63067cdde8c3be4413146329a91f8c0b4d73dc73482cf6e1a6886c9c70",
+        "2913d31f084e958646cea50005f5b23260012f0833b3ec52d923db31a82704a8"
+      ],
+      "sha256": "4da6ab30d9bd572c5af09791d4cb2f4f33e5f8da1e10b354ba381bf288806fa2",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "mirror_back",
+      "file": "assets/presentation/characters/mirror_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-0434040f-6af7-4f07-adf8-1ccc2681fc7c.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/mirror_back.png",
+      "prompt": "Use case: stylized-concept edit. Expand the supplied exact ORIGINAL paper-puppet BACK-VIEW strip into a production EIGHT-FRAME atlas, FOUR columns by TWO rows, exactly1536x1024, genuine transparent RGBA. Preserve this exact design, costume, palette, thick charcoal contour and flat paper shadow; all8 poses face AWAY diagonally UP-RIGHT with NO front eyes/mouth in any frame. Each384x512 cell has one full centered pose, keep body/head same scale. Make poses modestly sized: maximum280px width and360px height, leaving generous fully transparent gaps. Absolutely no hand, backpack tab, cape tip or paper fragment may touch/cross x384,768,1152 or middle y512. No grid, text, borders, ground, cast shadow, glow or held weapon. Row-major exact poses: row1 [idle,left-step,right-step,hurt squash] matching original4; row2 [empty-arm preparation,forceful follow-through,folding/crumpling downward,flattened discarded bundle]. Action and death are truly different silhouette drawings, not rotated duplicates. Death retains visible costume/backpack identity, stays within one cell and is no wider than1.2 times idle. Baseline consistent where possible, but full isolated poses are more important than filling the cell.SUBJECT Mirror/Misprint rear: blank cream rectangular paper head with exact muted mauve misprint stripe and bent purple corner, TWO horizontal rolled-paper cylinders bound with sage-green bands on the back, tiny cream arms and black feet. Frame4 shoulders/head momentarily print offset a little to one side; frame5 empty arms extend in a pushing gesture, keep the small mauve duplicate outline close enough to remain inside the cell. Frames6/7 fold the blank head over the two rolls then flatten. No face on back.",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        31,
+        90,
+        1497,
+        946
+      ],
+      "idle_bounds_ltrb": [
+        70,
+        93,
+        347,
+        462
+      ],
+      "frame_bounds_ltrb": [
+        [
+          70,
+          93,
+          347,
+          462
+        ],
+        [
+          57,
+          90,
+          341,
+          472
+        ],
+        [
+          52,
+          90,
+          341,
+          460
+        ],
+        [
+          45,
+          123,
+          345,
+          462
+        ],
+        [
+          31,
+          71,
+          376,
+          418
+        ],
+        [
+          44,
+          81,
+          372,
+          434
+        ],
+        [
+          23,
+          203,
+          351,
+          423
+        ],
+        [
+          19,
+          261,
+          344,
+          424
+        ]
+      ],
+      "frame_union_ltrb": [
+        19,
+        71,
+        376,
+        472
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          462
+        ],
+        [
+          192.0,
+          472
+        ],
+        [
+          192.0,
+          460
+        ],
+        [
+          192.0,
+          462
+        ],
+        [
+          192.0,
+          418
+        ],
+        [
+          192.0,
+          434
+        ],
+        [
+          192.0,
+          423
+        ],
+        [
+          192.0,
+          424
+        ]
+      ],
+      "frame_sha256": [
+        "438cc8410358ea990ff450e34091d1af50cf6aca82b369f4add5fce4fc0cbdbd",
+        "55c21858c14c2d13686bf6973768661ec9ab51db15eb21fa04c503daa0a2e9c5",
+        "dd58a46c964ae2250e16339b784d1d6cfc30962d3df5f495995044e297a2385d",
+        "e9a4a9e371aeff69773f8320aa3fb9c800d12383c53d617e71f8b76ffeed5a53",
+        "5cf8e32afd3e401228b0d03cf8c96673dfcaf31d8fa11264716cfd43e57d86ed",
+        "7dfc0405bdac14d4786b9eb43a6daa9e5829bc0c06f5a7c3f89a8fdfe8d0d20b",
+        "3e7d9913f0852f952be31401660fc872d0690656781ca20917473fd7c97b0ee1",
+        "15c282696706b17f4e5a03be797e7045bd15bc8b07c23e8d4249a34cceae6a08"
+      ],
+      "sha256": "99cdaaeeea52a2fc6ce638d65be85009c4114fbbd8fcef0d091f64a4544c0439",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "conductor_front",
+      "file": "assets/presentation/characters/conductor_front.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-5a661bab-f7d1-4979-9ceb-f9f8efa956bf.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/conductor_front.png",
+      "prompt": "Use case: stylized-concept edit. Expand the attached exact ORIGINAL paper-character four-frame strip to an EIGHT-FRAME production animation atlas. Preserve the exact character, costume, face, colors, camera angle and flat thick-ink drawing style. Output exactly 1536x1024, FOUR equal columns x TWO equal rows, transparent RGBA, no text/grid/frame/scene/ground/glow/cast shadow. Every cell is exactly384x512 and contains one complete isolated pose. Draw the character SMALL ENOUGH to leave at least45px fully transparent on both sides of every cell, including outstretched arms and paper tips. IMPORTANT LOCAL ANCHOR: in BOTH rows the bottom of the feet/remains is at local y=430 pixels (top row canvas y=430; bottom row canvas y=942). Do not vertically center the short death pose; keep it on the same ground baseline. Body and head have identical scale throughout, except actual squashing/folding. Do not let any visible pixel touch the quarter-column or middle-row boundary. Keep all normal heads safely below local y=70. Row-major exact order: top row [idle, left foot walk, right foot walk, hurt squash] retaining the attached four poses; bottom row [real empty-arm/body action preparation, real forceful follow-through, folding/crumpling death beginning, flattened discarded-paper remains with recognizable identity]. The bottom row must have genuinely new drawings/silhouettes, not eight copies merely tilted or resized. Weapons are mounted separately by the game: NO weapon or object held in the hands.Subject Conductor/Binder: broad-shouldered cream paper doll with sage-green folded coat collar and the exact FOUR upright paper-divider tabs on its broad backpack, tired squinting face, stub feet. FRONT three-quarter facing down-right. Action preparation raises one empty arm as if reluctantly conducting; follow-through makes a broad two-arm conducting gesture, backpack paper tabs flex but remain FOUR. Death crumples the folded coat and tab pack downward then flattens to a recognizable discarded bundle. No baton, weapon or added accessories.",
+      "refinement_prompt": "Production spacing cleanup ONLY on this exact eight-frame atlas. Preserve all eight poses, the character identity, face/costume/colors, camera direction and ink artwork. Keep canvas1536x1024 and exactly4 equal columns x2 equal rows. Cell384x512. Make ALL eight full poses about20% smaller and center each in its own cell, so there are at least45 fully transparent pixels to LEFT and RIGHT and40 to TOP and BOTTOM of EACH cell, including long arms, cape tips, backpack tabs and flattened remains. Some lower-row arms/paper currently cross x=384,768,1152: pull the entire pose inward by uniform scale, do not clip or amputate it. No visible pixel may touch/cross any vertical grid line or y=512 middle line. Keep rear views faceless if the input is a rear view. Maintain the exact row-major pose order and genuine action/death shapes. Genuine transparent RGBA outside contours; no frame borders, text, ground, shadows, glow or new objects. Do not increase a dead pose to fill its empty cell.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-01a4c2be-5bd9-4a1c-862c-81edb7cfef4b.png",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        71,
+        148,
+        1491,
+        898
+      ],
+      "idle_bounds_ltrb": [
+        74,
+        148,
+        310,
+        413
+      ],
+      "frame_bounds_ltrb": [
+        [
+          74,
+          148,
+          310,
+          413
+        ],
+        [
+          68,
+          149,
+          316,
+          417
+        ],
+        [
+          68,
+          149,
+          304,
+          418
+        ],
+        [
+          63,
+          182,
+          328,
+          417
+        ],
+        [
+          71,
+          124,
+          336,
+          385
+        ],
+        [
+          62,
+          129,
+          345,
+          385
+        ],
+        [
+          54,
+          174,
+          311,
+          386
+        ],
+        [
+          36,
+          249,
+          339,
+          385
+        ]
+      ],
+      "frame_union_ltrb": [
+        36,
+        124,
+        345,
+        418
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          413
+        ],
+        [
+          192.0,
+          417
+        ],
+        [
+          192.0,
+          418
+        ],
+        [
+          192.0,
+          417
+        ],
+        [
+          192.0,
+          385
+        ],
+        [
+          192.0,
+          385
+        ],
+        [
+          192.0,
+          386
+        ],
+        [
+          192.0,
+          385
+        ]
+      ],
+      "frame_sha256": [
+        "d9b774476564c5658c919234553cc866c202c390e179771635a7030c1974c78a",
+        "bb181c681af6f38d4d6971338867aeb020ae159b3e6b59039be0f2e6588cbb10",
+        "01f656b3555888ae61ef95d1d0ad42d267ee2c5e6a9c2bd6b0b1fb01abf01241",
+        "741c427b8e0f27a8ed13aec7c107bb215e7d8095fdc047db067bb281089c10df",
+        "6e85494183f31d7a28f0eae984642d35db0fad596a12a49ad03ea62b705bf2a0",
+        "a2708660f09b2581a60001e95636748cc950432d4f0ea5b1c390e03e4818e19e",
+        "129951e7d1ba117ac8ab62b4f666cf327f27c3a1a9e343b164a72c80c712ae95",
+        "31e5f908425535c9cffd3163681ba1cd798f4cbc20f89bf19d649ee54db7f6f6"
+      ],
+      "sha256": "72e5c7d3abfc9fab8745d45fdfebae21ab6b44995642141d79f95bdb2852947b",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
+    },
+    {
+      "id": "conductor_back",
+      "file": "assets/presentation/characters/conductor_back.png",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-4f32b39a-489c-48be-b2ba-bd0964998fb7.png",
+      "reference_source": "/Users/yupeng/projects/personal/reverb-delivery-battle-direction/before/art/characters/conductor_back.png",
+      "prompt": "Use case: stylized-concept edit. Expand the supplied exact ORIGINAL paper-puppet BACK-VIEW strip into a production EIGHT-FRAME atlas, FOUR columns by TWO rows, exactly1536x1024, genuine transparent RGBA. Preserve this exact design, costume, palette, thick charcoal contour and flat paper shadow; all8 poses face AWAY diagonally UP-RIGHT with NO front eyes/mouth in any frame. Each384x512 cell has one full centered pose, keep body/head same scale. Make poses modestly sized: maximum280px width and360px height, leaving generous fully transparent gaps. Absolutely no hand, backpack tab, cape tip or paper fragment may touch/cross x384,768,1152 or middle y512. No grid, text, borders, ground, cast shadow, glow or held weapon. Row-major exact poses: row1 [idle,left-step,right-step,hurt squash] matching original4; row2 [empty-arm preparation,forceful follow-through,folding/crumpling downward,flattened discarded bundle]. Action and death are truly different silhouette drawings, not rotated duplicates. Death retains visible costume/backpack identity, stays within one cell and is no wider than1.2 times idle. Baseline consistent where possible, but full isolated poses are more important than filling the cell.SUBJECT Conductor/Binder rear: exact wide tobacco-yellow multi-divider paper-file backpack with upright cream paper tabs, sage folded coat/collar and cuffs, blank cream rear of head peeking above/right, black stub feet. Broad rectangular stacked backpack silhouette. Frame4 one empty arm raises reluctantly, frame5 both empty arms conduct outward without exceeding cell margins; backpack tabs flex. Frames6/7 compress and fold the pack/coat down into discarded flattened bundle. No baton or face.",
+      "refinement_prompt": "Edit this exact rear-view eight-frame Conductor paper character atlas for spacing only. Preserve the exact paper-file backpack, coat, blank rear head, all eight action/death poses and their row-major order. Keep canvas1536x1024 with4 equal columns by2 equal rows. Each384x512 cell must contain the COMPLETE character isolated. The LOWER ROW now has arms crossing into neighbors: uniformly shrink EVERY full pose to75% of its current size and center each inside its own cell. Maintain a safe transparent gap of at least50px from the LEFT and RIGHT edges of EACH cell, even the outstretched hands/backpack/collapsed sheets. At x384,768,1152 and y512 there must be completely transparent vertical/horizontal gaps, no visible pixels. Do not clip or amputate arms; scale the whole pose including all extremities. Keep the artwork back-facing in every cell, never add a face, weapon, words, frame lines, floor or glow. Keep the final flattened pose small and low rather than enlarging it. All other identity, ink style, colors and pose shapes stay unchanged.",
+      "generation_source_file": "/Users/yupeng/.codex/generated_images/01a186c0-7288-72d1-b6b5-47e2e6965bd6/exec-dcb9195a-eb07-49d6-84ea-574fe0957cd4.png",
+      "columns": 4,
+      "rows": 2,
+      "frame_count": 8,
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_range": [
+        0,
+        254
+      ],
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        51,
+        186,
+        1462,
+        890
+      ],
+      "idle_bounds_ltrb": [
+        90,
+        191,
+        332,
+        446
+      ],
+      "frame_bounds_ltrb": [
+        [
+          90,
+          191,
+          332,
+          446
+        ],
+        [
+          75,
+          190,
+          334,
+          448
+        ],
+        [
+          71,
+          186,
+          326,
+          449
+        ],
+        [
+          59,
+          229,
+          310,
+          446
+        ],
+        [
+          51,
+          145,
+          321,
+          372
+        ],
+        [
+          74,
+          145,
+          350,
+          370
+        ],
+        [
+          76,
+          195,
+          300,
+          374
+        ],
+        [
+          65,
+          257,
+          309,
+          378
+        ]
+      ],
+      "frame_union_ltrb": [
+        51,
+        145,
+        350,
+        449
+      ],
+      "frame_pivots": [
+        [
+          192.0,
+          446
+        ],
+        [
+          192.0,
+          448
+        ],
+        [
+          192.0,
+          449
+        ],
+        [
+          192.0,
+          446
+        ],
+        [
+          192.0,
+          372
+        ],
+        [
+          192.0,
+          370
+        ],
+        [
+          192.0,
+          374
+        ],
+        [
+          192.0,
+          378
+        ]
+      ],
+      "frame_sha256": [
+        "761d4beda4f4956b8053171e3f546657afb48caa45d43301c5beb242faf968a6",
+        "d59ba2763022412c77260305a9e00c967340328be6b35de39f19f8a5588bdea7",
+        "b9bdb6896cb5f71ef6f8d05b871e8c44edcf7e1705e479faf55ed32cd8538621",
+        "39d1e968d6dfd7942e890f4f47112f2f6a4b4752f39fb78fd40c0ebaa5e82db4",
+        "a3e3c2ccab5b0fd73b25bfcb54d37cfaf758f224a395034a7d613358ab70b3ac",
+        "7c2cffb1d0417143626454fda29c4587cf8f2319d2f7e6f60bcd2872d8a87f70",
+        "fd1acc5aac65c4c542846dac0444ae4d8c1b3bb9e5174627928757461cc5f583",
+        "2902bae7232effebd6182dbd3687d1fb3f446e9d56193a701d0d4bd8a2a4925a"
+      ],
+      "sha256": "c1947a1f2be98851275f572658017fc86897001a4a18c79b6fa764b45d8b5a71",
+      "qa": {
+        "internal_grid_clear": true,
+        "all_frames_nonempty": true,
+        "unique_frames": 8
+      }
     }
+  ],
+  "animation_layout": "4 columns x 2 rows, row-major frames 0..7",
+  "pose_labels": [
+    "idle",
+    "step_left",
+    "step_right",
+    "hurt",
+    "action_ready",
+    "action_follow_through",
+    "crumple",
+    "flattened"
   ]
 }

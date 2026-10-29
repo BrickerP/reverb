@@ -5,12 +5,12 @@ thick dark ink contours, flat recycled-paper fills, tired expressions, limited
 sage/yellow/red accents, and visual jokes about disposable copies. They replace
 the previous mechanical character, weapon, enemy and metal-panel artwork.
 
-Generated with the built-in OpenAI image generation tool on 2026-10-28. Final
+Generated with the built-in OpenAI image generation tool; group records retain exact sources. Final
 PNG bytes are retained from tool outputs; required edits used the same tool.
 No existing game's characters or artwork are included.
 
 The runtime catalog preserves all content IDs. Character fronts/backs and all
-seven enemy identities are four-column animation strips. Common crop bounds
+seven enemy identities are four-column, two-row action atlases. Common crop bounds
 are measured across all four cells so changing poses never changes scale.
 Weapons remain independently mounted; echoes reuse the selected character art.
 

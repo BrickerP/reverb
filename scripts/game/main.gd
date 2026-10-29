@@ -2,6 +2,7 @@ extends Node
 
 const RECORD_BEAT := 0.6
 const VICTORY_BEAT := 0.9
+const PLAYER_DEATH_BEAT := BattleDirector.PLAYER_DEATH_TIME
 
 var sim: Sim
 var hud: Hud
@@ -465,7 +466,8 @@ func _sync_phase() -> void:
 		Sim.Phase.LOST:
 			hud.visible = true
 			_record_run()
-			end_ui.show_result(sim, _unlock_text)
+			# The run is already terminal and recorded; only the summary waits for the paper fall.
+			_end_delay = PLAYER_DEATH_BEAT
 		Sim.Phase.WON:
 			# Let the boss death land before the summary covers it.
 			hud.visible = true
