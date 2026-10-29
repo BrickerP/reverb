@@ -35,3 +35,12 @@ License 1.1. Full licenses are `assets/fonts/AmaticSC-OFL.txt` and
 `assets/fonts/ZCOOLKuaiLe-OFL.txt`; original URLs and byte hashes are recorded
 in `assets/fonts/SOURCES.json`. These notices and licenses are included in
 each audited export. Noto Sans CJK SC remains the body font.
+
+## Recorded object sounds
+
+The paperbureau palette layers processed recordings from Kenney Interface Sounds
+and Impact Sounds, licensed Creative Commons Zero (CC0), with original granular
+paper synthesis. Original clip names, checksum-pinned source archives, preserved
+development inputs and reproduction are recorded in `audio/presentation/SOURCES.md`.
+License: https://creativecommons.org/publicdomain/zero/1.0/ . Development source
+snapshots are excluded from game exports; the provenance notice is included.

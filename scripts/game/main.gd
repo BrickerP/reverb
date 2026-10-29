@@ -24,6 +24,7 @@ var paused: bool = false
 var character_id: StringName = &"looper"
 
 var _view: ArenaView
+var _arena_clip: Control
 var _phase: Sim.Phase = Sim.Phase.SHOP
 var _shop_delay := 0.0
 var _end_delay := 0.0
@@ -50,7 +51,19 @@ func _ready() -> void:
 	var theme := UiTheme.build()
 	_view = ArenaView.new()
 	_view.shake_enabled = settings.shake
-	add_child(_view)
+	# Keep the crop still while the world shakes inside it. The neutral origin
+	# preserves existing simulation/drawing coordinates and view.position semantics.
+	_arena_clip = Control.new()
+	_arena_clip.name = "BattlefieldClip"
+	_arena_clip.position = Sim.ARENA.position
+	_arena_clip.size = Sim.ARENA.size
+	_arena_clip.clip_contents = true
+	_arena_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_arena_clip)
+	var world_origin := Node2D.new()
+	world_origin.position = -Sim.ARENA.position
+	_arena_clip.add_child(world_origin)
+	world_origin.add_child(_view)
 	hud = Hud.new()
 	shop_ui = ShopUi.new()
 	end_ui = EndUi.new()

@@ -8,7 +8,7 @@ Brotato 式单屏竞技场 roguelite。核心机制：每波把你的走位和�
 
 当前是**垂直切片**：20 波完整可玩，有商店、构筑、终局 Boss、4 个角色、叠录、本地解锁记录和程序音效，并提供 macOS/Windows/Linux 构建；没有更多角色或元进度树。
 
-开发版本 **0.12.0-dev** 现采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。全部角色、敌人、武器、道具和场景已统一重绘，角色与敌人使用真实八帧图集；制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
+开发版本 **0.13.0-dev** 采用 **废件回收局 / Carbon Copy Purgatory** 美术：疲惫纸偶、过期复印副本、会咬人的办公废件，配合粗墨线纸卡 UI。角色与敌人使用真实八帧图集；场景加入退件传送带、报废工位和双语告示，声音统一为纸张与办公机器。制作与动画契约见 [art-direction.md](docs/art-direction.md)。下方图片来自实际窗口；GitHub Releases 中的 v0.10.0-rc.1 仍是改版前的公开包。
 
 0.11.1 的界面改为有机手墨轮廓：开放纸偶舞台、供货摊与副本卷宗、会对实际交易作出反应的小商贩，以及卷轴/材料袋 HUD。鼠标和键盘焦点共用同一套手绘提示，减弱特效会直接落到最终状态。
 
@@ -174,7 +174,7 @@ make perf     # 模拟步耗时与压力测试
 make frames   # 窗口帧耗时（需要显示器）
 make ui-shots # 截取开波/暂停/商店/结算等 UI 状态
 make export   # 导出 macOS/Windows/Linux（需要 Godot export templates）
-python3 tools/gen_audio.py  # 重新生成程序合成音效
+python3 tools/build_presentation_audio.py  # 从已固定的 CC0 对象录音重建纸张/机器音效
 python3 tools/runs_report.py <runs.jsonl>  # 汇总试玩日志
 python3 tools/package_release.py --artifacts <audit-artifacts> --out <packages> --version <ver> --commit <sha>
 ```
@@ -189,18 +189,18 @@ scripts/view/   竞技场绘制与 HUD
 scripts/ui/     商店、结算、主题
 scripts/game/   主流程、输入、音频
 scripts/dev/    bot、压测场景
-audio/          程序合成的音效与环境音
+audio/          CC0 物体录音与原创纸张合成的音效、机械环境循环
 tests/          无头测试
 tools/          烟测、平衡、性能探针、音效生成
 ```
 
 ## 已知限制
 
-- 已有独立武器音效、CC0 机械与交互音；整体环境音、配乐和混音尚未统一到纸墨世界。
+- 35 个音效与机械环境循环已统一到纸张/办公机器；尚未创作完整配乐，主观听感仍待实际试听。
 - 角色只有 4 个；解锁看最佳波数（第 10/15 波）与通关次数（1 次），元进度只有最佳波数/通关数。
 - 难度和 Boss 只用 bot 验证过（封口墨加入后 30 种子 balanced：折痕 15、拒收件 22、套印件 16；防御流仍偏弱）。真人手感未调。
-- 4–5 个回响同屏的可读性未验证；叠录目前只有单元测试和截图，未做 bot/真人平衡。
-- Steam Deck / 低端机帧率未验证。本机 M3 窗口压力测试（720p、100 敌人、约 390 发弹幕）约 7ms/帧，200 敌人约 10ms；高弹量会自动降特效。
+- 8 回响状态、拥挤遮挡和世界裁切已有真实窗口证据；真人辨识效率与操作手感未验证，叠录未做真人平衡。
+- Steam Deck / 低端机帧率未验证；本机极端 300 敌人加 8 回响不能稳定 60 帧，高弹量会减少装饰拖尾。
 - 手柄 UI 映射与暂停菜单尚未在 Steam Deck 实机验证。
 - 武器家族/进化/材料利息是首版规则；M3 起始武器候选 50 seed bot（会升级/进化、不主动存钱）：折痕 28/50、拒收件 29/50、套印件 33/50、装订员 33/50。真人未测。
 - 名称《回响》/ Take Stack 为工作名；Steam 已有多款 Reverb，英文名已更换；正式商标检索未做。

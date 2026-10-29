@@ -34,7 +34,7 @@
       "assets/presentation/surfaces/SOURCES.md",
       "assets/presentation/surfaces/manifest.json",
       "assets/presentation/app_icon/",
-      "tools/build_feedback_audio.py",
+      "tools/build_presentation_audio.py",
       "tools/feedback_probe.gd",
       "assets/presentation/SOURCES.md",
       "assets/presentation/characters/manifest.json",

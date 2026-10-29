@@ -296,7 +296,7 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	var pl := sim.player
 	var alpha := 1.0
 	if pl.hp > 0.0 and pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
-		alpha = 0.35
+		alpha = 0.74
 	var r := PlayerState.RADIUS
 	ci.draw_circle(pl.pos + Vector2(0.0, 5.0), r + 3.0, Color(INK, 0.22 * alpha))
 	var visual_time := float(motion.get("visual_time", sim.wave_time))
@@ -327,6 +327,47 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	if count > 0 and pl.hp > 0.0:
 		_draw_weapon_loadout(ci, sim, pl.pos, pl.weapons, pl.facing, bob, alpha,
 				Color.WHITE, 0.0, 1.0, -1, recoils)
+	if pl.hp > 0.0:
+		var fitted := _fitted_art_size(key, art_size)
+		var body := Rect2(Vector2(foot.x - fitted.x * 0.5, foot.y - fitted.y), fitted)
+		_draw_player_focus(ci, player_focus_profile(sim, body))
+
+
+static func player_focus_profile(sim: Sim, body: Rect2) -> Dictionary:
+	var nearby := 0
+	if sim == null or not body.has_area() or sim.player.hp <= 0.0:
+		return {"visible": false, "nearby": 0, "contours": []}
+	# Actual body overlap, not a global enemy-count trigger. No enemy is made
+	# transparent: silhouettes and shield/blast geometry retain their meaning.
+	for enemy in sim.enemies:
+		if not enemy.dead and enemy.def != null:
+			var radius := maxf(enemy.radius, 25.0)
+			if body.grow(radius).has_point(enemy.pos):
+				nearby += 1
+	for actor in sim.echoes:
+		if body.grow(24.0).has_point(actor.pos):
+			nearby += 1
+	var contours: Array[PackedVector2Array] = []
+	if nearby > 0:
+		# Bowed paper edges hug the live silhouette. They leave head and feet open,
+		# rather than putting another boxed label above a crowded combatant.
+		for side: float in [-1.0, 1.0]:
+			var x := body.get_center().x + side * (body.size.x * 0.5 + 3.0)
+			contours.append(PackedVector2Array([
+				Vector2(x - side * 3.0, body.position.y + 8.0),
+				Vector2(x + side * 1.0, body.position.y + body.size.y * 0.31),
+				Vector2(x + side * 2.0, body.position.y + body.size.y * 0.60),
+				Vector2(x, body.end.y - 5.0),
+				Vector2(x - side * 4.0, body.end.y - 1.0)]))
+	return {"visible": nearby > 0, "nearby": nearby, "contours": contours}
+
+
+static func _draw_player_focus(ci: CanvasItem, profile: Dictionary) -> void:
+	if not bool(profile["visible"]):
+		return
+	for contour: PackedVector2Array in profile["contours"]:
+		ci.draw_polyline(contour, Color("f3e8cc"), 6.0, true)
+		ci.draw_polyline(contour, INK, 2.0, true)
 
 
 static func sparks(ci: CanvasItem, list: Array[Spark]) -> void:
@@ -383,20 +424,98 @@ static func actor_remains(ci: CanvasItem, director: BattleDirector, reduced: boo
 				ci.draw_line(piece, piece + Vector2(3.0, 4.0), Color(INK, alpha), 1.0)
 
 
-static func boss_tear(ci: CanvasItem, director: BattleDirector, reduced: bool = false) -> void:
-	if director.tear.is_empty() or reduced:
+# Discarded whole/half prints sit below the actual live boss bodies.
+static func boss_tear_body(ci: CanvasItem, director: BattleDirector, reduced: bool = false) -> void:
+	var profile := director.tear_profile(reduced)
+	if profile.is_empty():
 		return
-	var progress := clampf(float(director.tear["age"]) / BattleDirector.TEAR_TIME, 0.0, 1.0)
 	var origin: Vector2 = director.tear["pos"]
-	var frame := 4 if progress < 0.42 else 5
-	# A faint discarded print, behind both actual dangerous halves, never hides them.
-	_draw_art(ci, &"enemy_paradox", origin, Vector2(88.0, 72.0), 0.0,
-			Color(PAPER, (1.0 - progress) * 0.30), false, frame)
-	var seam := PackedVector2Array()
-	for index in 7:
-		seam.append(origin + Vector2((-3.0 if index % 2 == 0 else 3.0) * (1.0 + progress),
-				-30.0 + float(index) * 10.0))
-	ci.draw_polyline(seam, Color(INK, (1.0 - progress) * 0.55), 2.0, true)
+	var whole_alpha := float(profile["whole_alpha"])
+	if whole_alpha > 0.01:
+		var stretch: Vector2 = profile["stretch"]
+		_draw_art(ci, &"enemy_paradox", origin, Vector2(104.0, 94.0) * stretch,
+				0.0, Color(PAPER, whole_alpha), false, int(profile["frame"]))
+	var half_alpha := float(profile["half_alpha"])
+	if half_alpha > 0.01:
+		for side in 2:
+			var sign_x := -1.0 if side == 0 else 1.0
+			var p := float(profile["stage_progress"])
+			var offset := Vector2(sign_x * float(profile["spring"]), -sin(p * PI) * 7.0)
+			# Transparent discarded prints spring locally; the actual dangerous bodies
+			# are always drawn afterwards at their own authoritative positions.
+			_draw_art(ci, &"enemy_paradox", origin + offset, Vector2(100.0, 90.0),
+					sign_x * float(profile["rotation"]), Color(PAPER, half_alpha), false, 2 + side)
+
+
+# The cut sits above the art, along its torn outer edge. Keep the face/body core
+# clear: a centered pair of heavy zigzags would read as a censor bar over it.
+static func boss_tear(ci: CanvasItem, director: BattleDirector, reduced: bool = false) -> void:
+	var profile := director.tear_profile(reduced)
+	if profile.is_empty():
+		return
+	var origin: Vector2 = director.tear["pos"]
+	var stage: StringName = profile["stage"]
+	var alpha := float(profile["seam_alpha"])
+	var geometry := boss_tear_edge_geometry(profile)
+	ci.draw_set_transform(origin, 0.0, Vector2.ONE)
+	for edge: PackedVector2Array in geometry["edges"]:
+		ci.draw_polyline(edge, Color(PAPER, alpha), float(geometry["paper_width"]), true)
+		ci.draw_polyline(edge, Color(INK, alpha), float(geometry["ink_width"]), true)
+	for thread: PackedVector2Array in geometry["threads"]:
+		ci.draw_polyline(thread, Color(PAPER, alpha), float(geometry["thread_width"]), true)
+		ci.draw_polyline(thread, Color(INK, alpha), 2.0, true)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	if stage == &"tension":
+		var pull := 7.0 + float(profile["stage_progress"]) * 9.0
+		for side in 2:
+			var sign_x := -1.0 if side == 0 else 1.0
+			for index in 3:
+				var start := origin + Vector2(sign_x * 40.0, -26.0 + float(index) * 22.0)
+				var end := start + Vector2(sign_x * pull, -2.0)
+				ci.draw_line(start, end, Color(PAPER, alpha), 5.0, true)
+				ci.draw_line(start, end, Color(INK, alpha), 2.2, true)
+	var fragment_alpha := float(profile["fragment_alpha"])
+	if fragment_alpha > 0.01:
+		var travel := float(profile["fragment_travel"])
+		for index in 8:
+			var sign_x := -1.0 if index % 2 == 0 else 1.0
+			var row := floorf(float(index) * 0.5)
+			var strip := origin + Vector2(sign_x * (20.0 + travel * (0.65 + row * 0.18)),
+					-38.0 + row * 22.0 - travel * 0.18)
+			var end := strip + Vector2(sign_x * (7.0 + row), 3.0)
+			ci.draw_line(strip, end, Color(PAPER, fragment_alpha), 5.5, true)
+			ci.draw_line(strip, end, Color(INK, fragment_alpha), 1.6, true)
+
+
+static func boss_tear_edge_geometry(profile: Dictionary) -> Dictionary:
+	if profile.is_empty():
+		return {}
+	var width := float(profile["seam_width"])
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	# The fixed authored edge is just beyond the first half's +X silhouette. Only
+	# the discarded right edge opens out; neither gutter traverses the live face.
+	var edge_x := 22.0
+	for index in 9:
+		var tooth := -2.5 if index % 2 == 0 else 2.5
+		var y := -36.0 + float(index) * 8.0
+		left.append(Vector2(edge_x + tooth, y))
+		right.append(Vector2(edge_x + tooth + width, y))
+	var threads: Array[PackedVector2Array] = []
+	var stage: StringName = profile["stage"]
+	for index in 4:
+		var y := -28.0 + float(index) * 16.0
+		if stage == &"tension":
+			threads.append(PackedVector2Array([Vector2(edge_x - 4.0, y - 3.0),
+					Vector2(edge_x + width + 4.0, y + 3.0)]))
+		elif stage == &"snap":
+			var p := float(profile["stage_progress"])
+			threads.append(PackedVector2Array([Vector2(edge_x - 1.0, y),
+					Vector2(edge_x - 4.0, y - 5.0 - p * 4.0)]))
+			threads.append(PackedVector2Array([Vector2(edge_x + width + 2.0, y),
+					Vector2(edge_x + width + 7.0 + p * 11.0, y + 5.0)]))
+	return {"edges": [left, right], "threads": threads, "paper_width": 6.5,
+		"ink_width": 2.8, "thread_width": 6.0}
 
 
 static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Array[Dictionary],

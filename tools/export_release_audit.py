@@ -41,6 +41,8 @@ PROVENANCE_FILES = [
     "assets/presentation/characters/manifest.json",
     "assets/presentation/enemies/SOURCES.md",
     "assets/presentation/enemies/manifest.json",
+    "assets/presentation/environment/SOURCES.md",
+    "assets/presentation/environment/manifest.json",
     "assets/presentation/items/SOURCES.md",
     "assets/presentation/items/manifest.json",
     "assets/presentation/surfaces/SOURCES.md",
@@ -58,12 +60,21 @@ FORBIDDEN_PATHS = [
     ".omx/",
     "override.cfg",
     "scripts/dev/",
-    # Presentation versions supersede these five compatibility sources.
+    # The single paper-bureau palette supersedes every legacy tonal cue.
+    "audio/boss.wav",
     "audio/buy.wav",
     "audio/click.wav",
     "audio/echo.wav",
     "audio/hit.wav",
+    "audio/hurt.wav",
+    "audio/kill.wav",
+    "audio/lose.wav",
+    "audio/pickup.wav",
+    "audio/shoot.wav",
+    "audio/silence.wav",
     "audio/wave_end.wav",
+    "audio/wave_start.wav",
+    "audio/win.wav",
 ]
 
 
@@ -160,13 +171,12 @@ def cue_names(audio_source: str) -> list[str]:
 
 def expected_inventory(stage: Path) -> dict[str, Any]:
     pngs = sorted(path.relative_to(stage).as_posix() for path in (stage / "assets/presentation").rglob("*.png"))
-    if len(pngs) != 42:
-        raise RuntimeError(f"expected 42 presentation PNGs, found {len(pngs)}")
+    if len(pngs) != 43:
+        raise RuntimeError(f"expected 43 presentation PNGs, found {len(pngs)}")
     names = cue_names((stage / "scripts/game/audio.gd").read_text())
     cues: list[str] = []
     for name in names:
-        preferred = stage / "audio/presentation" / f"{name}.wav"
-        selected = preferred if preferred.exists() else stage / "audio" / f"{name}.wav"
+        selected = stage / "audio/presentation" / f"{name}.wav"
         if not selected.exists():
             raise RuntimeError(f"runtime audio cue has no source file: {name}")
         cues.append(selected.relative_to(stage).as_posix())

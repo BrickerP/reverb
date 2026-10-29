@@ -78,3 +78,38 @@ the exported resource pack. Inspiration is the drawn marks, negative space
 and expressive interaction of Klei's official Don't Starve gallery:
 https://www.klei.com/games/dont-starve-together
 All characters and game-specific illustration remain original.
+
+## Recycling depot and field hierarchy (0.13.0)
+
+The discarded-crate wall is replaced by a quiet ash-paper floor and structural
+ink perimeter. A returns conveyor, a stamping workstation and an absurd notice
+occupy localized edge/corner clusters. Prop artwork keeps natural proportions;
+the horizontal notice is a native torn-paper shape with live bilingual text.
+The central fighting space stays empty. One `RecyclingDepot` child redraws at
+12 Hz from the presentation clock; pause freezes it and Reduced Effects holds
+one stationary state. Props are scenery, without new collision or rules.
+
+The world is a descendant of a fixed `Control.clip_contents` rectangle equal
+to `Sim.ARENA`. An intermediate inverse origin preserves world coordinates,
+while shake remains inside the crop. Actor art, particles and batched projectile
+heads cannot enter transparent HUD margins. The active player draws after
+routine debris; bowed paper/ink edges separate locally overlapping bodies.
+Enemies and their authoritative threat geometry are not faded or relocated.
+
+Copy states use whole-body value and shape plus large closed/stapled/torn marks;
+the tiny below-foot lifetime meter is removed. The Original's 0.62-second tear
+has tension, seam break and spring release; decorative prints never hold or move
+the real phase-two bodies. These states are assessed in the actual 1280x720
+battlefield, alongside Reduced Effects and scaled windows.
+
+All 35 sounds use one strict presentation palette from pinned CC0 object
+recordings plus original granular paper synthesis. Staple, stamp, crumple,
+feed and jam cues share a quiet mechanical room bed. Important events briefly
+duck the bed; voice budgets, mute and pause remain bounded. This is material
+sound design, without a new composed soundtrack or a claim of listening approval.
+See `audio/presentation/SOURCES.md` for complete recipes and provenance.
+
+`tools/depot_art_probe.gd` records copy states, crowd overlap, edge clipping
+and six tear timestamps. Its staged fixture declares positions/ages/durability;
+zero changed pixels outside the crop proves the draw boundary, not human
+recognition speed. Real handling and listening remain separate acceptance work.

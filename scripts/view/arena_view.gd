@@ -48,6 +48,7 @@ func _ready() -> void:
 	_backdrop = ArenaBackdrop.new()
 	_backdrop.show_behind_parent = true
 	add_child(_backdrop)
+	_sync_backdrop()
 
 
 func bind(s: Sim, id: StringName = &"looper") -> void:
@@ -92,6 +93,7 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.wave_ended.connect(_on_wave_phase)
 	sim.run_lost.connect(_on_run_lost)
 	sim.run_won.connect(_on_run_won)
+	_sync_backdrop()
 
 
 func unbind() -> void:
@@ -116,6 +118,7 @@ func unbind() -> void:
 	_motion_speed = 0.0
 	_paused = false
 	position = Vector2.ZERO
+	_sync_backdrop()
 	queue_redraw()
 
 
@@ -123,11 +126,13 @@ func set_paused(on: bool) -> void:
 	_paused = on
 	if on:
 		position = Vector2.ZERO
+	_sync_backdrop()
 
 
 func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
 	_director.settle(on)
+	_sync_backdrop()
 	if not on:
 		return
 	_shake = 0.0
@@ -224,7 +229,13 @@ func _process(delta: float) -> void:
 		_victory_time = minf(VICTORY_BEAT, _victory_time + delta)
 		if _victory_time >= VICTORY_BEAT:
 			_victory = false
+	_sync_backdrop()
 	queue_redraw()
+
+
+func _sync_backdrop() -> void:
+	if _backdrop != null:
+		_backdrop.set_presentation(_visual_time, reduced_effects, _paused)
 
 
 func _draw() -> void:
@@ -239,14 +250,16 @@ func _draw() -> void:
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
-	ArenaPainter.boss_tear(self, _director, reduced_effects)
+	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
 	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director)
 	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director)
+	ArenaPainter.boss_tear(self, _director, reduced_effects)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
-	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
 			reduced_effects)
 	ArenaPainter.sparks(self, _sparks)
+	# The original remains legible through decorative debris and routine hit ink.
+	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
 	if _victory:
 		ArenaPainter.victory(self, _victory_origin, _victory_color,
 				_victory_time / VICTORY_BEAT, reduced_effects)

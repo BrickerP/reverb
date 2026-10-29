@@ -1,0 +1,67 @@
+{
+  "assets": [
+    {
+      "file": "tools/audio_sources/kenney_objects/click.wav",
+      "sha256": "6397235f5739747e737e8c9bac0e447361174e586a63f0d9830a54396e9e3368",
+      "source_processed_file": "audio/presentation/click.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/weapon_pistol.wav",
+      "sha256": "a406ffac8d7a5e07e61543891c4b7fbde2946894b807d1c3118e077bc546b897",
+      "source_processed_file": "audio/presentation/weapon_pistol.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/weapon_longbow.wav",
+      "sha256": "f9c689608ed387d2b82201dc0e684a6e5261744212806ced5cb6c4151fbb04dc",
+      "source_processed_file": "audio/presentation/weapon_longbow.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/shield_block.wav",
+      "sha256": "8310d0648fbb32cf26b9d6e19829ca3f6db3a9b1c25b2eeb34bdb095b0f01ad6",
+      "source_processed_file": "audio/presentation/shield_block.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/hurt_contact.wav",
+      "sha256": "23992f94acaef13be85ac75690bc4a57fdcb370ed722e845f6866aba2a46f19d",
+      "source_processed_file": "audio/presentation/hurt_contact.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/hurt_blast.wav",
+      "sha256": "a3f147d5cec4c2d010dff5b9b82097d9b5d8e6b2718a566d31892eacc6ee64a7",
+      "source_processed_file": "audio/presentation/hurt_blast.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/weapon_explosion.wav",
+      "sha256": "8283acba68bdd2a13b20d30dbf2e786370b45e684099b206fdbc1bb42c108137",
+      "source_processed_file": "audio/presentation/weapon_explosion.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/shop_reroll.wav",
+      "sha256": "97b3301caf90ebac916865617c002040c77eee42f6f873704bb5b403a97a5138",
+      "source_processed_file": "audio/presentation/shop_reroll.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "tools/audio_sources/kenney_objects/weapon_nova_core.wav",
+      "sha256": "c9e4a663ed9f1fb2f4e0bc55e0123db995bd1ca88dae5e632dc41058ecedcea8",
+      "source_processed_file": "audio/presentation/weapon_nova_core.wav",
+      "snapshot_commit": "be0214e7dd3dd118caca5ed5e31bac6850cb5ef1",
+      "license": "CC0-1.0"
+    }
+  ]
+}

@@ -1,63 +1,100 @@
-# Presentation audio sources
+# Paperbureau audio sources
 
-The five WAV files in this directory are derived from Kenney's public-domain
-sound packs. Both source packs are licensed **Creative Commons Zero (CC0)**.
+All 35 routed cues now live in this directory. The old tonal placeholder WAVs
+and their runtime fallback have been removed. `audio/ambient.wav` is a separate
+16-second quiet room/feed-roller loop. This batch designs material and machine
+sound, not a composed music soundtrack.
 
-- Interface Sounds 1.0: https://kenney.nl/assets/interface-sounds
-  - Download used: `kenney_interface-sounds.zip`
+## Recorded source objects (CC0)
+
+Nine processed recordings from the previous committed palette are preserved as
+immutable development inputs in `tools/audio_sources/kenney_objects/`.
+`sources.json` records each exact SHA-256 and snapshot commit
+`be0214e7dd3dd118caca5ed5e31bac6850cb5ef1`. Development source snapshots are not
+included in game exports. They derive from these checksum-pinned official packs:
+
+- Kenney Interface Sounds 1.0: https://kenney.nl/assets/interface-sounds
+  - Archive: `kenney_interface-sounds.zip`
   - SHA-256: `f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232`
-- Impact Sounds 1.0: https://kenney.nl/assets/impact-sounds
-  - Download used: `kenney_impact-sounds.zip`
+- Kenney Impact Sounds 1.0: https://kenney.nl/assets/impact-sounds
+  - Archive: `kenney_impact-sounds.zip`
   - SHA-256: `029d734af1582474edf3a694d1b0cebc97c1c152f2f39fa34d4c2bafc5de77f8`
 - License: https://creativecommons.org/publicdomain/zero/1.0/
 
-The original archives include `License.txt` files that identify Kenney as the
-creator/distributor and state the CC0 license. Credit is optional under that
-license; it is recorded here for traceability.
+The original archives identify Kenney as creator/distributor and grant CC0.
+Credit is optional; source identity remains documented here for traceability.
+This batch uses the preserved local recordings and makes no new download.
 
-| Output | Source clips | Treatment |
+| Preserved input | Original source clips | Prior processing |
 | --- | --- | --- |
-| `click.wav` | Interface `click_001.ogg` | Shortened, high-pass filtered, faded and level-limited |
-| `buy.wav` | Interface `confirmation_003.ogg`; Impact `impactPlate_light_001.ogg` | Layered confirmation and light mechanical plate closure |
-| `hit.wav` | Impact `impactMetal_light_004.ogg` | Band-limited, shortened and faded for rapid repeated hits |
-| `echo.wav` | Interface `switch_003.ogg` | Level-shaped switch with a short decaying echo tail |
-| `wave_end.wav` | Interface `confirmation_002.ogg`; Impact `impactBell_heavy_001.ogg` | Layered confirmation and cropped bell tail |
+| `click` | Interface `click_001.ogg` | High-pass, crop, fade, level limit |
+| `weapon_pistol` | Impact `impactMetal_light_000.ogg` | Filtered short mechanical snap |
+| `weapon_longbow` | Interface `pluck_001.ogg` | Filtered natural object pluck |
+| `shield_block` | Impact `impactPlate_heavy_001.ogg` | Cropped plate resonance |
+| `hurt_contact` | Impact `impactSoft_medium_002.ogg` | Cropped soft object hit |
+| `hurt_blast` | Impact `impactPunch_heavy_000.ogg` | Low-pass punch/body impact |
+| `weapon_explosion` | Impact `impactPunch_medium_003.ogg`, `impactMetal_medium_000.ogg` | Layered compact impact |
+| `shop_reroll` | Interface `switch_001.ogg` | Filtered mechanical switch |
+| `weapon_nova_core` | Impact `impactBell_heavy_003.ogg`, Interface `glass_003.ogg` | Quiet resonant object body |
 
-`tools/build_presentation_audio.py` downloads the exact official archives and
-decodes each source to a fixed PCM intermediate before reproducing these 44.1
-kHz, mono, 16-bit PCM WAV files using `ffmpeg`. Its output limiter targets a
-peak no higher than 0.70 full scale (about -3.1 dBFS), and the builder rejects
-wrong formats, silent files, out-of-range peaks and cues longer than one second.
+## Original paper material and recipes
 
-## Rich combat and transaction feedback
+`tools/build_presentation_audio.py` is the single offline production path. It
+checks all source hashes, resamples the recorded objects, layers original
+deterministic granular friction and buckling fibres, removes DC, then applies
+zero-ended envelopes and conservative peak levels. The granular paper material
+is synthesis; no new recorded paper, microphone session or subjective listening
+validation is claimed. Original code/material is covered by the repository's
+`LICENSE`; recorded ingredients remain CC0.
 
-`tools/build_feedback_audio.py` uses the same checksum-pinned CC0 archives and
-the same fixed-PCM render path. It adds physical, sub-second cues without
-changing the five WAV files above.
+| Cue group | Physical language |
+| --- | --- |
+| `weapon_pistol`, `weapon_smg`, `shoot` | Dry staple/hole-punch releases with short paper edge |
+| `weapon_shotgun`, `weapon_rifle` | Folder slap and weighted stamp |
+| `weapon_orb`, `weapon_hex_bolt`, `weapon_nova_core` | Quiet resonant object body with fibre envelope |
+| `weapon_flechette`, `weapon_twin_fangs` | Offset puncture/staple clicks |
+| `weapon_longbow` | Object pluck and taut paper flick |
+| `weapon_flak_crown`, `weapon_rail_spike` | Heavy press and restrained plate tail |
+| `hit`, `hit_crit`, `kill` | Soft paper body, stronger buckle and crumple |
+| `shield_block` | Register clamp/plate closure |
+| `weapon_explosion`, `bomber_explosion` | Compact shredding burst and heavier discarded body |
+| `hurt`, `hurt_contact`, `hurt_blast` | Soft body collapse with paper friction |
+| `pickup`, `click`, `buy`, `equipment_apply` | Dry desk action and rubber-stamp closure |
+| `equipment_undo`, `shop_reroll` | Feed-roller reversal and sheet movement |
+| `echo`, `silence` | Copy fed/registered and register clamped shut |
+| `wave_start`, `wave_end` | Feed motor engages; completed sheet is stamped |
+| `lose`, `win` | Crumple followed by flattened-paper closure; completed-file stamp |
+| `boss` | Tension, seam snap at 0.18 seconds, paperjam body/release |
 
-| Outputs | Kenney source clips | Treatment |
-| --- | --- | --- |
-| `weapon_pistol`, `weapon_smg` | Impact `impactMetal_light_000/001` | Short, filtered mechanical snaps |
-| `weapon_shotgun`, `weapon_rifle` | Impact `impactMetal_heavy_000`, `impactMetal_medium_003` | Weighty close blast and tighter long report |
-| `weapon_orb` | Interface `glass_003`; Impact `impactBell_heavy_003` | Glass launch layered with a quiet resonant body |
-| `weapon_flechette` | Impact `impactMetal_light_003`, `impactGeneric_light_003` | Layered needle-like mechanical release |
-| `weapon_longbow` | Interface `pluck_001` | Natural pluck; intentionally no firearm burst |
-| `weapon_hex_bolt` | Interface `glass_005`, `switch_004` | Glassy arcane release with switch body |
-| `weapon_twin_fangs` | Impact `impactMetal_light_000/002` | Two offset light strikes |
-| `weapon_flak_crown` | Impact `impactMetal_heavy_002`, `impactPlate_heavy_001` | Heavy blast with plate tail |
-| `weapon_rail_spike` | Impact `impactMetal_heavy_004`, `impactMetal_medium_004` | Dense spike strike with a short metallic tail |
-| `weapon_nova_core` | Impact `impactBell_heavy_003`; Interface `glass_003` | Bell body and glass transient |
-| `hit_crit`, `shield_block` | Impact `impactMetal_medium_002`, `impactPlate_heavy_001` | Strong critical strike and distinct shield clang |
-| `weapon_explosion`, `bomber_explosion` | Impact punch/metal and punch/soft layers | Separate compact weapon blast and heavier bomber body |
-| `hurt_contact`, `hurt_blast` | Impact `impactSoft_medium_002`, `impactPunch_heavy_000` | Contact body hit and explosive player hit |
-| `equipment_apply`, `equipment_undo`, `shop_reroll` | Interface confirmation/back/switch; Impact plate | Mechanical transaction confirmation, reversal and reroll |
+The actual PHASE silence event owns the Boss tear cue; ordinary contact silence
+does not trigger it. Major paper actions briefly duck the quiet room bed.
+The twelve-voice pool, protected priorities, cooldowns, pause and mute paths stay
+bounded. Rapid weapon and hit levels are lower than transition/player signals.
+Age/merge spawn pitch and collapse stretching use existing event snapshots and
+never consume simulation randomness.
 
-Every added file is mono 44.1 kHz 16-bit PCM, lasts at most one second, and
-passes the same silence and peak bounds as the original presentation set.
+## Room loop and validation
 
-## Existing ambient bed
+The ambient loop uses low, whole-cycle motor modes, filtered air, and four sparse
+recorded feed/soft-object movements. It has no musical melody or bright constant
+buzz. It runs at -24 dB; both endpoints and their nearby slopes are zero. It is
+paused by the existing game pause path. Normalized preview playback is louder
+than its runtime level and is clearly labeled in the audition timeline.
 
-`audio/ambient.wav` is original deterministic procedural synthesis from
-`tools/gen_audio.py`, not a third-party recording. It is a 12-second seamless
-55/110/165 Hz sine drone with a whole-cycle low-frequency envelope. Its SHA-256
-is `ac5b898712d821859faf7698f61b4a6652fb459f5eeed56c054ad02589eecec9`.
+All production files are mono, 44.1 kHz, 16-bit PCM. Cue durations range from
+0.075 to 0.88 seconds, peak no higher than 0.64 full scale; the room loop is
+16 seconds with peak 0.18. `tests/test_audio_assets.py` checks format, body/RMS,
+headroom, DC, seam, exact reproduction, source corruption failure and the
+Boss transition accent. `tests/test_audio.gd` checks routing, voice bounds,
+cooldowns, mute, pause, detach, phase identity and bed envelopes.
+
+Reproduce the complete palette and an optional labeled audition:
+
+```
+python3 tools/build_presentation_audio.py --audition-dir /absolute/output/audio
+python3 -m unittest discover -s tests -p test_audio_assets.py
+```
+
+The audition starts with isolated representative materials, then a mixed scene
+at the actual runtime gains. It is an artifact for human listening; objective
+file checks alone do not establish perceived quality, comfort or speaker balance.

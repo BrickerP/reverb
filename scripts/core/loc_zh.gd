@@ -2,6 +2,11 @@ class_name LocZh
 extends RefCounted
 
 const TABLE := {
+	"world.returns": "退件入口",
+	"world.scrap": "报废工位",
+	"world.notice_title": "废件回收局",
+	"world.notice_line": "所有副本均可替换",
+	"world.notice_small": "原件概不退还",
 	"select.awaiting_release": "%s。暂未放行。",
 	"shop.vendor_refresh": "保质期再续一点。",
 	"shop.vendor_discard": "过去的你，已经过期。",

@@ -2,6 +2,11 @@ class_name LocEn
 extends RefCounted
 
 const TABLE := {
+	"world.returns": "RETURNS",
+	"world.scrap": "REJECT PROCESSING",
+	"world.notice_title": "RECYCLING BUREAU",
+	"world.notice_line": "ALL COPIES ARE REPLACEABLE",
+	"world.notice_small": "NO ORIGINALS RETURNED",
 	"select.awaiting_release": "%s. Not released yet.",
 	"shop.vendor_refresh": "A little more shelf life.",
 	"shop.vendor_discard": "Past you. Past its prime.",

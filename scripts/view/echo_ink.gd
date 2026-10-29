@@ -6,8 +6,7 @@ extends RefCounted
 const PAPER := Color("e5d8b8")
 const INK := Color("292720")
 const OLD_INK := Color("77755f")
-const DANGER := Color("be5749")
-const MAX_PIPS := 8
+const MAX_SLOTS := 8
 const MAX_CREASES := 3
 const MAX_TEARS := 2
 
@@ -22,9 +21,10 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		"age": 0, "age_ratio": 0.0, "expiring": false, "expired": true,
 		"merged": false, "muted": false, "rewinding": false, "slot": 0,
 		"identity_pattern": 0, "tint": PAPER, "body_tint": PAPER,
+		"state_priority": &"expired",
 		"alpha": 0.0, "offset_alpha": 0.0, "print_offset": Vector2.ZERO,
 		"paper_scale": Vector2.ONE,
-		"crease_count": 0, "tear_count": 0, "staple_count": 0, "pip_count": 0,
+		"crease_count": 0, "tear_count": 0, "staple_count": 0,
 		"crowded": false, "reduced": reduced}
 	if actor == null or actor.take == null or sim == null or not actor.pos.is_finite():
 		return result
@@ -33,35 +33,46 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 	var left := maxi(0, lifetime - age)
 	var wear := clampf(float(age) / float(maxi(1, lifetime - 1)), 0.0, 1.0)
 	var expired := left == 0
+	var expiring := left == 1
 	var muted := sim.echo_silenced > 0.0
 	var crowded := sim.echoes.size() > 4
 	var tint := identity_color(actor.take.tint())
-	var alpha := lerpf(0.78, 0.61, wear)
-	var body := PAPER.lerp(tint, 0.18 + wear * 0.12)
+	var alpha := lerpf(0.80, 0.67, wear)
+	var body := PAPER.lerp(tint, 0.18).lerp(OLD_INK, wear * 0.18)
+	var state_priority: StringName = &"worn" if age > 0 else &"fresh"
+	if actor.take.merged:
+		state_priority = &"merged"
+	if expiring:
+		# A whole-body value drop and compressed paper survive battlefield scale;
+		# surface creases alone disappear when the same artwork is only 40px wide.
+		body = body.lerp(OLD_INK, 0.34)
+		alpha = 0.67
+		state_priority = &"expiring"
 	if muted:
-		# A closed mouth and ink seam carry silence; opacity never makes a live copy
-		# disappear among other bodies merely because it cannot currently fire.
-		alpha = 0.54
-		body = body.lerp(OLD_INK, 0.20)
+		# Silence reads as a dark cancelled print, not as a disappearing body.
+		# Its crossed seal is independent of the last-wave tear and binding.
+		alpha = 0.76
+		body = body.lerp(INK, 0.42)
+		state_priority = &"muted"
 	if expired:
 		alpha = 0.0
+		state_priority = &"expired"
 	var creases := mini(MAX_CREASES, ceili(wear * 3.0))
 	var tears := mini(MAX_TEARS, floori(wear * 2.0))
 	if crowded or reduced:
 		creases = mini(2, creases)
 		tears = mini(1, tears)
-	var slot := clampi(actor.index, 0, MAX_PIPS - 1)
+	var slot := clampi(actor.index, 0, MAX_SLOTS - 1)
 	result.merge({"valid": true, "visible": not expired, "lifespan": lifetime,
-		"remaining": left, "age": age, "age_ratio": wear, "expiring": left == 1,
+		"remaining": left, "age": age, "age_ratio": wear, "expiring": expiring,
 		"expired": expired, "merged": actor.take.merged, "muted": muted,
 		"rewinding": actor.rewinding, "slot": slot, "identity_pattern": slot,
-		"tint": tint, "body_tint": body, "alpha": alpha,
-		"offset_alpha": alpha * (0.22 if reduced else 0.34),
+		"tint": tint, "body_tint": body, "alpha": alpha, "state_priority": state_priority,
+		"offset_alpha": alpha * (0.12 if muted else (0.20 if reduced else 0.28)),
 		"print_offset": Vector2(1.4 + wear * 2.0, 0.45 if slot % 2 else -0.45),
-		"paper_scale": Vector2(1.0 + wear * 0.04, 1.0 - wear * 0.07),
+		"paper_scale": Vector2(1.08, 0.84) if expiring else Vector2(1.0 + wear * 0.03, 1.0 - wear * 0.05),
 		"crease_count": creases, "tear_count": tears,
-		"staple_count": 1 if actor.take.merged else 0,
-		"pip_count": mini(MAX_PIPS, lifetime), "crowded": crowded}, true)
+		"staple_count": 1 if actor.take.merged else 0, "crowded": crowded}, true)
 	return result
 
 
@@ -69,8 +80,8 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 # can be checked without replacing the renderer with an implementation mirror.
 static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 	var result := {"creases": [], "tears": [], "staples": [], "punctures": [],
-		"identity": [], "mute": [], "rewind": [], "expiry": PackedVector2Array(),
-		"pip_rects": [], "pip_filled": []}
+		"identity": [], "mute": [], "mute_contour": PackedVector2Array(),
+		"rewind": [], "expiry": PackedVector2Array()}
 	if not bool(data.get("visible", false)) or not _valid_bounds(bounds):
 		return result
 	var creases: Array[PackedVector2Array] = []
@@ -89,23 +100,25 @@ static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 	var staples: Array[PackedVector2Array] = []
 	var punctures: Array[Vector2] = []
 	if bool(data.get("merged", false)):
-		staples.append(_map(PackedVector2Array([Vector2(0.29, 0.23), Vector2(0.29, 0.065),
-			Vector2(0.72, 0.065), Vector2(0.72, 0.23)]), bounds))
-		punctures.append(_point(Vector2(0.29, 0.23), bounds))
-		punctures.append(_point(Vector2(0.72, 0.23), bounds))
+		staples.append(_map(PackedVector2Array([Vector2(0.14, 0.35), Vector2(0.14, 0.13),
+			Vector2(0.84, 0.15), Vector2(0.86, 0.35)]), bounds))
+		punctures.append(_point(Vector2(0.14, 0.35), bounds))
+		punctures.append(_point(Vector2(0.86, 0.35), bounds))
 	# Three physical punch positions identify the eight current slots even if two
 	# palette entries repeat. These are slot marks, not a claim of permanent identity.
 	var identity: Array[Dictionary] = []
-	var pattern := clampi(int(data.get("identity_pattern", 0)), 0, MAX_PIPS - 1)
+	var pattern := clampi(int(data.get("identity_pattern", 0)), 0, MAX_SLOTS - 1)
 	for bit in 3:
 		identity.append({"pos": _point(Vector2(0.17 + float(bit) * 0.075, 0.08), bounds),
 			"punched": (pattern & (1 << bit)) != 0})
 	var mute: Array[PackedVector2Array] = []
+	var mute_contour := PackedVector2Array()
 	if bool(data.get("muted", false)):
-		mute.append(_map(PackedVector2Array([Vector2(0.66, 0.25), Vector2(0.85, 0.25)]), bounds))
-		for k in 3:
-			var x := 0.69 + float(k) * 0.06
-			mute.append(_map(PackedVector2Array([Vector2(x - 0.015, 0.21), Vector2(x + 0.015, 0.29)]), bounds))
+		mute_contour = _map(PackedVector2Array([Vector2(0.15, 0.39), Vector2(0.08, 0.47),
+			Vector2(0.12, 0.69), Vector2(0.84, 0.70), Vector2(0.92, 0.61),
+			Vector2(0.88, 0.40), Vector2(0.15, 0.39)]), bounds)
+		mute.append(_map(PackedVector2Array([Vector2(0.28, 0.42), Vector2(0.73, 0.67)]), bounds))
+		mute.append(_map(PackedVector2Array([Vector2(0.73, 0.42), Vector2(0.28, 0.67)]), bounds))
 	var rewind: Array[PackedVector2Array] = []
 	if bool(data.get("rewinding", false)):
 		for index in 2:
@@ -114,22 +127,12 @@ static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 				Vector2(x, 0.52)]), bounds))
 	var expiry := PackedVector2Array()
 	if bool(data.get("expiring", false)):
-		expiry = _map(PackedVector2Array([Vector2(0.22, 0.96), Vector2(0.35, 0.92),
-			Vector2(0.47, 0.97), Vector2(0.59, 0.93), Vector2(0.76, 0.96)]), bounds)
-	var pips: Array[Rect2] = []
-	var filled: Array[bool] = []
-	var count := mini(int(data.get("pip_count", 0)), mini(MAX_PIPS, floori(bounds.size.x / 3.0)))
-	var meter_width := minf(30.0, bounds.size.x * 0.72)
-	if count > 0:
-		var step := meter_width / float(count)
-		var left := bounds.get_center().x - meter_width * 0.5
-		for index in count:
-			pips.append(Rect2(Vector2(left + float(index) * step, bounds.end.y + 3.0),
-				Vector2(maxf(0.6, step - 1.0), 2.5)))
-			filled.append(float(index) / float(count) < float(data.get("remaining", 0)) / float(maxi(1, int(data.get("lifespan", 1)))))
+		expiry = _map(PackedVector2Array([Vector2(0.08, 0.77), Vector2(0.13, 0.95),
+			Vector2(0.27, 0.78), Vector2(0.40, 0.96), Vector2(0.54, 0.77),
+			Vector2(0.69, 0.95), Vector2(0.81, 0.78), Vector2(0.92, 0.91)]), bounds)
 	result.merge({"creases": creases, "tears": tears, "staples": staples,
-		"punctures": punctures, "identity": identity, "mute": mute,
-		"rewind": rewind, "expiry": expiry, "pip_rects": pips, "pip_filled": filled}, true)
+		"punctures": punctures, "identity": identity, "mute": mute, "mute_contour": mute_contour,
+		"rewind": rewind, "expiry": expiry}, true)
 	return result
 
 
@@ -149,29 +152,29 @@ static func draw_marks(ci: CanvasItem, _actor: EchoActor, art_bounds: Rect2,
 	for line: PackedVector2Array in geometry["tears"]:
 		ci.draw_polyline(line, ink, width + 0.3, true)
 	for line: PackedVector2Array in geometry["staples"]:
-		ci.draw_polyline(line, Color(PAPER, alpha), 5.0, true)
-		ci.draw_polyline(line, Color(INK, alpha), 2.7, true)
+		ci.draw_polyline(line, Color(PAPER, 0.90), 6.5, true)
+		ci.draw_polyline(line, Color(INK, 0.90), 3.0, true)
 	for point: Vector2 in geometry["punctures"]:
-		ci.draw_circle(point, 1.7, Color(INK, alpha))
+		ci.draw_circle(point, 2.0, Color(INK, 0.90))
 	for mark: Dictionary in geometry["identity"]:
 		var point: Vector2 = mark["pos"]
 		if bool(mark["punched"]):
 			ci.draw_circle(point, 0.95, Color(INK, alpha * 0.9), true, -1.0, true)
 		else:
 			ci.draw_circle(point, 0.95, Color(INK, alpha * 0.9), false, 0.8, true)
+	var mute_contour: PackedVector2Array = geometry["mute_contour"]
+	if not mute_contour.is_empty():
+		ci.draw_polyline(mute_contour, Color(PAPER, 0.78), 5.0, true)
+		ci.draw_polyline(mute_contour, Color(INK, 0.92), 2.7, true)
 	for line: PackedVector2Array in geometry["mute"]:
-		ci.draw_polyline(line, Color(PAPER, alpha), 3.4, true)
-		ci.draw_polyline(line, Color(DANGER, alpha), 1.8, true)
+		ci.draw_polyline(line, Color(PAPER, 0.78), 5.0, true)
+		ci.draw_polyline(line, Color(INK, 0.92), 2.7, true)
 	for line: PackedVector2Array in geometry["rewind"]:
 		ci.draw_polyline(line, Color(INK, alpha), 1.8, true)
 	var expiry: PackedVector2Array = geometry["expiry"]
 	if not expiry.is_empty():
-		ci.draw_polyline(expiry, Color(INK, alpha), 1.8, true)
-	var pips: Array = geometry["pip_rects"]
-	var filled: Array = geometry["pip_filled"]
-	var tint: Color = data.get("tint", PAPER)
-	for index in pips.size():
-		ci.draw_rect(pips[index], tint if bool(filled[index]) else Color(INK, 0.24))
+		ci.draw_polyline(expiry, Color(PAPER, 0.83), 5.7, true)
+		ci.draw_polyline(expiry, Color(INK, 0.93), 2.9, true)
 
 
 static func _valid_bounds(bounds: Rect2) -> bool:

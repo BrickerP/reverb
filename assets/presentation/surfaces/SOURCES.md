@@ -1,6 +1,12 @@
 # World and UI illustration sources
 
-`arena_floor.png` and `recording_cartridge.png` retain the original approved
+`arena_floor.png` is the 2026-10-29 recycling-bureau replacement: warm ash/sage
+paper work floor, sparse low ink edge channels and stapled seams. The generic
+crate and fence wall is removed. Its quiet center supports the original paper
+actors; the recycling machinery and live notices are separate edge landmarks in
+`../environment/depot_landmarks.png`.
+
+`recording_cartridge.png` retains the original approved
 Carbon Copy Purgatory production artwork. `shopkeeper.png` adds a soft,
 hand-inked scrap merchant with four event-driven expressions: tired, payment,
 empty hands and a round bite mouth.

@@ -5,7 +5,8 @@ const POOL := 12
 const COMMON_POOL := 7
 const PROTECTED_POOL := 5
 const PRESENTATION_DIR := "res://audio/presentation"
-const LEGACY_AUDIO_DIR := "res://audio"
+const AMBIENT_DB := -24.0
+const TRANSITION_DUCK_DB := -8.0
 const NAMES: Array[StringName] = [
 	&"shoot", &"hit", &"kill", &"pickup", &"buy", &"hurt", &"echo",
 	&"wave_start", &"wave_end", &"lose", &"win", &"click", &"boss", &"silence",
@@ -42,40 +43,40 @@ const WEAPON_PROFILES := {
 }
 const VOLUMES := {
 	&"shoot": -15.0,
-	&"hit": -20.0,
-	&"kill": -13.0,
-	&"pickup": -17.0,
-	&"buy": -11.0,
-	&"hurt": -8.0,
-	&"echo": -12.0,
-	&"wave_start": -12.0,
-	&"wave_end": -12.0,
-	&"lose": -7.0,
-	&"win": -7.0,
+	&"hit": -22.0,
+	&"kill": -16.0,
+	&"pickup": -21.0,
+	&"buy": -13.0,
+	&"hurt": -11.0,
+	&"echo": -14.0,
+	&"wave_start": -14.0,
+	&"wave_end": -13.0,
+	&"lose": -10.0,
+	&"win": -10.0,
 	&"click": -18.0,
-	&"boss": -8.0,
-	&"silence": -9.0,
-	&"weapon_pistol": -13.0,
-	&"weapon_smg": -15.0,
-	&"weapon_shotgun": -10.0,
-	&"weapon_rifle": -11.0,
-	&"weapon_orb": -13.0,
-	&"weapon_flechette": -14.0,
-	&"weapon_longbow": -12.0,
-	&"weapon_hex_bolt": -13.0,
-	&"weapon_twin_fangs": -14.0,
-	&"weapon_flak_crown": -9.0,
-	&"weapon_rail_spike": -9.0,
-	&"weapon_nova_core": -10.0,
-	&"hit_crit": -14.0,
-	&"shield_block": -13.0,
-	&"weapon_explosion": -10.0,
-	&"bomber_explosion": -7.0,
-	&"hurt_contact": -8.0,
-	&"hurt_blast": -6.0,
-	&"equipment_apply": -10.0,
-	&"equipment_undo": -11.0,
-	&"shop_reroll": -14.0,
+	&"boss": -11.0,
+	&"silence": -12.0,
+	&"weapon_pistol": -17.0,
+	&"weapon_smg": -20.0,
+	&"weapon_shotgun": -15.0,
+	&"weapon_rifle": -16.0,
+	&"weapon_orb": -18.0,
+	&"weapon_flechette": -19.0,
+	&"weapon_longbow": -17.0,
+	&"weapon_hex_bolt": -18.0,
+	&"weapon_twin_fangs": -19.0,
+	&"weapon_flak_crown": -14.0,
+	&"weapon_rail_spike": -14.0,
+	&"weapon_nova_core": -15.0,
+	&"hit_crit": -17.0,
+	&"shield_block": -16.0,
+	&"weapon_explosion": -15.0,
+	&"bomber_explosion": -11.0,
+	&"hurt_contact": -11.0,
+	&"hurt_blast": -10.0,
+	&"equipment_apply": -12.0,
+	&"equipment_undo": -13.0,
+	&"shop_reroll": -16.0,
 }
 const COOLDOWNS := {
 	&"shoot": 0.035,
@@ -147,6 +148,7 @@ var _silent := false
 var _bound: Sim
 var _bound_shop: Shop
 var _music: AudioStreamPlayer
+var _duck_remaining := 0.0
 
 
 func _ready() -> void:
@@ -166,10 +168,31 @@ func _ready() -> void:
 		ambient.loop_begin = 0
 		ambient.loop_end = int(ambient.get_length() * float(ambient.mix_rate))
 		_music.stream = ambient
-		_music.volume_db = -26.0
+		_music.volume_db = AMBIENT_DB
 		add_child(_music)
 		if not _silent:
 			_music.play()
+
+
+func _process(delta: float) -> void:
+	if _paused:
+		return
+	_duck_remaining = maxf(0.0, _duck_remaining - delta)
+	_update_ambient_level()
+
+
+func _duck_room(seconds: float) -> void:
+	if _paused:
+		return
+	_duck_remaining = maxf(_duck_remaining, seconds)
+	_update_ambient_level()
+
+
+func _update_ambient_level() -> void:
+	if _music != null:
+		# A short release makes major paper actions readable without a new voice,
+		# audio bus, timer node or mutable simulation state.
+		_music.volume_db = AMBIENT_DB + TRANSITION_DUCK_DB * minf(1.0, _duck_remaining / 0.16)
 
 
 func _exit_tree() -> void:
@@ -186,6 +209,8 @@ func _add_player(pool: Array[AudioStreamPlayer]) -> void:
 
 
 func stop_all() -> void:
+	_duck_remaining = 0.0
+	_update_ambient_level()
 	if _music != null:
 		_music.stop()
 	for player in _players:
@@ -233,7 +258,6 @@ func bind(sim: Sim) -> void:
 	sim.purchased.connect(_on_purchase)
 	sim.run_lost.connect(_on_lost)
 	sim.run_won.connect(_on_won)
-	sim.boss_spawned.connect(_on_boss)
 	sim.echoes_silenced.connect(_on_silence)
 	_bound_shop.shop_action_resolved.connect(_on_shop_action)
 
@@ -252,7 +276,6 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.purchased, _on_purchase)
 		_disconnect_signal(_bound.run_lost, _on_lost)
 		_disconnect_signal(_bound.run_won, _on_won)
-		_disconnect_signal(_bound.boss_spawned, _on_boss)
 		_disconnect_signal(_bound.echoes_silenced, _on_silence)
 	if _bound_shop != null:
 		_disconnect_signal(_bound_shop.shop_action_resolved, _on_shop_action)
@@ -271,6 +294,8 @@ func _reset_session_state() -> void:
 	_next_protected = 0
 	_play_serial = 0
 	_paused = false
+	_duck_remaining = 0.0
+	_update_ambient_level()
 	if _music != null:
 		_music.stream_paused = false
 
@@ -370,14 +395,13 @@ func binding_state() -> Dictionary:
 		"routed_voices": _player_cues.size(),
 		"ambient_playing": _music != null and _music.playing,
 		"ambient_paused": _music != null and _music.stream_paused,
+		"ambient_volume_db": _music.volume_db if _music != null else AMBIENT_DB,
+		"duck_remaining": _duck_remaining,
 	}
 
 
 static func stream_path(name: StringName) -> String:
-	var preferred := "%s/%s.wav" % [PRESENTATION_DIR, name]
-	if ResourceLoader.exists(preferred):
-		return preferred
-	return "%s/%s.wav" % [LEGACY_AUDIO_DIR, name]
+	return "%s/%s.wav" % [PRESENTATION_DIR, name]
 
 
 static func weapon_profile(id: StringName) -> Dictionary:
@@ -441,6 +465,12 @@ func _on_damage_info(info: DamageInfo) -> void:
 
 
 func _on_explosion_info(info: ExplosionInfo) -> void:
+	if info.effect == &"echo_collapse":
+		# The same physical burst is stretched into a large discarded paper sheet.
+		# Source statistics and collision timing remain owned by the simulation.
+		play(&"weapon_explosion", 1.5, 0.66)
+		_duck_room(0.42)
+		return
 	var cue := &"bomber_explosion" if info.kind == ExplosionInfo.BOMBER else &"weapon_explosion"
 	play(cue, -2.0 if info.source >= 0 else 0.0, 1.0)
 
@@ -449,20 +479,6 @@ func _on_hurt_info(info: PlayerHurtInfo) -> void:
 	var blast := info.effect == &"bomber_explosion"
 	play(&"hurt_blast" if blast else &"hurt_contact", 2.0 if info.lethal else 0.0,
 			0.90 if info.lethal else 1.0)
-
-
-# Compatibility handlers remain callable for older tools, but bind() deliberately
-# consumes rich combat signals so the legacy+rich pair emitted by Sim plays once.
-func _on_shot(source: int) -> void:
-	play(&"shoot", -2.0 if source >= 0 else 0.0, 0.93 if source >= 0 else 1.0)
-
-
-func _on_hit(_pos: Vector2, _amount: float, crit: bool, source: int) -> void:
-	play(&"hit", -2.0 if source >= 0 else 0.0, 1.18 if crit else 1.0)
-
-
-func _on_hurt(_amount: float) -> void:
-	play(&"hurt")
 
 
 func _on_kill(info: EnemyDeathInfo) -> void:
@@ -487,8 +503,9 @@ func _on_pickup(amount: int) -> void:
 	play(&"pickup", 0.0, 1.0 + minf(0.2, float(amount) * 0.02))
 
 
-func _on_echo(_actor: EchoActor) -> void:
-	play(&"echo")
+func _on_echo(actor: EchoActor) -> void:
+	var pitch := 1.03 if actor.take.merged else clampf(0.98 - float(actor.take.age) * 0.025, 0.72, 0.98)
+	play(&"echo", 0.5 if actor.take.merged else 0.0, pitch)
 
 
 func _on_wave_start(_wave: int) -> void:
@@ -518,15 +535,18 @@ func _on_shop_action(result: ShopResult) -> void:
 
 func _on_lost() -> void:
 	play(&"lose")
+	_duck_room(0.82)
 
 
 func _on_won() -> void:
 	play(&"win")
+	_duck_room(0.88)
 
 
-func _on_boss(_enemy: EnemyState) -> void:
-	play(&"boss")
-
-
-func _on_silence(_info: EchoSilenceInfo) -> void:
+func _on_silence(info: EchoSilenceInfo) -> void:
+	if info.kind == EchoSilenceInfo.PHASE:
+		# One authoritative PHASE event owns the synchronized .18s seam snap.
+		play(&"boss", 1.5, 1.0)
+		_duck_room(0.8)
+		return
 	play(&"silence")

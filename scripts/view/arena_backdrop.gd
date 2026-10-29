@@ -1,13 +1,29 @@
 class_name ArenaBackdrop
 extends Node2D
 
-# Static parts of the arena (quiet paper-yard floor and ink perimeter). Drawn once and left alone; ArenaView only
-# redraws the moving actors on top of it.
+# The quiet floor stays static. A single child draws shallow edge landmarks at
+# a restrained rate instead of redrawing the full floor with every belt tick.
+
+var _depot: RecyclingDepot
 
 
 func _ready() -> void:
+	_ensure_depot()
 	queue_redraw()
 
 
 func _draw() -> void:
 	ArenaPainter.arena(self)
+
+
+func set_presentation(time: float, reduced: bool, paused: bool) -> void:
+	_ensure_depot()
+	_depot.set_presentation(time, reduced, paused)
+
+
+func _ensure_depot() -> void:
+	if _depot != null:
+		return
+	_depot = RecyclingDepot.new()
+	add_child(_depot)
+	_depot.set_presentation(0.0, false, false)

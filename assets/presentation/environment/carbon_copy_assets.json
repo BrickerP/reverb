@@ -1,0 +1,94 @@
+{
+  "tool": "built-in imagegen",
+  "date": "2026-10-29",
+  "art_direction": "Carbon Copy Purgatory",
+  "assets": [
+    {
+      "file": "assets/presentation/environment/depot_landmarks.png",
+      "size": [
+        1881,
+        836
+      ],
+      "width": 1881,
+      "height": 836,
+      "mode": "RGBA",
+      "sha256": "2ba8d54c4e20c8b4ac491f79921846a249541c0b5d5393353c1066b3ede9950d",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        28,
+        59,
+        1857,
+        746
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "columns": 1,
+      "rows": 1,
+      "frame_count": 1,
+      "id": "depot_landmarks",
+      "source_file": "/Users/yupeng/.codex/generated_images/01a18786-eeea-70d2-bbaf-92d61a3f10e1/exec-9c515088-d4ce-488b-9730-da9340734af4.png",
+      "references": [
+        "assets/presentation/player.png",
+        "assets/presentation/enemies/brute.png"
+      ],
+      "regions": {
+        "returns": [
+          28,
+          272,
+          721,
+          449
+        ],
+        "workstation": [
+          774,
+          59,
+          519,
+          673
+        ],
+        "notice": [
+          1332,
+          117,
+          525,
+          629
+        ]
+      },
+      "prompt": "Use case: stylized-concept. Asset type: one production game prop atlas, truly transparent RGBA background. The two input images are STYLE REFERENCES ONLY, not edit targets. Match their original hand-drawn paper-puppet world: thick uneven charcoal contour, worn cream paper, soot gray machinery, dull brass and tiny oxblood red details, one flat paper shadow, mischievous bureaucratic black humor. Make a NEW sheet in landscape 1536x1024, exactly THREE equal-width columns (512 pixels each), ONE row. Each independent prop completely inside its own column with 30 px transparent padding and no overlap. No frames, labels, text, letters, numbers, floors, backgrounds, glows or cast shadows beyond the object. View is slightly top-down frontal, the same readable 2D cutout game perspective as the references. Column 1: a horizontal rejected-mail returns conveyor with a squat sleepy looking paper-feed mouth on one end, chunky uneven rollers, a few embarrassed crumpled envelopes, and an empty cream hanging tag for live game text; wide short silhouette, readable from 200 pixel width. Column 2: an absurd bureaucratic scrap-processing stamping workstation: squat wheeled metal desk, giant manual rubber-stamp lever high above a small pile of discarded paper forms, one jammed paper tongue, bulging rivets and a tiny dull indicator lamp; stout asymmetrical silhouette, not a living enemy, no eyes, fits within one column. Column 3: crooked notice board assembled from scrap wood and a bent staple, one LARGE blank light cream torn paper notice facing camera, two little blank pinned slips at its corner, a small crossed-out wastepaper pictogram with no writing. Leave the main notice completely blank for bilingual game text. Keep solid bold silhouettes rather than tiny textures. Every prop should be a usable original game sprite, isolated on full transparency, and must stay visibly separated across the three columns.",
+      "layout_note": "Tool authored three separated unequal-width props instead of equal columns; use explicit static regions, never infer animation from sheet proportions.",
+      "render_contract": {
+        "natural_proportions": true,
+        "returns_destination": [
+          60,
+          92,
+          190,
+          118
+        ],
+        "workstation_destination": [
+          1128,
+          538,
+          100,
+          130
+        ],
+        "poster_destination": [
+          48,
+          550,
+          80,
+          96
+        ],
+        "live_notice_destination": [
+          516,
+          86,
+          248,
+          60
+        ],
+        "live_notice_technique": "native torn-paper polygon with localized font text",
+        "quiet_center": [
+          260,
+          220,
+          860,
+          320
+        ]
+      }
+    }
+  ]
+}

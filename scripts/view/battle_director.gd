@@ -12,7 +12,9 @@ const HURT_TIME := 0.10
 const HURT_INTERVAL := 0.24
 const CONTACT_TIME := 0.24
 const PLAYER_DEATH_TIME := 0.55
-const TEAR_TIME := 0.58
+const TEAR_TIME := 0.62
+const TEAR_TENSION_TIME := 0.16
+const TEAR_SNAP_TIME := 0.11
 
 var corpses: Array[Dictionary] = []
 var tear: Dictionary = {}
@@ -47,7 +49,8 @@ func settle(reduced: bool) -> void:
 	_shots.clear()
 	_enemy_contacts.clear()
 	_boss_roar = 0.0
-	tear.clear()
+	if not tear.is_empty():
+		tear["reduced"] = true
 	while corpses.size() > REDUCED_CORPSES:
 		var discarded := 0
 		for index in corpses.size():
@@ -142,7 +145,47 @@ func is_boss_roaring() -> bool:
 
 func begin_tear(origin: Vector2) -> void:
 	if origin.is_finite():
-		tear = {"pos": origin, "age": 0.0}
+		tear = {"pos": origin, "age": 0.0, "reduced": false}
+
+
+# The live shards are never held, hidden or moved by this discarded-paper print.
+# Its three beats merely describe the real phase event after it has happened.
+func tear_profile(reduced: bool = false) -> Dictionary:
+	if tear.is_empty():
+		return {}
+	var age := clampf(float(tear["age"]), 0.0, TEAR_TIME)
+	var progress := age / TEAR_TIME
+	var opacity := 1.0 - smoothstep(0.72, 1.0, progress)
+	if reduced or bool(tear.get("reduced", false)):
+		return {"stage": &"settled", "progress": progress, "stage_progress": progress,
+			"frame": 5, "stretch": Vector2.ONE, "spring": 0.0, "rotation": 0.0,
+			"whole_alpha": 0.0, "half_alpha": 0.0, "seam_width": 12.0,
+			"seam_alpha": opacity * 0.9, "fragment_alpha": 0.0,
+			"fragment_travel": 0.0}
+	if age < TEAR_TENSION_TIME:
+		var p := age / TEAR_TENSION_TIME
+		return {"stage": &"tension", "progress": progress, "stage_progress": p,
+			"frame": 4, "stretch": Vector2(1.0 + p * 0.16, 1.0 - p * 0.11),
+			"spring": 0.0, "rotation": 0.0, "whole_alpha": 0.70,
+			"half_alpha": 0.0, "seam_width": 2.0 + p * 2.5,
+			"seam_alpha": 0.9, "fragment_alpha": 0.0, "fragment_travel": 0.0}
+	if age < TEAR_TENSION_TIME + TEAR_SNAP_TIME:
+		var p := (age - TEAR_TENSION_TIME) / TEAR_SNAP_TIME
+		return {"stage": &"snap", "progress": progress, "stage_progress": p,
+			"frame": 5, "stretch": Vector2(1.16, 0.89), "spring": 18.0 * p,
+			"rotation": p * 0.16, "whole_alpha": (1.0 - p) * 0.70,
+			"half_alpha": p * 0.6, "seam_width": 4.5 + p * 9.5,
+			"seam_alpha": 1.0, "fragment_alpha": 0.85,
+			"fragment_travel": p * 12.0}
+	var p := (age - TEAR_TENSION_TIME - TEAR_SNAP_TIME) / (TEAR_TIME - TEAR_TENSION_TIME - TEAR_SNAP_TIME)
+	# One overshoot then settle, rather than an endlessly oscillating combat object.
+	var spring := 18.0 + 23.0 * (1.0 - pow(1.0 - p, 3.0)) + sin(p * PI) * 8.0
+	return {"stage": &"release", "progress": progress, "stage_progress": p,
+		"frame": 5, "stretch": Vector2.ONE, "spring": spring,
+		"rotation": 0.16 * (1.0 - p), "whole_alpha": 0.0,
+		"half_alpha": pow(1.0 - p, 2.0) * 0.6, "seam_width": 14.0 - p * 9.0,
+		"seam_alpha": pow(1.0 - p, 1.5), "fragment_alpha": (1.0 - p) * 0.85,
+		"fragment_travel": 12.0 + p * 26.0}
 
 
 func lose_player(position: Vector2, facing: Vector2, character: StringName) -> void:

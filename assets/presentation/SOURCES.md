@@ -1,6 +1,6 @@
 # Carbon Copy Purgatory artwork
 
-All 42 production PNGs use the approved original paper-puppet art direction:
+All 43 production PNGs use the approved original paper-puppet art direction:
 thick dark ink contours, flat recycled-paper fills, tired expressions, limited
 sage/yellow/red accents, and visual jokes about disposable copies. They replace
 the previous mechanical character, weapon, enemy and metal-panel artwork.
@@ -11,7 +11,7 @@ No existing game's characters or artwork are included.
 
 The runtime catalog preserves all content IDs. Character fronts/backs and all
 seven enemy identities are four-column, two-row action atlases. Common crop bounds
-are measured across all four cells so changing poses never changes scale.
+are measured across all eight cells so changing poses never changes scale.
 Weapons remain independently mounted; echoes reuse the selected character art.
 
 ## Production provenance
@@ -28,7 +28,12 @@ from the actual PNG bytes by `python3 tools/sync_art_catalog.py`. Pixel scanning
 occurs only offline; the game reads precomputed bounds.
 
 Other groups: [Items](items/SOURCES.md), [Surfaces](surfaces/SOURCES.md),
+[Recycling depot landmarks](environment/SOURCES.md),
 [Application icon](app_icon/SOURCES.md).
+
+The depot atlas is static region artwork with independently measured prop crops,
+not an animation strip. Its production manifest retains those regions; the
+backdrop loads it directly, as it does the arena floor.
 
 `bounds_ltrb` measures the complete PNG; `frame_union_ltrb` measures all poses
 in local cell coordinates. Right and bottom are exclusive. Visible alpha is

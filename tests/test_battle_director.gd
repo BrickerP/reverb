@@ -149,6 +149,138 @@ func test_boss_transition_is_separate_from_real_shards_and_death_identity(c: Che
 	c.eq(BattleDirector.corpse_profile(director.corpses[0])["frame"], 7, "both defeated halves end as harmless torn paper")
 
 
+func test_boss_tear_has_tension_snap_release_and_a_finite_visual_envelope(c: Check) -> void:
+	var director := BattleDirector.new()
+	c.ok(director.tear_profile().is_empty(), "clock alone cannot create a boss transition")
+	director.begin_tear(Vector2(320.0, 280.0))
+	c.eq(director.tear_profile()["stage"], &"tension", "the real event starts by pulling paper tight")
+	director.step(BattleDirector.TEAR_TENSION_TIME * 0.8)
+	var stretched := director.tear_profile()
+	c.ok(stretched["stretch"].x > 1.1 and stretched["stretch"].y < 0.93,
+			"tension changes the print's silhouette before it breaks")
+	c.eq(stretched["half_alpha"], 0.0, "halves do not appear before the seam breaks")
+	director.step(BattleDirector.TEAR_TENSION_TIME * 0.2 + 0.001)
+	c.eq(director.tear_profile()["stage"], &"snap", "seam break follows tension at the exact boundary")
+	c.ok(director.tear_profile()["fragment_alpha"] > 0.8, "one strong bounded paper burst marks the break")
+	director.step(BattleDirector.TEAR_SNAP_TIME)
+	c.eq(director.tear_profile()["stage"], &"release", "springing afterprints follow the broken seam")
+	c.ok(director.tear_profile()["half_alpha"] > 0.5, "the release has a visible paper silhouette")
+	for index in 35:
+		var profile := director.tear_profile()
+		if profile.is_empty():
+			break
+		c.ok(float(profile["spring"]) >= 0.0 and float(profile["spring"]) <= 49.0,
+				"discarded halves stay within a local bounded decorative envelope")
+		c.ok(float(profile["seam_width"]) <= 14.0 and absf(float(profile["rotation"])) <= 0.16,
+				"a seam is not drawn as an arena-spanning threat")
+		director.step(0.01)
+	director.step(0.02)
+	c.ok(director.tear.is_empty(), "the complete three-beat picture ends within 0.62 seconds")
+	director.begin_tear(Vector2(INF, 1.0))
+	c.ok(director.tear.is_empty(), "invalid origin cannot allocate a transition")
+	director.begin_tear(Vector2.ONE)
+	var age: float = director.tear["age"]
+	director.step(NAN)
+	director.step(-1.0)
+	c.eq(director.tear["age"], age, "invalid deltas never advance or poison the tear timeline")
+
+
+func test_reduced_tear_keeps_a_stationary_broken_seam_without_motion(c: Check) -> void:
+	var director := BattleDirector.new()
+	director.begin_tear(Vector2(320.0, 280.0))
+	director.step(0.10)
+	director.settle(true)
+	var still := director.tear_profile()
+	c.eq(still["stage"], &"settled", "switching effects keeps a readable final tear mark")
+	c.ok(still["seam_alpha"] >= 0.8 and still["seam_width"] >= 12.0,
+			"reduced effects retain the meaningful contrast and broken shape")
+	for index in 4:
+		var profile := director.tear_profile(true)
+		c.eq(profile["spring"], 0.0, "reduced transition has no flying half prints")
+		c.eq(profile["rotation"], 0.0, "reduced transition never spins")
+		c.eq(profile["fragment_alpha"], 0.0, "reduced transition has no travelling fragments")
+		c.eq(profile["stretch"], Vector2.ONE, "reduced transition has no paper stretching")
+		director.step(0.10)
+	director.clear()
+	c.ok(director.tear_profile().is_empty(), "a new run releases even a reduced transition")
+	director.begin_tear(Vector2.ZERO)
+	c.eq(director.tear_profile(true)["stage"], &"settled", "already-reduced events start at the stationary final mark")
+	director.step_terminal(1.0)
+	c.ok(director.tear.is_empty(), "reduced and terminal worlds cannot leave a permanent seam")
+
+
+func test_foreground_tear_gutters_and_threads_keep_the_live_body_core_clear(c: Check) -> void:
+	var director := BattleDirector.new()
+	director.begin_tear(Vector2(550.0, 150.0))
+	# Native battle review found the first half's face/body core within +/-12px.
+	# Test complete stroke envelopes, not only points: thick gutters matter here.
+	var core := Rect2(-12.0, -36.0, 24.0, 64.0)
+	for reduced in [false, true]:
+		director.begin_tear(Vector2(550.0, 150.0))
+		for frame in 38:
+			var profile := director.tear_profile(reduced)
+			if profile.is_empty():
+				break
+			var geometry := ArenaPainter.boss_tear_edge_geometry(profile)
+			for group: String in ["edges", "threads"]:
+				var stroke := float(geometry["paper_width"] if group == "edges" else geometry["thread_width"])
+				for line: PackedVector2Array in geometry[group]:
+					var bounds := Rect2(line[0], Vector2.ZERO)
+					for point: Vector2 in line:
+						bounds = bounds.expand(point)
+					c.ok(not bounds.grow(stroke * 0.5).intersects(core),
+							"foreground seam stroke leaves the actual half's central face/body uncovered")
+			director.step(1.0 / 60.0)
+	c.ok(ArenaPainter.boss_tear_edge_geometry({}).is_empty(), "absent phase has no foreground cut geometry")
+
+
+func test_real_boss_phase_event_starts_paper_beats_without_holding_live_shards(c: Check) -> void:
+	var sim := Sim.new(713)
+	sim.start_run()
+	sim.player.stats.add(Stats.MAX_HP, 100000.0)
+	sim.player.hp = sim.player.max_hp()
+	sim.start_wave(WaveDirector.FINAL_WAVE)
+	for index in 200:
+		sim.step(1.0 / 60.0, Vector2.ZERO)
+	c.ok(sim.boss != null, "real final-wave boss has spawned")
+	if sim.boss == null:
+		return
+	var view := ArenaView.new()
+	view.bind(sim)
+	var original := sim.boss.pos
+	sim.boss.hp = sim.boss.max_hp * 0.51
+	sim.damage_enemy(sim.boss, sim.boss.max_hp * 0.02, Vector2.ZERO, false, -1)
+	c.eq(sim.boss_phase, 2, "real damage starts the authoritative second phase")
+	c.eq(sim.boss_alive_count(), 2, "both real damaging bodies already exist during the first visual beat")
+	c.eq(view._director.tear["pos"], original, "visual tension snapshots the real original position")
+	c.eq(view._director.tear_profile()["stage"], &"tension", "actual phase event begins the sequence once")
+	var first_position := sim.boss_shards[0].pos
+	var second_position := sim.boss_shards[1].pos
+	var first_hp := sim.boss_shards[0].hp
+	var second_hp := sim.boss_shards[1].hp
+	var rng := sim.rng.state
+	var wave_time := sim.wave_time
+	view.set_paused(true)
+	view._process(0.30)
+	c.eq(view._director.tear["age"], 0.0, "pause freezes the strong tension and seam picture")
+	view.set_paused(false)
+	view._process(0.18)
+	c.eq(view._director.tear_profile()["stage"], &"snap", "visual time alone can advance to the broken seam")
+	view._process(0.16)
+	c.eq(view._director.tear_profile()["stage"], &"release", "the released paper follows the break")
+	c.eq(sim.boss_shards[0].pos, first_position, "visual spring never repositions the first collision body")
+	c.eq(sim.boss_shards[1].pos, second_position, "visual spring never repositions the second collision body")
+	c.eq(sim.boss_shards[0].hp, first_hp, "first shard keeps its exact real health")
+	c.eq(sim.boss_shards[1].hp, second_hp, "second shard keeps its exact real health")
+	c.eq(sim.rng.state, rng, "paper fragments do not consume gameplay random draws")
+	c.eq(sim.wave_time, wave_time, "the presentation beat neither delays nor advances gameplay time")
+	view._process(1.0)
+	c.ok(view._director.tear.is_empty(), "afterprints expire while both live shards remain")
+	c.eq(sim.boss_alive_count(), 2, "the end of the art is not a fake shard death")
+	view.unbind()
+	view.free()
+
+
 func test_paused_view_does_not_advance_actors_and_terminal_pose_finishes_without_sim(c: Check) -> void:
 	var sim := Sim.new(171)
 	sim.start_run()
