@@ -200,6 +200,8 @@ func echo_merge_quote(sim: Sim, a: EchoTake, b: EchoTake, merge_trait: StringNam
 	if sim.phase != Sim.Phase.SHOP or a == null or b == null or a == b \
 			or not sim.bank.takes.has(a) or not sim.bank.takes.has(b):
 		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	if _staff_take(sim, a) or _staff_take(sim, b):
+		return ShopResult.failure(ShopResult.ECHO_MERGE, &"staff")
 	if sim.bank.preview_merge(a, b, merge_trait) == null:
 		return ShopResult.failure(ShopResult.ECHO_MERGE, &"trait")
 	var cost := 6 if merge_trait == &"skill" else (10 if merge_trait == &"repair" else 14)
@@ -211,6 +213,8 @@ func echo_merge_quote(sim: Sim, a: EchoTake, b: EchoTake, merge_trait: StringNam
 func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
 	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
 		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
+	if _staff_take(sim, take):
+		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"staff")
 	var before := ShopState.capture(sim)
 	if not sim.bank.discard(take):
 		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
@@ -246,6 +250,10 @@ func merge_echoes(sim: Sim, a: EchoTake, b: EchoTake, merge_trait: StringName = 
 	return result
 
 
+func _staff_take(sim: Sim, take: EchoTake) -> bool:
+	return take != null and take.uid > 0 and take.uid == int(sim.expedition.get("world", {}).get("staff_uid", 0))
+
+
 func _remove_shop_actor(sim: Sim, uid: int) -> void:
 	for actor: EchoActor in sim.echoes.duplicate():
 		if actor.take.uid == uid:
@@ -277,8 +285,9 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 					or sim.active_contract == null or offer.contract == sim.active_contract:
 				return ShopResult.failure(action, &"invalid")
 			var cost := offer.price - sim.active_contract.deposit
-			if offer.contract.kind == AnomalyContract.CREDIT and int(sim.expedition.get("debt", 0)) > 0:
-				return ShopResult.failure(action, &"debt", cost)
+			var reason := offer.contract.availability_reason(sim)
+			if reason != &"":
+				return ShopResult.failure(action, reason, cost)
 			return _quoted(action, &"poor" if sim.player.materials < cost else &"", cost, -1, offer.id())
 		ShopResult.REPLACE:
 			if not _valid_offer(offer) or not offer.is_weapon() or offer.sold or not offers.has(offer) \
@@ -311,6 +320,24 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 			return result
 		ShopResult.SELL:
 			return _quoted(action, sell_block_reason(sim, index), -resale_for(sim, index), index)
+		ShopResult.DEPLOY_COMPANION:
+			for row: Dictionary in Expedition.crew_options(sim):
+				if row["id"] != target:
+					continue
+				var reason := StringName(row["reason_key"]) if not row["available"] else &""
+				var cost: int = row["cost"]
+				if reason == &"" and sim.player.materials < cost:
+					reason = &"poor"
+				var result := _quoted(action, reason, cost)
+				result.target_id = target
+				return result
+			return ShopResult.failure(action, &"invalid")
+		ShopResult.PAY_DEBT:
+			var debt := int(sim.expedition.get("debt", 0))
+			if debt <= 0:
+				return ShopResult.failure(action, &"debt_clear")
+			var cost := mini(sim.player.materials, debt)
+			return _quoted(action, &"poor" if cost <= 0 else &"", cost)
 		ShopResult.REROLL:
 			var cost := reroll_cost(sim.wave)
 			return _quoted(action, &"poor" if sim.player.materials < cost else &"", cost)
@@ -371,6 +398,12 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 			sim.player.cooldowns[index] = 0.0
 		ShopResult.SELL:
 			_remove_weapon(sim, index)
+		ShopResult.DEPLOY_COMPANION:
+			if not Expedition.assign_companion(sim, target):
+				before.restore(sim)
+				return ShopResult.failure(action, &"invalid", quoted.cost)
+		ShopResult.PAY_DEBT:
+			sim.expedition["debt"] = maxi(0, int(sim.expedition["debt"]) - quoted.cost)
 	if action != ShopResult.SELL:
 		sim.purchased.emit()
 	var after := ShopState.capture(sim)
@@ -536,8 +569,9 @@ func block_reason(sim: Sim, offer: Offer) -> StringName:
 			return &"invalid"
 		if sim.active_contract != null:
 			return &"order_active"
-		if offer.contract.kind == AnomalyContract.CREDIT and int(sim.expedition.get("debt", 0)) > 0:
-			return &"debt"
+		var reason := offer.contract.availability_reason(sim)
+		if reason != &"":
+			return reason
 	elif _maxed(sim, offer.item):
 		return &"maxed"
 	if sim.player.materials < offer.price:

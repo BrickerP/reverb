@@ -25,8 +25,20 @@ static func play(seed_value: int, no_echo: bool = false, max_wave: int = WaveDir
 	var total_earned := 0
 	var total_interest := 0
 	var max_materials := 0
-	while sim.phase == Sim.Phase.WAVE or sim.phase == Sim.Phase.SHOP \
+	while sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] \
 			or (sim.phase == Sim.Phase.WON and target_wave > WaveDirector.FINAL_WAVE):
+		if sim.phase == Sim.Phase.RESOLUTION:
+			for choice in Expedition.exit_options(sim):
+				if choice["available"]:
+					sim.choose_exit(choice["id"])
+					break
+			continue
+		if Expedition.is_negotiating(sim):
+			for choice in Expedition.negotiation_options(sim):
+				if choice["available"]:
+					sim.choose_negotiation(choice["id"])
+					break
+			continue
 		if sim.phase == Sim.Phase.WON:
 			if target_wave <= WaveDirector.FINAL_WAVE:
 				break

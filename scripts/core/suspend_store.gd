@@ -84,7 +84,7 @@ static func _parse(text: String) -> Dictionary:
 		last_error = "suspend.corrupt"
 		return {}
 	var data: Dictionary = parser.data
-	if typeof(data.get("snapshot")) != TYPE_DICTIONARY or not data.has("envelope"):
+	if data.size() != 2 or typeof(data.get("snapshot")) != TYPE_DICTIONARY or not data.has("envelope"):
 		last_error = "suspend.corrupt"
 		return {}
 	var sim := RunSnapshot.restore(data.snapshot)

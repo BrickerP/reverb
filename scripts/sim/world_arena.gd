@@ -161,3 +161,8 @@ static func machine_sites() -> Array[Dictionary]:
 			"active": 4.0 if kinds[index] == &"conveyor" else 0.0, "cooldown": 4.0 + float(index),
 			"used": false, "direction": Vector2.RIGHT if index % 2 == 0 else Vector2.LEFT})
 	return sites
+
+
+# Saved workers wait beyond the production lanes; they never become targetable decoys.
+static func safe_worker_position(stage: int) -> Vector2:
+	return Vector2(180.0 + float(posmod(stage - 1, 6)) * 48.0, 1170.0 + float(int((stage - 1) / 6)) * 42.0)

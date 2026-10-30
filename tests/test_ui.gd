@@ -117,6 +117,9 @@ func test_shop_order_is_purchased_from_goods(c: Check) -> void:
 	var ui := _open_shop(s)
 	var before := s.player.materials
 	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+	c.ok(ui.workshop.visible, "order opens responsibility and natural-situation terms")
+	c.eq(s.player.materials, before, "reading terms does not buy responsibility")
+	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.player.materials, before - offer.price, "goods purchase charges order once")
 	c.ok(s.active_contract == offer.contract, "purchased order becomes active")
 	c.ok((ui.offers_box.get_child(0) as OfferCard).disabled, "sold order card is inert")
@@ -216,7 +219,7 @@ func test_end_screen_offers_a_restart(c: Check) -> void:
 	ui.show_result(s)
 	c.ok(ui.visible, "shown")
 	c.eq(ui.size, _root().get_visible_rect().size, "end screen covers the whole screen")
-	c.ok(ui.best_take != null, "the strongest recorded take is shown")
+	c.ok(ui.candidate_take != null, "a retained recording is available to select")
 	ui.show_result(s, "Unlocked: Soloist")
 	c.ok(ui._unlock.visible, "an unlock message is shown")
 	ui.show_result(s)
@@ -424,15 +427,17 @@ func test_character_select_cycles_unlocked_ascension(c: Check) -> void:
 		DirAccess.remove_absolute(abs)
 
 
-func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
+func test_end_screen_preserves_player_choice_among_retained_echoes(c: Check) -> void:
 	var s := _shop_sim()
 	s.bank.takes.clear()
 	var weak := EchoTake.new()
 	weak.wave = 1
 	weak.weapons.append(Content.weapon(&"pistol"))
+	weak.samples = PackedVector2Array([Vector2(200, 300)])
 	var strong := EchoTake.new()
 	strong.wave = 2
 	strong.weapons.append(Content.weapon(&"rifle"))
+	strong.samples = PackedVector2Array([Vector2(240, 300)])
 	s.bank.add(weak)
 	s.bank.add(strong)
 	s.phase = Sim.Phase.LOST
@@ -440,12 +445,19 @@ func test_end_screen_picks_the_strongest_echo(c: Check) -> void:
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
 	ui.show_result(s)
-	c.eq(ui.best_take, strong, "the highest-DPS take wins")
-	c.ok(ui._best_row.visible, "the echo row is shown")
+	c.eq(ui.candidate_count(), 2, "every retained recording is available")
+	c.eq(ui.candidate_take, weak, "first recording is selected without a damage ranking")
+	c.ok(ui._candidate_row.visible, "the echo chooser is shown")
+	ui.next_button.pressed.emit()
+	c.eq(ui.candidate_take, strong, "next control selects another recording")
+	ui.previous_button.pressed.emit()
+	c.eq(ui.candidate_take, weak, "player can return to the lower damage recording")
+	c.ok(not ui.select_candidate(2), "out of range selection is rejected")
+	c.eq(ui.candidate_take, weak, "invalid selection preserves the current choice")
 	s.bank.takes.clear()
 	ui.show_result(s)
-	c.eq(ui.best_take, null, "no take survives an early death")
-	c.ok(not ui._best_row.visible, "the echo row hides")
+	c.eq(ui.candidate_take, null, "no take survives an early death")
+	c.ok(not ui._candidate_row.visible, "the echo chooser hides")
 	c.ok(ui._no_echo.visible, "the empty state is shown")
 	ui.free()
 
@@ -693,11 +705,17 @@ func test_boss_death_holds_the_end_screen(c: Check) -> void:
 	c.ok(s.boss != null, "the boss spawned")
 	s.damage_enemy(s.boss, 100000.0, Vector2.ZERO, false, -1)
 	main._physics_process(DT)
-	c.eq(s.phase, Sim.Phase.WON, "boss death wins")
-	c.ok(not main.end_ui.visible, "the end screen waits for the victory beat")
+	c.eq(s.phase, Sim.Phase.RESOLUTION, "boss death waits for an explicit exit")
+	c.ok(not main.end_ui.visible, "the end screen cannot precede the choice")
 	for i in 70:
 		main._physics_process(DT)
-	c.ok(main.end_ui.visible, "the end screen arrives after the beat")
+	c.ok(main.context_ui.visible and main.paused, "record beat opens paused exit terms")
+	main.context_ui.choice_buttons[2].pressed.emit()
+	c.eq(s.phase, Sim.Phase.WON, "chosen takeover commits a win")
+	c.ok(not main.end_ui.visible, "end screen waits for the chosen victory beat")
+	for i in 70:
+		main._physics_process(DT)
+	c.ok(main.end_ui.visible, "the end screen arrives after the chosen result beat")
 	main.free()
 
 

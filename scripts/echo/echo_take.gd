@@ -12,6 +12,7 @@ const PALETTE: Array[Color] = [
 ]
 
 var samples: PackedVector2Array = PackedVector2Array()
+var work_actions: Array[Dictionary] = []
 var weapons: Array[WeaponDef] = []
 var levels: Array[int] = []
 var stats: Stats = Stats.new()
@@ -28,6 +29,7 @@ var archived: bool = false
 func copy() -> EchoTake:
 	var out := EchoTake.new()
 	out.samples = samples.duplicate()
+	out.work_actions.assign(work_actions.duplicate(true))
 	out.weapons = weapons.duplicate()
 	out.levels = levels.duplicate()
 	out.stats = stats.copy()

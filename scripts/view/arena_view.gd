@@ -11,6 +11,7 @@ const MAX_HITS := 96
 const MAX_EXPLOSIONS := 24
 const MAX_HURTS := 8
 const MAX_WEAPON_CHANGES := 12
+const MAX_WORK_MARKS := 8
 
 var sim: Sim
 var character_id: StringName = &"looper"
@@ -42,6 +43,8 @@ var _hits: Array[Dictionary] = []
 var _explosions: Array[Dictionary] = []
 var _hurts: Array[Dictionary] = []
 var _weapon_changes: Array[Dictionary] = []
+var _work_marks: Array[Dictionary] = []
+var _world_profile: Dictionary = {}
 var _last_event: Dictionary = {}
 var _noise_counter := 0
 var _director := BattleDirector.new()
@@ -87,6 +90,8 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.player_hurt_info.connect(_on_hurt_info)
 	sim.explosion_info.connect(_on_explosion_info)
 	sim.weapon_changed.connect(_on_weapon_changed)
+	sim.echo_work_performed.connect(_on_echo_work)
+	sim.world_event.connect(_on_world_event)
 	sim.echo_spawned.connect(_on_echo)
 	sim.boss_spawned.connect(_on_boss_spawned)
 	sim.boss_phase_changed.connect(_on_boss_phase_changed)
@@ -105,12 +110,14 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 		_paths[actor] = points
 		_reveal[actor] = 1.0
 	_sync_backdrop()
+	_refresh_world_presentation()
 
 
 func unbind() -> void:
 	if sim != null:
 		_disconnect_sim(sim)
 	sim = null
+	_world_profile.clear()
 	character_id = &"looper"
 	_paths.clear()
 	_reveal.clear()
@@ -132,6 +139,7 @@ func unbind() -> void:
 	_paused = false
 	position = Vector2.ZERO
 	_sync_backdrop()
+	_refresh_world_presentation()
 	queue_redraw()
 
 
@@ -260,6 +268,7 @@ func _process(delta: float) -> void:
 	_expire_feedback(_explosions, delta)
 	_expire_feedback(_hurts, delta)
 	_expire_feedback(_weapon_changes, delta)
+	_expire_feedback(_work_marks, delta)
 	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
 	for actor in _reveal.keys():
 		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
@@ -346,6 +355,26 @@ func _sync_backdrop() -> void:
 		_backdrop.set_presentation(_visual_time, reduced_effects, _paused)
 
 
+func _refresh_world_presentation() -> void:
+	_world_profile = Expedition.world_profile(sim) if sim != null else {}
+	if _backdrop != null:
+		_backdrop.set_world_profile(_world_profile)
+
+
+func _on_world_event(_info: Dictionary) -> void:
+	_refresh_world_presentation()
+
+
+func _on_echo_work(info: Dictionary) -> void:
+	# One current note per worker keeps several same-tick events from covering the arena.
+	for index in range(_work_marks.size() - 1, -1, -1):
+		if _work_marks[index].get("uid") == info.get("uid"):
+			_work_marks.remove_at(index)
+	var mark := info.duplicate(true)
+	mark["life"] = 1.4
+	_push_feedback(_work_marks, mark, MAX_WORK_MARKS)
+
+
 func _draw() -> void:
 	if sim == null:
 		return
@@ -359,7 +388,8 @@ func _draw() -> void:
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	WeaponInk.draw_fields(self, sim, reduced_effects)
-	ExpeditionInk.draw(self, sim, _visual_time, reduced_effects)
+	ExpeditionInk.draw(self, sim, _visual_time, reduced_effects, _world_profile)
+	ExpeditionInk.draw_work(self, _work_marks, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
 	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
 	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director, _actor_motion)
@@ -687,17 +717,20 @@ func _clear_feedback() -> void:
 	_explosions.clear()
 	_hurts.clear()
 	_weapon_changes.clear()
+	_work_marks.clear()
 	_last_event.clear()
 
 
 func _on_wave_phase(_wave: int) -> void:
 	_clear_feedback()
+	_refresh_world_presentation()
 	_director.end_actions()
 	_sparks.clear()
 
 
 func _on_wave_started(_wave: int) -> void:
 	_clear_feedback()
+	_refresh_world_presentation()
 	_director.clear()
 	_motion_amount = 0.0
 	_motion_speed = 0.0
@@ -740,6 +773,7 @@ func _disconnect_sim(s: Sim) -> void:
 		[s.enemy_killed, _on_kill], [s.shot_fired_info, _on_shot_info],
 		[s.damage_event, _on_damage_info], [s.player_hurt_info, _on_hurt_info],
 		[s.explosion_info, _on_explosion_info], [s.weapon_changed, _on_weapon_changed],
+		[s.echo_work_performed, _on_echo_work], [s.world_event, _on_world_event],
 		[s.echo_spawned, _on_echo], [s.boss_spawned, _on_boss_spawned],
 		[s.boss_phase_changed, _on_boss_phase_changed],
 		[s.boss_shard_spawned, _on_boss_shard_spawned],

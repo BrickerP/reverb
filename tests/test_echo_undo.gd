@@ -75,4 +75,6 @@ func test_discard_take_uses_shop_transaction(c: Check) -> void:
 	var t := _take(s)
 	s.bank.add(t)
 	s.discard_take(t)
-	c.eq(s.bank.takes.size(), 0, "direct discard remains compatible")
+	c.eq(s.bank.takes.size(), 0, "simulation discard uses the canonical shop transaction")
+	c.ok(s.shop.undo(s).ok, "simulation discard is undoable through the same shop history")
+	c.eq(s.bank.takes.size(), 1, "undo restores the discarded copy")

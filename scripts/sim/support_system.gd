@@ -85,14 +85,38 @@ static func spawn_weapon(sim: Sim, weapon: WeaponDef, pos: Vector2, damage_amoun
 	unit["actor_token"] = actor_token
 	unit["source_tint"] = tint
 	unit["weapon_id"] = weapon.id
-	unit["damage"] = minf(500.0, damage_amount) if weapon.role not in [&"repair", &"production", &"defense"] else 0.0
-	unit["interval"] = clampf(float(unit["interval"]) * cadence_mult, 0.15, 5.0)
-	unit["reach"] = clampf(weapon.reach * reach_mult, 60.0, 1200.0)
-	unit["level"] = clampi(level, 0, WeaponDef.MAX_LEVEL)
-	if weapon.support_kind in [&"repair_station", &"paper_tree", &"decoy"]:
-		unit["max_hp"] = float(unit["max_hp"]) * weapon.level_mult(level)
-		unit["hp"] = unit["max_hp"]
+	var profile := weapon_profile(weapon, level, damage_amount, cadence_mult, reach_mult)
+	for key: String in ["hp", "max_hp", "life", "interval", "damage", "charges", "level", "reach"]:
+		unit[key] = profile[key]
 	return true
+
+
+# Pure entry/loadout preview shared with deployment; callers see the same grade
+# scaling and bounds as a real support rather than reconstructing utility rules.
+static func weapon_profile(weapon: WeaponDef, level: int, damage_amount: float = 0.0,
+		cadence_mult: float = 1.0, reach_mult: float = 1.0) -> Dictionary:
+	if weapon == null or Content.weapon(weapon.id) != weapon or not PROFILES.has(weapon.support_kind) \
+			or PROFILES[weapon.support_kind]["weapon"] != weapon.id \
+			or not is_finite(damage_amount) or damage_amount < 0.0 \
+			or not is_finite(cadence_mult) or cadence_mult <= 0.0 \
+			or not is_finite(reach_mult) or reach_mult <= 0.0:
+		return {}
+	var base: Dictionary = PROFILES[weapon.support_kind]
+	var kind := weapon.support_kind
+	var grade := clampi(level, 0, WeaponDef.MAX_LEVEL)
+	var hp := float(base["hp"])
+	if kind in [&"repair_station", &"paper_tree", &"decoy"]:
+		hp *= weapon.level_mult(level)
+	var utility_mult := 1.0 + 0.15 * float(grade)
+	return {"hp": hp, "max_hp": hp, "life": float(base["life"]),
+		"interval": clampf(float(base["interval"]) * cadence_mult, 0.15, 5.0),
+		"damage": minf(500.0, damage_amount) if weapon.role not in [&"repair", &"production", &"defense"] else 0.0,
+		"charges": 4 if kind == &"paper_tree" else (6 if kind == &"repair_station" else 0),
+		"level": grade, "reach": clampf(weapon.reach * reach_mult, 60.0, 1200.0),
+		"heal_hp": 1.5 * utility_mult if kind == &"repair_station" else 0.0,
+		"repair_condition": 2.0 * utility_mult if kind == &"repair_station" else 0.0,
+		"shield": 2.0 * utility_mult if kind == &"paper_tree" else 0.0,
+		"energy": 3.0 * utility_mult if kind == &"paper_tree" else 0.0}
 
 
 static func damage(sim: Sim, uid: int, amount: float) -> bool:

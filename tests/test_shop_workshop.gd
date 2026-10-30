@@ -101,8 +101,12 @@ func test_work_order_cards_buy_replace_confirm_and_undo(c: Check) -> void:
 		if sim.shop.offers[index].is_contract():
 			orders.append(index)
 	c.eq(orders.size(), 2, "goods contain exactly two orders")
+	var before_buy := ShopState.capture(sim).to_dict()
 	(ui.offers_box.get_child(orders[0]) as OfferCard).pressed.emit()
-	c.ok(sim.active_contract != null, "order card purchases through BUY")
+	c.ok(ui.workshop.visible, "initial order opens forecast and responsibility confirmation")
+	c.eq(ShopState.capture(sim).to_dict(), before_buy, "reading initial terms changes no funds or dangers")
+	ui.workshop.choice_buttons[0].pressed.emit()
+	c.ok(sim.active_contract != null, "confirmed order card purchases through BUY")
 	var before_replace := ShopState.capture(sim).to_dict()
 	(ui.offers_box.get_child(orders[1]) as OfferCard).pressed.emit()
 	c.ok(ui.workshop.visible, "another order requires explicit replacement")

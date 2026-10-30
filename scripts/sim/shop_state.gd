@@ -26,6 +26,7 @@ var contracts_accepted: int = 0
 var contracts_completed: int = 0
 var contracts_failed: int = 0
 var expedition: Dictionary = {}
+var story_progress: Dictionary = {}
 var character_id: StringName = &""
 var character_energy: float = 0.0
 var character_cooldown: float = 0.0
@@ -71,6 +72,7 @@ static func capture(sim: Sim) -> ShopState:
 			"inherited_skill": take.inherited_skill,
 			"merge_trait": take.merge_trait,
 			"archived": take.archived,
+			"work_actions": take.work_actions.duplicate(true),
 		})
 	state.tint_counter = sim.bank.tint_counter()
 	state.next_echo_uid = sim.bank.next_uid()
@@ -80,7 +82,8 @@ static func capture(sim: Sim) -> ShopState:
 	for actor in sim.echoes:
 		state.echo_actors.append({"uid": actor.take.uid, "index": actor.index,
 			"t": actor.t, "pos": actor.pos, "rewinding": actor.rewinding,
-			"cooldowns": actor.cooldowns.duplicate()})
+			"cooldowns": actor.cooldowns.duplicate(),
+			"work_cursor": actor.work_cursor, "work_cycle": actor.work_cycle})
 	for o in sim.shop.offers:
 		state.offers.append({
 			"kind": "weapon" if o.is_weapon() else ("order" if o.is_contract() else "item"),
@@ -98,6 +101,7 @@ static func capture(sim: Sim) -> ShopState:
 	state.contracts_completed = sim.contracts_completed
 	state.contracts_failed = sim.contracts_failed
 	state.expedition = sim.expedition.duplicate(true)
+	state.story_progress = sim.story_progress.duplicate(true)
 	state.character_id = sim.character_id
 	state.character_energy = sim.character_energy
 	state.character_cooldown = sim.character_cooldown
@@ -144,6 +148,7 @@ func restore(sim: Sim) -> void:
 		take.inherited_skill = StringName(str(entry.get("inherited_skill", "")))
 		take.merge_trait = StringName(str(entry.get("merge_trait", "")))
 		take.archived = bool(entry.get("archived", false))
+		take.work_actions.assign(entry["work_actions"].duplicate(true))
 		max_tint = maxi(max_tint, take.tint_index)
 		sim.bank.takes.append(take)
 	sim.bank.set_tint_counter(maxi(tint_counter, max_tint + 1))
@@ -161,6 +166,8 @@ func restore(sim: Sim) -> void:
 		actor.pos = entry["pos"]
 		actor.rewinding = bool(entry["rewinding"])
 		actor.cooldowns.assign(entry["cooldowns"])
+		actor.work_cursor = int(entry["work_cursor"])
+		actor.work_cycle = int(entry["work_cycle"])
 		sim.echoes.append(actor)
 	sim.active_contract = AnomalyContract.from_dict(active_order) if not active_order.is_empty() else null
 	sim.shop.offers.clear()
@@ -184,6 +191,7 @@ func restore(sim: Sim) -> void:
 	sim.contracts_completed = contracts_completed
 	sim.contracts_failed = contracts_failed
 	sim.expedition = expedition.duplicate(true)
+	sim.story_progress = story_progress.duplicate(true)
 	sim.character_id = character_id
 	sim.character_energy = character_energy
 	sim.character_cooldown = character_cooldown
@@ -227,6 +235,7 @@ func to_dict() -> Dictionary:
 		"contracts_completed": contracts_completed,
 		"contracts_failed": contracts_failed,
 		"expedition": expedition.duplicate(true),
+		"story_progress": story_progress.duplicate(true),
 		"character_id": String(character_id),
 		"character_energy": character_energy,
 		"character_cooldown": character_cooldown,

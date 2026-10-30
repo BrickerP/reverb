@@ -15,6 +15,9 @@ var reroll_button: Button
 var undo_button: Button
 var start_button: Button
 var receipt_button: Button
+var crew_button: Button
+var debt_button: Button
+var crew: CrewUi
 var echo_panel: EchoPanel
 var build_panel: BuildPanel
 
@@ -101,6 +104,12 @@ func _ready() -> void:
 	workshop.z_index = 10
 	add_child(workshop)
 	workshop.closed.connect(_on_workshop_closed)
+	crew = CrewUi.new()
+	crew.z_index = 11
+	add_child(crew)
+	crew.action_requested.connect(_on_crew_action)
+	crew.undo_requested.connect(_on_crew_undo)
+	crew.closed.connect(_on_crew_closed)
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
@@ -114,6 +123,7 @@ func _exit_tree() -> void:
 func open(s: Sim) -> void:
 	_disconnect_shop()
 	workshop.reset()
+	crew.reset()
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	sim = s
@@ -145,6 +155,8 @@ func close_session() -> void:
 	visible = false
 	if workshop != null:
 		workshop.reset()
+	if crew != null:
+		crew.reset()
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	sim = null
@@ -176,6 +188,8 @@ func refresh(animate_echo: bool = false) -> void:
 			Sim.interest_for(sim.player.materials)])
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
+	var world := Expedition.world_profile(sim)
+	_prep_status.text = Loc.t(str(world.production_state_key)) + " · " + _prep_status.text
 	if int(expedition.debt) > 0:
 		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
 	_prep_status.tooltip_text = _prep_status.text + " · " + Loc.t(str(expedition.route))
@@ -193,6 +207,13 @@ func refresh(animate_echo: bool = false) -> void:
 	reroll_button.disabled = sim.player.materials < cost
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
+	crew_button.text = Loc.t("crew.open")
+	crew_button.accessibility_name = crew_button.text
+	crew_button.tooltip_text = Loc.t("crew.summary")
+	debt_button.text = Loc.t("debt.open", [int(expedition.debt)])
+	debt_button.tooltip_text = Loc.t("debt.rule")
+	debt_button.accessibility_name = debt_button.text
+	debt_button.accessibility_description = debt_button.tooltip_text
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
@@ -243,6 +264,10 @@ func _build_footer() -> Control:
 	receipt_button.add_theme_font_size_override("font_size", 14)
 	receipt_button.pressed.connect(func() -> void: receipt_requested.emit())
 	actions.add_child(receipt_button)
+	crew_button = Button.new()
+	WorkshopUi.fit_button(crew_button, 15, 34.0)
+	crew_button.pressed.connect(_open_crew)
+	actions.add_child(crew_button)
 	for button: Button in [reroll_button, undo_button, start_button]:
 		WorkshopUi.fit_button(button, 16, 34.0)
 		actions.add_child(button)
@@ -276,8 +301,16 @@ func _build_header() -> Control:
 	identity.add_theme_constant_override("separation", 1)
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(identity)
+	var heading := HBoxContainer.new()
+	heading.add_theme_constant_override("separation", 12)
+	identity.add_child(heading)
 	_title = UiTheme.section_label("", 28, UiTheme.PAPER)
-	identity.add_child(_title)
+	heading.add_child(_title)
+	debt_button = Button.new()
+	WorkshopUi.fit_button(debt_button, 14, 28.0)
+	debt_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	debt_button.pressed.connect(_open_debt_ledger)
+	heading.add_child(debt_button)
 	_prep_status = UiTheme.label("", 14, ON_DARK)
 	_prep_status.clip_text = true
 	identity.add_child(_prep_status)
@@ -374,6 +407,9 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 	if reason != &"":
 		card.reject(reduced_effects)
 		_flash_block(reason)
+		return
+	if o.is_contract():
+		_confirm_order_purchase(o)
 		return
 	var index := sim.shop.offers.find(o)
 	var result := sim.shop.apply(ShopResult.BUY, sim, o)
@@ -1037,6 +1073,8 @@ func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> 
 func _on_start() -> void:
 	if sim == null or not visible:
 		return
+	if crew != null and crew.visible:
+		return
 	if workshop != null and workshop.visible:
 		return
 	if sim.can_start_wave():
@@ -1047,6 +1085,8 @@ func _on_start() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if crew != null and crew.visible:
+		return
 	if workshop != null and workshop.visible:
 		return
 	if _replacing != null and event.is_action_pressed(&"ui_cancel"):
@@ -1071,6 +1111,9 @@ func _focus_card(from: int) -> void:
 
 
 func focus_default() -> void:
+	if crew != null and crew.visible:
+		crew.focus_default()
+		return
 	if workshop != null and workshop.visible:
 		workshop.focus_default()
 		return
@@ -1152,7 +1195,7 @@ func _rebuild_focus() -> void:
 	var active: Array = []
 	for node in find_children("*", "BaseButton", true, false):
 		var button := node as BaseButton
-		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button):
+		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button):
 			active.append(button)
 			var remember := _remember_focus.bind(button)
 			if not button.focus_entered.is_connected(remember):
@@ -1166,6 +1209,14 @@ func _rebuild_focus() -> void:
 
 func _on_workshop_closed() -> void:
 	if sim == null:
+		return
+	if _workshop_origin == &"ledger":
+		_rebuild_focus()
+		debt_button.grab_focus()
+		return
+	if _workshop_origin == &"order":
+		_rebuild_focus()
+		_focus_card(maxi(0, _workshop_slot))
 		return
 	if echo_panel.is_merging():
 		echo_panel.cancel_merge()
@@ -1328,15 +1379,91 @@ func _open_combine_donors(host: int) -> void:
 
 
 func _confirm_order_replace(offer: Offer) -> void:
+	_workshop_origin = &"order"
+	_workshop_slot = sim.shop.offers.find(offer)
 	var quote := sim.shop.quote(ShopResult.REPLACE_ORDER, sim, offer)
 	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_order", [quote.cost]), "value": offer, "disabled": not quote.ok}]
-	workshop.show_choices(Loc.t("workshop.replace_order"), Loc.t("workshop.order_replace_hint", [Loc.t("order.%s.name" % sim.active_contract.kind), Loc.t("order.%s.name" % offer.contract.kind), quote.cost]), choices, func(value: Variant) -> void:
+	workshop.show_choices(Loc.t("workshop.replace_order"), Loc.t("workshop.order_replace_hint", [Loc.t("order.%s.name" % sim.active_contract.kind), Loc.t("order.%s.name" % offer.contract.kind), quote.cost]) + "\n" + forecast_description(sim), choices, func(value: Variant) -> void:
 		var result := sim.shop.apply(ShopResult.REPLACE_ORDER, sim, value as Offer)
 		if result.ok:
 			refresh()
 			workshop.close()
 		else:
 			_flash_block(result.reason))
+
+
+func _confirm_order_purchase(offer: Offer) -> void:
+	_workshop_origin = &"order"
+	_workshop_slot = sim.shop.offers.find(offer)
+	var quote := sim.shop.quote(ShopResult.BUY, sim, offer)
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_order", [quote.cost]), "value": offer, "disabled": not quote.ok}]
+	var body := Loc.t("order.%s.desc" % offer.contract.kind) + "\n" + forecast_description(sim)
+	workshop.show_choices(Loc.t("order.%s.name" % offer.contract.kind), body, choices, func(value: Variant) -> void:
+		var result := sim.shop.apply(ShopResult.BUY, sim, value as Offer)
+		if result.ok:
+			refresh()
+			workshop.close()
+		else:
+			_flash_block(result.reason))
+
+
+static func forecast_description(s: Sim) -> String:
+	var forecast := Expedition.forecast(s, s.next_wave_number())
+	var facts := Loc.t("shop.forecast", [forecast["stage"], Loc.t(str(forecast["act_key"]))])
+	facts += " · " + Loc.t("shop.forecast_fault" if forecast["repair_available"] else "shop.forecast_repaired")
+	facts += " · " + Loc.t("shop.forecast_worker" if forecast["worker_available"] else "shop.forecast_no_worker")
+	return facts + "\n" + Loc.t("shop.order_responsibility")
+
+
+func _open_debt_ledger() -> void:
+	if sim == null or not visible or crew.visible:
+		return
+	_workshop_origin = &"ledger"
+	var debt := maxi(0, int(sim.expedition.get("debt", 0)))
+	var quote := sim.shop.quote(ShopResult.PAY_DEBT, sim)
+	var body := Loc.t("debt.balance", [debt, sim.player.materials, quote.cost, maxi(0, debt - quote.cost)])
+	body += "\n" + Loc.t("debt.rule")
+	if not quote.ok:
+		body += "\n" + Loc.t("debt.clear" if quote.reason == &"debt_clear" else "shop.drop_poor")
+	var choices: Array[Dictionary] = [{"text": Loc.t("debt.confirm", [quote.cost]), "value": &"pay", "disabled": not quote.ok}]
+	workshop.show_choices(Loc.t("debt.title"), body, choices, func(_value: Variant) -> void:
+		var result := sim.shop.apply(ShopResult.PAY_DEBT, sim)
+		refresh()
+		_open_debt_ledger()
+		if not result.ok:
+			_flash_block(result.reason))
+
+
+func _open_crew() -> void:
+	if sim == null or not visible or workshop.visible:
+		return
+	crew.open_crew(sim)
+
+
+func _on_crew_action(id: StringName) -> void:
+	if sim == null or not crew.visible:
+		return
+	var result := sim.shop.apply(ShopResult.DEPLOY_COMPANION, sim, null, -1, id)
+	if result.ok:
+		refresh()
+		crew.open_crew(sim)
+		if not crew.undo_button.disabled:
+			crew.undo_button.grab_focus()
+	else:
+		crew.open_crew(sim)
+
+
+func _on_crew_undo() -> void:
+	if sim == null or not crew.visible:
+		return
+	sim.shop.undo(sim)
+	refresh()
+	crew.open_crew(sim)
+
+
+func _on_crew_closed() -> void:
+	_rebuild_focus()
+	crew_button.grab_focus()
 
 
 func _open_merge_hosts() -> void:

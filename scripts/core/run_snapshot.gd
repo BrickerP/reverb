@@ -3,7 +3,7 @@ extends RefCounted
 
 # Saves only this closed family of data objects. A save never supplies a script
 # path, invokes a setter outside these classes, or carries signal connections.
-const VERSION := 2
+const VERSION := 3
 const MAX_OBJECTS := 16000
 const MAX_VALUES := 1000000
 const MAX_DEPTH := 48
@@ -163,7 +163,7 @@ func _encode(value: Variant, depth: int) -> Variant:
 
 
 func _restore(data: Dictionary) -> Sim:
-	if data.get("version") != VERSION or typeof(data.get("objects")) != TYPE_ARRAY:
+	if data.size() != 3 or data.get("version") != VERSION or typeof(data.get("objects")) != TYPE_ARRAY:
 		_fail("snapshot.version")
 		return null
 	_rows = data.objects
@@ -393,7 +393,7 @@ func _content(kind: String, id: StringName) -> Object:
 func _validate_run(sim: Sim) -> bool:
 	if sim.player == null or sim.player.stats == null or sim.bank == null or sim.recorder == null \
 			or sim.shop == null or sim.rng == null or sim.hazard_rng == null \
-			or sim.phase < Sim.Phase.WAVE or sim.phase > Sim.Phase.WON or sim.wave < 0 \
+			or sim.phase < Sim.Phase.WAVE or sim.phase > Sim.Phase.RESOLUTION or sim.wave < 0 \
 			or sim.player.weapons.size() != sim.player.weapon_levels.size() \
 			or sim.player.weapons.size() != sim.player.cooldowns.size() \
 			or not _investments_valid(sim.player.weapon_investments, sim.player.weapons.size()) \
@@ -497,7 +497,8 @@ func _validate_objects() -> bool:
 					or object.weapons.is_empty() or object.samples.is_empty() \
 					or not _loadout_valid(object.weapons, object.levels, true) \
 					or not _echo_metadata_valid(object.inherited_skill, object.merge_trait) \
-					or object.samples.size() > EchoArchive.MAX_SAMPLES:
+					or object.samples.size() > EchoArchive.MAX_SAMPLES \
+					or not EchoWork.validate_actions(object.work_actions, object.duration()):
 				return false
 		if object is PlayerState:
 			if object.stats == null or not _loadout_valid(object.weapons, object.weapon_levels) \
@@ -515,9 +516,10 @@ func _validate_objects() -> bool:
 				or object.brain_time < 0.0 or object.attack_tick < 0.0 or object.pin_left < 0.0 \
 				or object.ink_left < 0.0 or object.stun_left < 0.0):
 			return false
-		if object is EchoActor and (object.take == null or object.index < 0 or object.t < 0.0):
+		if object is EchoActor and (object.take == null or object.index < 0 or object.t < 0.0 \
+				or not EchoWork.validate_actor(object)):
 			return false
-		if object is EchoRecorder and (object.get("_acc") < 0.0 or object.get("_acc") >= EchoTake.SAMPLE_DT):
+		if object is EchoRecorder and not _recorder_valid(object):
 			return false
 		if object is AnomalyContract and not _order_data_valid(object.to_dict()):
 			return false
@@ -527,6 +529,19 @@ func _validate_objects() -> bool:
 			if object.weapon_id != &"" and Content.weapon(object.weapon_id) == null:
 				return false
 	return true
+
+
+func _recorder_valid(recorder: EchoRecorder) -> bool:
+	var accumulator: float = recorder.get("_acc")
+	var elapsed: float = recorder.get("_elapsed")
+	if not _bounded_number(accumulator, 0.0, EchoTake.SAMPLE_DT) or accumulator >= EchoTake.SAMPLE_DT \
+			or not _bounded_number(elapsed, 0.0, float(EchoArchive.MAX_SAMPLES) * EchoTake.SAMPLE_DT) \
+			or recorder.samples.size() > EchoArchive.MAX_SAMPLES \
+			or not EchoWork.validate_actions(recorder.work_actions, elapsed):
+		return false
+	if recorder.samples.is_empty():
+		return elapsed == 0.0 and accumulator == 0.0 and recorder.work_actions.is_empty()
+	return absf(elapsed - (float(recorder.samples.size() - 1) * EchoTake.SAMPLE_DT + accumulator)) < 0.00001
 
 
 func _stats_valid(values: Dictionary) -> bool:
@@ -631,7 +646,7 @@ func _order_data_valid(order: Dictionary) -> bool:
 func _undo_valid(state: ShopState) -> bool:
 	if state.next_echo_uid < 1 or state.selected_echo_uid < 0 or state.retire_cooldown < 0.0 \
 			or state.echo_refreshes < 0 or state.rerolls < 0 or state.wave < 0 or state.phase != Sim.Phase.SHOP \
-			or state.materials < 0 or Content.character(state.character_id) == null \
+			or state.materials < 0 or Content.character(state.character_id) == null or not _story_valid(state.story_progress) \
 			or state.contracts_accepted < 0 or state.contracts_completed < 0 or state.contracts_failed < 0 \
 			or state.weapons.size() > Content.MAX_WEAPON_SLOTS \
 			or state.echoes.size() > Sim.MAX_ECHO_CAPACITY + 1 or state.offers.size() > Shop.OFFER_COUNT \
@@ -647,6 +662,7 @@ func _undo_valid(state: ShopState) -> bool:
 			or not _investments_valid(state.weapon_investments, state.weapons.size()) \
 			or not _role_valid(state.role_effects, state.character_energy, state.character_cooldown) \
 			or not Expedition.validate_plain(state.expedition, state.interactables) \
+			or state.expedition["world"]["resolution_pending"] \
 			or not SupportSystem.validate_state(state.support_units, state.next_support_uid):
 		return false
 	for id: StringName in state.weapons:
@@ -657,15 +673,17 @@ func _undo_valid(state: ShopState) -> bool:
 		if not _row_types(entry, {"samples": TYPE_PACKED_VECTOR2_ARRAY, "weapons": TYPE_PACKED_STRING_ARRAY,
 			"levels": TYPE_ARRAY, "stats": TYPE_DICTIONARY, "wave": TYPE_INT, "uid": TYPE_INT,
 			"condition": TYPE_FLOAT, "tint": TYPE_INT, "merged": TYPE_BOOL,
-			"inherited_skill": TYPE_STRING_NAME, "merge_trait": TYPE_STRING_NAME, "archived": TYPE_BOOL}):
+			"inherited_skill": TYPE_STRING_NAME, "merge_trait": TYPE_STRING_NAME, "archived": TYPE_BOOL, \
+			"work_actions": TYPE_ARRAY}):
 			return false
 		if entry.uid <= 0 or echo_ids.has(entry.uid) or state.next_echo_uid <= entry.uid \
 				or entry.condition < 0.0 or entry.condition > 100.0 or entry.tint < 0 or state.tint_counter <= entry.tint \
 				or (not entry.levels.is_empty() and entry.weapons.size() != entry.levels.size()) \
 				or entry.weapons.size() > Content.MAX_WEAPON_SLOTS or entry.samples.size() > EchoArchive.MAX_SAMPLES \
-				or not _stats_valid(entry.stats) or not _echo_metadata_valid(entry.inherited_skill, entry.merge_trait):
+				or not _stats_valid(entry.stats) or not _echo_metadata_valid(entry.inherited_skill, entry.merge_trait) \
+				or not EchoWork.validate_actions(entry.work_actions, maxf(0.0, float(entry.samples.size() - 1) * EchoTake.SAMPLE_DT)):
 			return false
-		echo_ids[entry.uid] = true
+		echo_ids[entry.uid] = entry
 		for i in entry.weapons.size():
 			if Content.weapon(StringName(entry.weapons[i])) == null:
 				return false
@@ -673,12 +691,21 @@ func _undo_valid(state: ShopState) -> bool:
 				return false
 	if state.selected_echo_uid > 0 and not echo_ids.has(state.selected_echo_uid):
 		return false
+	if not _undo_world_links_valid(state, echo_ids):
+		return false
 	var actor_ids := {}
 	for entry: Dictionary in state.echo_actors:
 		if not _row_types(entry, {"uid": TYPE_INT, "index": TYPE_INT, "t": TYPE_FLOAT,
-			"pos": TYPE_VECTOR2, "rewinding": TYPE_BOOL, "cooldowns": TYPE_ARRAY}) or not echo_ids.has(entry.uid) \
+			"pos": TYPE_VECTOR2, "rewinding": TYPE_BOOL, "cooldowns": TYPE_ARRAY, \
+			"work_cursor": TYPE_INT, "work_cycle": TYPE_INT}) or not echo_ids.has(entry.uid) \
 				or entry.index != actor_ids.size() or entry.t < 0.0 or actor_ids.has(entry.uid) \
-				or entry.cooldowns.size() > Content.MAX_WEAPON_SLOTS:
+				or entry.cooldowns.size() > Content.MAX_WEAPON_SLOTS or entry.work_cursor < 0 or entry.work_cycle < 0:
+			return false
+		var take_entry: Dictionary = echo_ids[entry.uid]
+		var actions: Array[Dictionary] = []
+		actions.assign(take_entry.work_actions)
+		if not EchoWork.validate_cursor(actions, maxf(0.0, float(take_entry.samples.size() - 1) * EchoTake.SAMPLE_DT),
+				entry.t, entry.work_cursor, entry.work_cycle):
 			return false
 		actor_ids[entry.uid] = true
 		for cooldown: Variant in entry.cooldowns:
@@ -715,6 +742,25 @@ func _undo_valid(state: ShopState) -> bool:
 		if mission.get("kind", &"") != StringName(state.active_order.kind) or mission.get("state", &"") != &"pending":
 			return false
 	return true
+
+
+func _undo_world_links_valid(state: ShopState, echo_ids: Dictionary) -> bool:
+	var world: Dictionary = state.expedition["world"]
+	var staff_uid: int = world["staff_uid"]
+	if staff_uid > 0 and not echo_ids.has(staff_uid):
+		return false
+	var active: Dictionary = {}
+	for row: Dictionary in world["roster"]:
+		if row["state"] == &"active":
+			active = row
+	for unit: Dictionary in state.support_units:
+		if not SupportSystem.COMPANIONS.has(unit["kind"]):
+			continue
+		if active.is_empty() or int(unit["uid"]) != int(active["uid"]) \
+				or unit["kind"] != StringName("recruited_" + String(active["kind"])):
+			return false
+		active = {}
+	return active.is_empty()
 
 
 func _row_types(row: Dictionary, fields: Dictionary) -> bool:

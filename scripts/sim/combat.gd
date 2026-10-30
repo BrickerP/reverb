@@ -449,9 +449,15 @@ static func _advance_projectile(sim: Sim, p: Projectile, delta: float) -> void:
 	sim.grid.query(middle,previous.distance_to(destination)*0.5+p.radius+Sim.MAX_ENEMY_RADIUS,candidates)
 	# Grid order follows world cells, not flight direction. Resolve the earliest
 	# actual circle contact first, including shots traveling left and large ticks.
+	# Contact geometry is fixed during sorting. Cache it once per candidate rather
+	# than repeating square roots for both operands of every sort comparison.
+	# The hit loop still checks live geometry after earlier hit/explosion callbacks.
+	var contact_times: Dictionary = {}
+	for candidate: EnemyState in candidates:
+		contact_times[candidate.uid] = _contact_time(previous, destination, candidate.pos, candidate.radius + p.radius)
 	candidates.sort_custom(func(a: EnemyState,b: EnemyState)->bool:
-		var at := _contact_time(previous,destination,a.pos,a.radius+p.radius)
-		var bt := _contact_time(previous,destination,b.pos,b.radius+p.radius)
+		var at: float = contact_times[a.uid]
+		var bt: float = contact_times[b.uid]
 		return a.uid < b.uid if is_equal_approx(at,bt) else at < bt)
 	for e: EnemyState in candidates:
 		if e.dead or p.hit_uids.has(e.uid):

@@ -256,8 +256,11 @@ func test_final_wave_wins_the_run(c: Check) -> void:
 	c.ok(s.boss != null, "the boss spawned")
 	s.damage_enemy(s.boss, 100000.0, Vector2.ZERO, false, -1)
 	_run(s, 1)
-	c.eq(s.phase, Sim.Phase.WON, "phase is WON")
-	c.eq(won[0], 1, "run_won emitted")
+	c.eq(s.phase, Sim.Phase.RESOLUTION, "final fight waits for explicit discharge")
+	c.eq(won[0], 0, "beating the boss cannot choose a future for the player")
+	c.ok(s.choose_exit(&"takeover"), "an explicit free choice finalizes the run")
+	c.eq(s.phase, Sim.Phase.WON, "selected ending enters WON")
+	c.eq(won[0], 1, "run_won emitted once after intent")
 
 
 func test_boss_silences_the_echoes(c: Check) -> void:

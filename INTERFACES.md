@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.15 contract. Simulation owns rules and mutation. UI,
+This is the current 0.16 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -14,7 +14,7 @@ or saved-run outcomes.
 | Equipment | `Content`, `WeaponDef`, `Combat`, `SupportSystem` | 35 weapon profiles, hit identity, support bodies and bounded allocation |
 | Roles and copies | `CharacterSkills`, `EchoSystem`, `EchoBank`, `EchoArchive` | Role actions, copy wear/retirement, host-preserving merge and cross-run archive |
 | Transactions | `Shop`, `ShopState`, `ShopResult`, `Offer`, `AnomalyContract` | Six goods, quotes, order replacement, assembly, refit, branching and atomic undo |
-| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Snapshot v2, atomic storage, permanent unlock/archive data and route clues |
+| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Snapshot v3, atomic storage, permanent unlock/archive data and route clues |
 | Presentation | `Hud`, `ArenaView`, `ExpeditionInk`, `BattleDirector`, `GameAudio` | Read-only, bounded, localized visual/audio feedback |
 
 Main detaches prior session listeners before binding a new or restored session.
@@ -76,21 +76,19 @@ order requires `ShopResult.REPLACE_ORDER`; the previous deposit is credited in
 the quoted difference. One `ShopState` undo restores funds, offers, accepted
 aliases, mission state, debt and counters atomically.
 
-Credit is explicit: purchasing it adds 30 materials and 40 debt. No ordinary
-failure path adds debt. Outstanding debt blocks another credit offer and Echo
-archive writes. Wave settlement may pay existing debt from current materials;
-tests distinguish repayment from newly created debt.
+Credit is explicit: purchasing adds 30 materials and 40 debt. No ordinary failure adds debt and settlement never silently takes an installment. `ShopResult.PAY_DEBT` quotes `min(materials, debt)` with no fee, applies through the same transaction/undo path, and is reachable from the Shop ledger. Outstanding debt blocks another advance and permanent archive writes, independently of exit choice.
 
-`Expedition.apply_ending_outcome` is once-only and bounded:
+`Expedition.forecast` reports natural faults and endangered workers before a work order is bought. Repair/Rescue orders buy responsibility and rewards; ambient help remains possible. `world_profile` exposes bounded persistent machine, worker, witness and companion-roster records. Rescue creates a safe person, never a decoy. Deployment uses `DEPLOY_COMPANION`; the previous living ally is benched with actual HP/life and can return.
 
-- `released`: selected first after two completed audits; repairs current copies
-  to 100 and writes off remaining credit debt.
-- `collective`: fills player health, then restores an existing recruited
-  companion or spawns one when capacity permits; otherwise the bounded pending
-  result is retained until capacity exists.
-- `indebted`: adds exactly 24 materials and keeps the debt ledger.
+A recruited boss opens a paused `ContextChoiceUi`; `Sim.choose_negotiation` validates identity-specific terms. Cancelling returns to Pause, and Resume reopens pending terms. No hidden decline occurs.
 
-The recorded outcome survives Endless and cannot be applied again.
+The final fight enters `Sim.Phase.RESOLUTION` (appended numeric value4). `Sim.choose_exit` applies one explicit choice and only then enters WON and emits `run_won`:
+
+- `released`: costs zero with clearance or 12 materials otherwise, repairs copies to100; does not erase debt.
+- `collective`: requires actual living workers/crew, releases them alive and restores player health.
+- `takeover`: stays in the bureau and assigns the latest retained copy as staff; Solo signs alone.
+
+Two completed audits grant clearance and cancel current debt at audit settlement, never force an exit. At least one free exit is always available. Pending decisions save and resume, and the once-only selected outcome persists into Endless. Exact closed schemas and bounds are defined in [theme-convergence.md](docs/theme-convergence.md).
 
 ## Equipment and support contracts
 
@@ -154,24 +152,20 @@ route and loadout.
 | `repair` | 50% of donor condition repairs the host, capped at 100 |
 | `power` | One strongest eligible host weapon level; lower condition minus 15 |
 
-Archive records are Meta data, not suspended-run data. `EchoArchive` stores one
-bounded record per eligible character and protects a stronger prior record.
-Solo, Daily, outstanding debt, invalid canonical gear/routes/stats, and missing
-capacity are rejected. Loading occupies a real Echo slot, uses current player
-stats as the baseline, caps condition at 60, and caps opening target power at
-the smaller of archived power and `current player DPS * 0.75` at stage 1. The
-title archive screen previews records and atomically toggles inheritance.
+Echo recordings retain the route, wave-end build, retirement skill and up to six key work events. `EchoRecorder.record_work` records successful player press/conveyor operations and at most two representative attacks, spaced eight seconds apart. Normal automatic fire adapts to current enemies. `EchoWork.step` performs eligible work only forward, consumes unavailable/muted events without backlog, and charges four condition only on success. Looper rewind retains a consumed-event high-water cursor; it cannot duplicate free work. View/audio consume `echo_work_performed` without model mutation.
 
-## Snapshot v2 and atomic storage
+Archive records are permanent Meta data. EndUi selects any retained candidate; raw DPS never decides replacement. An existing file requires an explicit comparison and confirmation, including lower-output and utility-only choices. Solo, Daily, debt, invalid gear/routes/stats and missing capacity are rejected. `EchoArchive.normalize` is the shared pure load/preview path: a real slot, at most60 condition, grade0 at opening, combat budget no more than0.75 of starter DPS and matching normalized utility stats. The stored original keeps its identity/grade. Conductor opening copy synergy and Mirror starter gear are included in actual-entry previews. Old permanent records may omit `work_actions`, decoded as an empty list in the same closed decoder.
 
-`RunSnapshot.VERSION == 2`. The graph includes expedition, debt/outcome,
+## Snapshot v3 and atomic storage
+
+`RunSnapshot.VERSION == 3`. The graph includes expedition, debt/outcome,
 interactables, character energy/cooldown/effects, support units and next UID,
 graded offers, paid investment, assembly annotations, order aliases, Echo merge
-metadata, archive-loaded flags and boss negotiation. It preserves exact RNG and
+metadata, key-work cursors and rewind high-water state, archive-loaded flags, persistent world/roster/witness references, pending boss terms and final resolution. It preserves exact RNG and
 shared references while accepting only known classes, canonical content and
 finite bounded values.
 
-The old 0.14 suspended-run schema is intentionally incompatible. There is no
+The old 0.15 and earlier suspended-run schemas is intentionally incompatible. There is no
 legacy fallback or migration branch. Permanent Meta unlocks, clues, archives
 and settings remain separate.
 
@@ -202,11 +196,6 @@ Current evidence entry points are:
   and reduced closeout flow;
 - `make export` plus release auditing for actual platform artifacts.
 
-The final native evidence is EN 1280×720 (46 PNGs, 440 checks) and ZH Reduced
-960×540 (47 PNGs, 449 checks), both with empty failure lists. Each profile
-strictly restores the authoritative Snapshot around 43 Sim screenshots. These
-are clinical fixtures, not a human playthrough. Three-platform export remains a
-separate pending gate tracked in [docs/closeout-acceptance.md](docs/closeout-acceptance.md).
-Scripted evidence does not establish human balance, addictiveness,
-physical-controller behavior, Windows GUI behavior, notarization or universal
-frame-rate acceptance.
+Native probes use original1280×720 and960×540 canvases, including EN/ZH and Reduced Effects. Clinical fixtures disclose setup, use real Main/UI inputs and validate snapshots around rendering; they are not human playthroughs. `tests/probe_native_theme_ui.gd` checks bounded full rosters and decision sheets, while `tools/theme_performance_probe.gd` supplies deterministic CPU comparisons. Build and release receipts accompany the exact immutable exported commit.
+
+Scripted evidence does not establish human balance, addictiveness, physical-controller behavior, Windows GUI behavior, notarization or universal frame-rate acceptance.

@@ -7,6 +7,8 @@ var t: float = 0.0
 var pos: Vector2 = Vector2.ZERO
 var rewinding: bool = false
 var cooldowns: Array[float] = []
+var work_cursor: int = 0
+var work_cycle: int = 0
 
 
 func _init(source: EchoTake, slot: int) -> void:

@@ -54,10 +54,45 @@ func _is_content_key(key: String) -> bool:
 			for value: String in ["compliance", "solidarity", "profit"]:
 				if parts[1] == "route." + value:
 					return true
-			for value: String in ["released", "collective", "indebted"]:
+			for value: StringName in Expedition.EXIT_IDS:
 				if parts[1] in ["ending." + value, "outcome." + value]:
 					return true
 			return false
+		"exit":
+			for value: StringName in Expedition.EXIT_IDS:
+				if parts[1] in [String(value), String(value) + ".desc"]:
+					return true
+			return false
+		"negotiation":
+			for value: String in ["sign", "stop_press", "settle_debt", "witness_mediation", "preserve_copy", "retire_copy", "self_witness", "decline"]:
+				if parts[1] in [value, value + ".desc"]:
+					return true
+			return false
+		"crew":
+			for boss: StringName in Expedition.BOSS_IDS:
+				if parts[1] in [String(boss), String(boss) + ".desc"]:
+					return true
+			for state: String in ["unsigned", "active", "bench", "fallen", "exited"]:
+				if parts[1] in ["state." + state, "reason." + state]:
+					return true
+			return parts[1] in ["action.deploy", "action.aid"]
+		"world":
+			for act in range(1, 4):
+				if parts[1] in ["act.%d" % act, "production.%d" % act]:
+					return true
+			return parts[1] in ["machine.operating", "machine.fault", "machine.repaired"]
+		"work":
+			for kind: String in ["press", "conveyor", "signature"]:
+				if parts[1] == "kind." + kind:
+					return true
+			for reason: String in ["performed", "condition", "muted", "sealed", "unavailable", "weapon_missing", "no_target", "repaired", "stopped", "distant"]:
+				if parts[1] == "reason." + reason:
+					return true
+			return false
+		"archive":
+			return parts[1] in ["work.press", "work.conveyor", "work.signature"]
+		"reason":
+			return parts[1] in ["debt_clear", "order_unavailable"]
 		"workshop":
 			if parts[1] in ["reason_debt", "reason_duplicate", "reason_trait", "reason_level"]:
 				return true

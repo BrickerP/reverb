@@ -37,7 +37,9 @@ var _isolated_paths: Dictionary = {}
 
 
 func _initialize() -> void:
-	_shots_dir = OUTPUT_DIR
+	_shots_dir = OS.get_environment("REVERB_STRESS_OUTPUT")
+	if _shots_dir.is_empty():
+		_shots_dir = OUTPUT_DIR
 	DirAccess.make_dir_recursive_absolute(_shots_dir)
 	var data_dir := _shots_dir.path_join("userdata")
 	DirAccess.make_dir_recursive_absolute(data_dir)

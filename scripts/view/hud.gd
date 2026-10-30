@@ -27,6 +27,10 @@ var _mat_pulse := 0.0
 var _hint_time := 0.0
 var _last_combo: StringName = &""
 var _combo_left := 0.0
+var _safe_workers := 0
+var _faults := 0
+var _causal_status := ""
+var _world_language := ""
 
 
 func _ready() -> void:
@@ -40,7 +44,10 @@ func bind(s: Sim) -> void:
 	if s == null:
 		unbind()
 		return
+	_disconnect_world()
 	sim = s
+	sim.world_event.connect(_on_world_event)
+	_refresh_world_status()
 	_hp_ghost = clampf(s.player.hp / maxf(1.0, s.player.max_hp()), 0.0, 1.0)
 	_last_health_ratio = _hp_ghost
 	_critical_poke = 0.0
@@ -58,6 +65,7 @@ func bind(s: Sim) -> void:
 
 
 func unbind() -> void:
+	_disconnect_world()
 	sim = null
 	paused = false
 	_hp_ghost = 1.0
@@ -72,6 +80,35 @@ func unbind() -> void:
 	_combo_left = 0.0
 	_visual_time = 0.0
 	queue_redraw()
+
+
+func _exit_tree() -> void:
+	_disconnect_world()
+
+
+func _disconnect_world() -> void:
+	if sim != null and sim.world_event.is_connected(_on_world_event):
+		sim.world_event.disconnect(_on_world_event)
+
+
+func _on_world_event(_info: Dictionary) -> void:
+	_refresh_world_status()
+	queue_redraw()
+
+
+func _refresh_world_status() -> void:
+	_safe_workers = 0
+	_faults = 0
+	if sim != null:
+		var world := Expedition.world_profile(sim)
+		for worker: Dictionary in world["workers"]:
+			if worker["state"] == &"safe":
+				_safe_workers += 1
+		for machine: Dictionary in world["machines"]:
+			if machine["status"] == &"fault" and not machine["stopped"]:
+				_faults += 1
+	_world_language = Loc.lang
+	_causal_status = Loc.t("hud.world_status", [_safe_workers, _faults])
 
 
 # 0 = just fired, 1 = ready. Drives the fill in each weapon slot.
@@ -642,12 +679,25 @@ func _draw_expedition() -> void:
 	if is_compact() or selected_echo_profile().is_empty() or not interaction.is_empty():
 		var hint_rect: Rect2 = layout_regions().interaction
 		_stock(&"interaction_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 8).draw(get_canvas_item(), hint_rect)
-		var hint := Loc.t("hud.manual_energy")
+		if _world_language != Loc.lang:
+			_world_language = Loc.lang
+			_causal_status = Loc.t("hud.world_status", [_safe_workers, _faults])
+		var hint := _causal_status
 		if not interaction.is_empty():
 			hint = Loc.t("hud.interact", [Controls.interact_label(), Loc.t(interaction.name_key)])
 		var debt := Loc.t("hud.debt", [status.debt]) if int(status.debt) > 0 else ""
-		if is_compact() and not debt.is_empty():
+		var condition := ""
+		if not interaction.is_empty():
+			if float(interaction.get("cooldown", 0.0)) > 0.0:
+				condition = Loc.t("world.wait", [ceili(float(interaction["cooldown"]))])
+			elif int(interaction.get("cost", 0)) > 0:
+				condition = Loc.t("world.cost", [interaction["cost"]])
+				if not interaction.get("available", false):
+					condition += " · " + Loc.t("shop.drop_poor")
+		if not debt.is_empty():
+			condition += (" · " if not condition.is_empty() else "") + debt
+		if not condition.is_empty():
 			_text(hint, hint_rect.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
-			_text(debt, hint_rect.position + Vector2(10.0, 29.0), 13, UiTheme.WARN, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
+			_text(condition, hint_rect.position + Vector2(10.0, 29.0), 12, UiTheme.WARN, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
 		else:
-			_text(hint + (" · " + debt if not debt.is_empty() else ""), hint_rect.position + Vector2(10.0, 23.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
+			_text(hint, hint_rect.position + Vector2(10.0, 23.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)

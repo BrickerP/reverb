@@ -17,6 +17,53 @@ func _item_offer(s: Sim, id: StringName, price: int) -> Offer:
 	return o
 
 
+func test_debt_repayment_quotes_partial_cost_and_undo_restores_funds_and_debt(c: Check) -> void:
+	var sim := _shop_sim(13)
+	sim.expedition["debt"] = 40
+	sim.expedition["credit_taken"] = 1
+	var before := ShopState.capture(sim).to_dict()
+	var rng_before := sim.rng.state
+	var quote := sim.shop.quote(ShopResult.PAY_DEBT, sim)
+	c.ok(quote.ok, "existing funds permit a partial voluntary repayment")
+	c.eq(quote.cost, 13, "repayment quote never exceeds funds or outstanding debt")
+	c.eq(ShopState.capture(sim).to_dict(), before, "repayment quote never spends or changes history")
+	var result := sim.shop.apply(ShopResult.PAY_DEBT, sim)
+	c.ok(result.ok, "canonical repayment applies")
+	c.eq(result.cost, quote.cost, "charged repayment matches visible quote")
+	c.eq(sim.player.materials, 0, "partial repayment spends exactly the quoted funds")
+	c.eq(sim.expedition["debt"], 27, "partial repayment reduces actual debt by the same amount")
+	c.eq(sim.rng.state, rng_before, "financial choice never changes combat RNG")
+	c.ok(sim.shop.undo(sim).ok, "repayment can be undone as one transaction")
+	c.eq(ShopState.capture(sim).to_dict(), before, "one undo restores both cash and actual debt")
+	sim.player.materials = 100
+	c.eq(sim.shop.quote(ShopResult.PAY_DEBT, sim).cost, 40, "full repayment has no extra fee")
+	c.ok(sim.shop.apply(ShopResult.PAY_DEBT, sim).ok, "debt can be cleared without Collector or audit")
+	c.eq(sim.player.materials, 60, "surplus cash remains available for equipment")
+	c.eq(sim.expedition["debt"], 0, "full repayment clears outstanding debt")
+	c.eq(sim.expedition["credit_taken"], 1, "repayment does not erase historical borrowing")
+
+
+func test_debt_repayment_rejects_no_cash_no_debt_and_combat_without_mutation(c: Check) -> void:
+	var sim := _shop_sim(0)
+	sim.expedition["debt"] = 40
+	sim.expedition["credit_taken"] = 1
+	var before := RunSnapshot.capture(sim)
+	c.eq(sim.shop.quote(ShopResult.PAY_DEBT, sim).reason, &"poor", "zero cash cannot make a zero-value transaction")
+	c.ok(not sim.shop.apply(ShopResult.PAY_DEBT, sim).ok, "no-cash repayment refuses apply")
+	c.eq(RunSnapshot.capture(sim), before, "failed repayment does not create undo entries or change money")
+	sim.player.materials = 50
+	sim.expedition["debt"] = 0
+	before = RunSnapshot.capture(sim)
+	c.eq(sim.shop.quote(ShopResult.PAY_DEBT, sim).reason, &"debt_clear", "cleared account explains why no repayment is due")
+	c.ok(not sim.shop.apply(ShopResult.PAY_DEBT, sim).ok, "debt-free players cannot spend on repayment")
+	c.eq(RunSnapshot.capture(sim), before, "cleared account never loses funds")
+	sim.expedition["debt"] = 40
+	sim.phase = Sim.Phase.WAVE
+	before = RunSnapshot.capture(sim)
+	c.eq(sim.shop.apply(ShopResult.PAY_DEBT, sim).reason, &"invalid", "repayment is a shop action")
+	c.eq(RunSnapshot.capture(sim), before, "combat cannot mutate repayment or undo history")
+
+
 func test_family_combo_thresholds(c: Check) -> void:
 	var weapons: Array[WeaponDef] = []
 	var pistol := Content.weapon(&"pistol")

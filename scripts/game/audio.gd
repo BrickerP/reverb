@@ -316,7 +316,7 @@ func _update_effect_envelopes(delta: float) -> void:
 static func music_profile(sim: Sim, current: StringName = &"battle") -> Dictionary:
 	if sim == null or sim.phase in [Sim.Phase.LOST, Sim.Phase.WON]:
 		return {"mode": &"menu", "intensity": 0.0, "nearby": 0, "attacks": 0}
-	if sim.phase == Sim.Phase.SHOP:
+	if sim.phase in [Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
 		return {"mode": &"shop", "intensity": 0.0, "nearby": 0, "attacks": 0}
 	var nearby := 0
 	var attacks := 0
@@ -414,6 +414,7 @@ func bind(sim: Sim) -> void:
 	sim.material_collected.connect(_on_pickup)
 	sim.echo_spawned.connect(_on_echo)
 	sim.echo_retired.connect(_on_echo_retired)
+	sim.echo_work_performed.connect(_on_echo_work)
 	sim.wave_started.connect(_on_wave_start)
 	sim.wave_ended.connect(_on_wave_end)
 	sim.purchased.connect(_on_purchase)
@@ -434,6 +435,7 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.material_collected, _on_pickup)
 		_disconnect_signal(_bound.echo_spawned, _on_echo)
 		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
+		_disconnect_signal(_bound.echo_work_performed, _on_echo_work)
 		_disconnect_signal(_bound.wave_started, _on_wave_start)
 		_disconnect_signal(_bound.wave_ended, _on_wave_end)
 		_disconnect_signal(_bound.purchased, _on_purchase)
@@ -694,6 +696,16 @@ func _on_echo_retired(info: EchoRetirementInfo) -> void:
 	_last.erase(cue)
 	play(cue, 1.0, pitch, 0.32)
 	_duck_room(0.32)
+
+
+func _on_echo_work(info: Dictionary) -> void:
+	if not bool(info.get("success", false)):
+		return
+	# Signature attacks already emit their own weapon cue. Devices use the same
+	# bounded dry palette and cooldowns as the rest of the bureau.
+	match info.get("kind", &""):
+		&"press": play(&"weapon_rail_spike", -4.0, 0.65, 0.18)
+		&"conveyor": play(&"click", -5.0, 0.82, 0.12)
 
 
 func _on_wave_start(_wave: int) -> void:

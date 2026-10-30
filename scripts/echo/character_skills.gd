@@ -5,6 +5,7 @@ const ENERGY_COST := 100.0
 const COOLDOWN := 6.0
 const ENERGY_PER_MATERIAL := 4.0
 const HISTORY_SAMPLES := 21
+const REWIND_SECONDS := 2.0
 
 
 static func on_pickup(sim: Sim, value: int) -> void:
@@ -70,9 +71,10 @@ static func _rewind(sim: Sim) -> bool:
 		destination = sim.recorder.samples[0]
 	sim.player.pos = WorldArena.move_body(destination, Vector2.ZERO, PlayerState.RADIUS)
 	for actor: EchoActor in sim.echoes:
-		actor.t = maxf(0.0, actor.t - 2.0)
+		actor.t = maxf(0.0, actor.t - REWIND_SECONDS)
 		actor.pos = actor.take.position_at(actor.t)
 		actor.rewinding = actor.take.is_rewinding(actor.t)
+		# Consumed key work stays consumed while the route catches back up.
 	for i in sim.player.cooldowns.size():
 		sim.player.cooldowns[i] = 0.0
 	sim.player.iframes = maxf(sim.player.iframes, 0.35)

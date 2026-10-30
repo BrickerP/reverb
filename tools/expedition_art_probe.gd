@@ -8,8 +8,8 @@ var _main: Node
 var _out := ""
 var _failures: Array[String] = []
 var _summary := {"screenshots": [], "pixels": [], "state_checks": [],
-	"fixture": "Frozen Main/Sim art gallery: canonical complete mission rows, correctly allocated bosses and support, one real weapon with long cooldown. Actual ability activation and rule delta are executed. Mixed mission targets are disclosed gallery staging, not a campaign result.",
-	"negative_control": "HUD draw processing is frozen to isolate arena clipping; only support/target visibility and boss brain states are temporarily changed, then original arrays and all enemy states are restored by UID. Skill controls restore the original role_effects dictionary. Complete RunSnapshot equality and both RNGs are checked."}
+	"fixture": "Frozen 0.16 Main/Sim art gallery. Physical machine sites and natural worker/repair identities retain their canonical positions; extra part/terminal targets are disclosed mixed-order gallery staging, not a campaign result. Five equipment supports use the real allocator; companion deployment has a reciprocal persistent roster. Bosses use the real spawn allocator. One real weapon has a long cooldown. Actual ability activation and rule delta are executed.",
+	"negative_control": "HUD draw processing is frozen to isolate arena clipping; only support/target visibility, active-to-bench roster status and boss brain states are temporarily changed. Original arrays, roster and enemy states are restored by UID. Skill controls restore the original role_effects dictionary. Complete RunSnapshot equality, strict JSON restore and both RNGs are checked."}
 var _started := Time.get_ticks_msec()
 
 
@@ -57,6 +57,7 @@ func _run() -> void:
 	_main._view._visual_time = 1.3
 	_main._view._beat_take = null
 	_main._view._paths.clear()
+	_main._view.set_reduced_effects(OS.get_environment("REVERB_PROBE_REDUCED") == "1")
 	var sim: Sim = _main.sim
 	sim.player.pos = Vector2(1240, 680)
 	sim.enemies.clear()
@@ -64,65 +65,70 @@ func _run() -> void:
 	sim.pickups.clear()
 	sim._plan.clear()
 	sim._plan_idx = 0
-	sim.interactables.clear()
 	sim.support_units.clear()
 	sim.player.cooldowns[0] = 1000.0
 	var camera := WorldArena.camera_rect(sim.player.pos, WorldArena.display_viewport(root.get_visible_rect().size))
-	var support_kinds: Array[StringName] = [&"hound", &"turret", &"repair_station", &"paper_tree", &"decoy", &"recruited_foreman"]
+	var support_kinds: Array[StringName] = [&"hound", &"turret", &"repair_station", &"paper_tree", &"decoy"]
 	for index in support_kinds.size():
 		SupportSystem.spawn(sim, support_kinds[index], camera.position + Vector2(100.0 + float(index) * (camera.size.x - 200.0) / 5.0, camera.size.y * 0.72))
 		sim.support_units.back()["hp"] = float(sim.support_units.back()["max_hp"]) * 0.65
 		sim.support_units.back()["cooldown"] = 0.9
 		if support_kinds[index] == &"paper_tree":
 			sim.support_units.back()["charges"] = 2
-	var kinds: Array[StringName] = [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue"]
-	for index in kinds.size():
-		sim.interactables.append({"id": StringName("fixture_%d" % index), "kind": kinds[index],
-			"pos": camera.position + Vector2(100.0 + float(index) * (camera.size.x - 200.0) / 6.0, camera.size.y * 0.22), "range": 112.0, "cost": 8 if kinds[index] == &"recycler" else 0,
-			"warning": 0.6 if kinds[index] == &"press" else 0.0, "active": 3.0 if kinds[index] == &"conveyor" else 0.0,
-			"cooldown": 0.0, "used": false, "direction": Vector2.RIGHT})
+	_stage_companion(sim, &"foreman", camera.position + Vector2(camera.size.x - 100.0, camera.size.y * 0.72))
+	# Preserve actual machine locations and the real endangered worker identity.
+	# Only animation clocks and two extra mixed-order gallery props are staged.
+	for item: Dictionary in sim.interactables:
+		item["cooldown"] = 0.0
+		if item["kind"] == &"press":
+			item["warning"] = 0.6
+		elif item["kind"] == &"conveyor":
+			item["active"] = 3.0
+	for index in 2:
+		Expedition._add_target_at(sim, StringName("gallery_mission_%d" % index), &"part" if index == 0 else &"terminal",
+			camera.position + Vector2(camera.size.x * (0.4 + index * 0.3), camera.size.y * 0.22))
 	sim.expedition["mission"] = _mission(&"rescue", sim.wave)
 	sim.expedition["negotiation"] = {}
 	_main._view._update_camera()
 	await _capture("support_and_missions", sim)
 	var original_pos := sim.player.pos
-	sim.player.pos = sim.interactables[2]["pos"]
+	sim.player.pos = _target(sim, &"recycler")["pos"]
 	_main._view._update_camera()
 	Controls.using_gamepad = false
 	await _capture("machine_keyboard", sim)
 	Controls.using_gamepad = true
 	await _capture("machine_controller", sim)
 	Controls.using_gamepad = false
+	for kind: StringName in [&"press", &"conveyor", &"part", &"terminal", &"repair", &"rescue"]:
+		var target := _target(sim, kind)
+		if target.is_empty():
+			_failures.append("canonical gallery target missing: " + String(kind))
+			continue
+		sim.player.pos = target["pos"]
+		_main._view._update_camera()
+		await _capture("target_" + String(kind), sim)
 	sim.player.pos = original_pos
 	_main._view._update_camera()
 	var companion_pos: Vector2 = sim.support_units.back()["pos"]
-	for kind: StringName in [&"recruited_collector", &"recruited_paradox"]:
-		sim.support_units.pop_back()
-		SupportSystem.spawn(sim, kind, companion_pos)
-		sim.support_units.back()["hp"] = float(sim.support_units.back()["max_hp"]) * 0.65
-		await _capture(String(kind), sim)
+	for kind: StringName in [&"collector", &"paradox"]:
+		_stage_companion(sim, kind, companion_pos)
+		await _capture("recruited_" + String(kind), sim)
 	for id: StringName in [&"foreman", &"collector", &"paradox"]:
 		sim.enemies.clear()
 		sim.expedition["negotiation"] = {}
 		sim.expedition["mission"] = _mission(&"rescue", sim.wave)
 		_remove_negotiation_target(sim)
-		var enemy := EnemyState.new()
-		enemy.uid = sim._next_uid
-		sim._next_uid += 1
-		enemy.def = Content.enemy(id)
-		enemy.pos = camera.position + Vector2(camera.size.x * 0.23, camera.size.y * 0.32)
-		enemy.hp = enemy.def.hp
-		enemy.max_hp = enemy.hp
-		enemy.radius = enemy.def.radius
+		sim.boss = null
+		sim.boss_shards.clear()
+		var spawn := PendingSpawn.new()
+		spawn.def = Content.enemy(id)
+		spawn.pos = WorldArena.move_body(camera.position + Vector2(camera.size.x * 0.23, camera.size.y * 0.32), Vector2.ZERO, spawn.def.radius)
+		sim._materialize(spawn)
+		var enemy := sim.boss
 		enemy.attack_target = camera.position + Vector2(camera.size.x * 0.63, camera.size.y * 0.35)
 		enemy.attack_direction = Vector2.RIGHT
 		enemy.brain_state = &"warn"
 		enemy.brain_time = 0.55
-		sim.enemies.append(enemy)
-		sim.boss = enemy
-		sim.boss_shards = [enemy]
-		sim.boss_phase = 1
-		sim.boss_original_max_hp = enemy.max_hp
 		await _capture(String(id) + "_warning", sim)
 		sim.expedition["mission"] = _mission(&"recruit", sim.wave)
 		if not Expedition.try_negotiate(sim, enemy):
@@ -136,6 +142,7 @@ func _run() -> void:
 			enemy.brain_state = &"warn"
 			_main._view.set_reduced_effects(true)
 			await _capture("paradox_reduced", sim)
+	_main._view.set_reduced_effects(OS.get_environment("REVERB_PROBE_REDUCED") == "1")
 	await _pixel_control(sim)
 	await _skill_captures()
 	_finish()
@@ -168,6 +175,7 @@ func _capture(name: String, sim: Sim) -> void:
 	if not labels_inside:
 		_failures.append(name + " selected label leaves actual world camera")
 	_summary["screenshots"].append({"name": name, "size": [pixels.get_width(), pixels.get_height()],
+		"reduced_effects": _main._view.reduced_effects,
 		"supports": ExpeditionInk.draw_stats()["supports"], "targets": ExpeditionInk.draw_stats()["targets"],
 		"warnings": ExpeditionInk.draw_stats()["warnings"], "skills": ExpeditionInk.draw_stats()["skills"], "wave_time": sim.wave_time,
 		"camera_world_xywh": _rect(actual["world_rect"]), "expected_camera_xywh": _rect(expected),
@@ -253,12 +261,18 @@ func _pixel_control(sim: Sim) -> void:
 	_store_snapshot("world_after_render", RunSnapshot.capture(sim))
 	var units := sim.support_units
 	var items := sim.interactables
+	var roster: Array = sim.expedition["world"]["roster"]
+	var hidden_roster: Array = roster.duplicate(true)
+	for row: Dictionary in hidden_roster:
+		if row["state"] == &"active":
+			row["state"] = &"bench"
 	var brains := {}
 	for enemy: EnemyState in sim.enemies:
 		brains[enemy.uid] = enemy.brain_state
 		enemy.brain_state = &"recover"
 	sim.support_units = []
 	sim.interactables = []
+	sim.expedition["world"]["roster"] = hidden_roster
 	var control := _checked_snapshot(sim, "world hidden baseline")
 	_main._view.queue_redraw()
 	await process_frame
@@ -273,10 +287,38 @@ func _pixel_control(sim: Sim) -> void:
 	_summary["pixels"].append(changed)
 	sim.support_units = units
 	sim.interactables = items
+	sim.expedition["world"]["roster"] = roster
 	for enemy: EnemyState in sim.enemies:
 		enemy.brain_state = brains[enemy.uid]
 	_assert_same(sim, baseline, rng, "world control restored")
 	_store_snapshot("world_after_control", RunSnapshot.capture(sim))
+
+
+func _stage_companion(sim: Sim, kind: StringName, pos: Vector2) -> void:
+	var row := Expedition._roster(sim, kind)
+	if row.is_empty():
+		var profile: Dictionary = SupportSystem.PROFILES[StringName("recruited_" + String(kind))]
+		row = {"kind": kind, "hp": float(profile["hp"]), "max_hp": float(profile["hp"]),
+			"life": float(profile["life"]), "state": &"bench", "uid": 0}
+		sim.expedition["world"]["roster"].append(row)
+	if not Expedition._deploy(sim, kind):
+		_failures.append("canonical roster deployment failed: " + String(kind))
+		return
+	var unit: Dictionary = sim.support_units.back()
+	unit["pos"] = WorldArena.move_body(pos, Vector2.ZERO, SupportSystem.UNIT_RADIUS)
+	unit["hp"] = float(unit["max_hp"]) * 0.65
+	unit["cooldown"] = 0.9
+	Expedition.sync_roster(sim)
+	sim.expedition["recruited_boss"] = kind
+	if not sim.expedition["recruited_bosses"].has(kind):
+		sim.expedition["recruited_bosses"].append(kind)
+
+
+func _target(sim: Sim, kind: StringName) -> Dictionary:
+	for item: Dictionary in sim.interactables:
+		if item["kind"] == kind and not item["used"]:
+			return item
+	return {}
 
 
 func _mission(kind: StringName, wave: int) -> Dictionary:

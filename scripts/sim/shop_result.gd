@@ -11,6 +11,8 @@ const SELL := &"sell"
 const ECHO_DISCARD := &"echo_discard"
 const ECHO_MERGE := &"echo_merge"
 const ECHO_REPAIR := &"echo_repair"
+const DEPLOY_COMPANION := &"deploy_companion"
+const PAY_DEBT := &"pay_debt"
 const REROLL := &"reroll"
 const UNDO := &"undo"
 

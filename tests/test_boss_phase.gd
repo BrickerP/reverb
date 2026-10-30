@@ -124,8 +124,12 @@ func test_both_shards_must_die(c: Check) -> void:
 	c.eq(enrages[0], 1, "enrage fires when only one body remains")
 	c.eq(s.boss_alive_count(), 0, "no boss bodies remain")
 	_run(s, 1)
-	c.eq(s.phase, Sim.Phase.WON, "both deaths win the run")
-	c.eq(won[0], 1, "win is emitted once")
+	c.eq(s.phase, Sim.Phase.RESOLUTION, "both deaths open the final departure choice")
+	c.eq(won[0], 0, "combat victory cannot silently select a future")
+	c.ok(s.choose_exit(&"takeover"), "an explicit free departure choice finalizes victory")
+	c.eq(s.phase, Sim.Phase.WON, "chosen future completes the run")
+	c.ok(not s.choose_exit(&"released"), "repeated choice cannot replace the completed ending")
+	c.eq(won[0], 1, "win is emitted once after choice")
 
 
 func test_lethal_hit_can_skip_phase_two(c: Check) -> void:
@@ -137,7 +141,9 @@ func test_lethal_hit_can_skip_phase_two(c: Check) -> void:
 	c.eq(s.boss_phase, 1, "phase remains one")
 	c.eq(s.boss_total_count(), 1, "no shard is spawned")
 	_run(s, 1)
-	c.eq(s.phase, Sim.Phase.WON, "the lethal hit still wins")
+	c.eq(s.phase, Sim.Phase.RESOLUTION, "a lethal hit still waits for the final departure choice")
+	c.ok(s.choose_exit(&"takeover"), "phase-one victory has the same explicit ending path")
+	c.eq(s.phase, Sim.Phase.WON, "chosen ending completes phase-one victory")
 
 
 func test_phase_two_keeps_the_silence_cadence(c: Check) -> void:

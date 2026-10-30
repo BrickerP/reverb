@@ -19,6 +19,8 @@ signal explosion_info(info: ExplosionInfo)
 signal weapon_changed(info: WeaponChangeInfo)
 signal material_collected(amount: int)
 signal support_event(info: Dictionary)
+signal world_event(info: Dictionary)
+signal echo_work_performed(info: Dictionary)
 signal purchased
 signal explosion(pos: Vector2, radius: float, color: Color)
 signal boss_spawned(enemy: EnemyState)
@@ -33,7 +35,7 @@ signal rift_spawned(rift: TemporalRift)
 signal rift_activated(rift: TemporalRift)
 signal rift_ended(rift: TemporalRift)
 
-enum Phase { WAVE, SHOP, LOST, WON }
+enum Phase { WAVE, SHOP, LOST, WON, RESOLUTION }
 
 const ARENA := WorldArena.BOUNDS
 const VIEWPORT := WorldArena.VIEWPORT
@@ -176,6 +178,7 @@ func _init(seed_value: int = 1) -> void:
 	player.materials = START_MATERIALS
 	player.add_weapon(Content.weapon(Content.STARTER_WEAPON))
 	echo_retired.connect(_on_echo_retired)
+	shot_fired_info.connect(_record_signature)
 
 
 func start_run() -> void:
@@ -415,9 +418,17 @@ func start_wave(n: int) -> void:
 	player.iframes = 0.0
 	for i in player.cooldowns.size():
 		player.cooldowns[i] = 0.0
-	bank.trim_to(echo_capacity())
+	var staff_uid := int(expedition.get("world", {}).get("staff_uid", 0))
+	var staff := bank.find_uid(staff_uid)
+	if staff != null:
+		bank.takes.erase(staff)
+	bank.trim_to(maxi(0, echo_capacity() - (1 if staff != null else 0)))
+	if staff != null:
+		bank.takes.append(staff)
 	echoes.clear()
 	for i in bank.takes.size():
+		if bank.takes[i].uid == staff_uid:
+			continue
 		var actor := EchoActor.new(bank.takes[i], i)
 		echoes.append(actor)
 		echo_spawned.emit(actor)
@@ -429,7 +440,7 @@ func start_wave(n: int) -> void:
 
 
 func step(delta: float, move_dir: Vector2) -> void:
-	if phase != Phase.WAVE:
+	if phase != Phase.WAVE or Expedition.is_negotiating(self):
 		return
 	if delta <= 0.0 or not is_finite(delta):
 		return
@@ -465,6 +476,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	Combat.tick_fields(self, delta)
 	_update_pickups(delta)
 	SupportSystem.step(self, delta)
+	Expedition.sync_roster(self)
 	_compact()
 	if player.hp <= 0.0:
 		phase = Phase.LOST
@@ -777,7 +789,7 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 
 
 func discard_take(take: EchoTake) -> void:
-	bank.discard(take)
+	shop.discard_echo(self, take)
 
 
 func can_retire_echo() -> bool:
@@ -827,6 +839,88 @@ func activate_character_skill() -> bool:
 
 func interact() -> bool:
 	return Expedition.interact(self)
+
+
+func choose_negotiation(choice: StringName) -> bool:
+	return Expedition.choose_negotiation(self, choice)
+
+
+func choose_exit(choice: StringName) -> bool:
+	if not Expedition.choose_exit(self, choice):
+		return false
+	phase = Phase.WON
+	run_won.emit()
+	return true
+
+
+func _record_signature(info: ShotInfo) -> void:
+	if info != null and info.source == -1 and info.actor_token < 0 and phase == Phase.WAVE:
+		recorder.record_work(&"signature", &"", info.origin, info.weapon_id, info.direction)
+
+
+func replay_signature_status(actor: EchoActor, action: Dictionary) -> Dictionary:
+	var weapon := Content.weapon(action.get("weapon_id", &""))
+	if actor == null or actor.take == null or weapon == null or not actor.take.weapons.has(weapon):
+		return {"target_pos": actor.pos if actor != null else player.pos, "reason": &"weapon_missing"}
+	if weapon.support_kind != &"":
+		var aim: Vector2 = action.get("aim", Vector2.RIGHT)
+		return {"target_pos": actor.pos + aim.normalized() * 44.0, "reason": &"ready"}
+	var target := signature_target(actor, action)
+	return {"target_pos": target.pos if target != null else actor.pos, "reason": &"ready" if target != null else &"no_target"}
+
+
+func signature_target(actor: EchoActor, action: Dictionary) -> EnemyState:
+	if actor == null or actor.take == null or phase != Phase.WAVE:
+		return null
+	var weapon := Content.weapon(action.get("weapon_id", &""))
+	if weapon == null or not actor.take.weapons.has(weapon):
+		return null
+	var aim: Vector2 = action.get("aim", Vector2.RIGHT)
+	var target: EnemyState = null
+	var best := INF
+	var reach := weapon.reach * actor.take.stats.range_mult()
+	for enemy in enemies:
+		if enemy.dead or enemy.brain_state == &"defeated":
+			continue
+		var offset := enemy.pos - actor.pos
+		if offset.length() > reach + enemy.radius:
+			continue
+		var score := offset.length() + (1.0 - offset.normalized().dot(aim.normalized())) * reach
+		if score < best:
+			best = score
+			target = enemy
+	return target
+
+
+func replay_signature(actor: EchoActor, action: Dictionary) -> bool:
+	if actor == null or actor.take == null or phase != Phase.WAVE:
+		return false
+	var weapon := Content.weapon(action.get("weapon_id", &""))
+	if weapon == null or not actor.take.weapons.has(weapon):
+		return false
+	var status := replay_signature_status(actor, action)
+	if status["reason"] != &"ready":
+		return false
+	var index := actor.take.weapons.find(weapon)
+	var level := actor.take.levels[index] if index < actor.take.levels.size() else 0
+	var executed := Combat.fire(self, actor.pos, status["target_pos"], weapon, level, synergy_damage_mult(),
+		actor.take.stats, echo_power(), actor.index, actor.take.tint(), 0, false, actor.take.uid)
+	if not executed:
+		return false
+	shot_sequence += 1
+	var info := ShotInfo.new()
+	info.source = actor.index
+	info.actor_token = actor.take.uid
+	info.source_tint = actor.take.tint()
+	info.weapon_id = weapon.id
+	info.origin = actor.pos
+	info.target = status["target_pos"]
+	info.direction = (info.target - info.origin).normalized()
+	info.count = maxi(1, weapon.pellets)
+	info.level = level
+	info.sequence = shot_sequence
+	shot_fired_info.emit(info)
+	return true
 
 
 func _step_tail_pressure(delta: float) -> void:
@@ -1103,6 +1197,8 @@ func _compact() -> void:
 
 
 func _end_wave() -> void:
+	if phase != Phase.WAVE:
+		return
 	echo_silenced = 0.0
 	for pk in pickups:
 		if pk.kind == &"scrap":
@@ -1142,8 +1238,7 @@ func _end_wave() -> void:
 	StoryLedger.on_wave(self)
 	wave_ended.emit(wave)
 	if wave >= WaveDirector.FINAL_WAVE and not endless:
-		phase = Phase.WON
-		run_won.emit()
+		phase = Phase.RESOLUTION
 	else:
 		phase = Phase.SHOP
 		shop.roll(self)

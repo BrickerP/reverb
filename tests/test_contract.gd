@@ -186,3 +186,38 @@ func test_paid_order_to_credit_exchange_refund_advance_and_liability_are_one_und
 	c.ok(sim.active_contract == credit.contract and credit.sold and not repair.sold, "new order and returned stock have consistent aliases")
 	c.ok(sim.shop.undo(sim).ok, "undo restores the previous paid order")
 	c.eq(ShopState.capture(sim).to_dict(), before, "refund, advance, debt, counters and accepted aliases reverse atomically")
+
+
+func test_repair_quotes_follow_natural_forecast_and_recheck_held_work(c: Check) -> void:
+	var sim := _shop_sim()
+	var repair := _order(sim, AnomalyContract.REPAIR)
+	c.ok(sim.shop.quote(ShopResult.BUY, sim, repair).ok, "a real unrepaired device supports a repair job")
+	c.ok(sim.shop.toggle_lock(sim, repair), "player can hold the quoted repair work")
+	for machine: Dictionary in sim.expedition["world"]["machines"]:
+		machine["status"] = &"repaired"
+		machine["repaired_wave"] = 1
+		machine["stopped"] = true
+	var before := ShopState.capture(sim).to_dict()
+	var quote := sim.shop.quote(ShopResult.BUY, sim, repair)
+	c.ok(not quote.ok and quote.reason == &"order_unavailable", "held work is rechecked when all actual machines are already repaired")
+	c.ok(not sim.shop.apply(ShopResult.BUY, sim, repair).ok, "a held quote cannot manufacture a new fault")
+	c.eq(ShopState.capture(sim).to_dict(), before, "unavailable held work cannot charge or rewrite the world")
+	var salvage := _order(sim, AnomalyContract.SALVAGE)
+	c.ok(sim.shop.apply(ShopResult.BUY, sim, salvage).ok, "another useful job can still be selected")
+	before = ShopState.capture(sim).to_dict()
+	quote = sim.shop.quote(ShopResult.REPLACE_ORDER, sim, repair)
+	c.ok(not quote.ok and quote.reason == &"order_unavailable", "exchange also checks the actual target")
+	c.ok(not sim.shop.apply(ShopResult.REPLACE_ORDER, sim, repair).ok, "exchange cannot refund work into an impossible job")
+	c.eq(ShopState.capture(sim).to_dict(), before, "failed exchange retains accepted job and money")
+
+
+func test_endless_rescue_quote_never_invents_people_beyond_the_roster_bound(c: Check) -> void:
+	var sim := _shop_sim()
+	sim.wave = 12
+	sim.endless = true
+	var rescue := _order(sim, AnomalyContract.RESCUE)
+	var before := ShopState.capture(sim).to_dict()
+	var quote := sim.shop.quote(ShopResult.BUY, sim, rescue)
+	c.ok(not quote.ok and quote.reason == &"order_unavailable", "the thirteenth stage cannot promise an invented worker")
+	c.ok(not sim.shop.apply(ShopResult.BUY, sim, rescue).ok, "old held rescue quote is refused past the finite roster")
+	c.eq(ShopState.capture(sim).to_dict(), before, "refused rescue never creates or deletes a person")

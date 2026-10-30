@@ -1,11 +1,11 @@
 extends SceneTree
-# Native 0.15 Main/input evidence. Scenario setup is synthetic and disclosed in
+# Native 0.16 Main/input evidence. Scenario setup is synthetic and disclosed in
 # summary.json; subsequent UI, transactions, collisions and mission rules are real.
 # REVERB_LANG=en|zh REVERB_PROBE_SIZE=1280x720|960x540 REVERB_PROBE_REDUCED=0|1
 # godot --path . --disable-vsync --script res://tools/expedition_gameplay_probe.gd
 
-const DEADLINE_MSEC := 180000
-const SEED := 150150
+const DEADLINE_MSEC := 240000
+const SEED := 160160
 const ROLES: Array[StringName] = [&"looper", &"solo", &"mirror", &"conductor", &"mender", &"overloader"]
 const FILES := {"REVERB_SAVE": "meta.json", "REVERB_SETTINGS": "settings.json", "REVERB_RUN_LOG": "runs.jsonl", "REVERB_FEEDBACK_LOG": "feedback.jsonl", "REVERB_SUSPEND": "suspend.json"}
 
@@ -17,7 +17,7 @@ var _finished := false
 var _size := Vector2i(1280, 720)
 var _failures: Array[String] = []
 var _shots_by_weapon: Dictionary = {}
-var _summary := {"probe": "expedition_gameplay_0_15", "coverage": [], "fixtures": [], "screenshots": {}, "checks": [], "results": {}, "peak_counts": {},
+var _summary := {"probe": "theme_convergence_gameplay_0_16", "coverage": [], "fixtures": [], "screenshots": {}, "checks": [], "results": {}, "peak_counts": {},
 	"coverage_meaning": "Executed scenario IDs; success additionally requires failures to be empty",
 	"disclosure": "Scripted clinical fixtures, not a human playthrough or usability test. Canonical Main/Sim methods create stages; disclosed loadouts, budgets, positions and route counters shorten setup. Real Input.parse_input_event press/release drives UI and abilities. Main physics is frozen during decisions and explicitly advanced at 60 Hz during battle. Native force_draw captures real pixels even when occluded. Rendering negative controls are owned by expedition_art_probe."}
 
@@ -67,7 +67,7 @@ func _process(_delta: float) -> bool:
 	if _finished:
 		return false
 	if Time.get_ticks_msec() - _started > DEADLINE_MSEC:
-		_check(false, "deadline_180_seconds")
+		_check(false, "deadline_240_seconds")
 		_finish()
 		return false
 	RenderingServer.force_draw()
@@ -102,6 +102,7 @@ func _run() -> void:
 	await _activate(_main.character_select._cards[0])
 	_check(_main.sim != null and _main.sim.character_id == &"looper", "title_card_starts_actual_main_run")
 	await _recording_beat()
+	await _recorded_work()
 	await _equipment()
 	await _evolutions()
 	await _echo_traits()
@@ -233,6 +234,8 @@ func _credit_and_reroll() -> void:
 	var before := RunSnapshot.capture(sim)
 	var funds := sim.player.materials
 	await _activate(ui.offers_box.get_child(4) as OfferCard)
+	_check(RunSnapshot.capture(sim) == before, "credit_order_terms_wait_for_explicit_confirmation")
+	await _activate(ui.workshop.choice_buttons[0])
 	_check(sim.player.materials == funds + 30 and int(sim.expedition.debt) == 40, "credit_card_pays_actual_advance_and_debt")
 	var credit := RunSnapshot.capture(sim)
 	await _shot("credit_order_purchased")
@@ -246,6 +249,21 @@ func _credit_and_reroll() -> void:
 	await _shot("credit_order_replacement_undone")
 	await _activate(ui.undo_button)
 	_check(RunSnapshot.capture(sim) == before, "credit_buy_undo_restores_pre_advance_ledger")
+	# The ledger is an accessible shop transaction, with the same undo chain.
+	await _activate(ui.offers_box.get_child(4) as OfferCard)
+	await _activate(ui.workshop.choice_buttons[0])
+	var borrowed := RunSnapshot.capture(sim)
+	await _activate(ui.debt_button, true)
+	_check(RunSnapshot.capture(sim) == borrowed, "opening_debt_ledger_is_pure")
+	await _shot("debt_ledger_actual_quote")
+	await _activate(ui.workshop.choice_buttons[0], true)
+	_check(sim.expedition.debt == 0 and sim.player.materials == funds - 10, "actual_ledger_repayment_charges_forty_without_fee")
+	await _shot("debt_ledger_paid")
+	await _activate(ui.workshop.cancel_button)
+	await _activate(ui.undo_button)
+	_check(RunSnapshot.capture(sim) == borrowed, "ledger_undo_restores_debt_and_cash_exactly")
+	await _activate(ui.undo_button)
+	_check(RunSnapshot.capture(sim) == before, "loan_and_repayment_undos_restore_original_shop")
 	var next := sim.shop.next_reroll_cost(sim.wave)
 	await _activate(ui.reroll_button)
 	_check(sim.shop.reroll_cost(sim.wave) == next and ui.reroll_button.text == Loc.t("workshop.reroll_prices", [next, sim.shop.next_reroll_cost(sim.wave)]), "locale_reroll_shows_actual_current_and_next_prices")
@@ -258,6 +276,7 @@ func _missions() -> void:
 		var sim := _prep("mission_" + String(kind), &"looper", 3 if kind == &"recruit" else 1, [&"pistol"], [0])
 		_stage_order(sim, kind, 4)
 		await _activate(_main.shop_ui.offers_box.get_child(4) as OfferCard)
+		await _activate(_main.shop_ui.workshop.choice_buttons[0])
 		await _activate(_main.shop_ui.start_button)
 		_check(sim.expedition.mission.state == &"active", "purchased_order_starts_real_mission_" + String(kind))
 		if kind == &"salvage":
@@ -280,21 +299,53 @@ func _missions() -> void:
 			await _joy(JOY_BUTTON_X)
 			_check(Expedition.order_complete(sim, sim.active_contract), "actual_controller_X_repairs_generated_target")
 			await _shot("repair_target_actual_X_result")
+			await _interact_kind(sim, &"rescue")
+			var repaired_ids: Array[StringName] = []
+			for machine: Dictionary in sim.expedition.world.machines:
+				if machine["status"] == &"repaired":
+					repaired_ids.append(machine["id"])
+			var saved_id: StringName = sim.expedition.world.witnesses.back()
+			sim._end_wave()
+			for stage in [5, 9]:
+				sim.start_wave(stage)
+				_clear_plan(sim)
+				_main._sync_phase()
+				for machine: Dictionary in sim.expedition.world.machines:
+					if repaired_ids.has(machine["id"]):
+						_check(machine["status"] == &"repaired" and machine["stopped"], "repaired_machine_persists_into_act_%d" % int((stage - 1) / 4 + 1))
+				var safe := false
+				for worker: Dictionary in sim.expedition.world.workers:
+					safe = safe or (worker["id"] == saved_id and worker["state"] == &"safe")
+				_check(safe and sim.support_units.is_empty(), "saved_worker_stays_safe_instead_of_becoming_decoy_stage_%d" % stage)
+				await _shot("world_memory_stage_%d" % stage)
+				if stage == 5:
+					sim._end_wave()
+					_main._sync_phase()
+					_main._physics_process(_main.RECORD_BEAT + 0.01)
+			_fixture("world_act_skips", "After real X repair and E rescue, canonical start_wave(5/9) shortens travel across acts. Existing repaired/safe states must remain; no new repair or rescue flags are staged")
 		else:
+			await _interact_kind(sim, &"rescue")
 			await _advance(2.3)
 			var boss: EnemyState = sim.boss
 			if _check(boss != null and boss.def.id == &"foreman", "mandatory_actual_foreman_spawned"):
 				sim.player.pos = boss.pos + Vector2(120, 0)
 				boss.hp = 1.0
-				_fixture("near_defeat_boss", "Actual scheduled Foreman body reduced to 1 HP only; production autofire must create protected negotiation, then real X must recruit")
+				_fixture("near_defeat_boss", "Actual scheduled Foreman body reduced to 1 HP only; production autofire must create a protected, paused terms sheet; explicit controller A must recruit")
 				await _advance(0.9)
 				_check(not sim.expedition.negotiation.is_empty(), "autofire_lethal_hit_opens_protected_boss_negotiation")
 				sim.player.pos = boss.pos
 				await _shot("recruit_foreman_negotiation")
-				await _joy(JOY_BUTTON_X)
-				_check(Expedition.order_complete(sim, sim.active_contract) and sim.support_units.size() == 1 and sim.support_units[0].kind == &"recruited_foreman", "actual_X_negotiation_creates_bounded_companion")
+				_check(_main.context_ui.visible and _main.paused, "actual_Main_opens_paused_boss_terms")
+				await _activate(_main.context_ui.return_button)
+				_check(_main.pause_ui.visible and _main.paused and not sim.expedition.negotiation.is_empty(), "return_from_terms_keeps_choice_pending_in_pause")
+				await _activate(_main.pause_ui.resume_button, true)
+				_check(_main.context_ui.visible and _main.paused, "resume_reopens_same_pending_terms")
+				sim = await _save_pending_context("foreman")
+				await _activate(_button(_main.context_ui, "negotiation.stop_press"), true)
+				_check(Expedition.order_complete(sim, sim.active_contract) and sim.support_units.size() == 1 and sim.support_units[0].kind == &"recruited_foreman", "actual_A_terms_stop_press_and_create_bounded_companion")
 				await _advance(0.2)
 				await _shot("recruited_foreman_actual_companion")
+				await _crew_and_second_boss(sim)
 		_fixture("mission_positions_" + String(kind), "Player repositioned onto generated mission targets to bound travel time; objectives, interaction range/cost, boss negotiation and support allocation remain production rules")
 	_cover("real_E_parts_X_repair_and_boss_negotiation_companion")
 
@@ -351,6 +402,7 @@ func _save_continue() -> void:
 	var sim := _prep("save_continue", &"mender", 1, [&"pistol"], [0])
 	_stage_order(sim, &"credit", 4)
 	await _activate(_main.shop_ui.offers_box.get_child(4) as OfferCard)
+	await _activate(_main.shop_ui.workshop.choice_buttons[0])
 	await _activate(_main.shop_ui.start_button)
 	await _key(KEY_SHIFT)
 	await _advance(0.1)
@@ -375,37 +427,45 @@ func _save_continue() -> void:
 
 
 func _endings() -> void:
-	for ending: StringName in [&"released", &"collective", &"indebted"]:
+	for ending: StringName in [&"released", &"collective", &"takeover"]:
 		var sim := _battle("ending_" + String(ending), &"looper", WaveDirector.FINAL_WAVE)
-		sim.player.materials = 0
+		sim.player.materials = 100
 		sim.player.hp = 10.0
 		_take(sim, &"pistol", 0, 40.0, sim.player.pos)
-		if ending == &"released":
-			sim.expedition.audits = 2
+		if ending == &"collective":
+			await _interact_kind(sim, &"rescue")
 			sim.expedition.debt = 40
 			sim.expedition.credit_taken = 1
-		elif ending == &"collective":
-			sim.expedition.solidarity = 3
-		else:
-			sim.expedition.debt = 40
-			sim.expedition.credit_taken = 1
-		_fixture("ending_counters_" + String(ending), "Encounter12 terminal route counters staged for this outcome; not a twelve-encounter playthrough. Production end_wave, installment, outcome ledger, Main victory beat and EndUi execute")
+		_fixture("exit_setup_" + String(ending), "Canonical encounter12 shortened at battle end, not a full campaign. One disclosed damaged copy; collective uses actual E rescue and a staged40 debt to prove that solidarity does not imply debt clearance. Real Main resolution, explicit choice, costs, record and EndUi execute")
 		sim._end_wave()
 		_main._sync_phase()
+		_main._physics_process(_main.RECORD_BEAT + 0.01)
+		_check(sim.phase == Sim.Phase.RESOLUTION and _main.context_ui.visible and _main.paused and not _main._recorded, "final_fight_waits_for_choice_before_recording_" + String(ending))
+		await _shot("exit_choice_" + String(ending))
+		if ending == &"released":
+			sim = await _save_pending_context("final_exit")
+		var cash_before := sim.player.materials
+		await _activate(_button(_main.context_ui, "exit." + String(ending)), ending == &"collective")
 		_main._physics_process(_main.VICTORY_BEAT + 0.01)
-		_check(_main.end_ui.visible and sim.expedition.ending == ending, "actual_EndUI_shows_route_outcome_" + String(ending))
+		_check(_main.end_ui.visible and sim.expedition.ending == ending, "actual_EndUI_records_explicit_outcome_" + String(ending))
 		var ledger: Dictionary = sim.expedition.ending_outcome.duplicate(true)
-		var actual_outcome := int(ledger.get("forgiven_debt", 0)) == 40 and int(sim.expedition.debt) == 0 if ending == &"released" else (is_equal_approx(sim.player.hp, sim.player.max_hp()) and sim.support_units.size() == 1 if ending == &"collective" else int(ledger.get("cash", 0)) == 24 and int(sim.expedition.debt) == 40)
-		_check(actual_outcome, "ending_applies_concrete_outcome_" + String(ending))
-		_check(not ledger.is_empty() and not Expedition.apply_ending_outcome(sim) and sim.expedition.ending_outcome == ledger, "ending_outcome_is_applied_once_" + String(ending))
-		_summary.results["ending_" + String(ending)] = {"ledger": ledger, "debt": sim.expedition.debt, "funds": sim.player.materials, "interest": sim.last_interest, "copies": sim.bank.takes.size(), "support": sim.support_units.size()}
+		var actual_outcome := false
+		match ending:
+			&"released": actual_outcome = int(ledger.get("cost", 0)) == 12 and sim.player.materials == cash_before - 12 and int(ledger.get("repaired_copies", 0)) > 0
+			&"collective": actual_outcome = int(ledger.get("survivors", 0)) > 0 and int(sim.expedition.debt) == 40 and sim.expedition.world.workers.back().state == &"exited"
+			&"takeover": actual_outcome = int(ledger.get("staff_uid", 0)) > 0 and sim.bank.find_uid(int(ledger.get("staff_uid", 0))) != null
+		_check(actual_outcome, "explicit_exit_has_real_cost_survivor_or_staff_" + String(ending))
+		_check(not ledger.is_empty() and not sim.choose_exit(ending) and sim.expedition.ending_outcome == ledger, "chosen_exit_applies_once_" + String(ending))
+		_summary.results["ending_" + String(ending)] = {"ledger": ledger, "debt": sim.expedition.debt, "funds": sim.player.materials, "copies": sim.bank.takes.size(), "support": sim.support_units.size()}
 		await _shot("ending_" + String(ending))
-	_cover("three_story_endings_real_outcomes_and_idempotence")
+	_cover("three_explicit_exits_real_costs_survivors_staff_and_idempotence")
 
 
 func _archive() -> void:
 	var sim := _battle("archive", &"looper")
-	_take(sim, &"pistol", WeaponDef.MAX_LEVEL, 80.0, sim.player.pos)
+	var strong := _take(sim, &"pistol", WeaponDef.MAX_LEVEL, 80.0, sim.player.pos)
+	var utility := _take(sim, &"repair_kit", WeaponDef.MAX_LEVEL, 70.0, sim.player.pos + Vector2(50, 20))
+	_check(utility.power() == 0.0 and strong.power() > utility.power(), "utility_archive_has_zero_raw_DPS_but_real_work")
 	sim.player.iframes = 0.0
 	sim._hurt_player(sim.player.hp + sim.player.shield + 10.0, &"grunt", &"hit", sim.player.pos, Vector2.ZERO)
 	_main._physics_process(0.01)
@@ -413,7 +473,14 @@ func _archive() -> void:
 	_check(_main.end_ui.visible and not _main.end_ui.archive_button.disabled, "real_loss_exposes_eligible_archive_action")
 	await _shot("end_archive_eligible")
 	await _activate(_main.end_ui.archive_button)
-	_check(EchoArchive.has(Meta.new(_main.meta.path), &"looper"), "actual_End_archive_action_persists_copy")
+	_check(EchoArchive.has(Meta.new(_main.meta.path), &"looper"), "actual_End_archive_action_persists_first_choice")
+	await _activate(_main.end_ui.next_button, true)
+	_check(_main.end_ui.candidate_take == utility and not _main.end_ui.archive_button.disabled, "real_candidate_paging_selects_zero_DPS_utility")
+	await _activate(_main.end_ui.archive_button)
+	_check(_main.end_ui.replacement_pending and EchoArchive.peek(_main.meta, &"looper").weapons[0].id == &"pistol", "lower_DPS_replacement_requires_confirmation_before_persistence")
+	await _shot("archive_lower_DPS_utility_replacement")
+	await _activate(_main.end_ui.confirm_button, true)
+	_check(EchoArchive.peek(Meta.new(_main.meta.path), &"looper").weapons[0].id == &"repair_kit", "confirmed_utility_replaces_stronger_raw_DPS_archive")
 	await _activate(_main.end_ui.character_button)
 	await _activate(_button(_main.character_select, "archive.open"))
 	_check(_main.echo_archive_ui.visible and _main.echo_archive_ui._preview.visible, "actual_Title_archive_button_opens_saved_preview")
@@ -428,12 +495,155 @@ func _archive() -> void:
 	await _activate(_button(_main.character_select, "archive.open"))
 	await _activate(_main.echo_archive_ui.toggle_button)
 	await _activate(_main.echo_archive_ui._close_button)
+	var opening := Sim.new(1)
+	Content.character(&"looper").apply(opening)
+	var preview := EchoArchive.entry_preview(_main.meta, &"looper", opening)
 	_main.character_select.seed_edit.text = str(SEED + 2)
 	await _activate(_main.character_select._cards[0])
 	_check(_main.sim.bank.takes.size() == 1 and _main.sim.bank.takes[0].archived and _main.sim.bank.takes[0].uid > 0, "real_title_new_run_inherits_one_normalized_archived_body")
+	var inherited: EchoTake = _main.sim.bank.takes[0]
+	_check(inherited.weapons[0].id == &"repair_kit" and inherited.level_at(0) == 0 and inherited.condition == 60.0, "utility_inheritance_obeys_actual_opening_grade_and_condition")
+	_check(EchoArchive.encode(inherited) == EchoArchive.encode(preview["take"]), "menu_entry_preview_equals_actual_loaded_archive")
+	var enemy := _enemy(_main.sim, &"grunt", _main.sim.player.pos + Vector2(140, 0))
+	enemy.hp = enemy.max_hp
+	await _advance(0.1)
+	var deployed: Dictionary = {}
+	for unit: Dictionary in _main.sim.support_units:
+		if unit["kind"] == &"repair_station" and int(unit["actor_token"]) == inherited.uid:
+			deployed = unit
+	_check(not deployed.is_empty(), "actual_inherited_utility_attack_deploys_support")
+	if not deployed.is_empty() and not preview["utility"].is_empty():
+		var promised: Dictionary = preview["utility"][0]
+		_check(deployed["max_hp"] == promised["max_hp"] and deployed["level"] == promised["level"] and deployed["interval"] == promised["interval"], "actual_inherited_support_matches_preview_HP_grade_and_cadence")
 	_preflight("inherited_run")
-	await _shot("new_run_actual_inherited_echo")
-	_cover("End_archive_Title_preview_toggle_and_actual_new_run_inheritance")
+	await _shot("new_run_actual_inherited_utility_echo")
+	_cover("End_any_candidate_lower_DPS_confirmation_Title_preview_toggle_and_actual_utility_inheritance")
+
+
+func _recorded_work() -> void:
+	var sim := _battle("recorded_conveyor_work", &"looper")
+	var site: Dictionary = sim.interactables[1]
+	sim.player.pos = site["pos"]
+	sim.recorder.begin(sim.player.pos)
+	# Keep the natural initial cooldown; the next act must also be ready at replay time.
+	await _advance(6.2)
+	await _key(KEY_E)
+	_check(sim.recorder.work_actions.size() == 1 and sim.recorder.work_actions[0]["kind"] == &"conveyor", "actual_E_records_successful_key_work")
+	sim._end_wave()
+	_main._sync_phase()
+	_main._physics_process(_main.RECORD_BEAT + 0.01)
+	var uid: int = sim.bank.takes.back().uid
+	await _activate(_main.shop_ui.start_button)
+	_clear_plan(sim)
+	await _advance(6.0)
+	await _key(KEY_P)
+	var before := RunSnapshot.capture(sim)
+	await _activate(_main.pause_ui.save_button)
+	await _activate(_main.character_select.continue_button)
+	sim = _main.sim
+	_check(sim != null and RunSnapshot.capture(sim) == before, "actual_key_work_pre_event_save_resumes_exactly")
+	if sim == null:
+		return
+	var events: Array[Dictionary] = []
+	sim.echo_work_performed.connect(func(info: Dictionary) -> void: events.append(info.duplicate(true)))
+	var condition := sim.bank.find_uid(uid).condition
+	await _advance(0.4)
+	_check(events.size() == 1 and events[0]["success"] and events[0]["kind"] == &"conveyor", "resumed_echo_executes_real_recorded_machine_work_once")
+	_check(sim.bank.find_uid(uid).condition <= condition - EchoWork.CONDITION_COST, "successful_key_work_pays_visible_additional_wear")
+	await _shot("echo_actual_recorded_machine_work")
+	await _key(KEY_P)
+	before = RunSnapshot.capture(sim)
+	await _activate(_main.pause_ui.save_button)
+	await _activate(_main.character_select.continue_button)
+	sim = _main.sim
+	_check(sim != null and RunSnapshot.capture(sim) == before, "consumed_key_work_cursor_resumes_exactly")
+	if sim == null:
+		return
+	var repeated: Array[Dictionary] = []
+	sim.echo_work_performed.connect(func(info: Dictionary) -> void: repeated.append(info))
+	await _advance(0.1)
+	_check(repeated.is_empty(), "resume_does_not_replay_consumed_work_during_return_route")
+	_cover("actual_E_key_work_two_saves_exact_cursor_real_replay_and_condition_cost")
+
+
+func _interact_kind(sim: Sim, kind: StringName) -> bool:
+	for item: Dictionary in sim.interactables:
+		if item["kind"] == kind and not item["used"]:
+			sim.player.pos = item["pos"]
+			await _key(KEY_E)
+			return _check(item["used"], "actual_E_" + String(kind) + "_" + String(item["id"]))
+	return _check(false, "actual_target_present_" + String(kind))
+
+
+func _save_pending_context(id: String) -> Sim:
+	var sim: Sim = _main.sim
+	var before := RunSnapshot.capture(sim)
+	var pending: StringName = _main._pending_context()
+	await _shot("pending_" + id + "_before_save")
+	await _activate(_main.context_ui.save_button)
+	_check(_main.sim == null and _main.character_select.continue_button.visible, "context_Save_Return_releases_run_" + id)
+	await _activate(_main.character_select.continue_button)
+	_check(_main.sim != null and RunSnapshot.capture(_main.sim) == before, "context_Continue_restores_exact_state_" + id)
+	_check(_main.context_ui.visible and _main.paused and _main._pending_context() == pending, "context_Continue_reopens_same_unspent_choice_" + id)
+	await _shot("pending_" + id + "_after_continue")
+	return _main.sim
+
+
+func _crew_and_second_boss(sim: Sim) -> void:
+	var foreman_uid: int = sim.support_units[0]["uid"]
+	SupportSystem.damage(sim, foreman_uid, 8.0)
+	await _advance(0.05)
+	var injured_hp: float = sim.support_units[0]["hp"]
+	sim._end_wave()
+	_main._sync_phase()
+	_main._physics_process(_main.RECORD_BEAT + 0.01)
+	sim.start_wave(7)
+	_clear_plan(sim)
+	_main._sync_phase()
+	sim.recorder.record(sim.player.pos, 0.1)
+	sim._end_wave()
+	_main._sync_phase()
+	_main._physics_process(_main.RECORD_BEAT + 0.01)
+	_stage_order(sim, &"recruit", 4)
+	await _activate(_main.shop_ui.offers_box.get_child(4) as OfferCard)
+	await _activate(_main.shop_ui.workshop.choice_buttons[0])
+	await _activate(_main.shop_ui.start_button)
+	await _advance(2.3)
+	if not _check(sim.boss != null and sim.boss.def.id == &"collector", "second_actual_mandatory_boss_is_Collector"):
+		return
+	sim.player.pos = sim.boss.pos + Vector2(120, 0)
+	sim.boss.hp = 1.0
+	await _advance(1.1)
+	if not _check(_main.context_ui.visible and _main.paused, "actual_Collector_defeat_opens_distinct_terms"):
+		return
+	await _shot("collector_witness_mediation_terms")
+	for unit: Dictionary in sim.support_units:
+		if unit["kind"] == &"recruited_foreman":
+			injured_hp = float(unit["hp"])
+	await _activate(_button(_main.context_ui, "negotiation.witness_mediation"), true)
+	_check(sim.support_units.size() == 1 and sim.support_units[0]["kind"] == &"recruited_collector", "actual_witness_terms_recruit_Collector_with_one_active_unit")
+	var benched := false
+	for row: Dictionary in sim.expedition.world.roster:
+		benched = benched or (row["kind"] == &"foreman" and row["state"] == &"bench" and row["hp"] == injured_hp)
+	_check(benched, "previous_signed_ally_is_benched_with_real_injury_instead_of_deleted")
+	sim._end_wave()
+	_main._sync_phase()
+	_main._physics_process(_main.RECORD_BEAT + 0.01)
+	await _activate(_main.shop_ui.crew_button, true)
+	var before := RunSnapshot.capture(sim)
+	await _shot("crew_real_survivor_and_two_signed_bosses")
+	var deploy: Button
+	for button: Button in _main.shop_ui.crew.action_buttons:
+		if button.get_meta(&"crew_id", &"") == &"foreman":
+			deploy = button
+	await _activate(deploy, true)
+	_check(sim.support_units.size() == 1 and sim.support_units[0]["kind"] == &"recruited_foreman" and sim.support_units[0]["hp"] == injured_hp, "actual_crew_deploy_restores_the_selected_injured_ally")
+	await _shot("crew_selected_foreman_deployed")
+	await _activate(_main.shop_ui.crew.undo_button)
+	_check(RunSnapshot.capture(sim) == before, "actual_crew_undo_restores_roster_unit_UID_history_cash_and_story")
+	await _activate(_main.shop_ui.crew.return_button)
+	_fixture("crew_act_skip", "Actual Foreman recruitment and injury are retained while canonical stages7/8 shorten the middle act. Mandatory Collector is production-spawned then reduced to1HP; autofire triggers terms. Real saved worker testimony mediates. Actual crew input swaps allies and undoes")
+	_cover("two_actual_boss_terms_safe_worker_witness_benched_injured_crew_deploy_and_exact_undo")
 
 
 func _battle(id: String, role: StringName, wave: int = 1) -> Sim:
@@ -445,7 +655,7 @@ func _battle(id: String, role: StringName, wave: int = 1) -> Sim:
 	_clear_plan(sim)
 	sim.shot_fired_info.connect(_on_shot)
 	_main._view.shake_enabled = false
-	_fixture(id, "Canonical Main.new_run seed150150; start_wave(%d), automatic plan/pending removed with index reset to bound fixture; ordinary player stats and canonical allocators retained" % wave)
+	_fixture(id, "Canonical Main.new_run seed160160; start_wave(%d), automatic plan/pending removed with index reset to bound fixture; ordinary player stats and canonical allocators retained" % wave)
 	return sim
 
 
@@ -590,7 +800,7 @@ func _shot(id: String, hold: bool = true) -> void:
 	_check(pixels.get_size() == _size, "native_pixel_extent_" + id)
 	var outside := _outside_controls()
 	_check(outside.is_empty(), "visible_controls_inside_native_canvas_" + id)
-	var state := {"outside_controls": outside, "record_progress": _main._view._beat_time / ArenaView.RECORD_BEAT if _main._view._beat_take != null else -1.0, "path": path, "size": [pixels.get_width(), pixels.get_height()], "frame": _frames, "title": _main.character_select.visible, "shop": _main.shop_ui.visible, "workbench": _main.shop_ui.workshop.visible, "end": _main.end_ui.visible, "archive": _main.echo_archive_ui.visible}
+	var state := {"outside_controls": outside, "record_progress": _main._view._beat_time / ArenaView.RECORD_BEAT if _main._view._beat_take != null else -1.0, "path": path, "size": [pixels.get_width(), pixels.get_height()], "frame": _frames, "title": _main.character_select.visible, "shop": _main.shop_ui.visible, "workbench": _main.shop_ui.workshop.visible, "end": _main.end_ui.visible, "archive": _main.echo_archive_ui.visible, "context": _main.context_ui.visible, "crew": _main.shop_ui.crew.visible}
 	if _main.sim != null:
 		var snapshot := RunSnapshot.capture(_main.sim)
 		state["snapshot_valid"] = not snapshot.is_empty() and RunSnapshot.restore(snapshot) != null
@@ -607,14 +817,16 @@ func _shot(id: String, hold: bool = true) -> void:
 
 func _outside_controls() -> Array[String]:
 	var surface: Control = null
-	if _main.echo_archive_ui.visible:
+	if _main.context_ui.visible:
+		surface = _main.context_ui
+	elif _main.echo_archive_ui.visible:
 		surface = _main.echo_archive_ui
 	elif _main.pause_ui.visible:
 		surface = _main.pause_ui
 	elif _main.end_ui.visible:
 		surface = _main.end_ui
 	elif _main.shop_ui.visible:
-		surface = _main.shop_ui.workshop if _main.shop_ui.workshop.visible else _main.shop_ui
+		surface = _main.shop_ui.crew if _main.shop_ui.crew.visible else (_main.shop_ui.workshop if _main.shop_ui.workshop.visible else _main.shop_ui)
 	elif _main.character_select.visible:
 		surface = _main.character_select
 	var outside: Array[String] = []

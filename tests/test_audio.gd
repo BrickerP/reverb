@@ -178,6 +178,7 @@ func test_bind_is_idempotent_and_rebind_disconnects_old_sim_and_shop(c: Check) -
 	second.shop.shop_action_resolved.emit(ShopResult.success(ShopResult.UNDO, 0))
 	c.eq(audio.play_count(&"wave_start"), 2, "new sim connected")
 	c.eq(audio.play_count(&"equipment_undo"), 1, "new shop connected")
+
 	audio._player_cues[audio._players[0]] = &"weapon_pistol"
 	audio.bind(null)
 	var state := audio.binding_state()
@@ -188,6 +189,30 @@ func test_bind_is_idempotent_and_rebind_disconnects_old_sim_and_shop(c: Check) -
 	c.eq(state["routed_voices"], 0, "detach clears voice routing")
 	second.wave_started.emit(4)
 	c.eq(audio.play_count(&"wave_start"), 2, "bind null disconnects and preserves diagnostics")
+	audio.free()
+
+
+func test_echo_device_work_uses_bounded_palette_without_duplicate_signature_or_stale_binding(c: Check) -> void:
+	var audio := _audio()
+	var first := Sim.new(1616)
+	var next := Sim.new(1617)
+	first.start_run()
+	next.start_run()
+	audio.bind(first)
+	first.echo_work_performed.emit({"kind": &"press", "success": true})
+	c.eq(audio.play_count(&"weapon_rail_spike"), 1, "successful press has a dry machine accent")
+	first.echo_work_performed.emit({"kind": &"conveyor", "success": true})
+	c.eq(audio.play_count(&"click"), 1, "successful conveyor work has its own bounded cue")
+	first.echo_work_performed.emit({"kind": &"press", "success": false})
+	first.echo_work_performed.emit({"kind": &"signature", "success": true})
+	c.eq(audio.play_count(&"weapon_rail_spike"), 1, "failure and signature marker do not duplicate attack audio")
+	c.eq(audio._players.size(), GameAudio.POOL, "work uses existing voice limit")
+	audio.bind(next)
+	first.echo_work_performed.emit({"kind": &"conveyor", "success": true})
+	c.eq(audio.play_count(&"click"), 1, "old simulation cannot play work after rebind")
+	audio.bind(null)
+	next.echo_work_performed.emit({"kind": &"conveyor", "success": true})
+	c.eq(audio.play_count(&"click"), 1, "detached session cannot leak work audio")
 	audio.free()
 
 

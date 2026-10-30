@@ -19,7 +19,23 @@ var boss_rush_button: Button
 var retry_button: Button
 var open_log_button: Button
 var feedback_button: Button
-var best_take: EchoTake
+var candidate_take: EchoTake
+var candidate_index := -1
+var replacement_pending := false
+var previous_button: Button
+var next_button: Button
+var confirm_button: Button
+var cancel_button: Button
+var _candidates: Array[EchoTake] = []
+var _sim: Sim
+var _entry_sim: Sim
+var _meta: Meta
+var _candidate_ui: ArchiveCandidateUi
+var _candidate_count: Label
+var _confirmation: Control
+var _confirmation_panel: PanelContainer
+var _confirmation_rows: Array[ArchiveCandidateUi] = []
+var _confirmation_title: Label
 var reduced_effects := false
 var feedback_available := false
 
@@ -28,9 +44,7 @@ var _afterword: Label
 var _stats: Label
 var _seed: Label
 var _unlock: Label
-var _best_row: HBoxContainer
-var _best_preview: PathPreview
-var _best_label: Label
+var _candidate_row: VBoxContainer
 var _no_echo: Label
 var _seed_value: int = 0
 var _panel: PanelContainer
@@ -81,33 +95,42 @@ func _ready() -> void:
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.custom_minimum_size = Vector2(790.0, 0.0)
 	box.add_child(_stats)
-	_best_row = HBoxContainer.new()
-	_best_row.add_theme_constant_override("separation", 16)
-	_best_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_best_preview = PathPreview.new()
-	_best_row.add_child(_best_preview)
-	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 4)
-	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	info.add_child(UiTheme.label(Loc.t("end.best_echo"), 15, UiTheme.ECHO))
-	_best_label = UiTheme.label("", 18)
-	info.add_child(_best_label)
-	_best_row.add_child(info)
+	_candidate_row = VBoxContainer.new()
+	_candidate_row.add_theme_constant_override("separation", 4)
+	var paging := HBoxContainer.new()
+	paging.alignment = BoxContainer.ALIGNMENT_CENTER
+	previous_button = _small_action()
+	previous_button.custom_minimum_size.x = 100.0
+	previous_button.text = Loc.t("archive.previous")
+	previous_button.pressed.connect(func() -> void: select_candidate(posmod(candidate_index - 1, _candidates.size())))
+	paging.add_child(previous_button)
+	_candidate_count = UiTheme.label("", 14, UiTheme.ECHO, HORIZONTAL_ALIGNMENT_CENTER)
+	_candidate_count.custom_minimum_size.x = 160.0
+	paging.add_child(_candidate_count)
+	next_button = _small_action()
+	next_button.custom_minimum_size.x = 100.0
+	next_button.text = Loc.t("archive.next")
+	next_button.pressed.connect(func() -> void: select_candidate(posmod(candidate_index + 1, _candidates.size())))
+	paging.add_child(next_button)
+	_candidate_row.add_child(paging)
+	_candidate_ui = ArchiveCandidateUi.new()
+	_candidate_row.add_child(_candidate_ui)
 	_echo_row = HBoxContainer.new()
 	_echo_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_echo_row.add_theme_constant_override("separation", 20)
-	_echo_row.add_child(_best_row)
+	_echo_row.add_child(_candidate_row)
+	_candidate_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(_echo_row)
 	_archive_box = VBoxContainer.new()
-	_archive_box.custom_minimum_size.x = 350.0
+	_archive_box.custom_minimum_size.x = 220.0
 	_archive_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_archive_box.add_theme_constant_override("separation", 4)
 	_echo_row.add_child(_archive_box)
 	archive_button = Button.new()
-	archive_button.text = Loc.t("archive.save_best")
-	archive_button.custom_minimum_size = Vector2(280.0, 32.0)
+	archive_button.text = Loc.t("archive.save_selected")
+	archive_button.custom_minimum_size = Vector2(200.0, 32.0)
 	archive_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	archive_button.pressed.connect(func() -> void: archive_requested.emit(best_take))
+	archive_button.pressed.connect(request_archive)
 	_archive_box.add_child(archive_button)
 	_archive_note = UiTheme.label("", 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	_archive_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -163,6 +186,7 @@ func _ready() -> void:
 	feedback_button.pressed.connect(func() -> void: feedback_requested.emit())
 	tools.add_child(feedback_button)
 	box.add_child(tools)
+	_build_confirmation()
 	get_viewport().size_changed.connect(_apply_layout)
 	_apply_layout()
 
@@ -175,7 +199,18 @@ func _small_action() -> Button:
 	return button
 
 
-func show_result(sim: Sim, unlocked_text: String = "") -> void:
+func show_result(sim: Sim, unlocked_text: String = "", profile: Meta = null) -> void:
+	_sim = sim
+	_meta = profile
+	_entry_sim = Sim.new(1)
+	Content.character(sim.character_id).apply(_entry_sim)
+	replacement_pending = false
+	_confirmation.visible = false
+	_candidates.clear()
+	for take: EchoTake in sim.bank.takes:
+		_candidates.append(take)
+	candidate_take = null
+	candidate_index = -1
 	_apply_layout()
 	var won := sim.phase == Sim.Phase.WON
 	_afterword.text = Loc.t("end.win_note") if won else Loc.t("end.loss_note")
@@ -193,23 +228,20 @@ func show_result(sim: Sim, unlocked_text: String = "") -> void:
 	_seed.text = Loc.t("end.seed", [sim.run_seed])
 	_unlock.text = unlocked_text
 	_unlock.visible = unlocked_text != ""
-	best_take = null
-	for take: EchoTake in sim.bank.takes:
-		if best_take == null or sim.echo_dps(take) > sim.echo_dps(best_take):
-			best_take = take
-	archive_button.disabled = best_take == null or not EchoArchive.eligible(sim.character_id) or sim.daily_modifier != &"" or int(sim.expedition.get("debt", 0)) > 0
-	_archive_note.text = Loc.t("archive.eligible_note") if not archive_button.disabled else Loc.t("archive.unavailable")
+	_archive_note.text = Loc.t("archive.choice_note")
+	if sim.daily_modifier != &"" or not EchoArchive.eligible(sim.character_id):
+		_archive_note.text = Loc.t("archive.unavailable")
 	if int(sim.expedition.get("debt", 0)) > 0:
 		_archive_note.text = Loc.t("archive.debt")
 	var report := Expedition.status(sim)
 	_afterword.text = Loc.t(report.ending) if won else Loc.t("end.loss_note")
 	if won and not str(report.get("outcome_key", "")).is_empty():
 		_afterword.text += "\n" + Loc.t(report.outcome_key)
-	_best_row.visible = best_take != null
-	_no_echo.visible = best_take == null
-	if best_take != null:
-		_best_label.text = Loc.t("end.echo_stats", [best_take.wave, int(round(sim.echo_dps(best_take)))])
-		_best_preview.setup(best_take, not reduced_effects, _preview_extent())
+	_candidate_row.visible = not _candidates.is_empty()
+	_no_echo.visible = _candidates.is_empty()
+	previous_button.disabled = _candidates.size() < 2
+	next_button.disabled = _candidates.size() < 2
+	select_candidate(0)
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
 	endless_button.text = Loc.t("end.endless_continue")
@@ -229,8 +261,7 @@ func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
 	if on:
 		UiTheme.animate_open(self, true)
-	if on and _best_preview != null:
-		_best_preview.finish_immediately()
+
 
 
 func set_feedback_available(available: bool) -> void:
@@ -245,12 +276,18 @@ func set_feedback_available(available: bool) -> void:
 
 
 func focus_default() -> void:
+	if replacement_pending:
+		cancel_button.grab_focus()
+		return
 	if restart_button != null:
 		restart_button.grab_focus()
 
 
 func _rebuild_focus_cycle() -> void:
-	UiFocus.cycle([archive_button, retry_button, open_log_button, feedback_button, endless_button,
+	if replacement_pending:
+		UiFocus.cycle([_confirmation_rows[0].detail_button, _confirmation_rows[1].detail_button, cancel_button, confirm_button])
+		return
+	UiFocus.cycle([previous_button, next_button, _candidate_ui.detail_button, archive_button, retry_button, open_log_button, feedback_button, endless_button,
 			boss_rush_button, restart_button, character_button])
 
 
@@ -286,10 +323,6 @@ func _compact() -> bool:
 	return extent.x < 1100.0 or extent.y < 640.0
 
 
-func _preview_extent() -> Vector2:
-	return Vector2(88.0, 48.0) if _compact() else Vector2(110.0, 60.0)
-
-
 func _apply_layout() -> void:
 	if _panel == null:
 		return
@@ -305,7 +338,7 @@ func _apply_layout() -> void:
 	_stats.custom_minimum_size.x = 0.0
 	_unlock.add_theme_font_size_override("font_size", 14 if compact else 18)
 	var actions: Array[Button] = [archive_button, character_button, endless_button, boss_rush_button, retry_button, open_log_button, feedback_button]
-	var widths: Array[float] = [280.0, 204.0, 230.0, 170.0, 156.0, 156.0, 156.0]
+	var widths: Array[float] = [200.0, 204.0, 230.0, 170.0, 156.0, 156.0, 156.0]
 	for index in actions.size():
 		var button := actions[index]
 		WorkshopUi.fit_button(button, 14 if compact else 16, 30.0 if compact else 34.0)
@@ -319,5 +352,124 @@ func _apply_layout() -> void:
 			style.content_margin_top = 2.0
 			style.content_margin_bottom = 2.0
 			restart_button.add_theme_stylebox_override(state, style)
-	if best_take != null:
-		_best_preview.setup(best_take, false, _preview_extent())
+	if candidate_take != null and _entry_sim != null:
+		_candidate_ui.setup(candidate_take, EchoArchive.preview(candidate_take, _entry_sim), compact)
+	if _confirmation_panel != null:
+		_confirmation_panel.custom_minimum_size.x = minf(880.0, maxf(0.0, _canvas_size().x - 48.0))
+		_confirmation_title.add_theme_font_size_override("font_size", 20 if compact else 26)
+		if replacement_pending:
+			_refresh_confirmation()
+
+
+func candidate_count() -> int:
+	return _candidates.size()
+
+
+func select_candidate(index: int) -> bool:
+	if replacement_pending or index < 0 or index >= _candidates.size():
+		archive_button.disabled = candidate_take == null or not _can_archive()
+		return false
+	candidate_index = index
+	candidate_take = _candidates[index]
+	_candidate_count.text = Loc.t("archive.candidate", [index + 1, _candidates.size()])
+	_candidate_ui.setup(candidate_take, EchoArchive.preview(candidate_take, _entry_sim), _compact())
+	previous_button.disabled = _candidates.size() < 2
+	next_button.disabled = _candidates.size() < 2
+	archive_button.disabled = not _can_archive()
+	_rebuild_focus_cycle()
+	return true
+
+
+func _can_archive() -> bool:
+	return _sim != null and candidate_take != null and _sim.bank.takes.has(candidate_take) \
+		and EchoArchive.eligible(_sim.character_id) and _sim.daily_modifier == &"" \
+		and int(_sim.expedition.get("debt", 0)) <= 0 and not EchoArchive.encode(candidate_take).is_empty()
+
+
+func request_archive() -> void:
+	if not _can_archive():
+		return
+	if _meta != null and EchoArchive.has(_meta, _sim.character_id):
+		replacement_pending = true
+		_refresh_confirmation()
+		_confirmation.visible = true
+		UiFocus.cycle([_confirmation_rows[0].detail_button, _confirmation_rows[1].detail_button, cancel_button, confirm_button])
+		cancel_button.grab_focus()
+		return
+	archive_requested.emit(candidate_take)
+
+
+func confirm_archive() -> void:
+	if not replacement_pending or not _can_archive():
+		cancel_archive()
+		return
+	replacement_pending = false
+	_confirmation.visible = false
+	_rebuild_focus_cycle()
+	archive_requested.emit(candidate_take)
+
+
+func cancel_archive() -> void:
+	replacement_pending = false
+	_confirmation.visible = false
+	_rebuild_focus_cycle()
+	archive_button.grab_focus()
+
+
+func _input(event: InputEvent) -> void:
+	if visible and replacement_pending and event.is_action_pressed(&"ui_cancel"):
+		cancel_archive()
+		get_viewport().set_input_as_handled()
+
+
+func _build_confirmation() -> void:
+	_confirmation = Control.new()
+	add_child(_confirmation)
+	_confirmation.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var shade := ColorRect.new()
+	shade.color = Color(UiTheme.EDGE, 0.95)
+	_confirmation.add_child(shade)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	_confirmation.add_child(center)
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_confirmation_panel = PanelContainer.new()
+	_confirmation_panel.add_theme_stylebox_override("panel", UiTheme.surface_panel())
+	center.add_child(_confirmation_panel)
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	_confirmation_panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
+	_confirmation_title = UiTheme.label(Loc.t("archive.replace_title"), 26, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	box.add_child(_confirmation_title)
+	for key in ["archive.current_entry", "archive.chosen_entry"]:
+		box.add_child(UiTheme.label(Loc.t(key), 14, UiTheme.ECHO))
+		var row := ArchiveCandidateUi.new()
+		box.add_child(row)
+		_confirmation_rows.append(row)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(buttons)
+	cancel_button = Button.new()
+	cancel_button.text = Loc.t("archive.keep_current")
+	cancel_button.custom_minimum_size = Vector2(200.0, 36.0)
+	cancel_button.pressed.connect(cancel_archive)
+	buttons.add_child(cancel_button)
+	confirm_button = Button.new()
+	confirm_button.text = Loc.t("archive.replace_confirm")
+	confirm_button.custom_minimum_size = Vector2(200.0, 36.0)
+	confirm_button.pressed.connect(confirm_archive)
+	buttons.add_child(confirm_button)
+	_confirmation.visible = false
+
+
+func _refresh_confirmation() -> void:
+	var existing := EchoArchive.peek(_meta, _sim.character_id)
+	if existing == null:
+		cancel_archive()
+		return
+	_confirmation_rows[0].setup(existing, EchoArchive.entry_preview(_meta, _sim.character_id, _entry_sim), _compact())
+	_confirmation_rows[1].setup(candidate_take, EchoArchive.preview(candidate_take, _entry_sim), _compact())

@@ -39,6 +39,8 @@ var _latest_saved_run: Dictionary = {}
 var echo_wheel: EchoSelectionWheel
 var story_ui: StoryArchiveUi
 var receipt_ui: StoryReceipt
+var context_ui: ContextChoiceUi
+var _context_kind: StringName = &""
 var _replace_dialog: ConfirmationDialog
 var _pending_start: Dictionary = {}
 var _retire_pressed := false
@@ -105,9 +107,14 @@ func _ready() -> void:
 	echo_wheel = EchoSelectionWheel.new()
 	story_ui = StoryArchiveUi.new()
 	receipt_ui = StoryReceipt.new()
+	context_ui = ContextChoiceUi.new()
 	_add_layer(11, echo_wheel, theme)
 	_add_layer(10, story_ui, theme)
 	_add_layer(9, receipt_ui, theme)
+	_add_layer(13, context_ui, theme)
+	context_ui.chosen.connect(_on_context_chosen)
+	context_ui.save_requested.connect(save_and_return)
+	context_ui.closed.connect(_on_context_closed)
 	receipt_ui.position = Vector2(430.0, 220.0)
 	receipt_ui.custom_minimum_size.x = 420.0
 	receipt_ui.archive_requested.connect(open_story)
@@ -141,7 +148,7 @@ func _ready() -> void:
 	character_select.history_requested.connect(open_history)
 	character_select.daily_requested.connect(start_daily)
 	character_select.codex_requested.connect(open_codex)
-	pause_ui.resume_requested.connect(func() -> void: _set_paused(false))
+	pause_ui.resume_requested.connect(_on_resume_requested)
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
 	pause_ui.mute_requested.connect(_on_mute_requested)
@@ -316,15 +323,15 @@ func _on_settings_closed() -> void:
 	if _settings_restore_pause:
 		if pause_ui != null:
 			pause_ui.open(audio != null and audio.is_muted())
-	elif sim != null and sim.phase == Sim.Phase.WAVE:
-		_set_paused(false)
+	elif sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
+		_on_resume_requested()
 	else:
 		_restore_underlay_focus()
 	_settings_restore_pause = false
 
 
 func _on_history_closed() -> void:
-	if paused and sim != null and sim.phase == Sim.Phase.WAVE and pause_ui != null:
+	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
 		pause_ui.open(audio != null and audio.is_muted())
 	else:
 		_restore_underlay_focus()
@@ -359,7 +366,7 @@ func _on_fullscreen_changed(on: bool) -> void:
 
 
 func _on_language_changed(code: String) -> void:
-	var active := sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]
+	var active := sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]
 	if active and not _save_active():
 		settings_ui.open(settings)
 		settings_ui.show_error(Loc.t(SuspendStore.last_error))
@@ -432,6 +439,9 @@ func show_select() -> void:
 func _detach_presentation_session() -> void:
 	_retire_pressed = false
 	_retire_hold = 0.0
+	_context_kind = &""
+	if context_ui != null:
+		context_ui.reset()
 	if echo_archive_ui != null:
 		echo_archive_ui.close()
 	if echo_wheel != null:
@@ -459,29 +469,47 @@ func _detach_presentation_session() -> void:
 
 
 func toggle_pause() -> void:
-	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
-		_set_paused(not paused)
+	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
+		if paused:
+			_on_resume_requested()
+		else:
+			_set_paused(true)
 
 
 func _physics_process(delta: float) -> void:
 	_update_retirement_hold(delta)
 	if paused or sim == null or character_select.visible or settings_ui.visible or history_ui.visible \
-			or feedback_ui.visible or boon_ui.visible or story_ui.visible or receipt_ui.visible or echo_archive_ui.visible:
+			or feedback_ui.visible or boon_ui.visible or story_ui.visible or receipt_ui.visible or echo_archive_ui.visible or context_ui.visible:
+		return
+	if _pending_context() == &"negotiation":
+		_open_pending_context()
 		return
 	sim.step(delta, Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down"))
 	if _shop_delay > 0.0:
 		_shop_delay -= delta
 		if _shop_delay <= 0.0:
-			_open_shop()
+			if sim.phase == Sim.Phase.RESOLUTION:
+				_open_pending_context()
+			else:
+				_open_shop()
 	if _end_delay > 0.0:
 		_end_delay -= delta
 		if _end_delay <= 0.0:
 			_show_end()
 	_sync_phase()
+	if _pending_context() == &"negotiation":
+		_open_pending_context()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	Controls.note_event(event)
+	if context_ui.visible:
+		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
+			context_ui.close()
+			get_viewport().set_input_as_handled()
+		return
+	if end_ui.visible and end_ui.replacement_pending:
+		return
 	if echo_archive_ui.visible:
 		if event.is_action_pressed(&"ui_cancel"):
 			echo_archive_ui.close()
@@ -596,6 +624,11 @@ func _sync_phase() -> void:
 			_record_run()
 			# The run is already terminal and recorded; only the summary waits for the paper fall.
 			_end_delay = PLAYER_DEATH_BEAT
+		Sim.Phase.RESOLUTION:
+			hud.visible = true
+			shop_ui.visible = false
+			_shop_delay = RECORD_BEAT
+			_view.play_record_beat(sim)
 		Sim.Phase.WON:
 			# Let the boss death land before the summary covers it.
 			hud.visible = true
@@ -671,7 +704,61 @@ func _on_boon_reroll() -> void:
 func _show_end() -> void:
 	_end_delay = 0.0
 	if sim != null and not end_ui.visible:
-		end_ui.show_result(sim, _unlock_text)
+		end_ui.show_result(sim, _unlock_text, meta)
+
+
+func _pending_context() -> StringName:
+	if sim == null:
+		return &""
+	if sim.phase == Sim.Phase.RESOLUTION:
+		return &"exit"
+	if sim.phase == Sim.Phase.WAVE and sim.expedition.get("negotiation", {}).get("choice_pending", false):
+		return &"negotiation"
+	return &""
+
+
+func _open_pending_context() -> void:
+	var kind := _pending_context()
+	if kind == &"":
+		return
+	_context_kind = kind
+	if kind == &"exit":
+		_shop_delay = 0.0
+	_set_paused(true)
+	pause_ui.close()
+	var choices := Expedition.exit_options(sim) if kind == &"exit" else Expedition.negotiation_options(sim)
+	var title := "context.exit.title" if kind == &"exit" else "context.negotiation.title"
+	var body := "context.exit.body" if kind == &"exit" else "context.negotiation.body"
+	context_ui.open_context(title, body, choices, true)
+
+
+func _on_context_chosen(id: StringName) -> void:
+	if sim == null or not context_ui.visible or _context_kind != _pending_context():
+		return
+	# Choosing is synchronous and the sheet still blocks input. Release the audio
+	# pause before the authoritative win event, so its cue is not discarded.
+	_set_paused(false)
+	var accepted := sim.choose_exit(id) if _context_kind == &"exit" else sim.choose_negotiation(id)
+	if not accepted:
+		_open_pending_context()
+		context_ui.show_error(Loc.t("context.changed"))
+		return
+	context_ui.reset()
+	_context_kind = &""
+	_persist_story()
+	_sync_phase()
+
+
+func _on_context_closed() -> void:
+	_context_kind = &""
+	_set_paused(true)
+
+
+func _on_resume_requested() -> void:
+	if _pending_context() != &"":
+		_open_pending_context()
+	else:
+		_set_paused(false)
 
 
 func _on_endless_requested() -> void:
@@ -721,7 +808,7 @@ func _on_mute_requested() -> void:
 
 
 func _restore_underlay_focus() -> void:
-	if paused and sim != null and sim.phase == Sim.Phase.WAVE and pause_ui != null:
+	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
 		pause_ui.open(audio != null and audio.is_muted())
 	elif end_ui != null and end_ui.visible:
 		end_ui.focus_default()
@@ -789,7 +876,7 @@ func _confirm_new_run() -> void:
 
 
 func _save_active() -> bool:
-	if sim == null or not sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
+	if sim == null or not sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
 		return false
 	_persist_story()
 	return SuspendStore.save(sim, {
@@ -848,12 +935,17 @@ func continue_run(restore_pause: bool = false) -> bool:
 			_show_boon()
 		elif bool(envelope.get("shop_visible", true)) or _shop_delay <= 0.0:
 			_open_shop()
+	if _pending_context() != &"":
+		_shop_delay = 0.0
+		_open_pending_context()
 	_persist_story()
 	return true
 
 
 func _resume_language_settings() -> void:
 	if continue_run(true):
+		context_ui.reset()
+		_set_paused(true)
 		pause_ui.close()
 		settings_ui.open(settings)
 
@@ -930,16 +1022,19 @@ func _cancel_retirement_selection() -> void:
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_WM_CLOSE_REQUEST:
 		return
-	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
+	if sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
 		if not _save_active():
-			_set_paused(true)
+			if not context_ui.visible:
+				_set_paused(true)
 			_show_save_error(Loc.t(SuspendStore.last_error))
 			return
 	get_tree().quit()
 
 
 func _show_save_error(message: String) -> void:
-	if boon_ui.visible:
+	if context_ui.visible:
+		context_ui.show_error(message)
+	elif boon_ui.visible:
 		boon_ui.show_error(message)
 	elif settings_ui.visible:
 		settings_ui.show_error(message)
@@ -979,10 +1074,6 @@ func _on_archive_echo(take: EchoTake) -> void:
 		return
 	if int(sim.expedition.get("debt", 0)) > 0:
 		end_ui.set_archive_result(false, "archive.debt")
-		return
-	var previous := EchoArchive.peek(meta, character_id)
-	if previous != null and previous.power() >= take.power():
-		end_ui.set_archive_result(false, "archive.weaker_kept")
 		return
 	var saved := EchoArchive.store(meta, character_id, take)
 	end_ui.set_archive_result(saved, meta.last_error)

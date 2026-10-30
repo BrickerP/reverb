@@ -9,7 +9,9 @@ var toggle_button: Button
 var _body: VBoxContainer
 var _note: Label
 var _roles: HBoxContainer
-var _preview: PathPreview
+var _preview: ArchiveRoutePreview
+var _entry: ArchiveCandidateUi
+var _entry_sim: Sim
 var _description: Label
 var _close_button: Button
 var _role_buttons: Array[Button] = []
@@ -54,14 +56,10 @@ func _ready() -> void:
 		button.pressed.connect(_choose.bind(id))
 		_role_buttons.append(button)
 		_roles.add_child(button)
-	_preview = PathPreview.new()
-	_preview.custom_minimum_size = Vector2(280.0, 150.0)
-	_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_body.add_child(_preview)
-	_description = UiTheme.label("", 16, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
-	_description.custom_minimum_size.x = 820.0
-	_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_body.add_child(_description)
+	_entry = ArchiveCandidateUi.new()
+	_body.add_child(_entry)
+	_preview = _entry.route
+	_description = _entry.details
 	toggle_button = Button.new()
 	toggle_button.toggle_mode = true
 	toggle_button.custom_minimum_size = Vector2(340.0, 42.0)
@@ -87,6 +85,7 @@ func open(profile: Meta, id: StringName = &"looper") -> void:
 	var focus_controls: Array[Control] = []
 	for button in _role_buttons:
 		focus_controls.append(button)
+	focus_controls.append(_entry.detail_button)
 	focus_controls.append(toggle_button)
 	focus_controls.append(_close_button)
 	UiFocus.cycle(focus_controls)
@@ -113,16 +112,12 @@ func _refresh() -> void:
 	var take := EchoArchive.peek(meta, selected)
 	_preview.visible = take != null
 	if take == null:
+		_entry.detail_button.visible = false
 		_description.text = Loc.t("archive.empty", [Loc.character_name(selected)])
 	else:
-		var extent := Vector2(220.0, 80.0) if _compact() else Vector2(280.0, 120.0)
-		_preview.setup(take, true, extent)
-		var weapons := PackedStringArray()
-		for index in mini(3, take.weapons.size()):
-			weapons.append(Loc.weapon_name(take.weapons[index].id))
-		if take.weapons.size() > 3:
-			weapons.append("+%d" % (take.weapons.size() - 3))
-		_description.text = Loc.t("archive.preview", [Loc.character_name(selected), take.wave, ", ".join(weapons)])
+		_entry_sim = Sim.new(1)
+		Content.character(selected).apply(_entry_sim)
+		_entry.setup(take, EchoArchive.entry_preview(meta, selected, _entry_sim), _compact())
 	for index in _role_buttons.size():
 		_role_buttons[index].button_pressed = _role_buttons[index].text == Loc.character_name(selected)
 

@@ -11,9 +11,11 @@ static func step(sim: Sim, delta: float) -> void:
 	sim.retire_cooldown = maxf(0.0, sim.retire_cooldown - delta)
 	var wear := 100.0 * delta / sim.echo_duration() * maxf(0.0, sim.wear_rate_mult)
 	for actor: EchoActor in sim.echoes.duplicate():
+		var previous_time := actor.t
 		if int(sim.role_effects.get("anchor_uid", 0)) != actor.take.uid or float(sim.role_effects.get("anchor_left", 0.0)) <= 0.0:
 			actor.step(delta)
 		actor.take.condition = maxf(0.0, actor.take.condition - wear)
+		EchoWork.step(sim, actor, previous_time, actor.t - previous_time)
 		if actor.take.condition <= 0.0:
 			_remove(sim, actor, true, {})
 	ensure_selection(sim)

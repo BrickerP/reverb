@@ -364,8 +364,8 @@ func _end_states() -> bool:
 	_main.end_ui.set_feedback_available(true)
 	_main.end_ui.show_result(sim)
 	if not _require(_main.end_ui.visible and _main.end_ui.restart_button.has_focus()
-			and _main.end_ui.best_take == null and _main.end_ui._no_echo.visible
-			and not _main.end_ui._best_row.visible,
+			and _main.end_ui.candidate_take == null and _main.end_ui._no_echo.visible
+			and not _main.end_ui._candidate_row.visible,
 			"loss without echoes shows explicit empty state"):
 		return false
 	if not (await _assert_focus_cycle(_main.end_ui, 5, _main.end_ui.restart_button,
@@ -382,12 +382,11 @@ func _end_states() -> bool:
 	sim.wave = WaveDirector.FINAL_WAVE
 	var unlock_text: String = Loc.t("end.unlocked", [Loc.character_name(&"conductor")])
 	_main.end_ui.show_result(sim, unlock_text)
-	if not _require(_main.end_ui.best_take == strong and _main.end_ui._best_row.visible
+	if not _require(_main.end_ui.candidate_take == weak and _main.end_ui.candidate_count() == 2 and _main.end_ui._candidate_row.visible
 			and not _main.end_ui._no_echo.visible and _main.end_ui._unlock.visible
 			and _main.end_ui._unlock.text == unlock_text
-			and not _main.end_ui._best_preview.is_animating()
 			and _main.end_ui.restart_button.has_focus(),
-			"win shows best echo, unlock and restart focus"):
+			"win shows retained choices, unlock and restart focus"):
 		return false
 	if not (await _assert_focus_cycle(_main.end_ui, 5, _main.end_ui.restart_button,
 			_main.end_ui.retry_button, _main.end_ui.character_button, true, "end_win")):

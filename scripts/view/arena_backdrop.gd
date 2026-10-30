@@ -21,6 +21,11 @@ func set_presentation(time: float, reduced: bool, paused: bool) -> void:
 	_depot.set_presentation(time, reduced, paused)
 
 
+func set_world_profile(profile: Dictionary) -> void:
+	_ensure_depot()
+	_depot.set_world_profile(profile)
+
+
 func _ensure_depot() -> void:
 	if _depot != null:
 		return

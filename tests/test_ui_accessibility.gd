@@ -231,5 +231,6 @@ func test_end_screen_focus_and_reduced_preview(c: Check) -> void:
 	_root().add_child(ui)
 	ui.show_result(sim, "Unlocked")
 	c.ok(ui.restart_button.has_focus(), "end screen starts on Play again")
-	c.ok(not ui._best_preview.is_animating(), "reduced end preview is already settled")
+	c.ok(ui._candidate_ui.route != null, "reduced end report keeps the selected route preview")
+	c.ok(not ui._candidate_ui.route.is_processing(), "route comparison is static without a playback animation")
 	ui.free()

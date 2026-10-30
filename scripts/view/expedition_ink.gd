@@ -15,20 +15,21 @@ static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0, "skills":
 
 
 static func snapshot(sim: Sim, clock: float = 0.0, reduced: bool = false,
-		display_rect: Rect2 = WorldArena.VIEWPORT) -> Dictionary:
+		display_rect: Rect2 = WorldArena.VIEWPORT, world: Dictionary = {}) -> Dictionary:
 	var result := {"supports": [], "targets": [], "warnings": [], "skill": {"visible": false}}
 	if sim == null:
 		return result
 	var safe := WorldArena.camera_rect(sim.player.pos, display_rect)
 	var view := safe.grow(ArenaPainter.CULL_SHAKE_MARGIN)
 	var choice := Expedition.interaction(sim)
+	var world_state := world if not world.is_empty() else Expedition.world_profile(sim)
 	result["skill"] = skill_profile(sim, reduced)
 	for index in mini(SupportSystem.MAX_UNITS, sim.support_units.size()):
 		var profile := support_profile(sim.support_units[index], clock, reduced)
 		if bool(profile["visible"]) and ArenaPainter.body_in_view(profile["pos"], view):
 			result["supports"].append(profile)
 	for index in mini(MAX_TARGETS, sim.interactables.size()):
-		var profile := target_profile(sim, sim.interactables[index], safe, choice)
+		var profile := target_profile(sim, sim.interactables[index], safe, choice, world_state)
 		if bool(profile["visible"]):
 			result["targets"].append(profile)
 	for enemy: EnemyState in sim.enemies:
@@ -79,7 +80,7 @@ static func support_profile(unit: Dictionary, clock: float = 0.0, reduced: bool 
 		"charges": maxi(0, int(unit.get("charges", 0))), "actor_token": int(unit.get("actor_token", -1))}
 
 
-static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dictionary = {}) -> Dictionary:
+static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dictionary = {}, world: Dictionary = {}) -> Dictionary:
 	var kind := StringName(item.get("kind", &""))
 	var pos: Vector2 = item.get("pos", Vector2.ZERO)
 	var valid := TARGET_KINDS.has(kind) and pos.is_finite() and not bool(item.get("used", false))
@@ -92,6 +93,13 @@ static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dict
 	var bounds := Rect2(pos - Vector2.ONE * maxf(38.0, danger_radius), Vector2.ONE * maxf(76.0, danger_radius * 2.0))
 	var label := Rect2(pos + Vector2(-98, -92), Vector2(196, 42))
 	label.position = label.position.clamp(view.position + Vector2(8, 8), view.end - label.size - Vector2(8, 8))
+	var protected_hp := clampf(float(sim.expedition.get("mission", {}).get("protected_hp", 0.0)) / 45.0, 0.0, 1.0)
+	if kind == &"rescue":
+		for worker: Dictionary in sim.expedition.get("world", world).get("workers", []):
+			if worker["id"] == item.get("id"):
+				protected_hp = clampf(float(worker["hp"]) / 45.0, 0.0, 1.0)
+				valid = valid and worker["state"] == &"danger"
+				break
 	return {"visible": valid and bounds.intersects(view), "id": item.get("id", &""), "kind": kind,
 		"pos": pos, "near": near, "selected": selected, "label": label,
 		"cost": maxi(0, int(item.get("cost", 0))), "cooldown": cooldown,
@@ -100,7 +108,7 @@ static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dict
 		"progress": 1.0 - clampf(warning / 1.1, 0.0, 1.0),
 		"direction": item.get("direction", Vector2.RIGHT),
 		"negotiation": maxf(0.0, float(sim.expedition.get("negotiation", {}).get("remaining", 0.0))),
-		"protected_hp": clampf(float(sim.expedition.get("mission", {}).get("protected_hp", 0.0)) / 45.0, 0.0, 1.0)}
+		"protected_hp": protected_hp}
 
 
 static func boss_warning_profile(enemy: EnemyState) -> Dictionary:
@@ -138,11 +146,11 @@ static func boss_warning_profile(enemy: EnemyState) -> Dictionary:
 		"active": bool(profile["active"]), "progress": clampf(float(profile["progress"]), 0.0, 1.0)}
 
 
-static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false) -> void:
+static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false, world: Dictionary = {}) -> void:
 	_last_stats = {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
 	if ci == null or sim == null:
 		return
-	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size))
+	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size), world)
 	for warning: Dictionary in data["warnings"]:
 		_draw_warning(ci, warning, reduced)
 		_last_stats["warnings"] += 1
@@ -211,7 +219,7 @@ static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
 	elif kind == &"repair":
 		ArenaPainter._draw_art_foot(ci, &"support_repair_station", pos + Vector2(0, 12), Vector2(42, 46), 0, Color.WHITE)
 	elif kind == &"rescue":
-		ArenaPainter._draw_art_foot(ci, &"support_decoy", pos + Vector2(0, 12), Vector2(42, 50), 0, Color.WHITE)
+		draw_worker(ci, pos, false)
 		var bar := Rect2(pos + Vector2(-20, -47), Vector2(40, 4))
 		ci.draw_rect(bar, INK)
 		ci.draw_rect(Rect2(bar.position, Vector2(40.0 * float(p["protected_hp"]), 4)), DANGER)
@@ -235,6 +243,75 @@ static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
 		elif int(p["cost"]) > 0:
 			detail = Loc.t("world.cost", [int(p["cost"])])
 		ci.draw_string(UiTheme.font(), label.position + Vector2(7, 35), detail, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 13, color)
+
+
+# A living worker has a face, hard hat, coat and two feet. The authored cardboard
+# decoy remains reserved for its equipment/support identity.
+static func draw_worker(ci: CanvasItem, pos: Vector2, safe: bool) -> void:
+	var coat := PackedVector2Array([pos + Vector2(-10, -15), pos + Vector2(9, -15), pos + Vector2(12, 9), pos + Vector2(-12, 9)])
+	ci.draw_colored_polygon(coat, PAPER)
+	coat.append(coat[0])
+	ci.draw_polyline(coat, INK, 2, true)
+	ci.draw_circle(pos + Vector2(0, -24), 8, PAPER)
+	ci.draw_arc(pos + Vector2(0, -24), 8, 0, TAU, 16, INK, 1.7, true)
+	ci.draw_arc(pos + Vector2(0, -28), 9, PI, TAU, 12, INK, 3, true)
+	ci.draw_line(pos + Vector2(-12, -28), pos + Vector2(12, -28), INK, 2.5, true)
+	for dx in [-3.0, 3.0]:
+		ci.draw_circle(pos + Vector2(dx, -24), 1.2, INK)
+	ci.draw_line(pos + Vector2(-3, -19), pos + Vector2(3, -19), INK, 1, true)
+	ci.draw_line(pos + Vector2(0, -13), pos + Vector2(0, 8), INK, 1.2, true)
+	ci.draw_line(pos + Vector2(-6, 10), pos + Vector2(-7, 19), INK, 3, true)
+	ci.draw_line(pos + Vector2(6, 10), pos + Vector2(7, 19), INK, 3, true)
+	ci.draw_line(pos + Vector2(-11, -9), pos + Vector2(-17, 3 if safe else -17), INK, 2.5, true)
+	ci.draw_line(pos + Vector2(11, -9), pos + Vector2(17, 3 if safe else -17), INK, 2.5, true)
+	if safe:
+		ci.draw_polyline(PackedVector2Array([pos + Vector2(-4, -5), pos + Vector2(0, -1), pos + Vector2(6, -8)]), FRIEND, 2, true)
+
+
+static func work_profile(info: Dictionary, view: Rect2) -> Dictionary:
+	var pos: Vector2 = info.get("pos", Vector2.ZERO)
+	var target: Vector2 = info.get("target_pos", pos)
+	var kind := StringName(info.get("kind", &""))
+	var success := bool(info.get("success", false))
+	if not pos.is_finite() or not target.is_finite() or kind not in [&"press", &"conveyor", &"signature"]:
+		return {"visible": false}
+	var anchor := target if success and kind != &"signature" else pos
+	var label := Rect2(anchor + Vector2(-102, -68), Vector2(204, 34))
+	label.position = label.position.clamp(view.position + Vector2(8, 8), view.end - label.size - Vector2(8, 8))
+	return {"visible": view.grow(24).has_point(anchor), "uid": int(info.get("uid", 0)), "kind": kind,
+		"pos": anchor, "intent": (target - pos).normalized(), "success": success,
+		"reason": StringName(info.get("reason", &"unavailable")), "label": label,
+		"alpha": clampf(float(info.get("life", 1.0)) / 0.35, 0.0, 1.0)}
+
+
+static func draw_work(ci: CanvasItem, marks: Array[Dictionary], view: Rect2, reduced: bool) -> void:
+	var count := mini(4 if reduced else 8, marks.size())
+	for index in range(marks.size() - count, marks.size()):
+		var p := work_profile(marks[index], view)
+		if not p["visible"]:
+			continue
+		var pos: Vector2 = p["pos"]
+		var alpha := float(p["alpha"])
+		var color := Color(FRIEND if p["success"] else INK, alpha)
+		if p["success"]:
+			if p["kind"] == &"signature":
+				# A short old-aim compass is intent, never a projectile or hit area.
+				var direction: Vector2 = p["intent"]
+				if direction == Vector2.ZERO:
+					direction = Vector2.RIGHT
+				var normal := Vector2(-direction.y, direction.x)
+				ci.draw_polyline(PackedVector2Array([pos - direction * 7 + normal * 5, pos + direction * 7, pos - direction * 7 - normal * 5]), color, 2, true)
+			else:
+				_glyph(ci, p["kind"], pos, color)
+		else:
+			ci.draw_line(pos + Vector2(-6, -6), pos + Vector2(6, 6), color, 2, true)
+			ci.draw_line(pos + Vector2(6, -6), pos + Vector2(-6, 6), color, 2, true)
+		var label: Rect2 = p["label"]
+		ci.draw_rect(label, Color(PAPER, alpha * 0.94))
+		var title := Loc.t("work.mark", [p["uid"], Loc.t("work.kind." + String(p["kind"]))])
+		var cause := Loc.t("work.reason." + String(p["reason"]))
+		ci.draw_string(UiTheme.font(), label.position + Vector2(6, 14), title, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 12, color)
+		ci.draw_string(UiTheme.font(), label.position + Vector2(6, 28), cause, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 12, color)
 
 
 static func _draw_warning(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:

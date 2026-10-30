@@ -70,14 +70,21 @@ func test_live_notice_text_is_localized_and_fits(c: Check) -> void:
 	var before := Loc.lang
 	for language in ["en", "zh"]:
 		Loc.lang = language
-		for key in ["world.returns", "world.scrap", "world.notice_title", "world.notice_line", "world.notice_small"]:
+		var keys: Array[String] = ["world.scrap", "world.notice_small", "world.machine.stopped",
+			"world.machine.operating", "world.machine.fault", "world.machine.repaired", "world.safe_registry"]
+		for act in [1, 2, 3]:
+			keys.append("world.act.%d" % act)
+			keys.append(RecyclingDepot.SHIFT_SIGN_KEYS[act - 1])
+		for key in keys:
 			var text := Loc.t(key)
-			c.ok(text != key and not text.is_empty(), "%s has %s copy" % [key, language])
-		var title := Loc.t("world.notice_title")
-		var width := RecyclingDepot.notice_text_rect().size.x
-		var size := RecyclingDepot.fitted_font_size(title, width, 16)
-		c.ok(UiTheme.title_font(title).get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x <= width,
-				"%s notice title fits its live paper area" % language)
+			c.ok(text != key and not text.is_empty(), "%s has %s live copy" % [key, language])
+		for act in [1, 2, 3]:
+			for key in ["world.act.%d" % act, RecyclingDepot.SHIFT_SIGN_KEYS[act - 1]]:
+				var text := Loc.t(key)
+				var width := RecyclingDepot.notice_text_rect().size.x
+				var size := RecyclingDepot.fitted_font_size(text, width, 16)
+				c.ok(UiTheme.title_font(text).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x <= width,
+						"%s %s fits its live paper area" % [language, key])
 	Loc.lang = before
 
 

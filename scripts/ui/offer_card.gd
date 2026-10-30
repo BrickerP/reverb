@@ -17,6 +17,7 @@ var _clear_drag_hint := Callable()
 var _suppress_next_pressed := false
 var reduced_effects := false
 var _press_tween: Tween
+var _order_context := ""
 
 
 func _init() -> void:
@@ -58,6 +59,7 @@ static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
 func setup(o: Offer, sim: Sim, selected: bool = false,
 		payload_provider: Callable = Callable(), clear_drag_hint: Callable = Callable()) -> void:
 	offer = o
+	_order_context = ShopUi.forecast_description(sim) if o.is_contract() else ""
 	swap_button = null
 	lock_button = null
 	_drag_payload = payload_provider
@@ -106,7 +108,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
 	else:
-		var desc := UiTheme.label(_description(o), 14, UiTheme.DIM)
+		var desc := UiTheme.label(_description(o).replace("\n", " · "), 14, UiTheme.DIM)
 		desc.clip_text = true
 		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		desc.tooltip_text = _description(o)
@@ -419,7 +421,7 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 
 func _description(o: Offer) -> String:
 	if o.is_contract():
-		return Loc.t("order.%s.desc" % o.contract.kind)
+		return Loc.t("order.%s.desc" % o.contract.kind) + " · " + _order_context
 	return Loc.weapon_desc(o.weapon.id) + " · " + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item)
 
 

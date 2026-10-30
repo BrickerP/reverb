@@ -2,7 +2,7 @@ extends SceneTree
 # Source-backed economic envelopes plus bounded, unmodified-stat campaign simulations.
 # godot --headless --path . --script res://tools/expedition_balance_probe.gd -- [output.json] [seed_count]
 
-const DEFAULT_OUTPUT := "/Users/yupeng/projects/personal/reverb-delivery-expedition-closeout/economy.json"
+const DEFAULT_OUTPUT := "/Users/yupeng/projects/personal/reverb-delivery-theme-convergence/economy.json"
 const DT := 1.0 / 60.0
 const MARKET_RESERVE := 10
 const MARKET_SAMPLES := 96
@@ -17,7 +17,7 @@ func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	var output: String = args[0] if not args.is_empty() else DEFAULT_OUTPUT
 	var seed_count := clampi(int(args[1]), 1, SEEDS.size()) if args.size() > 1 else 2
-	var temp_dir := "/tmp/reverb-expedition-economy-probe"
+	var temp_dir := ProjectSettings.globalize_path("user://theme_economy_probe")
 	DirAccess.make_dir_recursive_absolute(temp_dir)
 	for key: String in ["REVERB_SAVE", "REVERB_RUN_LOG", "REVERB_SETTINGS", "REVERB_FEEDBACK_LOG", "REVERB_SUSPEND"]:
 		OS.set_environment(key, temp_dir + "/" + key.to_lower() + ".json")
@@ -34,6 +34,7 @@ func _initialize() -> void:
 			"Greedy Bot buys affordable equipment, refits and rerolls; it does not plan orders or replacements.",
 			"Assembly policy adds only profitable, affordable full-build assembly plus restocking before the same greedy shopper.",
 			"Both policies use identical opportunistic role skills and nearby safe interactions; these are heuristics, not human play.",
+			"Pending boss terms and final departures choose the first available explicit option; automatic ending scores are not used.",
 			"Expected DPS omits target coverage, hazards and support utility; no balance changes are inferred from wins alone.",
 			"Baseline movement ignores attack warnings. Telegraph-aware movement samples collision-safe escape directions from actual boss targets and press warnings; it is a separate diagnostic policy."],
 		"source_grade_multipliers": [], "branch_tradeoffs": branch_tradeoffs(), "market": [], "market_by_role": [], "runs": []}
@@ -348,6 +349,13 @@ static func play(seed_value: int, role: StringName, policy: StringName, combat_m
 	var status := "running"
 	while sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP]:
 		var row := stages.back() as Dictionary
+		if Expedition.is_negotiating(sim):
+			for choice in Expedition.negotiation_options(sim):
+				if choice["available"]:
+					row["negotiation_choice"] = String(choice["id"])
+					sim.choose_negotiation(choice["id"])
+					break
+			continue
 		if sim.phase == Sim.Phase.SHOP:
 			row["completed"] = true
 			row["earnings_settled"] = true
@@ -393,6 +401,11 @@ static func play(seed_value: int, role: StringName, policy: StringName, combat_m
 		if sim.boss != null:
 			row["boss_hp_end"] = sim.boss.hp
 			row["boss_max_hp"] = sim.boss.max_hp
+	if sim.phase == Sim.Phase.RESOLUTION:
+		for choice in Expedition.exit_options(sim):
+			if choice["available"]:
+				sim.choose_exit(choice["id"])
+				break
 	if sim.phase == Sim.Phase.WON:
 		status = "won"
 		stages.back()["completed"] = true
@@ -421,6 +434,7 @@ static func play(seed_value: int, role: StringName, policy: StringName, combat_m
 	return {"seed": seed_value, "role": String(role), "policy": String(policy), "status": status,
 		"combat_mode": String(combat_mode), "last_stage": sim.wave, "won": sim.phase == Sim.Phase.WON, "steps": steps,
 		"death_source": String(sim.last_damage_source) if sim.phase == Sim.Phase.LOST else "",
+		"chosen_ending": String(sim.expedition.get("ending", &"")),
 		"wall_ms": Time.get_ticks_msec() - started, "bosses": bosses,
 		"bought": bought, "refits": refits, "combines": combines,
 		"wallet": sim.player.materials, "debt": sim.expedition.get("debt", 0),

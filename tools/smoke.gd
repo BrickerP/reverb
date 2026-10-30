@@ -35,6 +35,7 @@ func _initialize() -> void:
 	OS.set_environment("REVERB_SAVE", "user://smoke_save.json")
 	OS.set_environment("REVERB_RUN_LOG", "user://smoke_runs.jsonl")
 	OS.set_environment("REVERB_SETTINGS", "user://smoke_settings.json")
+	SuspendStore.clear()
 	if OS.get_cmdline_user_args().has("--shots"):
 		_shots_dir = ProjectSettings.globalize_path("res://shots")
 		DirAccess.make_dir_recursive_absolute(_shots_dir)
@@ -118,6 +119,13 @@ func _restart(sim: Sim) -> void:
 func _shop_step() -> void:
 	var ui: ShopUi = _main.shop_ui
 	if not ui.visible:
+		return
+	if ui.workshop.visible:
+		for button: Button in ui.workshop.choice_buttons:
+			if not button.disabled:
+				button.pressed.emit()
+				return
+		ui.workshop.cancel_button.pressed.emit()
 		return
 	for card: OfferCard in ui.offers_box.get_children():
 		if not card.disabled and card.blocked_reason == &"":

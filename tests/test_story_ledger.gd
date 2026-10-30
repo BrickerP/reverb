@@ -34,7 +34,7 @@ func test_milestones_and_choices_recover_distinct_clues_without_rng(c: Check) ->
 
 func test_boss_discovery_and_final_receipt_follow_expedition_decisions(c: Check) -> void:
 	var routes: Array[StringName] = [&"compliance", &"solidarity", &"profit"]
-	var endings: Array[StringName] = [&"released", &"collective", &"indebted"]
+	var endings: Array[StringName] = [&"released", &"collective", &"takeover"]
 	for i in routes.size():
 		var sim := Sim.new(5)
 		sim.start_wave(WaveDirector.FINAL_WAVE)

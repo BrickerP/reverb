@@ -51,6 +51,19 @@ static func create(kind_id: StringName, next_wave: int) -> AnomalyContract:
 	return order
 
 
+# A held order is rechecked against the same natural forecast used when rolling
+# offers, so a repaired device or an already-safe worker cannot sell dead work.
+func availability_reason(sim: Sim) -> StringName:
+	if kind == CREDIT and int(sim.expedition.get("debt", 0)) > 0:
+		return &"debt"
+	var future := Expedition.forecast(sim, sim.next_wave_number())
+	if kind == REPAIR and not future["repair_available"]:
+		return &"order_unavailable"
+	if kind == RESCUE and not future["worker_available"]:
+		return &"order_unavailable"
+	return &""
+
+
 func id() -> StringName:
 	return StringName("order_" + String(kind))
 

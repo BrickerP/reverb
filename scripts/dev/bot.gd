@@ -100,7 +100,14 @@ func shop(sim: Sim) -> void:
 			break
 	_spend_on_weapons(sim)
 	while not sim.can_start_wave():
-		sim.discard_take(sim.bank.weakest())
+		var candidate: EchoTake = null
+		var staff_uid := int(sim.expedition.get("world", {}).get("staff_uid", 0))
+		for take in sim.bank.takes:
+			if take.uid != staff_uid and (candidate == null or take.power() < candidate.power()):
+				candidate = take
+		if candidate == null:
+			break
+		sim.discard_take(candidate)
 
 
 func _spend_on_weapons(sim: Sim) -> void:
