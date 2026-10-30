@@ -26,7 +26,7 @@ Builds are on [GitHub Releases](https://github.com/BrickerP/reverb/releases). Fo
 - **Windows**: unsigned. SmartScreen may complain.
 - **Linux**: mark `TakeStack.x86_64` executable, then run it.
 
-To try the verb first, open [thirty seconds on paper](docs/play/index.html). That is not the game. You walk, a copy from three seconds ago follows, then it is crumpled.
+To try the verb first, open [thirty seconds on paper](https://brickerp.github.io/reverb/play/?lang=en). That is not the game. You walk, a copy from three seconds ago follows, then it is crumpled. The page itself is [brickerp.github.io/reverb](https://brickerp.github.io/reverb/?lang=en).
 
 ## Roles
 

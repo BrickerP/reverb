@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>回响 / Take Stack</title>
+<style>
+  :root { --ink:#1c1915; --paper:#f3e6c8; --brick:#c6453a; --mold:#5f7d68; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #24211c; color: var(--ink); }
+  body {
+    font-family: "Iowan Old Style", Palatino, "Songti SC", serif;
+    display: flex; justify-content: center; padding: 28px 16px 64px;
+  }
+  main {
+    width: min(880px, 100%);
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    padding: 28px 28px 40px;
+  }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0; }
+  button, a.btn {
+    font: inherit; color: var(--ink); background: transparent;
+    border: 2px solid var(--ink); border-radius: 8px;
+    padding: 6px 12px; text-decoration: none; cursor: pointer; white-space: nowrap;
+  }
+  .lead { font-size: 28px; line-height: 1.35; margin: 28px 0 12px; }
+  p { line-height: 1.5; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 28px; }
+  a.btn.solid { background: var(--ink); color: var(--paper); }
+  figure { margin: 0 0 22px; }
+  img { width: 100%; height: auto; border: 2px solid var(--ink); display: block; }
+  figcaption { margin-top: 6px; }
+  footer { margin-top: 12px; font-size: 14px; }
+  footer a { color: var(--ink); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="name">回响 / Take Stack</h1>
+    <button id="lang" type="button">English</button>
+  </header>
+  <p class="lead" id="lead"></p>
+  <p id="body"></p>
+  <div class="row">
+    <a class="btn solid" id="play" href="play/index.html"></a>
+    <a class="btn" id="release" href="https://github.com/BrickerP/reverb/releases"></a>
+    <a class="btn" id="code" href="https://github.com/BrickerP/reverb"></a>
+  </div>
+  <figure>
+    <img src="wave.png" alt="">
+    <figcaption id="c1"></figcaption>
+  </figure>
+  <figure>
+    <img src="echo_selection.png" alt="">
+    <figcaption id="c2"></figcaption>
+  </figure>
+  <figure>
+    <img src="story.png" alt="">
+    <figcaption id="c3"></figcaption>
+  </figure>
+  <footer id="foot"></footer>
+</main>
+<script>
+const copy = {
+  zh: {
+    lang: "English",
+    lead: "昨天的你，是今天的耗材。",
+    body: "在废件回收局，你负责走位，武器自己打。每场留下的回响会磨破：可以装订、修补，或者提前报废。结局要自己签字。",
+    play: "纸上走 30 秒",
+    release: "下载",
+    code: "源码",
+    c1: "你走，武器自己打。",
+    c2: "回响会磨破。选一张，装订、修补，或让它再打一次。",
+    c3: "选择会留下签名。",
+    foot: "这一页是门面。完整规则在仓库的 DESIGN.md。"
+  },
+  en: {
+    lang: "中文",
+    lead: "Yesterday's you is today's consumable.",
+    body: "In the scrap-recycling bureau you move, and the weapons fire themselves. Each fight leaves an Echo. It wears out. Staple it, repair it, or scrap it early. The ending is a signature.",
+    play: "Thirty seconds on paper",
+    release: "Download",
+    code: "Source",
+    c1: "You move. The weapons fire.",
+    c2: "Echoes wear out. Pick one to staple, repair, or spend.",
+    c3: "Choices leave a signature.",
+    foot: "This page is the front. The rules live in DESIGN.md in the repo."
+  }
+};
+const params = new URLSearchParams(location.search);
+let lang = params.get("lang") === "en" ? "en" : "zh";
+function apply() {
+  const t = copy[lang];
+  document.documentElement.lang = lang === "zh" ? "zh" : "en";
+  document.getElementById("lang").textContent = t.lang;
+  document.getElementById("lead").textContent = t.lead;
+  document.getElementById("body").textContent = t.body;
+  document.getElementById("play").textContent = t.play;
+  document.getElementById("play").href = "play/index.html?lang=" + lang;
+  document.getElementById("release").textContent = t.release;
+  document.getElementById("code").textContent = t.code;
+  document.getElementById("c1").textContent = t.c1;
+  document.getElementById("c2").textContent = t.c2;
+  document.getElementById("c3").textContent = t.c3;
+  document.getElementById("foot").textContent = t.foot;
+}
+document.getElementById("lang").onclick = () => {
+  lang = lang === "zh" ? "en" : "zh";
+  const url = new URL(location.href);
+  url.searchParams.set("lang", lang);
+  window.history.replaceState(null, "", url);
+  apply();
+};
+apply();
+</script>
+</body>
+</html>

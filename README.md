@@ -26,7 +26,7 @@
 - **Windows**：未签名，可能触发 SmartScreen。
 - **Linux**：给 `TakeStack.x86_64` 执行权限后运行。
 
-想先摸一下这个动词，打开 [纸上的 30 秒](docs/play/index.html)。那不是完整游戏：走，身后跟着三秒前的自己，然后它被揉掉。
+想先摸一下这个动词，打开 [纸上的 30 秒](https://brickerp.github.io/reverb/play/)。那不是完整游戏：走，身后跟着三秒前的自己，然后它被揉掉。整页在 [brickerp.github.io/reverb](https://brickerp.github.io/reverb/)。
 
 ## 角色
 
