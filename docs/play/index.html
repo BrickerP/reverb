@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>回响 · 纸上的 30 秒</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --paper: #f3e6c8;
+    --brick: #c6453a;
+    --mold: #5f7d68;
+    --tobacco: #c4923a;
+  }
+  html, body { margin: 0; height: 100%; background: #24211c; color: var(--ink); }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Iowan Old Style", Palatino, "Songti SC", serif;
+  }
+  canvas { width: min(960px, 100vw); height: auto; background: var(--paper); touch-action: none; }
+  .bar {
+    position: fixed; left: 0; right: 0; top: 0;
+    display: flex; gap: 12px; align-items: center;
+    padding: 10px 16px; color: var(--paper); font-size: 14px;
+  }
+  a { color: var(--paper); }
+  button {
+    font: inherit; color: var(--ink); background: var(--paper);
+    border: 2px solid var(--ink); border-radius: 8px;
+    padding: 4px 12px; white-space: nowrap; cursor: pointer;
+  }
+  #back { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <a id="back" href="../../README.md">回响</a>
+  <span id="hint"></span>
+  <button id="lang" type="button">English</button>
+</div>
+<canvas id="sheet" width="960" height="540"></canvas>
+<script>
+const copy = {
+  zh: {
+    title: "回响 · 纸上的 30 秒",
+    back: "回响",
+    lang: "English",
+    hint: "WASD 或方向键。三秒前的你跟在后面，然后被揉掉。",
+    wear: "耐久",
+    fresh: "新副本",
+    gone: "已报废"
+  },
+  en: {
+    title: "Take Stack · thirty seconds on paper",
+    back: "Take Stack",
+    lang: "中文",
+    hint: "WASD or arrows. You from three seconds ago follows, then gets crumpled.",
+    wear: "wear",
+    fresh: "fresh copy",
+    gone: "scrapped"
+  }
+};
+const params = new URLSearchParams(location.search);
+let lang = params.get("lang") === "en" ? "en" : "zh";
+const canvas = document.getElementById("sheet");
+const ctx = canvas.getContext("2d");
+const keys = new Set();
+const history = [];
+const player = { x: 480, y: 270 };
+let wear = 0.15;
+let crumple = 0;
+let echo = null;
+let last = performance.now();
+
+function t() { return copy[lang]; }
+function applyLang() {
+  document.documentElement.lang = lang === "zh" ? "zh" : "en";
+  document.title = t().title;
+  document.getElementById("back").textContent = t().back;
+  document.getElementById("hint").textContent = t().hint;
+  document.getElementById("lang").textContent = t().lang;
+}
+document.getElementById("lang").onclick = () => {
+  lang = lang === "zh" ? "en" : "zh";
+  const url = new URL(location.href);
+  url.searchParams.set("lang", lang);
+  window.history.replaceState(null, "", url);
+  applyLang();
+};
+addEventListener("keydown", (e) => {
+  keys.add(e.key.toLowerCase());
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
+});
+addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+
+function down(names) { return names.some((n) => keys.has(n)); }
+
+function drawClerk(x, y, alpha, squish) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1.8, 1.8 * squish);
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "#1c1915";
+  ctx.fillStyle = "#f7f1df";
+  ctx.beginPath();
+  ctx.moveTo(-16, -28);
+  ctx.lineTo(8, -28);
+  ctx.lineTo(18, -16);
+  ctx.lineTo(18, -4);
+  ctx.lineTo(-16, -4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(8, -28);
+  ctx.lineTo(8, -16);
+  ctx.lineTo(18, -16);
+  ctx.stroke();
+  ctx.fillStyle = "#1c1915";
+  ctx.beginPath();
+  ctx.arc(-4, -18, 2.2, 0, Math.PI * 2);
+  ctx.arc(6, -18, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-2, -12);
+  ctx.quadraticCurveTo(2, -9, 6, -12);
+  ctx.stroke();
+  ctx.fillStyle = "#efe4c8";
+  ctx.fillRect(-14, -4, 28, 22);
+  ctx.strokeRect(-14, -4, 28, 22);
+  ctx.strokeRect(-6, 18, 5, 10);
+  ctx.strokeRect(4, 18, 5, 10);
+  ctx.restore();
+}
+
+function sample(now) {
+  const want = now - 3000;
+  if (history.length < 2 || history[0].t > want) return null;
+  let i = 1;
+  while (i < history.length && history[i].t < want) i++;
+  const b = history[Math.min(i, history.length - 1)];
+  const a = history[Math.max(0, i - 1)];
+  const span = Math.max(1, b.t - a.t);
+  const u = Math.min(1, Math.max(0, (want - a.t) / span));
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  let dx = 0, dy = 0;
+  if (down(["a", "arrowleft"])) dx -= 1;
+  if (down(["d", "arrowright"])) dx += 1;
+  if (down(["w", "arrowup"])) dy -= 1;
+  if (down(["s", "arrowdown"])) dy += 1;
+  const mag = Math.hypot(dx, dy) || 1;
+  if (dx || dy) {
+    player.x = Math.min(900, Math.max(60, player.x + dx / mag * 170 * dt));
+    player.y = Math.min(480, Math.max(70, player.y + dy / mag * 170 * dt));
+    wear = Math.min(1, wear + dt * 0.085);
+  }
+  history.push({ t: now, x: player.x, y: player.y });
+  while (history.length && now - history[0].t > 8000) history.shift();
+
+  if (crumple > 0) {
+    crumple = Math.max(0, crumple - dt);
+    if (crumple === 0) wear = 0.08;
+  } else if (wear >= 1) {
+    crumple = 0.7;
+  }
+  echo = sample(now);
+
+  ctx.clearRect(0, 0, 960, 540);
+  ctx.fillStyle = "#f3e6c8";
+  ctx.fillRect(0, 0, 960, 540);
+  ctx.strokeStyle = "rgba(28,25,21,0.15)";
+  ctx.lineWidth = 1;
+  for (let x = 40; x < 960; x += 48) {
+    ctx.beginPath(); ctx.moveTo(x, 36); ctx.lineTo(x - 8, 520); ctx.stroke();
+  }
+  ctx.strokeStyle = "#1c1915";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(28, 28, 904, 484);
+
+  if (echo) {
+    const dying = crumple > 0;
+    const squish = dying ? 0.25 + 0.75 * (crumple / 0.7) : 1 - wear * 0.18;
+    const alpha = dying ? crumple / 0.7 : 0.35 + (1 - wear) * 0.4;
+    drawClerk(echo.x + (dying ? 6 : 2), echo.y + 2, alpha, squish);
+  }
+  const moving = dx || dy;
+  drawClerk(player.x, player.y + (moving ? Math.sin(now / 140) * 1.5 : 0), 1, 1);
+
+  ctx.fillStyle = "#1c1915";
+  ctx.font = "16px Palatino, Songti SC, serif";
+  const label = crumple > 0 ? t().gone : (wear < 0.25 ? t().fresh : t().wear);
+  ctx.fillText(label, 48, 64);
+  ctx.strokeRect(48, 74, 160, 14);
+  ctx.fillStyle = wear > 0.72 ? "#c6453a" : "#5f7d68";
+  ctx.fillRect(50, 76, 156 * (crumple > 0 ? crumple / 0.7 : 1 - wear), 10);
+  requestAnimationFrame(frame);
+}
+applyLang();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
