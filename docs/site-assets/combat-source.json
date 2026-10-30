@@ -1,0 +1,154 @@
+{
+  "controller": "balanced",
+  "disclosure": "The real balanced Bot completed encounters 1 and 2 and the first 10 seconds of encounter 3 without render waits. The recorded interval is normal encounter 3 gameplay. No HP, weapon, enemy, projectile, spawn-budget or capacity boosts were applied. This is automatic control, not a human playthrough.",
+  "draw_invariance_checks": 13,
+  "final_state": {
+    "echoes": 2,
+    "enemies": 3,
+    "grades": [
+      0,
+      0
+    ],
+    "hp": 35.0,
+    "kills": 61,
+    "max_hp": 35.0,
+    "player_position": [
+      1280.49377441406,
+      822.025817871094
+    ],
+    "projectiles": 24,
+    "stage": 3,
+    "wave_time": 27.9999999999997,
+    "weapons": [
+      "pistol",
+      "shotgun"
+    ]
+  },
+  "game_version": "0.17.0",
+  "initial_state": {
+    "echoes": 2,
+    "enemies": 0,
+    "grades": [
+      0,
+      0
+    ],
+    "hp": 35.0,
+    "kills": 47,
+    "max_hp": 35.0,
+    "player_position": [
+      1451.94860839844,
+      673.230834960938
+    ],
+    "projectiles": 11,
+    "stage": 3,
+    "wave_time": 10.0000000000001,
+    "weapons": [
+      "pistol",
+      "shotgun"
+    ]
+  },
+  "kind": "actual game simulation with automatic controller",
+  "native_pixels": [
+    1280,
+    720
+  ],
+  "peak_enemies": 6,
+  "peak_projectiles": 25,
+  "poster": "combat-cover.png",
+  "poster_frame": 398,
+  "poster_state": {
+    "echoes": 2,
+    "enemies": 6,
+    "grades": [
+      0,
+      0
+    ],
+    "hp": 35.0,
+    "kills": 48,
+    "max_hp": 35.0,
+    "player_position": [
+      1413.70947265625,
+      808.430480957031
+    ],
+    "projectiles": 15,
+    "stage": 3,
+    "wave_time": 16.6333333333337,
+    "weapons": [
+      "pistol",
+      "shotgun"
+    ]
+  },
+  "poster_time_seconds": 6.63333333333333,
+  "recorded_simulation_frames": 1080,
+  "recorded_simulation_seconds": 18.0,
+  "seed": 20261022,
+  "simulation_dt": 0.0166666666666667,
+  "source_commit": "cd07f16fd9e5963cbc6a51754dbccec7ff3884fd",
+  "state_and_both_rng_preserved_by_capture": true,
+  "web_loop": {
+    "file": "combat-loop.mp4",
+    "silent": true,
+    "seconds": 17.8,
+    "encoded_pixels": [
+      1280,
+      720
+    ],
+    "frames": 534,
+    "fps": 30,
+    "source_movie_interval_seconds": [
+      0.1,
+      17.9
+    ],
+    "bytes": 1755802,
+    "codec": "H264",
+    "playback_speed": 1.0,
+    "note": "Real source frames sampled at30fps; no motion interpolation."
+  },
+  "readme_preview": {
+    "file": "combat-loop.gif",
+    "seconds": 5.0,
+    "encoded_pixels": [
+      720,
+      405
+    ],
+    "frames": 50,
+    "fps": 10,
+    "palette_colors": 32,
+    "source_movie_interval_seconds": [
+      4.5,
+      9.5
+    ],
+    "bytes": 2471784,
+    "playback_speed": 1.0,
+    "note": "Accepted normal-speed web MP4 sampled at10fps; 32-color720px preview prioritizes smoothness within3MB. No motion interpolation.",
+    "encoded_from": "combat-loop.mp4",
+    "encoded_input_interval_seconds": [
+      4.4,
+      9.4
+    ]
+  },
+  "source_movie": {
+    "native_pixels": [
+      1280,
+      720
+    ],
+    "frames": 1083,
+    "fps": 60,
+    "seconds": 18.05,
+    "note": "Includes startup/teardown frames omitted from the web loop."
+  },
+  "files": {
+    "combat-loop.mp4": {
+      "bytes": 1755802,
+      "sha256": "7c3372056c75e31c94c8d0fecb1123cc9145e07a51382f4af3ef7a139e4ef0a2"
+    },
+    "combat-loop.gif": {
+      "bytes": 2471784,
+      "sha256": "a0d662f858100a8ec1a9ff820509a16051cc7dc0b7b4f5c80944876c0a268dd0"
+    },
+    "combat-cover.png": {
+      "bytes": 734773,
+      "sha256": "85e49e4da4a09d28c9d72bc3b4428b3486c8d665657228a15cc117b1db32c39c"
+    }
+  }
+}
