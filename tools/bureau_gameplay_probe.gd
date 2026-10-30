@@ -99,6 +99,15 @@ func _run() -> void:
 		_shop("tooltip_native_contrast")
 		await _ordinary_forecast_surface()
 		_cover("actual_native_tooltip_opaque_paper_ink_text_and_contrast")
+		# Dismiss the real tooltip window before detaching its themed source.
+		# Leaving it open during this short exit can retain native theme resources.
+		var leave := InputEventMouseMotion.new()
+		leave.position = Vector2(8.0, float(_size.y) * 0.5)
+		leave.global_position = leave.position
+		Input.parse_input_event(leave)
+		await _wait(0.15)
+		await _settle()
+		_last_pixels = null
 		_finish()
 		return
 	await _archive_and_vending()
@@ -800,6 +809,7 @@ func _finish() -> void:
 	_summary["failures"] = _failures
 	_summary["frames"] = _frames
 	_summary["wall_seconds"] = float(Time.get_ticks_msec() - _started) / 1000.0
+	_last_pixels = null
 	var file := FileAccess.open(_out.path_join("tooltip-summary.json" if _tooltip_only else "summary.json"), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(_summary, "\t", true, true))
