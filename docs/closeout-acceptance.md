@@ -1,4 +1,4 @@
-# 0.16 acceptance map
+# 0.17 acceptance map
 
 Every row maps a real entry to authoritative behavior and an executable check. Native probes are disclosed clinical fixtures, not human usability or long-term balance approval.
 
@@ -34,7 +34,7 @@ Additional original feedback remains covered by the full suite: weapon/enemy ani
 - Credit, discharge papers and solidarity are separate facts. Two audits grant clearance/settle current debt; only the player chooses an exit.
 - Echo promises route, old build and bounded key work. It does not promise exact historical automatic targeting.
 - Archive previews use the same opening normalization as deployment, including utility bodies and character synergy.
-- Snapshotv3 preserves pending decisions, world references, work timing and atomic undo; malformed graphs fail before replacing the session.
+- Snapshotv4 preserves pending decisions, world references, work timing and atomic undo; malformed graphs fail before replacing the session.
 - Sorting optimization preserves event digest, checkpoint snapshots, RNG, target order and allocation caps. Performance claims use paired measurements.
 
 ## Reproduction
@@ -42,3 +42,9 @@ Additional original feedback remains covered by the full suite: weapon/enemy ani
 `./tools/test.sh` runs the complete synchronous suite. `tools/main_language_probe.gd` checks real scene reload. `tests/probe_native_theme_ui.gd` checks EN/ZH1280/960 decision/ledger/full-roster geometry. `tools/expedition_gameplay_probe.gd` exercises real Main inputs and save/continue. `tools/expedition_art_probe.gd` compares rendered identities with snapshot and pixel negative controls. `tools/presentation_stress_probe.gd -- legal-only` renders the fixed96-enemy/8-Echo/12-support case. Python tooling checks and immutable export audits are independent build gates.
 
 Test and export receipts, performance JSON and original-resolution captures accompany the delivered build; source files alone do not prove a public package. Human fun/balance, physical gamepads, Windows GUI and low-end hardware remain separate playtests. macOS uses ad-hoc signing without notarization; Windows GUI binaries are unsigned.
+
+## Bureau concept integration
+
+Archive/vending/family wall and bounded retrospective drawer: tests/test_bureau_archive_ui.gd, tests/probe_bureau_archive_geometry.gd. Actual canonical merge/Undo ceremonies, three distinct trait overlays and confession receipts/forecast: tests/test_bureau_shop_ui.gd, tests/probe_bureau_shop_layout.gd. Delivery, safety-lever replay, once-only reward, chronology and transient-world-history preservation: tests/test_bureau_events.gd. Confession stock-hold/Undo-anchor, committed clues, verified/missed state and exact resumed history: tests/test_bureau_confession.gd, tests/test_run_snapshot.gd. Actual cross-run reports: tests/test_bureau_reports.gd and tests/test_bureau_main.gd. New source alpha/poses/provenance and read-only drawing: tests/test_bureau_art.py and tests/test_bureau_presentation.gd.
+
+The integrated tools/bureau_gameplay_probe.gd and tools/bureau_world_art_probe.gd use disclosed real Main/model fixtures, native EN/ZH pixels, exact state/both-RNG comparison and strict restoration. Pose clocks may be sampled for readable ceremony demonstrations; movies are clinical validation, not human-playthrough claims. Godot MovieMaker's console zero-frame counter is checked against the decoded file. Actual tooltips are captured with the final paper/ink theme.

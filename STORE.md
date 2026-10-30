@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.15 开发版源码**，不是尚未公布的下一次公开发布页。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.17 源码**，不是尚未公布的下一次公开发布页。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
@@ -22,12 +22,12 @@ Record your route and fight beside your past. Take work orders, assemble weapons
 
 新的远征由三幕 12 场组成。每幕末面对不同 Boss：监工的压印、收集者的冲锋与悖论体的十字裁切都先锁定真实攻击几何。战后商店固定提供武器、被动与工作单；打捞、审计、维修、营救、招募和信用会改变下一场的目标、敌人或环境。
 
-- **35 把武器与真实取舍**：18 把基础武器各有两条终极分支，另有 5 把支援武器。四级火力倍率为 1×、1.8×、3.2×、5.5×；同 ID、同等级武器可以装配升级并空出槽位。高等级配对可能需要跨场存钱，现金改装不需要供体，但刻意更贵。终极分支保留满级与实际投入账本。
+- **35 把武器与真实取舍**：18 把基础武器按六个家族发展为各两条终极分支，共 12 把终极武器，另有 5 把支援武器。四级火力倍率为 1×、1.8×、3.2×、5.5×；同 ID、同等级武器可以装配升级并空出槽位。高等级配对可能需要跨场存钱，现金改装不需要供体，但刻意更贵。终极分支保留满级与实际投入账本。
 - **六名角色，六种主动技**：手动拾取为能量充能；倒回、纸冲刺、位置交换、接力电弧、修补站与耐久爆发都改变实际战斗。
 - **有限而可受伤的支援**：纸猎犬、哨戒炮、修补站、纸树与诱饵会被敌人摧毁并自然过期；还可在 8 秒谈判窗口内招募一名 Boss 同伴。
 - **过去仍是资产**：修补回响，或选择技能、维修、火力三种供体特质合并；宿主保留原路线。结算后可为每名有回响容量的角色保留一张跨局档案。
-- **债务来自明确选择**：信用单立即给 30 材料并记 40 债务；普通任务失败不会额外征税。你的审计、互助和债务状态会兑现为三个不同结局。
-- **中断后继续同一局**：Snapshot v2 保存战斗、工作单、债务、支援、报价、撤销、主动技与 Boss 谈判。语言切换与窗口关闭使用同一条安全路径。
+- **债务来自明确选择**：信用单立即给 30 材料并记 40 债务；普通任务失败不会额外征税。债务、放行资格和互助记录分别保留，最终由玩家选择个人放行、共同离开或接管回收局。
+- **中断后继续同一局**：Snapshot v4 保存战斗、工作单、债务、支援、报价、撤销、主动技与 Boss 谈判。语言切换与窗口关闭使用同一条安全路径。
 
 **EN**
 
@@ -41,8 +41,8 @@ The expedition spans three acts and twelve encounters. Each act ends with a dist
 - **Six roles with six real abilities:** manual pickups charge rewind, paper dash, position swap, relay, repair-station, and condition-scaled overload actions.
 - **Finite, damageable support:** hounds, turrets, repair stations, paper trees, and decoys expire and can be destroyed. A recruit order can preserve one defeated boss for an eight-second negotiation.
 - **Your past remains an asset:** merge a donor's skill, repair value, or power while keeping the host route. Save one bounded cross-run Echo for each role that can use one.
-- **Debt comes from an explicit choice:** a credit order advances 30 cash and records 40 debt. Ordinary mission failure adds no surprise finance debt. Audits, solidarity actions, and the remaining ledger produce three distinct endings.
-- **Continue the exact run:** Snapshot v2 preserves battle, work orders, debt, support bodies, graded offers, undo, role state, and boss negotiation through save-and-return, language reload, and window close.
+- **Debt comes from an explicit choice:** a credit order advances 30 cash and records 40 debt. Ordinary mission failure adds no surprise finance debt. Clearance, solidarity and debt remain separate facts; the player signs for individual discharge, collective departure, or staying to run the bureau.
+- **Continue the exact run:** Snapshot v4 preserves battle, work orders, debt, support bodies, graded offers, undo, role state, and boss negotiation through save-and-return, language reload, and window close.
 
 ## 宣传重点 / Positioning
 
@@ -79,17 +79,25 @@ HUD 的手柄标签从当前 InputMap 生成；菜单支持鼠标、键盘和手
 ## Press kit
 
 - 标题 / Title：`回响 / Take Stack (working title)`。
-- 当前源码与已发布构建：[Repository](https://github.com/BrickerP/reverb)、[GitHub Releases](https://github.com/BrickerP/reverb/releases)。下一次公开发布 URL 尚未确定。
+- 当前源码与已发布构建：[Repository](https://github.com/BrickerP/reverb)、[GitHub Releases](https://github.com/BrickerP/reverb/releases)。固定下载入口为 https://github.com/BrickerP/reverb/releases/latest 。
 - 设计与验证：[DESIGN.md](DESIGN.md)、[INTERFACES.md](INTERFACES.md)、[closeout acceptance](docs/closeout-acceptance.md)。
 - 图像与声音来源：[Art direction](docs/art-direction.md)、[Third-party notices](THIRD_PARTY.md)。
 - 联系 / Contact：yplmicro@gmail.com。
 
 ## 发布表述边界 / Claims and validation
 
-原生收官取证已完成 EN 1280×720 与 ZH Reduced 960×540，两套失败列表为空，并覆盖真实响应式选角、商店、战斗 HUD、结算/档案和输入路径。24 次脚本对局证明理解 Boss 预警会改变自动策略结果；它不是人类游玩或难度定稿证据。0.15 三平台最终导出仍在收口，不能提前写成发布完成。
+原生收官取证已完成 EN 1280×720 与 ZH Reduced 960×540，两套失败列表为空，并覆盖真实响应式选角、商店、战斗 HUD、结算/档案和输入路径。24 次脚本对局证明理解 Boss 预警会改变自动策略结果；它不是人类游玩或难度定稿证据。三平台导出及公开状态以对应版本发布页和随包验收资料为准。
 
 Python 仅用于开发与 CI：`tools/requirements-dev.txt` 固定 NumPy 2.0.2 和 Pillow 11.3.0。发行游戏没有 Python 运行时依赖。
 
 这些证据不证明游戏“上瘾”、真人平衡定稿、主观听感获认可或所有设备稳定 60 FPS。
 
 macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签名。实体手柄、Windows GUI、Steam Deck、低端硬件和长期真人体验仍未验证。定价、最低配置、正式商标状态和发行时间保持未定。
+
+## Bureau rituals / 回收局里的手续
+
+0.17 将现有档案与合并流程表现为副本家谱室、班次档案抽屉、真实继承打印和三种合订／拆钉演出。第2、6、10场有可选送审：Solo可以独自掌握落章时机，回响可以重放安全开关。每幕可在告解复印机签一次原始记录或粉饰履历；确切收益、库存暂时固定、下一场核查与撤销条件都会提前说明。未核验的结果留在收据上，普通失败不暗扣债务。
+
+The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
+
+Snapshotv4 requires a new current run; permanent characters, settings and Echo archives remain. Prior version-specific downloads retain the old run format. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.

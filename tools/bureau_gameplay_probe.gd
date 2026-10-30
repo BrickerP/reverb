@@ -5,6 +5,7 @@ extends SceneTree
 # godot --path . --disable-vsync --script res://tools/bureau_gameplay_probe.gd
 # Optional --headless-flow diagnostic exercises controls without pixel evidence;
 # REVERB_BUREAU_OUTPUT can point outside res:// for final delivery captures.
+# --tooltip-only refreshes the two departure surfaces and writes its own summary.
 
 const DEADLINE_MSEC := 240000
 const SEED := 170170
@@ -16,6 +17,8 @@ var _started := Time.get_ticks_msec()
 var _frames := 0
 var _finished := false
 var _headless_flow := false
+var _tooltip_only := false
+var _last_pixels: Image
 var _size := Vector2i(1280, 720)
 var _failures: Array[String] = []
 var _summary := {"probe": "bureau_rituals_gameplay_0_17", "checks": [], "screenshots": {}, "coverage": [], "fixtures": [], "results": {},
@@ -25,6 +28,7 @@ var _summary := {"probe": "bureau_rituals_gameplay_0_17", "checks": [], "screens
 func _initialize() -> void:
 	Engine.max_fps = 60
 	RenderingServer.render_loop_enabled = false
+	_tooltip_only = OS.get_cmdline_user_args().has("--tooltip-only")
 	var lang := OS.get_environment("REVERB_LANG")
 	Loc.lang = lang if lang in ["en", "zh"] else "en"
 	var dimensions := OS.get_environment("REVERB_PROBE_SIZE")
@@ -57,6 +61,7 @@ func _initialize() -> void:
 	_summary["profile"] = profile
 	_summary["requested_canvas"] = [_size.x, _size.y]
 	_summary["native_display"] = DisplayServer.get_name()
+	_summary["check_mode"] = "tooltip_only" if _tooltip_only else "full_gameplay"
 	_summary["native_pixels_verified"] = DisplayServer.get_name() != "headless"
 	if not _check(DisplayServer.get_name() != "headless" or _headless_flow, "native_display_required_or_explicit_diagnostic"):
 		_finish()
@@ -90,6 +95,12 @@ func _run() -> void:
 	for role: StringName in Content.characters():
 		_main.meta.unlocked[role] = true
 	_main.character_select.refresh(_main.meta)
+	if _tooltip_only:
+		_shop("tooltip_native_contrast")
+		await _ordinary_forecast_surface()
+		_cover("actual_native_tooltip_opaque_paper_ink_text_and_contrast")
+		_finish()
+		return
 	await _archive_and_vending()
 	await _binding()
 	await _truth(false)
@@ -213,6 +224,69 @@ func _archive_and_vending() -> void:
 	_cover("family_wall_actual_retirement_history_archive_and_one_copy_vending")
 
 
+func _ordinary_forecast_surface() -> void:
+	# Let the ordinary shop's optional opening tween finish before comparing pixels.
+	await _wait(0.25)
+	await _shot("ordinary_shop_stamp_forecast")
+	var before := _last_pixels
+	var status: Label = _main.shop_ui._prep_status
+	var prefix_width := status.get_theme_font("font").get_string_size(Loc.t("bureau.delivery.next_short"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, status.get_theme_font_size("font_size")).x
+	_check(status.is_visible_in_tree() and prefix_width <= status.size.x, "leading_stamp_announcement_fits_the_native_header_before_any_offer_is_opened")
+	await _hover(_main.shop_ui.start_button)
+	await _shot("ordinary_shop_departure_delivery_terms")
+	if _tooltip_only:
+		_tooltip_pixels(before, _last_pixels, _main.shop_ui.start_button.get_global_rect())
+
+
+func _tooltip_pixels(before: Image, after: Image, button_rect: Rect2) -> void:
+	if not _check(before != null and after != null, "tooltip_has_two_actual_native_images"):
+		return
+	var low := Vector2i(_size.x, _size.y)
+	var high := Vector2i.ZERO
+	var paper_pixels := 0
+	var paper_light := 0.0
+	var top := maxi(0, floori(button_rect.position.y) - 120)
+	# Limit the comparison to the footer near departure. The merchant's idle
+	# animation cannot become a false tooltip positive in this region.
+	for y in range(top, _size.y):
+		for x in range(floori(float(_size.x) * 0.35), _size.x):
+			var old := before.get_pixel(x, y)
+			var color := after.get_pixel(x, y)
+			var lum := _luminance(color)
+			if lum > 0.55 and _luminance(old) < 0.20 and color.r > color.b and color.g > color.b:
+				paper_pixels += 1
+				paper_light += lum
+				low.x = mini(low.x, x)
+				low.y = mini(low.y, y)
+				high.x = maxi(high.x, x)
+				high.y = maxi(high.y, y)
+	_check(paper_pixels > 1000, "actual_hover_creates_an_opaque_cream_paper_surface")
+	var ink_pixels := 0
+	var ink_light := 0.0
+	if paper_pixels > 0 and high.x - low.x > 24 and high.y - low.y > 16:
+		# Exclude the outline. A blank paper panel cannot pass as legible text.
+		for y in range(low.y + 8, high.y - 7):
+			for x in range(low.x + 8, high.x - 7):
+				var lum := _luminance(after.get_pixel(x, y))
+				if lum < 0.08:
+					ink_pixels += 1
+					ink_light += lum
+	_check(ink_pixels > 60, "actual_tooltip_contains_interior_dark_ink_glyphs")
+	var contrast := (paper_light / float(paper_pixels) + 0.05) / (ink_light / float(ink_pixels) + 0.05) if paper_pixels > 0 and ink_pixels > 0 else 0.0
+	_check(contrast >= 4.5, "actual_native_tooltip_paper_and_ink_have_readable_contrast")
+	_summary.results["tooltip_pixels"] = {"roi": [floori(float(_size.x) * 0.35), top, _size.x, _size.y],
+		"new_paper_pixels": paper_pixels, "ink_glyph_pixels": ink_pixels, "contrast_ratio": contrast,
+		"paper_bounds": [low.x, low.y, high.x, high.y], "comparison": "Actual native before/after hover pixels; outline excluded from ink count"}
+
+
+func _luminance(color: Color) -> float:
+	return 0.2126 * _linear(color.r) + 0.7152 * _linear(color.g) + 0.0722 * _linear(color.b)
+
+
+func _linear(value: float) -> float:
+	return value / 12.92 if value <= 0.04045 else pow((value + 0.055) / 1.055, 2.4)
+
+
 func _binding() -> void:
 	for trait_index in EchoBank.MERGE_TRAITS.size():
 		await _binding_case(trait_index)
@@ -222,12 +296,7 @@ func _binding_case(trait_index: int) -> void:
 	var label := String(EchoBank.MERGE_TRAITS[trait_index])
 	var sim := _shop("binding_ceremony_" + label)
 	if trait_index == 0:
-		await _shot("ordinary_shop_stamp_forecast")
-		var status: Label = _main.shop_ui._prep_status
-		var prefix_width := status.get_theme_font("font").get_string_size(Loc.t("bureau.delivery.next_short"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, status.get_theme_font_size("font_size")).x
-		_check(status.is_visible_in_tree() and prefix_width <= status.size.x, "leading_stamp_announcement_fits_the_native_header_before_any_offer_is_opened")
-		await _hover(_main.shop_ui.start_button)
-		await _shot("ordinary_shop_departure_delivery_terms")
+		await _ordinary_forecast_surface()
 	var host: EchoTake = sim.bank.takes[0]
 	host.condition = 45.0
 	var donor := _take(sim, &"ink_bottle", 70.0, sim.player.pos)
@@ -661,6 +730,7 @@ func _shot(id: String) -> void:
 		_main.hud.queue_redraw()
 		RenderingServer.force_draw()
 		var pixels := root.get_texture().get_image()
+		_last_pixels = pixels
 		_check(pixels != null and not pixels.is_empty() and pixels.get_size() == _size, "original_native_pixels_" + id)
 		_check(pixels.save_png(_out.path_join(id + ".png")) == OK, "native_capture_saved_" + id)
 	var outside := _outside_controls()
@@ -730,7 +800,7 @@ func _finish() -> void:
 	_summary["failures"] = _failures
 	_summary["frames"] = _frames
 	_summary["wall_seconds"] = float(Time.get_ticks_msec() - _started) / 1000.0
-	var file := FileAccess.open(_out.path_join("summary.json"), FileAccess.WRITE)
+	var file := FileAccess.open(_out.path_join("tooltip-summary.json" if _tooltip_only else "summary.json"), FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(_summary, "\t", true, true))
 		file.close()
