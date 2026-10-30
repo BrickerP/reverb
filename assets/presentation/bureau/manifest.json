@@ -1,0 +1,300 @@
+{
+  "tool": "built-in imagegen",
+  "art_direction": "Carbon Copy Purgatory",
+  "assets": [
+    {
+      "file": "binding.png",
+      "sha256": "29b3a97a14998d29561d2f95acde38ef3d9663069a203e071cf12a8bae2a7c34",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        22,
+        51,
+        1516,
+        940
+      ],
+      "frame_union_ltrb": [
+        4,
+        24,
+        380,
+        459
+      ],
+      "frame_bounds_ltrb": [
+        [
+          22,
+          215,
+          380,
+          458
+        ],
+        [
+          49,
+          51,
+          358,
+          457
+        ],
+        [
+          40,
+          151,
+          375,
+          458
+        ],
+        [
+          80,
+          211,
+          333,
+          459
+        ],
+        [
+          55,
+          168,
+          320,
+          427
+        ],
+        [
+          47,
+          28,
+          318,
+          426
+        ],
+        [
+          4,
+          24,
+          347,
+          428
+        ],
+        [
+          11,
+          179,
+          364,
+          427
+        ]
+      ],
+      "frame_pivots": [
+        [
+          188.0,
+          434
+        ],
+        [
+          188.0,
+          433
+        ],
+        [
+          188.0,
+          434
+        ],
+        [
+          188.0,
+          435
+        ],
+        [
+          188.0,
+          403
+        ],
+        [
+          188.0,
+          402
+        ],
+        [
+          188.0,
+          404
+        ],
+        [
+          188.0,
+          403
+        ]
+      ],
+      "frame_count": 8,
+      "columns": 4,
+      "rows": 2
+    },
+    {
+      "file": "facilities.png",
+      "sha256": "7e9111fdb40a939733d0e33b461a6a2703f63165ecd269daf2c7538633233213",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "visible_alpha_min": 20,
+      "bounds_ltrb": [
+        29,
+        84,
+        1511,
+        958
+      ],
+      "frame_union_ltrb": [
+        29,
+        84,
+        1511,
+        958
+      ],
+      "frame_bounds_ltrb": [
+        [
+          29,
+          84,
+          1511,
+          958
+        ]
+      ],
+      "frame_pivots": [
+        [
+          739.0,
+          874
+        ]
+      ],
+      "frame_count": 1,
+      "columns": 1,
+      "rows": 1,
+      "regions": {
+        "bureau_vending_closed": {
+          "source_rect_xywh": [
+            0,
+            0,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            46,
+            84,
+            381,
+            500
+          ],
+          "pivot": [
+            146.0,
+            416
+          ]
+        },
+        "bureau_vending_open": {
+          "source_rect_xywh": [
+            384,
+            0,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            405,
+            84,
+            756,
+            500
+          ],
+          "pivot": [
+            171.0,
+            416
+          ]
+        },
+        "bureau_copier_closed": {
+          "source_rect_xywh": [
+            768,
+            0,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            779,
+            141,
+            1152,
+            496
+          ],
+          "pivot": [
+            181.0,
+            355
+          ]
+        },
+        "bureau_copier_print": {
+          "source_rect_xywh": [
+            1152,
+            0,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            1152,
+            121,
+            1510,
+            506
+          ],
+          "pivot": [
+            192.0,
+            385
+          ]
+        },
+        "bureau_stamp_raised": {
+          "source_rect_xywh": [
+            0,
+            512,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            29,
+            528,
+            369,
+            940
+          ],
+          "pivot": [
+            163.0,
+            412
+          ]
+        },
+        "bureau_stamp_down": {
+          "source_rect_xywh": [
+            384,
+            512,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            404,
+            608,
+            746,
+            934
+          ],
+          "pivot": [
+            172.0,
+            326
+          ]
+        },
+        "bureau_inbox": {
+          "source_rect_xywh": [
+            768,
+            512,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            768,
+            625,
+            1152,
+            924
+          ],
+          "pivot": [
+            192.0,
+            299
+          ]
+        },
+        "bureau_cabinet": {
+          "source_rect_xywh": [
+            1152,
+            512,
+            384,
+            512
+          ],
+          "bounds_ltrb": [
+            1152,
+            540,
+            1511,
+            958
+          ],
+          "pivot": [
+            192.0,
+            418
+          ]
+        }
+      }
+    }
+  ]
+}

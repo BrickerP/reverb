@@ -122,7 +122,7 @@ func test_unknown_definitions_use_documented_safe_fallbacks(c: Check) -> void:
 func test_source_metadata_stays_inside_original_images(c: Check) -> void:
 	c.eq(PresentationAssets.SOURCE_METADATA.size(), PresentationAssets.PATHS.size(),
 			"every presentation asset has source metadata")
-	c.eq(PresentationAssets.PATHS.size(), 78, "catalog includes expedition bosses, arsenal, support poses and mission letter")
+	c.eq(PresentationAssets.PATHS.size(), 87, "catalog includes bureau facilities and binding poses alongside expedition art")
 	var identities: Array[String] = []
 	for key: StringName in PresentationAssets.PATHS:
 		c.ok(PresentationAssets.SOURCE_METADATA.has(key), "metadata exists for %s" % key)

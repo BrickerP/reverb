@@ -38,11 +38,20 @@ func _ready() -> void:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 7)
 	paper.add_child(content)
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 12)
+	content.add_child(header)
+	var cabinet := BureauFacilityUi.new()
+	cabinet.custom_minimum_size = Vector2(90, 62)
+	header.add_child(cabinet)
+	var words := VBoxContainer.new()
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(words)
 	_title = UiTheme.section_label("", 30)
-	content.add_child(_title)
+	words.add_child(_title)
 	_body = UiTheme.label("", 14, UiTheme.DIM)
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(_body)
+	words.add_child(_body)
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
@@ -77,6 +86,15 @@ func open_crew(sim: Sim) -> void:
 	witness_labels.clear()
 	_last_focus = null
 	var world := Expedition.world_profile(sim)
+	var safe := 0
+	var bench := 0
+	for worker: Dictionary in world["workers"]:
+		if worker["state"] == &"safe":
+			safe += 1
+	for colleague: Dictionary in world["roster"]:
+		if colleague["state"] == &"bench":
+			bench += 1
+	_body.text = Loc.t("room.crew_counts", [safe, bench, world["witnesses"].size()])
 	var options := Expedition.crew_options(sim)
 	_rows.add_child(UiTheme.section_label(Loc.t("crew.bosses"), 21))
 	for kind: StringName in Expedition.BOSS_IDS:
@@ -92,11 +110,11 @@ func open_crew(sim: Sim) -> void:
 		var portrait := UiTheme.art_icon(StringName("enemy_" + String(kind)), Vector2(54.0, 54.0))
 		_add_row(sim, portrait, Loc.enemy_name(kind), detail, option, &"deploy")
 	_rows.add_child(UiTheme.section_label(Loc.t("crew.people"), 21))
-	var safe := 0
+	var visible_people := 0
 	for worker: Dictionary in world["workers"]:
 		if worker["state"] not in [&"safe", &"exited"]:
 			continue
-		safe += 1
+		visible_people += 1
 		var title := Loc.t("crew.worker_number", [int(worker["stage"])])
 		var detail := Loc.t("crew.worker_exited" if worker["state"] == &"exited" else "crew.worker_safe")
 		detail += " · " + Loc.t("crew.aid_used" if worker["aid_used"] else "crew.aid_ready")
@@ -105,7 +123,7 @@ func open_crew(sim: Sim) -> void:
 		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var option := _option(options, StringName("aid_" + String(worker["id"])))
 		_add_row(sim, portrait, title, detail, option, &"aid")
-	if safe == 0:
+	if visible_people == 0:
 		var empty := UiTheme.label(Loc.t("crew.people_empty"), 14, UiTheme.DIM)
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_rows.add_child(empty)

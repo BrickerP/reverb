@@ -415,6 +415,7 @@ func bind(sim: Sim) -> void:
 	sim.echo_spawned.connect(_on_echo)
 	sim.echo_retired.connect(_on_echo_retired)
 	sim.echo_work_performed.connect(_on_echo_work)
+	sim.world_event.connect(_on_world_event)
 	sim.wave_started.connect(_on_wave_start)
 	sim.wave_ended.connect(_on_wave_end)
 	sim.purchased.connect(_on_purchase)
@@ -436,6 +437,7 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.echo_spawned, _on_echo)
 		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
 		_disconnect_signal(_bound.echo_work_performed, _on_echo_work)
+		_disconnect_signal(_bound.world_event, _on_world_event)
 		_disconnect_signal(_bound.wave_started, _on_wave_start)
 		_disconnect_signal(_bound.wave_ended, _on_wave_end)
 		_disconnect_signal(_bound.purchased, _on_purchase)
@@ -701,6 +703,8 @@ func _on_echo_retired(info: EchoRetirementInfo) -> void:
 func _on_echo_work(info: Dictionary) -> void:
 	if not bool(info.get("success", false)):
 		return
+	if info.get("target_id", &"") == BureauEvents.SWITCH_ID:
+		return
 	# Signature attacks already emit their own weapon cue. Devices use the same
 	# bounded dry palette and cooldowns as the rest of the bureau.
 	match info.get("kind", &""):
@@ -710,6 +714,14 @@ func _on_echo_work(info: Dictionary) -> void:
 
 func _on_wave_start(_wave: int) -> void:
 	play(&"wave_start")
+
+
+func _on_world_event(info: Dictionary) -> void:
+	match info.get("kind", &""):
+		&"dispatch_impact": play(&"weapon_rail_spike", -1.0, 0.62, 0.18)
+		&"dispatch_safe": play(&"click", -3.0, 0.92, 0.10)
+		&"dispatch_delivered": play(&"equipment_apply", -3.0, 1.05, 0.16)
+		&"dispatch_carried", &"inspection_registered": play(&"click", -3.0, 1.0, 0.12)
 
 
 func _on_wave_end(_wave: int) -> void:

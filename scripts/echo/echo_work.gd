@@ -7,7 +7,7 @@ const SIGNATURE_INTERVAL := 8.0
 const CONDITION_COST := 4.0
 const FIELDS := ["time", "kind", "target_id", "pos", "weapon_id", "aim"]
 const MACHINE_KINDS := {&"machine_0": &"press", &"machine_1": &"conveyor",
-	&"machine_3": &"press", &"machine_4": &"conveyor"}
+	&"machine_3": &"press", &"machine_4": &"conveyor", &"bureau_dispatch_switch": &"press"}
 
 
 static func validate_actions(actions: Variant, max_time: float) -> bool:
@@ -145,7 +145,7 @@ static func _cursor_before(actions: Array[Dictionary], phase: float) -> int:
 
 
 static func _perform(sim: Sim, actor: EchoActor, action: Dictionary) -> void:
-	var info := {"uid": actor.take.uid, "kind": action.kind, "pos": actor.pos,
+	var info := {"uid": actor.take.uid, "kind": action.kind, "target_id": action.target_id, "pos": actor.pos,
 		"target_pos": action.pos, "success": false, "reason": &"unavailable"}
 	if actor.take.condition < CONDITION_COST:
 		info.reason = &"condition"
@@ -167,4 +167,5 @@ static func _perform(sim: Sim, actor: EchoActor, action: Dictionary) -> void:
 			info.reason = &"performed" if info.success else &"unavailable"
 			if info.success:
 				actor.take.condition = maxf(0.0, actor.take.condition - CONDITION_COST)
+	BureauEvents.note_work(sim, info)
 	sim.echo_work_performed.emit(info)

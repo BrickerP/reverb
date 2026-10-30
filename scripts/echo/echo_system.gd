@@ -147,6 +147,7 @@ static func _remove(sim: Sim, actor: EchoActor, exhausted: bool, profile: Dictio
 	info.weapon_id = StringName(profile.get("weapon_id", &""))
 	info.damage = float(profile.get("damage", 0.0))
 	info.radius = float(profile.get("radius", 0.0))
+	BureauEvents.record_retirement(sim, info)
 	sim.bank.discard(actor.take)
 	sim.echoes.erase(actor)
 	for i in sim.echoes.size():

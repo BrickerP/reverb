@@ -17,6 +17,9 @@ var start_button: Button
 var receipt_button: Button
 var crew_button: Button
 var debt_button: Button
+var confession_button: Button
+var confession: ConfessionUi
+var binding_ceremony: BindingCeremonyUi
 var crew: CrewUi
 var echo_panel: EchoPanel
 var build_panel: BuildPanel
@@ -110,6 +113,14 @@ func _ready() -> void:
 	crew.action_requested.connect(_on_crew_action)
 	crew.undo_requested.connect(_on_crew_undo)
 	crew.closed.connect(_on_crew_closed)
+	confession = ConfessionUi.new()
+	confession.z_index = 12
+	add_child(confession)
+	confession.chosen.connect(_on_confession_chosen)
+	confession.closed.connect(_on_confession_closed)
+	binding_ceremony = BindingCeremonyUi.new()
+	binding_ceremony.z_index = 9
+	add_child(binding_ceremony)
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
@@ -124,6 +135,8 @@ func open(s: Sim) -> void:
 	_disconnect_shop()
 	workshop.reset()
 	crew.reset()
+	confession.reset()
+	binding_ceremony.reset()
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	sim = s
@@ -157,6 +170,10 @@ func close_session() -> void:
 		workshop.reset()
 	if crew != null:
 		crew.reset()
+	if confession != null:
+		confession.reset()
+	if binding_ceremony != null:
+		binding_ceremony.reset()
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	sim = null
@@ -192,7 +209,13 @@ func refresh(animate_echo: bool = false) -> void:
 	_prep_status.text = Loc.t(str(world.production_state_key)) + " · " + _prep_status.text
 	if int(expedition.debt) > 0:
 		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
+	var next_delivery := BureauEvents.forecast(sim.next_wave_number(), sim.endless)
+	if next_delivery:
+		_prep_status.text = Loc.t("bureau.delivery.next_short") + " · " + _prep_status.text
 	_prep_status.tooltip_text = _prep_status.text + " · " + Loc.t(str(expedition.route))
+	if next_delivery:
+		_prep_status.tooltip_text += " · " + Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
+	_prep_status.accessibility_description = _prep_status.tooltip_text
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -204,7 +227,10 @@ func refresh(animate_echo: bool = false) -> void:
 		card.lock_toggled.connect(_on_lock_offer)
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("workshop.reroll_prices", [cost, sim.shop.next_reroll_cost(sim.wave)])
-	reroll_button.disabled = sim.player.materials < cost
+	var reroll_quote := sim.shop.quote(ShopResult.REROLL, sim)
+	reroll_button.disabled = not reroll_quote.ok
+	reroll_button.tooltip_text = _drop_reason_text(reroll_quote.reason) if not reroll_quote.ok else reroll_button.text
+	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
 	crew_button.text = Loc.t("crew.open")
@@ -214,7 +240,13 @@ func refresh(animate_echo: bool = false) -> void:
 	debt_button.tooltip_text = Loc.t("debt.rule")
 	debt_button.accessibility_name = debt_button.text
 	debt_button.accessibility_description = debt_button.tooltip_text
+	confession_button.text = Loc.t("confession.ui.open")
+	confession_button.tooltip_text = Loc.t("confession.ui.rule")
+	confession_button.accessibility_name = confession_button.text
+	confession_button.accessibility_description = confession_button.tooltip_text
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
+	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
+	start_button.accessibility_description = start_button.tooltip_text
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
 	echo_panel.size_flags_stretch_ratio = 1.0
@@ -311,6 +343,11 @@ func _build_header() -> Control:
 	debt_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	debt_button.pressed.connect(_open_debt_ledger)
 	heading.add_child(debt_button)
+	confession_button = Button.new()
+	WorkshopUi.fit_button(confession_button, 14, 28.0)
+	confession_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	confession_button.pressed.connect(_open_confession)
+	heading.add_child(confession_button)
 	_prep_status = UiTheme.label("", 14, ON_DARK)
 	_prep_status.clip_text = true
 	identity.add_child(_prep_status)
@@ -608,6 +645,8 @@ func set_reduced_effects(on: bool) -> void:
 					card._release_paper()
 	if echo_panel != null:
 		echo_panel.set_reduced_effects(on)
+	if on and binding_ceremony != null:
+		binding_ceremony.skip()
 	if on:
 		UiTheme.animate_open(self, true)
 		reset_feedback()
@@ -654,6 +693,9 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 	if result == null or not result.ok:
 		return
 	# This is the committed transaction signal, never a pointer-down or drag preview.
+	if visible and sim != null and sim == _connected_sim:
+		if binding_ceremony.present(result, reduced_effects):
+			_update_binding_rect()
 	if visible and sim != null and sim == _connected_sim:
 		match result.action:
 			ShopResult.REROLL: _react_vendor(&"reroll", result)
@@ -968,6 +1010,8 @@ func _show_drop_quote(result: ShopResult) -> void:
 
 
 func _drop_reason_text(reason: StringName) -> String:
+	if reason in [&"pending_confession", &"history_full"]:
+		return Loc.t("reason.pending_confession" if reason == &"pending_confession" else "reason.history_full")
 	match reason:
 		&"debt", &"duplicate", &"trait", &"level":
 			return Loc.t("workshop.reason_" + String(reason))
@@ -1075,6 +1119,8 @@ func _on_start() -> void:
 		return
 	if crew != null and crew.visible:
 		return
+	if confession != null and confession.visible:
+		return
 	if workshop != null and workshop.visible:
 		return
 	if sim.can_start_wave():
@@ -1085,6 +1131,12 @@ func _on_start() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if confession != null and confession.visible:
+		return
+	if binding_ceremony != null and binding_ceremony.active and event.is_action_pressed(&"ui_cancel"):
+		binding_ceremony.skip()
+		accept_event()
+		return
 	if crew != null and crew.visible:
 		return
 	if workshop != null and workshop.visible:
@@ -1111,6 +1163,9 @@ func _focus_card(from: int) -> void:
 
 
 func focus_default() -> void:
+	if confession != null and confession.visible:
+		confession.focus_default()
+		return
 	if crew != null and crew.visible:
 		crew.focus_default()
 		return
@@ -1195,7 +1250,7 @@ func _rebuild_focus() -> void:
 	var active: Array = []
 	for node in find_children("*", "BaseButton", true, false):
 		var button := node as BaseButton
-		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button):
+		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button) and not confession.is_ancestor_of(button) and not binding_ceremony.is_ancestor_of(button):
 			active.append(button)
 			var remember := _remember_focus.bind(button)
 			if not button.focus_entered.is_connected(remember):
@@ -1412,6 +1467,8 @@ static func forecast_description(s: Sim) -> String:
 	var facts := Loc.t("shop.forecast", [forecast["stage"], Loc.t(str(forecast["act_key"]))])
 	facts += " · " + Loc.t("shop.forecast_fault" if forecast["repair_available"] else "shop.forecast_repaired")
 	facts += " · " + Loc.t("shop.forecast_worker" if forecast["worker_available"] else "shop.forecast_no_worker")
+	if BureauEvents.forecast(s.next_wave_number(), s.endless):
+		facts += "\n" + Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
 	return facts + "\n" + Loc.t("shop.order_responsibility")
 
 
@@ -1533,3 +1590,44 @@ func _merge_route_visual(host: EchoTake, donor: EchoTake, result: EchoTake) -> C
 
 func _remember_focus(control: Control) -> void:
 	_last_focus = control
+
+
+func _open_confession() -> void:
+	if sim == null or not visible or workshop.visible or crew.visible:
+		return
+	confession.open_confession(sim)
+
+
+func _on_confession_chosen(id: StringName) -> void:
+	if sim == null or not visible or not confession.visible:
+		return
+	var result := sim.shop.apply(ShopResult.CONFESS, sim, null, -1, id)
+	refresh()
+	confession.open_confession(sim)
+	if not result.ok:
+		confession.show_error(Loc.t("confession.ui.changed"))
+
+
+func _on_confession_closed() -> void:
+	_rebuild_focus()
+	if confession_button != null and confession_button.is_visible_in_tree():
+		confession_button.grab_focus()
+
+
+func set_paused(on: bool) -> void:
+	if binding_ceremony != null:
+		binding_ceremony.paused = on
+
+
+func _process(_delta: float) -> void:
+	if binding_ceremony != null and binding_ceremony.active:
+		_update_binding_rect()
+
+
+func _update_binding_rect() -> void:
+	if echo_panel == null or binding_ceremony == null:
+		return
+	var rect := echo_panel.get_global_rect()
+	var extent := Vector2(minf(270.0, maxf(0.0, rect.size.x - 12.0)), minf(142.0, maxf(0.0, rect.size.y - 12.0)))
+	binding_ceremony.size = extent
+	binding_ceremony.position = get_global_transform().affine_inverse() * (rect.get_center() - extent * 0.5)

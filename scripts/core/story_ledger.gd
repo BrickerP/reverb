@@ -11,6 +11,7 @@ const ALL: Array[StringName] = [
 	&"recruited_foreman", &"recruited_collector", &"recruited_paradox",
 	&"ending_released", &"ending_collective", &"ending_takeover",
 	&"worker_saved", &"machine_repaired", &"witness_used", &"companion_departed", &"worker_aid",
+	&"confession_truth", &"confession_polish", &"inspection_registered",
 ]
 const WAVES := {2: &"carbon", 4: &"handwriting", 6: &"duplicate", 8: &"audit", 10: &"tomorrow"}
 
@@ -121,3 +122,12 @@ static func _discover(sim: Sim, id: StringName) -> void:
 static func on_world_event(sim: Sim, kind: StringName) -> void:
 	if kind in [&"worker_saved", &"machine_repaired", &"witness_used", &"companion_departed", &"worker_aid"]:
 		_discover(sim, kind)
+
+
+static func on_confession(sim: Sim, choice: StringName) -> void:
+	if choice in BureauConfession.CHOICES:
+		_discover(sim, StringName("confession_" + String(choice)))
+
+
+static func on_inspection(sim: Sim) -> void:
+	_discover(sim, &"inspection_registered")

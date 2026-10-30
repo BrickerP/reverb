@@ -165,6 +165,9 @@ func echo_repair_cost(take: EchoTake, sim: Sim = null) -> int:
 func echo_repair_block_reason(sim: Sim, take: EchoTake) -> StringName:
 	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
 		return &"invalid"
+	var history_reason := _history_push_reason(sim)
+	if history_reason != &"":
+		return history_reason
 	if echo_repair_amount(take) <= 0.0:
 		return &"full"
 	if sim.player.materials < echo_repair_cost(take, sim):
@@ -200,6 +203,9 @@ func echo_merge_quote(sim: Sim, a: EchoTake, b: EchoTake, merge_trait: StringNam
 	if sim.phase != Sim.Phase.SHOP or a == null or b == null or a == b \
 			or not sim.bank.takes.has(a) or not sim.bank.takes.has(b):
 		return ShopResult.failure(ShopResult.ECHO_MERGE, &"invalid")
+	var history_reason := _history_push_reason(sim)
+	if history_reason != &"":
+		return ShopResult.failure(ShopResult.ECHO_MERGE, history_reason)
 	if _staff_take(sim, a) or _staff_take(sim, b):
 		return ShopResult.failure(ShopResult.ECHO_MERGE, &"staff")
 	if sim.bank.preview_merge(a, b, merge_trait) == null:
@@ -213,6 +219,9 @@ func echo_merge_quote(sim: Sim, a: EchoTake, b: EchoTake, merge_trait: StringNam
 func discard_echo(sim: Sim, take: EchoTake) -> ShopResult:
 	if sim.phase != Sim.Phase.SHOP or take == null or not sim.bank.takes.has(take):
 		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"invalid")
+	var history_reason := _history_push_reason(sim)
+	if history_reason != &"":
+		return ShopResult.failure(ShopResult.ECHO_DISCARD, history_reason)
 	if _staff_take(sim, take):
 		return ShopResult.failure(ShopResult.ECHO_DISCARD, &"staff")
 	var before := ShopState.capture(sim)
@@ -273,6 +282,15 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 		target: StringName = &"", donor: int = -1) -> ShopResult:
 	if sim.phase != Sim.Phase.SHOP:
 		return ShopResult.failure(action, &"invalid")
+	if action == ShopResult.REROLL:
+		if BureauConfession.pending_act(sim) > 0:
+			return ShopResult.failure(action, &"pending_confession")
+	elif action in [ShopResult.BUY, ShopResult.REPLACE, ShopResult.REPLACE_ORDER, ShopResult.UPGRADE,
+			ShopResult.COMBINE, ShopResult.EVOLVE, ShopResult.SELL, ShopResult.DEPLOY_COMPANION,
+			ShopResult.PAY_DEBT, ShopResult.CONFESS]:
+		var history_reason := _history_push_reason(sim)
+		if history_reason != &"":
+			return ShopResult.failure(action, history_reason)
 	match action:
 		ShopResult.BUY:
 			if offer == null or not offers.has(offer):
@@ -331,6 +349,14 @@ func quote(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 				var result := _quoted(action, reason, cost)
 				result.target_id = target
 				return result
+			return ShopResult.failure(action, &"invalid")
+		ShopResult.CONFESS:
+			for row: Dictionary in BureauConfession.options(sim):
+				if row["id"] == target:
+					var reason := StringName(row["reason_key"]) if not row["available"] else &""
+					var result := _quoted(action, reason, 0)
+					result.target_id = target
+					return result
 			return ShopResult.failure(action, &"invalid")
 		ShopResult.PAY_DEBT:
 			var debt := int(sim.expedition.get("debt", 0))
@@ -402,6 +428,10 @@ func apply(action: StringName, sim: Sim, offer: Offer = null, index: int = -1,
 			if not Expedition.assign_companion(sim, target):
 				before.restore(sim)
 				return ShopResult.failure(action, &"invalid", quoted.cost)
+		ShopResult.CONFESS:
+			if not BureauConfession.apply(sim, target):
+				before.restore(sim)
+				return ShopResult.failure(action, &"invalid")
 		ShopResult.PAY_DEBT:
 			sim.expedition["debt"] = maxi(0, int(sim.expedition["debt"]) - quoted.cost)
 	if action != ShopResult.SELL:
@@ -525,6 +555,27 @@ func _emit_combine_changes(sim: Sim, before: ShopState, after: ShopState, reason
 	sim.weapon_changed.emit(info)
 
 
+# A pending copy-desk signature remains reversible until departure. Keep its
+# pre-signing snapshot when the ordinary bounded Undo ring would evict it.
+func _history_push_reason(sim: Sim) -> StringName:
+	if _undo_stack.size() < MAX_UNDO:
+		return &""
+	var act := BureauConfession.pending_act(sim)
+	if act == 0 or not _before_signature(_undo_stack[0], act):
+		return &""
+	for index in range(1, _undo_stack.size()):
+		if _before_signature(_undo_stack[index], act):
+			return &""
+	return &"history_full"
+
+
+func _before_signature(state: ShopState, act: int) -> bool:
+	for row: Dictionary in state.expedition.get("bureau", {}).get("confessions", []):
+		if int(row["act"]) == act:
+			return false
+	return true
+
+
 func _push_history(state: ShopState) -> void:
 	_undo_stack.append(state)
 	if _undo_stack.size() > MAX_UNDO:
@@ -589,7 +640,7 @@ func replace_weapon(sim: Sim, offer: Offer, index: int) -> bool:
 
 func reroll(sim: Sim) -> bool:
 	var cost := reroll_cost(sim.wave)
-	if sim.phase != Sim.Phase.SHOP or sim.player.materials < cost:
+	if sim.phase != Sim.Phase.SHOP or BureauConfession.pending_act(sim) > 0 or sim.player.materials < cost:
 		return false
 	sim.player.materials -= cost
 	rerolls += 1
