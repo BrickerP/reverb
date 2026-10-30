@@ -5,107 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>回响 / Take Stack</title>
 <style>
-  :root { --ink:#1c1915; --paper:#f3e6c8; --brick:#c6453a; --mold:#5f7d68; }
+  :root { --ink:#1c1915; --paper:#f4ead7; --brick:#c6453a; --mold:#5e7c67; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: #24211c; color: var(--ink); }
-  body {
-    font-family: "Iowan Old Style", Palatino, "Songti SC", serif;
-    display: flex; justify-content: center; padding: 28px 16px 64px;
+  html, body { margin: 0; background: #1a1714; color: var(--ink); }
+  body { font-family: Palatino, "Iowan Old Style", "Songti SC", serif; }
+  main { width: min(980px, calc(100% - 28px)); margin: 22px auto 48px; }
+  .top { display: flex; justify-content: space-between; align-items: center; color: var(--paper); margin-bottom: 14px; }
+  .top a, .top button { color: var(--paper); }
+  button, a.chip {
+    font: inherit; background: transparent; color: var(--ink);
+    border: 2px solid var(--ink); border-radius: 8px; padding: 6px 12px;
+    text-decoration: none; cursor: pointer; white-space: nowrap;
   }
-  main {
-    width: min(880px, 100%);
+  .top button { color: var(--paper); border-color: var(--paper); }
+  .sheet {
     background: var(--paper);
-    border: 3px solid var(--ink);
-    padding: 28px 28px 40px;
+    border: 3px solid #111;
+    padding: 22px 22px 28px;
+    position: relative;
   }
-  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-  h1 { font-size: 22px; font-weight: 500; margin: 0; }
-  button, a.btn {
-    font: inherit; color: var(--ink); background: transparent;
-    border: 2px solid var(--ink); border-radius: 8px;
-    padding: 6px 12px; text-decoration: none; cursor: pointer; white-space: nowrap;
+  .stamp {
+    position: absolute; right: 26px; top: 18px;
+    width: 92px; height: 92px; border: 4px solid var(--brick); color: var(--brick);
+    border-radius: 50%; display: grid; place-items: center; text-align: center;
+    font-weight: 700; letter-spacing: 0.08em; transform: rotate(-12deg);
+    opacity: 0.9; line-height: 1.05; font-size: 15px; pointer-events: none;
   }
-  .lead { font-size: 28px; line-height: 1.35; margin: 28px 0 12px; }
-  p { line-height: 1.5; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 28px; }
-  a.btn.solid { background: var(--ink); color: var(--paper); }
-  figure { margin: 0 0 22px; }
-  img { width: 100%; height: auto; border: 2px solid var(--ink); display: block; }
+  h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.15; font-weight: 600; margin: 8px 0 8px; max-width: 16ch; }
+  .sub { margin: 0 0 16px; max-width: 38em; }
+  img.poster { width: 100%; display: block; border: 2px solid var(--ink); }
+  .playhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 18px 0 8px; }
+  .playhead p { margin: 0; }
+  canvas { width: 100%; height: auto; background: #efe2c6; border: 2px solid var(--ink); display: block; touch-action: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  a.chip.solid { background: var(--ink); color: var(--paper); }
+  figure { margin: 18px 0 0; }
   figcaption { margin-top: 6px; }
-  footer { margin-top: 12px; font-size: 14px; }
-  footer a { color: var(--ink); }
 </style>
 </head>
 <body>
+<div class="top">
+  <a id="repo" href="https://github.com/BrickerP/reverb">GitHub</a>
+  <button id="lang" type="button">English</button>
+</div>
 <main>
-  <header>
-    <h1 id="name">回响 / Take Stack</h1>
-    <button id="lang" type="button">English</button>
-  </header>
-  <p class="lead" id="lead"></p>
-  <p id="body"></p>
-  <div class="row">
-    <a class="btn solid" id="play" href="play/index.html"></a>
-    <a class="btn" id="release" href="https://github.com/BrickerP/reverb/releases"></a>
-    <a class="btn" id="code" href="https://github.com/BrickerP/reverb"></a>
+  <div class="sheet">
+    <div class="stamp" id="stamp">耗材</div>
+    <h1 id="lead"></h1>
+    <p class="sub" id="sub"></p>
+    <img class="poster" src="select.png" alt="">
+    <div class="playhead">
+      <p id="walk"></p>
+      <span id="state"></span>
+    </div>
+    <canvas id="sheet" width="960" height="300"></canvas>
+    <div class="row">
+      <a class="chip solid" id="release" href="https://github.com/BrickerP/reverb/releases"></a>
+      <a class="chip" id="code" href="https://github.com/BrickerP/reverb"></a>
+    </div>
+    <figure>
+      <img class="poster" src="story.png" alt="">
+      <figcaption id="sign"></figcaption>
+    </figure>
   </div>
-  <figure>
-    <img src="wave.png" alt="">
-    <figcaption id="c1"></figcaption>
-  </figure>
-  <figure>
-    <img src="echo_selection.png" alt="">
-    <figcaption id="c2"></figcaption>
-  </figure>
-  <figure>
-    <img src="story.png" alt="">
-    <figcaption id="c3"></figcaption>
-  </figure>
-  <footer id="foot"></footer>
 </main>
 <script>
 const copy = {
-  zh: {
-    lang: "English",
-    lead: "昨天的你，是今天的耗材。",
-    body: "在废件回收局，你负责走位，武器自己打。每场留下的回响会磨破：可以装订、修补，或者提前报废。结局要自己签字。",
-    play: "纸上走 30 秒",
-    release: "下载",
-    code: "源码",
-    c1: "你走，武器自己打。",
-    c2: "回响会磨破。选一张，装订、修补，或让它再打一次。",
-    c3: "选择会留下签名。",
-    foot: "这一页是门面。完整规则在仓库的 DESIGN.md。"
-  },
-  en: {
-    lang: "中文",
-    lead: "Yesterday's you is today's consumable.",
-    body: "In the scrap-recycling bureau you move, and the weapons fire themselves. Each fight leaves an Echo. It wears out. Staple it, repair it, or scrap it early. The ending is a signature.",
-    play: "Thirty seconds on paper",
-    release: "Download",
-    code: "Source",
-    c1: "You move. The weapons fire.",
-    c2: "Echoes wear out. Pick one to staple, repair, or spend.",
-    c3: "Choices leave a signature.",
-    foot: "This page is the front. The rules live in DESIGN.md in the repo."
-  }
+  zh: { lang:"English", stamp:"耗材", lead:"昨天的你，是今天的耗材。", sub:"你走，武器自己打。留下的那张会磨破。结局要自己签字。", walk:"在这张纸上走。三秒前的你跟在后面。", fresh:"新副本", wear:"在磨", gone:"揉掉了", release:"下载", code:"源码", sign:"选择会留下签名。" },
+  en: { lang:"中文", stamp:"SPENT", lead:"Yesterday's you is today's consumable.", sub:"You move. The weapons fire. The copy you leave behind wears out. The ending is a signature.", walk:"Walk on this sheet. You from three seconds ago follows.", fresh:"fresh copy", wear:"wearing", gone:"crumpled", release:"Download", code:"Source", sign:"Choices leave a signature." }
 };
 const params = new URLSearchParams(location.search);
 let lang = params.get("lang") === "en" ? "en" : "zh";
+function t() { return copy[lang]; }
 function apply() {
-  const t = copy[lang];
+  const s = t();
   document.documentElement.lang = lang === "zh" ? "zh" : "en";
-  document.getElementById("lang").textContent = t.lang;
-  document.getElementById("lead").textContent = t.lead;
-  document.getElementById("body").textContent = t.body;
-  document.getElementById("play").textContent = t.play;
-  document.getElementById("play").href = "play/index.html?lang=" + lang;
-  document.getElementById("release").textContent = t.release;
-  document.getElementById("code").textContent = t.code;
-  document.getElementById("c1").textContent = t.c1;
-  document.getElementById("c2").textContent = t.c2;
-  document.getElementById("c3").textContent = t.c3;
-  document.getElementById("foot").textContent = t.foot;
+  document.getElementById("lang").textContent = s.lang;
+  document.getElementById("stamp").textContent = s.stamp;
+  document.getElementById("lead").textContent = s.lead;
+  document.getElementById("sub").textContent = s.sub;
+  document.getElementById("walk").textContent = s.walk;
+  document.getElementById("release").textContent = s.release;
+  document.getElementById("code").textContent = s.code;
+  document.getElementById("sign").textContent = s.sign;
 }
 document.getElementById("lang").onclick = () => {
   lang = lang === "zh" ? "en" : "zh";
@@ -115,6 +97,86 @@ document.getElementById("lang").onclick = () => {
   apply();
 };
 apply();
+
+const canvas = document.getElementById("sheet");
+const ctx = canvas.getContext("2d");
+const keys = new Set();
+const trail = [];
+const player = { x: 180, y: 168 };
+let wear = 0.12, crumple = 0, last = performance.now();
+addEventListener("keydown", (e) => {
+  keys.add(e.key.toLowerCase());
+  if (e.key.startsWith("Arrow")) e.preventDefault();
+});
+addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+const down = (ns) => ns.some((n) => keys.has(n));
+function clerk(x, y, alpha, squish) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(1.7, 1.7 * squish);
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#1c1915";
+  ctx.fillStyle = "#f7f1df";
+  ctx.beginPath();
+  ctx.moveTo(-18, -30); ctx.lineTo(6, -30); ctx.lineTo(18, -16); ctx.lineTo(18, -2); ctx.lineTo(-18, -2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(6, -16); ctx.lineTo(18, -16); ctx.stroke();
+  ctx.fillStyle = "#1c1915";
+  ctx.beginPath(); ctx.arc(-6, -18, 2.1, 0, 6.3); ctx.arc(4, -18, 2.1, 0, 6.3); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-4, -12); ctx.quadraticCurveTo(0, -8, 6, -12); ctx.stroke();
+  ctx.fillStyle = "#efe4c8";
+  ctx.fillRect(-16, -2, 32, 22); ctx.strokeRect(-16, -2, 32, 22);
+  ctx.strokeRect(-8, 20, 6, 10); ctx.strokeRect(3, 20, 6, 10);
+  ctx.restore();
+}
+function sample(now) {
+  const want = now - 3000;
+  if (trail.length < 2 || trail[0].t > want) return null;
+  let i = 1;
+  while (i < trail.length && trail[i].t < want) i++;
+  const b = trail[Math.min(i, trail.length - 1)];
+  const a = trail[i - 1];
+  const u = Math.min(1, Math.max(0, (want - a.t) / Math.max(1, b.t - a.t)));
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u };
+}
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  let dx = 0, dy = 0;
+  if (down(["a", "arrowleft"])) dx--;
+  if (down(["d", "arrowright"])) dx++;
+  if (down(["w", "arrowup"])) dy--;
+  if (down(["s", "arrowdown"])) dy++;
+  const mag = Math.hypot(dx, dy) || 1;
+  if (dx || dy) {
+    player.x = Math.min(900, Math.max(60, player.x + dx / mag * 190 * dt));
+    player.y = Math.min(250, Math.max(70, player.y + dy / mag * 150 * dt));
+    wear = Math.min(1, wear + dt * 0.09);
+  }
+  trail.push({ t: now, x: player.x, y: player.y });
+  while (trail.length && now - trail[0].t > 8000) trail.shift();
+  if (crumple > 0) {
+    crumple = Math.max(0, crumple - dt);
+    if (crumple === 0) wear = 0.08;
+  } else if (wear >= 1) crumple = 0.7;
+  const echo = sample(now);
+  ctx.fillStyle = "#efe2c6";
+  ctx.fillRect(0, 0, 960, 300);
+  ctx.strokeStyle = "rgba(28,25,21,0.12)";
+  for (let x = 24; x < 960; x += 36) {
+    ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x - 10, 292); ctx.stroke();
+  }
+  if (echo) {
+    const dying = crumple > 0;
+    clerk(echo.x + 3, echo.y + 2, dying ? crumple / 0.7 : 0.45 + (1 - wear) * 0.35, dying ? 0.28 + 0.72 * (crumple / 0.7) : 1 - wear * 0.15);
+  }
+  clerk(player.x, player.y + ((dx || dy) ? Math.sin(now / 130) * 1.4 : 0), 1, 1);
+  document.getElementById("state").textContent = crumple > 0 ? t().gone : (wear < 0.28 ? t().fresh : t().wear);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
