@@ -142,9 +142,15 @@ func _finish() -> void:
 		return
 	RenderingServer.force_draw()
 	await _wait_frames(2)
+	# Fixed-fps empty frames can finish faster than the Dummy audio driver's
+	# real mix interval. The measured period is over: let queued menu/boss
+	# playback stops drain on its background thread before quitting the process.
+	OS.delay_msec(300)
+	await _wait_frames(2)
 	_summary["teardown"] = {"simulation_released": sim_released, "main_freed": main_released,
 		"probe_support_listener_disconnected": true, "music_playing": false, "active_sfx": 0,
-		"deferred_finish": true, "native_frames_waited": 4, "renderer_flushed": true,
+		"deferred_finish": true, "native_frames_waited": 6, "renderer_flushed": true,
+		"audio_thread_drain_wall_ms": 300,
 		"presentation_caches": {"cleared": false,
 			"reason": "normal process caches retained; no specific leaked resource has been identified"}}
 	if not OS.get_cmdline_user_args().has("validate-fixture"):

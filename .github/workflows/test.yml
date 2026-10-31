@@ -157,7 +157,7 @@ jobs:
             --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only
 
-      - name: Measure the public baseline on the same runner
+      - name: Prepare the public baseline and write actual0.17 saves
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           LIBGL_ALWAYS_SOFTWARE: '1'
@@ -179,9 +179,6 @@ jobs:
           REVERB_STRESS_COMMIT="$baseline_commit" ./tools/checked.sh --headless --path . \
             --script res://tools/release_save_compat.gd -- --mode=write \
             --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
-          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
-            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
-            --script res://tools/presentation_stress_probe.gd -- legal-only
 
       - name: Resume actual public-version saves with the current decoder
         env:
@@ -190,6 +187,19 @@ jobs:
         run: |
           ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
             --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+
+      - name: Measure the public baseline on the same runner
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
+        shell: bash
+        run: |
+          export REVERB_STRESS_COMMIT="$(cat "$REVERB_STRESS_OUTPUT/source_commit.txt")"
+          cd "$RUNNER_TEMP/paper-feedback-baseline"
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
+            --script res://tools/presentation_stress_probe.gd -- legal-only
 
       - name: Upload native action and pressure evidence
         if: always()
