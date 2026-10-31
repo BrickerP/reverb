@@ -1,11 +1,11 @@
 extends SceneTree
-# Copy this same probe into the immutable 0.17 archive for write, then run read
-# in 0.18. Wrap both commands with tools/checked.sh; never relax decoder checks.
+# Copy this same probe into each immutable public archive for write, then run
+# read in 0.18.1. Wrap commands with tools/checked.sh; never relax decoder checks.
 # -- --mode=write|read --output=<absolute directory>
 
 const DT := 1.0 / 60.0
-const SOURCE_VERSION := "0.17.0"
-const READER_VERSION := "0.18.0"
+const SOURCE_VERSIONS := ["0.17.0", "0.18.0"]
+const READER_VERSION := "0.18.1"
 const PAYLOAD_FILE := "compat-payload.json"
 const DEADLINE_MSEC := 30000
 
@@ -56,7 +56,7 @@ func _run() -> void:
 func _write_payload() -> bool:
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
 	var commit := OS.get_environment("REVERB_STRESS_COMMIT").strip_edges()
-	if not _require(version == SOURCE_VERSION, "writer must actually run project version 0.17.0") \
+	if not _require(version in SOURCE_VERSIONS, "writer must actually run public project version 0.17.0 or 0.18.0") \
 			or not _require(_commit_valid(commit), "writer needs its full REVERB_STRESS_COMMIT"):
 		return false
 	if not _require(not FileAccess.file_exists(_output.path_join(PAYLOAD_FILE)), "writer output must be fresh"):
@@ -104,6 +104,7 @@ func _write_payload() -> bool:
 	_result["source_version"] = version
 	_result["game_commit"] = commit
 	_result["scenarios"] = ["shop", "wave"]
+	_result["payload_sha256"] = FileAccess.get_sha256(_output.path_join(PAYLOAD_FILE))
 	return true
 
 
@@ -137,14 +138,14 @@ func _describe(sim: Sim) -> Dictionary:
 func _read_payload() -> bool:
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
 	var commit := OS.get_environment("REVERB_STRESS_COMMIT").strip_edges()
-	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.0") \
+	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.1") \
 			or not _require(_commit_valid(commit), "reader needs its full REVERB_STRESS_COMMIT"):
 		return false
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(_output.path_join(PAYLOAD_FILE)))
 	if not _require(parsed is Dictionary, "read the old process's JSON payload"):
 		return false
 	var payload: Dictionary = parsed
-	if not _require(payload.get("source_version") == SOURCE_VERSION and payload.get("schema") == 4
+	if not _require(payload.get("source_version") in SOURCE_VERSIONS and payload.get("schema") == 4
 			and _commit_valid(str(payload.get("game_commit", "")))
 			and payload.get("probe_sha256") == _result["probe_sha256"],
 			"old version, schema, full source commit and identical probe provenance match"):
@@ -238,6 +239,7 @@ func _read_payload() -> bool:
 	_result["reader_version"] = version
 	_result["source_game_commit"] = payload["game_commit"]
 	_result["reader_game_commit"] = commit
+	_result["payload_sha256"] = FileAccess.get_sha256(_output.path_join(PAYLOAD_FILE))
 	_result["scenarios"] = names
 	_result["details"] = details
 	return true

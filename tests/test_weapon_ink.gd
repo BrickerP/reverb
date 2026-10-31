@@ -63,10 +63,14 @@ func test_direction_uses_velocity_without_stretching_radius_or_range(c: Check) -
 	c.ok(not WeaponInk.valid_projectile(projectile), "nonfinite positions cannot reach a render batch")
 
 
-func test_density_and_reduced_mode_keep_heads_but_drop_optional_trails(c: Check) -> void:
-	c.ok(WeaponInk.trails_enabled(false, 160), "ordinary sparse volleys retain short trails")
-	c.ok(not WeaponInk.trails_enabled(false, 161), "dense volleys discard extra line submissions")
-	c.ok(not WeaponInk.trails_enabled(true, 1), "reduced effects discard optional motion even at low density")
+func test_density_and_reduced_mode_keep_bounded_material_accents(c: Check) -> void:
+	c.eq(WeaponInk.flight_accent_budget(false, 160), WeaponInk.MAX_FLIGHT_ACCENTS,
+		"ordinary flight has a fixed material accent budget")
+	c.eq(WeaponInk.flight_accent_budget(false, 161), WeaponInk.DENSE_FLIGHT_ACCENTS,
+		"dense flight retains a smaller fixed material sample")
+	c.eq(WeaponInk.flight_accent_budget(true, 1), 1, "a sparse Reduced head retains its material")
+	c.eq(WeaponInk.flight_accent_budget(true, Combat.MAX_PROJECTILES), WeaponInk.REDUCED_FLIGHT_ACCENTS,
+		"Reduced retains its sample even at maximum projectile density")
 	var projectile := Projectile.new()
 	projectile.color = Color("82935e")
 	var regular := WeaponInk.projectile_color(projectile)
@@ -98,3 +102,63 @@ func test_feedback_lifetime_rejects_degenerate_or_expired_marks(c: Check) -> voi
 		c.eq(WeaponInk._life(data), 0.0, "invalid lifetime cannot become an infinite or negative feedback scale")
 	c.eq(WeaponInk._life({"life": 2.0, "max_life": 1.0}), 1.0,
 			"late or duplicated state never scales a mark beyond its intended silhouette")
+
+
+func test_native_flight_materials_are_distinct_compact_and_directional(c: Check) -> void:
+	var signatures: Array[String] = []
+	for action: StringName in WeaponInk.FLIGHT_ACTIONS:
+		var segments := WeaponInk.flight_accent(action)
+		c.ok(segments.size() >= 4 and segments.size() <= 16 and segments.size() % 2 == 0,
+			"each material uses at most eight complete line segments")
+		c.ok(not signatures.has(var_to_str(segments)), "%s reads without family color" % action)
+		signatures.append(var_to_str(segments))
+		var minimum := Vector2.ZERO
+		var maximum := Vector2(-INF, -INF)
+		for point in segments:
+			c.ok(point.is_finite() and point.x <= 0.0 and point.length() <= 24.0,
+				"material marks stay behind the head, not ahead as a false attack range")
+			minimum = minimum.min(point)
+			maximum = maximum.max(point)
+		c.ok((maximum.x - minimum.x) * 0.75 >= 8.0,
+			"the identifying contour remains at least eight pixels wide at 960")
+		c.ok((maximum.y - minimum.y) * 0.75 >= 4.0,
+			"the identifying cross section survives the smaller viewport")
+	c.ok(WeaponInk.flight_accent(&"unknown_fixture").is_empty(), "unknown output cannot claim a known flight material")
+	c.ok(WeaponInk.flight_accent(&"return", true) != WeaponInk.flight_accent(&"return"),
+		"the actual returning head has a recovery hook instead of its outgoing loop")
+	c.eq(WeaponInk.flight_accent(&"pin", true), WeaponInk.flight_accent(&"pin"),
+		"a returning flag cannot relabel an unrelated material")
+
+
+func test_flight_sampling_is_exact_bounded_and_fair_for_repeating_materials(c: Check) -> void:
+	for reduced in [false, true]:
+		for count in [0, 1, 15, 16, 63, 64, 160, 161, 423, Combat.MAX_PROJECTILES]:
+			var budget := WeaponInk.flight_accent_budget(reduced, count)
+			var sampled := 0
+			for index in count:
+				if WeaponInk.accent_sample(index, count, budget):
+					sampled += 1
+			c.eq(sampled, budget, "sparse, dense and Reduced sampling meets its exact cap")
+			c.ok(budget <= WeaponInk.MAX_FLIGHT_ACCENTS and budget <= count,
+				"no policy draws more accents than heads or the global cap")
+		var counts: Dictionary = {}
+		for action: StringName in WeaponInk.FLIGHT_ACTIONS:
+			counts[action] = 200
+		var budget := WeaponInk.flight_accent_budget(reduced, Combat.MAX_PROJECTILES)
+		var quotas := WeaponInk.flight_accent_quotas(counts, budget)
+		var total := 0
+		for action: StringName in WeaponInk.FLIGHT_ACTIONS:
+			c.ok(int(quotas[action]) > 0, "every material survives dense and Reduced sampling")
+			total += int(quotas[action])
+		c.eq(total, budget, "fair material quotas share one global budget")
+	var unbalanced := WeaponInk.flight_accent_quotas({&"pin": 1195, &"stamp": 1,
+		&"cut": 1, &"ink": 1, &"return": 1, &"arc": 1}, 16)
+	c.eq(unbalanced[&"pin"], 11, "unused sparse-family quota returns to the busy family")
+	for action: StringName in [&"stamp", &"cut", &"ink", &"return", &"arc"]:
+		c.eq(unbalanced[action], 1, "one rare material is not starved by the busy family")
+	c.eq(WeaponInk.flight_accent_quotas({}, 64), {}, "empty populations cannot consume an accent budget")
+	c.eq(WeaponInk.flight_accent_quotas({&"pin": 4}, -1), {&"pin": 0}, "negative budgets submit no accents")
+	c.eq(WeaponInk.flight_accent_quotas({&"pin": 99999}, 99999), {&"pin": 64}, "even external budgets have a fixed upper bound")
+	for index in [-1, 2, 3]:
+		c.ok(not WeaponInk.accent_sample(index, 2, 1), "out-of-range indices cannot decorate another head")
+	c.eq(WeaponInk.flight_accent_budget(false, -1), 0, "negative counts have no drawable flight")

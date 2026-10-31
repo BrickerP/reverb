@@ -366,7 +366,7 @@ func _store_actor_motion(token: int, actor_pos: Vector2, elapsed: float, stride:
 
 func _sync_backdrop() -> void:
 	if _backdrop != null:
-		_backdrop.set_presentation(_visual_time, reduced_effects, _paused)
+		_backdrop.set_presentation(_visual_time, reduced_effects, _paused, _interaction_ink)
 
 
 func _refresh_world_presentation() -> void:
@@ -379,7 +379,23 @@ func _refresh_world_presentation() -> void:
 
 func _on_world_event(info: Dictionary) -> void:
 	_interaction_ink.consume_world(info)
-	_refresh_world_presentation()
+	if info.get("kind", &"") == &"character_skill" and bool(info.get("ok", false)):
+		# A simulation shift is a discontinuity, not a short burst of walking.
+		if info.get("pos") != info.get("target_pos"):
+			_reset_shift_sample(-1, sim.player.pos)
+		for anchor: Dictionary in info.get("anchors", []):
+			if anchor["from_pos"] != anchor["to_pos"]:
+				_reset_shift_sample(int(anchor["uid"]), anchor["to_pos"])
+	var kind := StringName(info.get("kind", &""))
+	if kind != &"character_relay" and (kind != &"character_skill" or info.get("ability", &"") == &"overloader"):
+		_refresh_world_presentation()
+
+
+func _reset_shift_sample(token: int, pos: Vector2) -> void:
+	_actor_positions[token] = pos
+	if _actor_motion.has(token):
+		_actor_motion[token]["moving"] = false
+		_actor_motion[token]["amount"] = 0.0
 
 
 func _on_support_event(info: Dictionary) -> void:
@@ -396,6 +412,7 @@ func _on_support_event(info: Dictionary) -> void:
 
 
 func _on_echo_work(info: Dictionary) -> void:
+	_interaction_ink.consume_echo_work(info)
 	# One current note per worker keeps several same-tick events from covering the arena.
 	for index in range(_work_marks.size() - 1, -1, -1):
 		if _work_marks[index].get("uid") == info.get("uid"):
@@ -408,6 +425,7 @@ func _on_echo_work(info: Dictionary) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
+	var body_feedback: InteractionInk = _interaction_ink if _interaction_ink.has_actor_actions() else null
 	BureauInk.draw(self, BureauInk.snapshot(sim, _display_rect), reduced_effects)
 	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
@@ -424,14 +442,14 @@ func _draw() -> void:
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
 	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
 	ArenaPainter.enemies(self, sim, reduced_effects, _visual_time, _director, _actor_motion)
-	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director, _actor_motion)
+	ArenaPainter.echoes(self, sim, character_id, _muzzles, reduced_effects, _visual_time, _director, _actor_motion, body_feedback)
 	ArenaPainter.boss_tear(self, _director, reduced_effects)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
 			reduced_effects)
 	ArenaPainter.sparks(self, _sparks)
 	# The original remains legible through decorative debris and routine hit ink.
-	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
+	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director, body_feedback)
 	_interaction_ink.draw(self, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects, sim)
 	BureauInk.draw_carried(self, sim)
 	BureauInk.draw_direction(self, BureauInk.direction_profile(sim, _display_rect))

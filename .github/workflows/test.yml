@@ -107,36 +107,45 @@ jobs:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
         run: ./tools/checked.sh --headless --path . --import
 
-      - name: Prepare the public baseline and write actual0.17 saves
+      - name: Archive public versions and write actual 0.17 and 0.18 saves
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           LIBGL_ALWAYS_SOFTWARE: '1'
           REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
         shell: bash
         run: |
-          git fetch --depth=1 origin tag v0.17.0
-          baseline_commit="$(git rev-parse 'v0.17.0^{commit}')"
-          baseline="$RUNNER_TEMP/paper-feedback-baseline"
-          mkdir -p "$baseline"
+          git fetch --depth=1 origin tag v0.17.0 tag v0.18.0
           mkdir -p "$REVERB_STRESS_OUTPUT"
-          git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
-          git archive v0.17.0 | tar -x -C "$baseline"
-          cp tools/presentation_stress_probe.gd "$baseline/tools/presentation_stress_probe.gd"
-          cp tools/release_save_compat.gd "$baseline/tools/release_save_compat.gd"
-          export REVERB_STRESS_COMMIT="$baseline_commit"
-          cd "$baseline"
-          ./tools/checked.sh --headless --path . --import
-          REVERB_STRESS_COMMIT="$baseline_commit" ./tools/checked.sh --headless --path . \
-            --script res://tools/release_save_compat.gd -- --mode=write \
-            --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+          for version in 0.17.0 0.18.0; do
+            tag="v$version"
+            source_commit="$(git rev-parse "$tag^{commit}")"
+            archive="$RUNNER_TEMP/paper-feedback-$version"
+            output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat/$version"
+            mkdir -p "$archive" "$output"
+            git archive "$tag" | tar -x -C "$archive"
+            python3 -c 'import json,sys; from pathlib import Path; sys.path.insert(0,"tools"); from release_receipts import project_version; folder,output,version,commit=sys.argv[1:]; actual=project_version(Path(folder)); assert actual==version, "public archive version mismatch"; Path(output,"source.json").write_text(json.dumps({"tag":"v"+version,"version":actual,"game_commit":commit})+"\n")' "$archive" "$output" "$version" "$source_commit"
+            cp tools/release_save_compat.gd "$archive/tools/release_save_compat.gd"
+            (
+              cd "$archive"
+              ./tools/checked.sh --headless --path . --import
+              REVERB_STRESS_COMMIT="$source_commit" ./tools/checked.sh --headless --path . \
+                --script res://tools/release_save_compat.gd -- --mode=write --output="$output"
+            )
+          done
+          # The performance baseline is last night's public 0.18.0, using the
+          # candidate's identical stress harness on this same CI runner.
+          cp tools/presentation_stress_probe.gd "$RUNNER_TEMP/paper-feedback-0.18.0/tools/presentation_stress_probe.gd"
+          cp "$GITHUB_WORKSPACE/shots/paper-actions/save-compat/0.18.0/source.json" "$REVERB_STRESS_OUTPUT/source.json"
 
       - name: Resume actual public-version saves with the current decoder
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           REVERB_STRESS_COMMIT: ${{ github.sha }}
         run: |
-          ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
-            --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+          for version in 0.17.0 0.18.0; do
+            ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
+              --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat/$version"
+          done
 
       - name: Capture native paper actions at normal speed
         env:
@@ -188,15 +197,15 @@ jobs:
             --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only
 
-      - name: Measure the public baseline on the same runner
+      - name: Measure public 0.18.0 on the same runner
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           LIBGL_ALWAYS_SOFTWARE: '1'
           REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
         shell: bash
         run: |
-          export REVERB_STRESS_COMMIT="$(cat "$REVERB_STRESS_OUTPUT/source_commit.txt")"
-          cd "$RUNNER_TEMP/paper-feedback-baseline"
+          export REVERB_STRESS_COMMIT="$(python3 -c 'import json,os; print(json.load(open(os.path.join(os.environ["REVERB_STRESS_OUTPUT"],"source.json")))["game_commit"])')"
+          cd "$RUNNER_TEMP/paper-feedback-0.18.0"
           xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
             --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only

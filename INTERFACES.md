@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.18 contract. Simulation owns rules and mutation. UI,
+This is the current 0.18.1 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -211,4 +211,4 @@ Scripted evidence does not establish human balance, addictiveness, physical-cont
 Family-wall selection and actual entry preview share existing archive rules. The inherited-copy print is passive0.7s, validates actual bank identity and never creates an extra body. Merge/Undo ceremonies consume actual ShopResult snapshots; skill transfer, repair patch and power clamp have distinct read-only geometry. Reduced Effects/skip/pause alter presentation only. TooltipPanel/TooltipLabel use an opaque paper surface and readable ink.
 
 
-The 0.18 event/presentation contract is documented in [paper-action-feedback.md](docs/paper-action-feedback.md). ShotInfo captures the actual weapon slot, PlayerHurtInfo separates absorbed impact and HP loss, and DamageInfo captures the target radius. These are event values rather than saved-run fields; Snapshot v4 remains unchanged.
+The 0.18.1 event/presentation contract is documented in [paper-action-feedback.md](docs/paper-action-feedback.md). ShotInfo captures the actual weapon slot, PlayerHurtInfo separates absorbed impact and HP loss, and DamageInfo captures the target radius. These are event values rather than saved-run fields; Snapshot v4 remains unchanged.

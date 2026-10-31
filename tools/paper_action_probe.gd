@@ -5,7 +5,7 @@ extends SceneTree
 
 const DT := 1.0 / 60.0
 const CASE_FRAMES := 96
-const DEADLINE_MSEC := 180000
+const DEADLINE_MSEC := 300000
 const MACHINE_ID := &"machine_3"
 const WEAPONS: Array[Dictionary] = [
 	{"name": "pin", "weapon": &"stapler"},
@@ -44,6 +44,14 @@ var _gait_rows: Array[Dictionary] = []
 var _last_interaction: Dictionary = {}
 var _support_rows: Array[Dictionary] = []
 var _isolated: Array[String] = []
+var _skill_event: Dictionary = {}
+var _skill_rows: Array[Dictionary] = []
+var _echo_work_rows: Array[Dictionary] = []
+var _work_uid := 0
+var _rescue_id: StringName = &""
+var _rescue_old := Vector2.INF
+var _rescue_safe := Vector2.INF
+var _rescue_event: Dictionary = {}
 var _summary: Dictionary = {"source": "scripted fixture", "cases": [], "screenshots": {},
 	"read_only_checks": [], "success": false}
 
@@ -150,6 +158,9 @@ func _run() -> void:
 			# cooldown elapses. The first press is faulty and auto-cycles instead.
 			_main.sim.player.pos = item["pos"] + Vector2(-80.0, 0.0)
 			break
+	# The later Echo replays this actual input, including its recorded readiness
+	# wait. No authored work row or direct cooldown edit stands in for E.
+	_main.sim.recorder.begin(_main.sim.player.pos)
 	if not (await _wait_for_machine_ready()):
 		return
 	for item: Dictionary in _main.sim.interactables:
@@ -163,6 +174,36 @@ func _run() -> void:
 			"real machine switch, warning and impact reached view and model"):
 		return
 	(_summary["cases"] as Array).append(machine)
+	var recorded: EchoTake = _main.sim.recorder.finish(_main.sim.wave,
+		_main.sim.player.weapons, _main.sim.player.stats, _main.sim.player.weapon_levels)
+	if not _require(recorded.work_actions.size() == 1 and recorded.work_actions[0]["target_id"] == MACHINE_ID,
+			"actual machine E produced the single machine work row replayed next"):
+		return
+	_main.sim.bank.add(recorded)
+	_main.sim.start_wave(2)
+	_main.sim._plan.clear()
+	_main.sim._plan_idx = 0
+	_main.sim.wave_duration = 60.0
+	_main.sim.player.pos += Vector2(-160.0, 0.0)
+	_disable_weapons()
+	_reset_case_observations()
+	_work_uid = recorded.uid
+	for item: Dictionary in _main.sim.interactables:
+		if item["id"] == MACHINE_ID:
+			_add_target(item["pos"] + Vector2(75.0, 0.0))
+			break
+	var replay_frames := ceili(float(recorded.work_actions[0]["time"]) / DT) + 96
+	var echo_work: Dictionary = await _run_case("echo_machine", "echo_machine", replay_frames)
+	if echo_work.is_empty() or not _require(int(_case_events.get("echo_work.success", 0)) == 1
+			and bool(_proofs.get("echo_uid", false)) and bool(_proofs.get("echo_grip", false))
+			and int(_case_events.get("damage", 0)) > 0,
+			"actual recorder take performs the real machine operation with its stable UID and lever contact"):
+		return
+	echo_work["recorded_work"] = {"source_case": "machine", "target_id": String(MACHINE_ID),
+		"uid": recorded.uid, "time": float(recorded.work_actions[0]["time"]),
+		"duration": recorded.duration(), "path_samples": recorded.samples.size()}
+	echo_work["work_events"] = _echo_work_rows.duplicate(true)
+	(_summary["cases"] as Array).append(echo_work)
 	_begin_case(&"pistol")
 	_add_stationary_copy(&"stamp", 70.0)
 	_disable_weapons()
@@ -210,6 +251,59 @@ func _run() -> void:
 		{"first_frame": 60, "last_frame": 119, "direction": [-0.35, 0.0]},
 		{"first_frame": 120, "last_frame": 164, "direction": [0.0, 0.0]}]
 	(_summary["cases"] as Array).append(gait)
+	for role: StringName in [&"solo", &"looper", &"mirror", &"conductor", &"mender", &"overloader"]:
+		_begin_case(&"pistol", role)
+		if role != &"solo":
+			_add_stationary_copy(&"stamp", 70.0, Vector2(180.0, 20.0))
+		_disable_weapons()
+		_main.sim.player.facing = Vector2.RIGHT
+		if role in [&"solo", &"conductor", &"overloader"]:
+			_add_target(_main.sim.player.pos + Vector2(110.0 if role == &"solo" else 210.0, 0.0))
+		if role == &"mender":
+			_main.sim.player.hp = 140.0
+		var skill_frames := 144 if role == &"looper" else (180 if role == &"conductor" else CASE_FRAMES)
+		var skill: Dictionary = await _run_case("skill_" + String(role), "skill", skill_frames)
+		if skill.is_empty() or not _require(bool(_skill_event.get("ok", false))
+				and bool(_proofs.get("skill_body", false)) and bool(_proofs.get("skill_settled", false)),
+				"%s real skill reaches its finite native body sequence" % role):
+			return
+		if role in [&"solo", &"looper", &"mirror"] and not _require(
+				(_skill_event["pos"] as Vector2).distance_to(_skill_event["target_pos"]) > 25.0,
+				"%s scene uses an actual committed displacement" % role):
+			return
+		if role == &"overloader" and not _require(_main.sim.bank.find_uid(_retire_uid) == null
+				and _main.sim.echoes.is_empty(), "overload source has actually left bank and live array"):
+			return
+		skill["ability"] = String(role)
+		skill["activation"] = _skill_event_row(_skill_event)
+		skill["body_samples"] = _skill_rows.duplicate(true)
+		(_summary["cases"] as Array).append(skill)
+	_begin_case(&"pistol")
+	_disable_weapons()
+	for item: Dictionary in _main.sim.interactables:
+		if item["kind"] == &"rescue":
+			_rescue_id = item["id"]
+			_rescue_old = item["pos"]
+			_main.sim.player.pos = _rescue_old + Vector2(-50.0, 0.0)
+			break
+	if not _require(_rescue_id != &"", "ambient endangered worker exists without manufacturing a mission"):
+		return
+	var rescue: Dictionary = await _run_case("rescue", "rescue", CASE_FRAMES)
+	if rescue.is_empty() or not _require(int(_case_events.get("world.worker_saved", 0)) == 1
+			and bool(_proofs.get("rescue_departure", false)) and bool(_proofs.get("rescue_safe_visible", false))
+			and bool(_proofs.get("rescue_receipt_expired", false)),
+			"real rescue shows old-location departure, actual safe worker, and finite transition cleanup"):
+		return
+	rescue["worker_id"] = String(_rescue_id)
+	rescue["from_pos"] = _point(_rescue_old)
+	rescue["safe_pos"] = _point(_rescue_safe)
+	rescue["event_endpoints"] = {"from_pos": _point(_rescue_event["from_pos"]),
+		"target_pos": _point(_rescue_event["target_pos"]), "subject": String(_rescue_event["subject"])}
+	rescue["camera_placement"] = {"case_frame": 40, "player_pos": _point(_rescue_safe + Vector2(80.0, -10.0)),
+		"reason": "scripted camera inspection of the committed safe worker; not player travel"}
+	(_summary["cases"] as Array).append(rescue)
+	_summary["scene_count"] = (_summary["cases"] as Array).size()
+	_summary["png_count"] = (_summary["screenshots"] as Dictionary).size()
 	var commit := OS.get_environment("REVERB_BUILD_COMMIT").strip_edges()
 	if commit.is_empty():
 		commit = str(ProjectSettings.get_setting("application/config/build_commit", "")).strip_edges()
@@ -230,6 +324,7 @@ func _run() -> void:
 		"simulation": "one real Sim.step(1/60) per native rendered frame; Main physics suppressed",
 		"visual_clock": "normal native engine clock, including each screenshot frame",
 		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture; repair station separated at player+(100,-50), real spawn@8/damage@18/useful repair/lethal damage@36/remains@44/machine repair@48",
+		"additional_staging": "Echo replays the actual recorded E and readiness wait; role skills activate through Sim; Looper history comes from 60 native movement frames; rescue camera inspects old location then committed safe location at frame 40",
 		"scope": "presentation evidence; not human playtesting, balance or a normal campaign completion",
 		"movie": "continuous CLI --write-movie recording; no skipped or slowed simulation steps"}
 	_main._detach_presentation_session()
@@ -249,8 +344,8 @@ func _run() -> void:
 	quit()
 
 
-func _begin_case(weapon_id: StringName) -> void:
-	_main.new_run(20261031, &"looper", 0)
+func _begin_case(weapon_id: StringName, role: StringName = &"looper") -> void:
+	_main.new_run(20261031, role, 0)
 	_main.paused = true
 	_main.pause_ui.close()
 	_main._view.set_paused(false)
@@ -273,6 +368,17 @@ func _begin_case(weapon_id: StringName) -> void:
 	sim.pending.clear()
 	sim.projectiles.clear()
 	sim.grid.clear()
+	_reset_case_observations()
+	sim.shot_fired_info.connect(_on_shot)
+	sim.damage_event.connect(_on_damage)
+	sim.player_hurt_info.connect(_on_hurt)
+	sim.echo_retired.connect(_on_retirement)
+	sim.world_event.connect(_on_world)
+	sim.support_event.connect(_on_support)
+	sim.echo_work_performed.connect(_on_echo_work)
+
+
+func _reset_case_observations() -> void:
 	_case_frame = -1
 	_first_action = -1
 	_first_contact = -1
@@ -293,12 +399,14 @@ func _begin_case(weapon_id: StringName) -> void:
 	_peaks.clear()
 	_samples.clear()
 	_shot_rows.clear()
-	sim.shot_fired_info.connect(_on_shot)
-	sim.damage_event.connect(_on_damage)
-	sim.player_hurt_info.connect(_on_hurt)
-	sim.echo_retired.connect(_on_retirement)
-	sim.world_event.connect(_on_world)
-	sim.support_event.connect(_on_support)
+	_skill_event.clear()
+	_skill_rows.clear()
+	_echo_work_rows.clear()
+	_work_uid = 0
+	_rescue_id = &""
+	_rescue_old = Vector2.INF
+	_rescue_safe = Vector2.INF
+	_rescue_event.clear()
 
 
 func _disable_weapons() -> void:
@@ -310,7 +418,7 @@ func _disable_weapons() -> void:
 			actor.cooldowns[index] = 1000.0
 
 
-func _add_stationary_copy(weapon_id: StringName, condition: float) -> void:
+func _add_stationary_copy(weapon_id: StringName, condition: float, offset: Vector2 = Vector2(65.0, 20.0)) -> void:
 	var sim: Sim = _main.sim
 	var take := EchoTake.new()
 	take.wave = 1
@@ -319,7 +427,7 @@ func _add_stationary_copy(weapon_id: StringName, condition: float) -> void:
 	take.levels.append(0)
 	take.stats = sim.player.stats.copy()
 	for _index in 361:
-		take.samples.append(sim.player.pos + Vector2(65.0, 20.0))
+		take.samples.append(sim.player.pos + offset)
 	sim.bank.add(take)
 	_retire_uid = take.uid
 	# The real wave-start path creates/deploys the Echo and notifies the bound view.
@@ -420,11 +528,15 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		var movement := Vector2.ZERO
 		if mode == "gait":
 			movement = Vector2.RIGHT * 0.35 if frame < 60 else (Vector2.LEFT * 0.35 if frame < 120 else Vector2.ZERO)
+		elif mode == "skill" and sim.character_id == &"looper" and frame < 60:
+			movement = Vector2.RIGHT * 0.35
 		sim.step(DT, movement)
 		var read_only_before: Dictionary = {}
 		var rng_before := sim.rng.state
 		var hazard_before := sim.hazard_rng.state
-		if frame == 30:
+		var read_only_frame := frame == 30 or (mode == "echo_machine" and _first_action >= 0 and frame == _first_action + 16) \
+			or (mode == "skill" and sim.character_id == &"looper" and frame == 86)
+		if read_only_frame:
 			read_only_before = RunSnapshot.capture(sim)
 			if not _require(not read_only_before.is_empty(), "%s snapshot captures actual fixture state" % name):
 				return {}
@@ -451,7 +563,7 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		if mode == "repair" and frame in [8, 36, 44]:
 			if not _check_support_evidence(frame):
 				return {}
-		if frame == 30:
+		if read_only_frame:
 			if not _require(sim.rng.state == rng_before and sim.hazard_rng.state == hazard_before
 					and RunSnapshot.capture(sim) == read_only_before,
 					"%s normal view process/draw leaves the full model and both RNGs unchanged" % name):
@@ -471,7 +583,7 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		"normal_speed": true, "movie_start_frame": movie_start, "movie_end_frame": _native_frames,
 		"events": _case_events.duplicate(true), "view_proofs": _proofs.duplicate(true),
 		"feedback_peaks": _peaks.duplicate(true), "audio_route_delta": audio_delta,
-		"screenshots": _samples.duplicate(true), "first_contact_frame": _first_contact,
+		"screenshots": _samples.duplicate(true), "first_action_frame": _first_action, "first_contact_frame": _first_contact,
 		"result_frame": int(_samples["result"]["case_frame"]) if _samples.has("result") else -1,
 		"first_hit_life": _first_hit_life,
 		"result_sample_rule": "first_contact + max(2,round(profile.hit_life*60*0.60))" \
@@ -482,7 +594,24 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 
 func _trigger(mode: String, frame: int) -> bool:
 	var sim: Sim = _main.sim
-	if mode == "repair":
+	if mode == "skill":
+		var activation := 72 if sim.character_id == &"looper" else 12
+		if frame == activation and not _require(sim.activate_character_skill(), "actual role input activates once"):
+			return false
+	elif mode == "rescue":
+		if frame == 8:
+			if not _require(sim.interact(), "actual nearby E rescues the ambient endangered worker"):
+				return false
+			var worker := Expedition._worker(sim, _rescue_id)
+			_rescue_safe = worker.get("pos", Vector2.INF)
+			if not _require(worker.get("state", &"") == &"safe" and _rescue_safe.distance_to(_rescue_old) > 100.0,
+					"rescued worker physically moved from danger to its real safe registry location"):
+				return false
+		elif frame == 40:
+			# The old lane and registry are farther apart than one camera. This
+			# explicit fixture placement inspects the committed safe body.
+			sim.player.pos = _rescue_safe + Vector2(80.0, -10.0)
+	elif mode == "repair":
 		if frame == 8:
 			if not _require(SupportSystem.spawn_weapon(sim, Content.weapon(&"repair_kit"),
 					sim.player.pos + Vector2(100.0, -50.0), 0.0, -1, -1, Color.WHITE, 1),
@@ -552,6 +681,59 @@ func _trigger(mode: String, frame: int) -> bool:
 
 func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool:
 	var labels: Array[String] = []
+	if mode == "skill":
+		var activation := 72 if _main.sim.character_id == &"looper" else 12
+		var skill_labels := {activation: "release", activation + 4: "motion",
+			activation + 14: "contact", activation + 40: "result", _frames - 1: "settled"}
+		if skill_labels.has(frame):
+			labels.append(skill_labels[frame])
+			var pose: Dictionary = _main._view._interaction_ink.actor_pose(-1, _variant == "reduced")
+			_skill_rows.append({"case_frame": frame, "label": skill_labels[frame],
+				"pos": _point(_main.sim.player.pos), "active": bool(pose["active"]),
+				"action": String(pose["action"]), "stage": String(pose["stage"]),
+				"scale": _point(pose["scale"]), "offset": _point(pose["offset"]),
+				"lean": float(pose["lean"]), "frame": int(pose["frame"])})
+			if frame == activation + 14:
+				_proofs["skill_body"] = bool(pose["active"]) and pose["action"] == _main.sim.character_id
+			if frame == _frames - 1:
+				_proofs["skill_settled"] = not bool(pose["active"])
+	elif mode == "rescue":
+		var rescue_labels := {0: "danger", 8: "release", 20: "departure", 48: "safe", 80: "settled"}
+		if rescue_labels.has(frame):
+			labels.append(rescue_labels[frame])
+		if frame == 20:
+			var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+			for mark: Dictionary in _main._view._interaction_ink.profiles(camera, _variant == "reduced", _main.sim):
+				if mark["family"] == &"rescue" and mark["subject"] == _rescue_id:
+					var pose := InteractionInk.rescue_pose(mark, float(mark["progress"]), _variant == "reduced")
+					_proofs["rescue_departure"] = (pose["source"] as Vector2).is_equal_approx(_rescue_old) \
+						and (pose["target"] as Vector2).is_equal_approx(_rescue_safe) \
+						and camera.has_point(_rescue_old) \
+						and (is_zero_approx(float(pose["departure_alpha"])) if _variant == "reduced" else float(pose["departure_alpha"]) > 0.0)
+		if frame == 48:
+			var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+			_proofs["rescue_safe_visible"] = camera.has_point(_rescue_safe) \
+				and Expedition._worker(_main.sim, _rescue_id)["state"] == &"safe" \
+				and bool(_main._view._interaction_ink.worker_pose(_rescue_id, _variant == "reduced")["safe_visible"])
+		if frame == 80:
+			var any_rescue := false
+			for mark: Dictionary in _main._view._interaction_ink.profiles(WorldArena.BOUNDS, false, _main.sim):
+				any_rescue = any_rescue or mark["family"] == &"rescue"
+			_proofs["rescue_receipt_expired"] = not any_rescue
+	elif mode == "echo_machine" and _first_action >= 0:
+		var echo_labels := {_first_action: "release", _first_action + 4: "motion",
+			_first_action + 16: "grip", _first_action + 78: "result"}
+		if echo_labels.has(frame):
+			labels.append(echo_labels[frame])
+		if frame == _first_action + 16:
+			var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+			for mark: Dictionary in _main._view._interaction_ink.profiles(camera, _variant == "reduced", _main.sim):
+				if mark["family"] != &"interaction" or int(mark["actor_token"]) != _work_uid:
+					continue
+				var pose := InteractionInk.interaction_pose(mark, float(mark["progress"]), _variant == "reduced")
+				_proofs["echo_grip"] = bool(pose["contact"]) \
+					and (pose["hand"] as Vector2).distance_to(pose["grip"]) <= 1.0 \
+					and float(pose["working_travel"]) > 0.0
 	if mode == "machine" and frame == 24:
 		var sim: Sim = _main.sim
 		var camera: Rect2 = _main._view.camera_profile()["world_rect"]
@@ -578,7 +760,7 @@ func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool
 			_gait_rows.append({"frame": frame, "x": pos.x, "y": pos.y,
 				"moving": bool(motion["moving"]), "gait_phase": float(motion["gait_phase"]),
 				"motion_amount": float(motion["amount"]), "shots": int(_case_events.get("shot", 0))})
-	else:
+	elif mode not in ["skill", "rescue", "echo_machine"]:
 		if _first_action >= 0:
 			if frame == _first_action:
 				labels.append("release")
@@ -712,6 +894,12 @@ func _on_retirement(_info: EchoRetirementInfo) -> void:
 func _on_world(info: Dictionary) -> void:
 	var kind := String(info.get("kind", &""))
 	_count("world." + kind)
+	if kind == "character_skill":
+		_skill_event = info.duplicate(true)
+		if bool(info.get("ok", false)) and _case_frame >= 0 and _first_action < 0:
+			_first_action = _case_frame
+	if kind == "worker_saved":
+		_rescue_event = info.duplicate(true)
 	if kind == "interaction_result":
 		_last_interaction = info.duplicate(true)
 	if kind == "interaction_result" and bool(info.get("ok", false)):
@@ -719,6 +907,34 @@ func _on_world(info: Dictionary) -> void:
 			_first_action = _case_frame
 		_proofs["world_view"] = bool(_proofs.get("world_view", false)) \
 			or int(_main._view.feedback_counts()["interactions"]) > 0
+
+
+func _on_echo_work(info: Dictionary) -> void:
+	_count("echo_work.success" if bool(info.get("success", false)) else "echo_work.failed")
+	_echo_work_rows.append({"case_frame": _case_frame, "uid": int(info["uid"]),
+		"kind": String(info["kind"]), "target_id": String(info["target_id"]),
+		"pos": _point(info["pos"]), "target_pos": _point(info["target_pos"]),
+		"success": bool(info["success"]), "reason": String(info["reason"])})
+	if bool(info.get("success", false)) and _case_frame >= 0:
+		if _first_action < 0:
+			_first_action = _case_frame
+		_proofs["echo_uid"] = int(info["uid"]) == _work_uid and _work_uid > 0 \
+			and info["target_id"] == MACHINE_ID
+
+
+func _skill_event_row(info: Dictionary) -> Dictionary:
+	var anchors: Array[Dictionary] = []
+	for row: Dictionary in info.get("anchors", []):
+		anchors.append({"uid": int(row["uid"]), "from_pos": _point(row["from_pos"]),
+			"to_pos": _point(row["to_pos"])})
+	return {"ability": String(info["ability"]), "ok": bool(info["ok"]),
+		"from_pos": _point(info["pos"]), "target_pos": _point(info["target_pos"]),
+		"energy_before": float(info["before"]["energy"]), "energy_after": float(info["after"]["energy"]),
+		"selected_uid": int(info.get("selected_uid", 0)), "anchors": anchors}
+
+
+func _point(pos: Vector2) -> Array:
+	return [pos.x, pos.y]
 
 
 func _on_support(info: Dictionary) -> void:

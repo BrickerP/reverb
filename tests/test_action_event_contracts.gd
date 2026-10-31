@@ -93,17 +93,48 @@ func test_echo_shot_keeps_stable_actor_and_exact_duplicate_slot(c: Check) -> voi
 	c.eq(shots[0].actor_token, take.uid, "stable owner is independent from the changed index")
 
 
-func test_delayed_burst_keeps_unknown_slot_without_extending_saved_attack_state(c: Check) -> void:
+func test_duplicate_burst_has_one_exact_trigger_slot_and_unknown_delayed_mounts(c: Check) -> void:
 	var sim := _sim()
-	var enemy := _enemy(sim)
+	_enemy(sim)
+	var weapon := Content.weapon(&"smg")
+	sim.player.weapons = [weapon, weapon]
+	sim.player.weapon_levels = [0, 0]
+	sim.player.cooldowns = [10.0, 0.0]
+	sim.player.weapon_investments = [0, 0]
 	var shots: Array[ShotInfo] = []
 	sim.shot_fired_info.connect(func(info: ShotInfo) -> void: shots.append(info))
+	Combat.step_weapons(sim, sim.player.pos, sim.player.stats, sim.player.weapons,
+		sim.player.weapon_levels, sim.player.cooldowns, 1.0, 0.01, -1, Color.WHITE)
+	c.eq(shots.size(), 1, "only the ready duplicate starts a burst")
+	c.eq(shots[0].weapon_slot, 1, "the triggering burst has the actual second mount")
+	Combat.tick_fields(sim, weapon.burst_interval + 0.001)
+	c.eq(shots.size(), 2, "the second round emits only after its real interval")
+	c.eq(shots[1].weapon_slot, -1, "saved burst state cannot guess between duplicate mounts")
+	c.eq(shots[1].weapon_id, weapon.id, "delayed round retains real weapon material identity")
+	c.eq(shots[1].source, -1, "delayed round retains the actual player source")
+	c.eq(shots[0].weapon_slot, 1, "a later unattributed round does not overwrite the trigger")
+
+
+func test_delayed_burst_resume_keeps_stable_retired_owner_without_guessed_slot(c: Check) -> void:
+	var sim := _sim()
+	var enemy := _enemy(sim)
 	var weapon := Content.weapon(&"smg")
 	c.ok(Combat.fire(sim, sim.player.pos, enemy.pos, weapon, 0, 1.0,
-		sim.player.stats, 1.0, -1, Color.WHITE), "real burst allocates delayed output")
-	Combat.tick_fields(sim, weapon.burst_interval + 0.001)
-	c.ok(not shots.is_empty(), "a later burst round emits its own real release")
-	c.eq(shots[0].weapon_slot, -1, "delayed output does not guess among same-ID guns")
+		sim.player.stats, 1.0, 0, Color("82a3a1"), 0, false, 144),
+		"an Echo burst releases while its owner can later retire")
+	var snapshot := RunSnapshot.capture(sim)
+	c.eq(snapshot["version"], 4, "cosmetic recoil does not change the suspend format")
+	var restored := RunSnapshot.restore(snapshot)
+	c.ok(restored != null, "a pending burst resumes with the current exact schema: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	var shots: Array[ShotInfo] = []
+	restored.shot_fired_info.connect(func(info: ShotInfo) -> void: shots.append(info))
+	Combat.tick_fields(restored, weapon.burst_interval + 0.001)
+	c.eq(shots.size(), 1, "resumed burst emits its next actual round")
+	c.eq(shots[0].actor_token, 144, "retired owner's token is never remapped to a new Echo at source zero")
+	c.eq(shots[0].source, 0, "legacy source remains the original release snapshot")
+	c.eq(shots[0].weapon_slot, -1, "resume cannot acquire cosmetic mount knowledge absent from saved state")
 
 
 func test_recorded_signature_never_guesses_duplicate_or_mirror_slots(c: Check) -> void:

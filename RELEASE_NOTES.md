@@ -1,49 +1,39 @@
-# 回响 / Take Stack 0.18 · 纸上见真章
+# Take Stack 0.18.1 · Hands required. Staff optional.
 
-武器自动开火，纸做的身体现在更清楚地承担后果。
+The paper crew now follows through on its work: Echoes reach for the machines they recorded, role abilities move the paper body, and rescued workers visibly leave their restraints.
 
-- **六类纸张动作，覆盖35把武器。** 钉穿留下纸孔与夹钉，压印留下墨边，裁切错开纸片，墨迹落地晕开，回卷有真实返程钩尾，传导留下短缝线。目标沿真实来向压折，走路仍由实际位移驱动。
-- **身体与工位真的接触。** 修补落在受疗身体的胸袖并短暂挺直；回响按装备能力折叠、抽丝或压成废件；纸手与服务握柄连成压下、回弹的过程。
-- **四处反馈修正。** 同ID武器按实际装备槽独立后坐；完全挡住的攻击使用防守反馈，实际掉血才表现受伤；支援出生、攻击、维修、受伤、毁坏与过期接通画面和声音；修好且停机的机器仍显示补丁。
-- **保持回收局的纸与墨。** 沿用现有纸偶和办公废件美术，减少特效模式保留必要接触和结果。支援与回响使用真实身份、生命和寿命，不产生额外身体或奖励。
+- **Readable fire in busy fights.** Six compact material accents distinguish pins, stamps, cuts, ink, returns and arcs. Dense and Reduced Effects scenes keep a bounded, fairly sampled set of accents while every real projectile head remains visible.
+- **Echoes operate the machinery.** Recorded work drives the actual copy's hand and the real lever. Missing, muted, sealed or out-of-range workers cannot animate a successful operation.
+- **Six role actions.** Rewind, dash, swap, relay, repair and overload have finite body gestures tied to their committed result. Movement settles without restarting the old automatic-fire body tremor.
+- **Rescue has a departure.** Shackles open at the worker's original position, a paper silhouette leaves for safety, and the real safe worker settles into view. This adds no extra damageable actor or reward.
+- **Keep your shift.** Snapshot v4 and the published data directory remain unchanged. Real 0.17 and 0.18 wave/shop saves are resumed by the release gates.
 
-This release keeps the existing paper cast and gives attacks a visible departure,
-contact and result. All 35 weapon profiles use six paper actions. Repairs,
-retirement and machine grips have physical feedback; equal weapons recoil in
-their actual slots, and full shield blocks are distinct from HP injury.
+回响会伸手压下旧路线上的拉杆；六名角色的技能有了身体动作；被救下的工友会先挣脱、再离开。高弹量和减少特效模式保留有上限的纸张材质线索，避免所有攻击只剩细线与小点。
 
-## 下载 / Downloads
-
-下载对应平台ZIP，解压后运行：
+## Downloads / 下载
 
 - [macOS](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-macos.zip)
 - [Windows](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-windows.zip)
 - [Linux](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-linux.zip)
 
-macOS包含有效ad-hoc完整性签名，尚未经过Apple公证；首次打开请按包内
-`MAC_START_HERE.txt` 操作。Windows包未签名。Linux可执行权限保留在ZIP中。
+Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signature and is not Apple-notarized; follow the included `MAC_START_HERE.txt` on first launch. Windows builds are unsigned. Linux executable permissions are preserved in the ZIP.
 
-## 存档 / Saves
+下载入口保持不变。macOS 首次启动请按包内说明操作。
 
-**0.18可继续0.17中途存档，无需重开。** Snapshot v4与既有永久档案格式未变；
-公开包继续使用 `TakeStack Preview` 目录。更早的中途存档格式需要新开对局，
-永久角色解锁、设置和回响档案保留。
+## Saves / 存档
 
-0.18 retains Snapshot v4 and the published 0.17 data directory. Existing 0.17 runs
-and permanent progress remain usable. Earlier suspended-run formats need a new run.
+**0.18.1 continues 0.17 and 0.18 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-## 构建与验证 / Build and evidence
+0.17、0.18 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
-本版从tag指向的完整提交在远端流水线重新构建。三平台测试、导出启动、资源审计、
-Mac签名与存档隔离，以及普通／中文960／减少特效三套原生动作样板是发版门禁。
-最终来源、版本、Godot版本和各文件SHA256以附带 `BUILD_INFO.txt`、`AUDIT.json`、
-`VERIFICATION.json`、`PERFORMANCE.json` 与 `SHA256SUMS.txt` 为准。
+## Build and evidence / 构建与验证
 
-原生样板是脚本夹具：三套各12场景、56张原尺寸PNG，附60fps静音原速录像、
-完整状态／双RNG不变和严格存档往返证据；并非真人通关或平衡结论。
-压力对照固定96敌人、8回响、12支援物和既有弹量上限，使用同一探针SHA与同一runner；
-性能结果是软件渲染诊断，不能换算为所有设备的FPS承诺。极限叠堆仍不能逐个分辨每具身体。
+The tag is rebuilt in GitHub Actions. Release gates include Linux, macOS and Windows tests/startup, immutable resource and macOS-signature audits, exact source/package hashes, and actual cross-version wave/shop save restores.
 
-Human feel, subjective audio, physical controllers and target-device performance
-remain playtest work. The attached source/evidence receipts describe what was
-actually built and measured, without relabelling automated fixtures as human play.
+The attached native evidence contains English 1280×720, Chinese 960×540 and Reduced Effects variants: twenty scenes and 95 original-size PNGs per variant, plus normal-speed 60fps silent movies. Every scene proves rendering leaves the full simulation snapshot and both RNG streams unchanged. These are disclosed scripted fixtures, with staged positions and durable targets.
+
+Pressure evidence compares this version with public 0.18 using the same probe and runner, retaining 96 enemies, eight Echoes and twelve supports. Software-renderer measurements describe that diagnostic, not target-device FPS.
+
+See `BUILD_INFO.txt`, `AUDIT.json`, `VERIFICATION.json`, `PERFORMANCE.json` and `SHA256SUMS.txt` for the exact source and results. Published downloads are downloaded again and checked against the audited bytes before Latest changes.
+
+Human play feel, subjective audio and physical-controller testing remain unverified.

@@ -6,6 +6,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 import stat
 import tempfile
@@ -20,10 +21,11 @@ SPEC.loader.exec_module(RECEIPTS)
 
 COMMIT = "a" * 40
 BASELINE = "b" * 40
-VERSION = "0.18.0"
-REF = "refs/tags/v0.18.0"
-CASE_NAMES = ("pin", "stamp", "cut", "ink", "return", "arc", "repair", "machine", "retirement", "shield", "duplicate", "gait")
-INVARIANTS = ("full_snapshot_unchanged", "rng_unchanged", "hazard_rng_unchanged", "strict_snapshot_roundtrip", "native_process_and_draw")
+OLD_WRITER = "d" * 40
+VERSION = "0.18.1"
+REF = "refs/tags/v0.18.1"
+CASE_NAMES = tuple(RECEIPTS.NATIVE_CASE_LABELS)
+INVARIANTS = RECEIPTS.NATIVE_INVARIANTS
 
 
 def put_json(path: Path, value: dict) -> None:
@@ -50,7 +52,7 @@ class ReleaseReceiptTest(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.repo = self.root / "repo"
         (self.repo / "tools").mkdir(parents=True)
-        (self.repo / "project.godot").write_text('config/version="0.18.0"\n')
+        (self.repo / "project.godot").write_text(f'config/version="{VERSION}"\n')
         (self.repo / "tools/presentation_stress_probe.gd").write_bytes(b"one pressure probe")
         (self.repo / "tools/release_save_compat.gd").write_bytes(b"one compatibility probe")
         self.pressure_hash = RECEIPTS.digest(self.repo / "tools/presentation_stress_probe.gd")
@@ -88,14 +90,28 @@ class ReleaseReceiptTest(unittest.TestCase):
             folder = self.evidence / variant
             folder.mkdir(parents=True)
             screenshots = {}
-            for index in range(56):
-                name = f"sample-{index:02}.png"
-                (folder / name).write_bytes(b"PNG inventory placeholder")
-                screenshots[f"{CASE_NAMES[index % 12]}/{index}"] = {"file": name, "width": canvas[0], "height": canvas[1], "case_frame": index, "native_frame": index + 1}
+            cases = []
+            for index, (name, labels) in enumerate(RECEIPTS.NATIVE_CASE_LABELS.items()):
+                samples = {}
+                for offset, label in enumerate(labels):
+                    filename = f"{name}_{label}.png"
+                    (folder / filename).write_bytes(b"PNG inventory placeholder")
+                    frame = RECEIPTS.NATIVE_SAMPLE_FRAMES.get(name, {}).get(label, offset)
+                    if name == "echo_machine":
+                        frame = 12 + dict(zip(labels, (0, 4, 16, 78)))[label]
+                    row = {"file": filename, "width": canvas[0], "height": canvas[1],
+                           "case_frame": frame, "native_frame": index * 200 + frame + 1}
+                    screenshots[f"{name}/{label}"] = row
+                    samples[label] = row
+                cases.append({"name": name, "first_action_frame": 12, "screenshots": samples,
+                              "view_proofs": dict.fromkeys(("skill_body", "skill_settled", "echo_uid", "echo_grip",
+                                                            "rescue_departure", "rescue_safe_visible", "rescue_receipt_expired"), True)})
+            proof_frames = [(name, 30) for name in CASE_NAMES] + [("skill_looper", 86), ("echo_machine", 28)]
             source = {"success": True, "commit": COMMIT, "source": "scripted fixture", "canvas": canvas, "language": language,
                       "capture": {"fps": 60, "speed": 1.0, "startup_config_pixels": canvas},
-                      "cases": [{"name": name} for name in CASE_NAMES], "screenshots": screenshots,
-                      "read_only_checks": [{"case": name, "frame": 30, "manual_view_delta": 0.0, **dict.fromkeys(INVARIANTS, True)} for name in CASE_NAMES],
+                      "cases": cases, "screenshots": screenshots, "scene_count": len(cases), "png_count": len(screenshots),
+                      "read_only_checks": [{"case": name, "frame": frame, "manual_view_delta": 0.0,
+                                            **dict.fromkeys(INVARIANTS, True)} for name, frame in proof_frames],
                       "teardown": {"main_freed": True, "simulation_detached": True, "native_frames_waited": 2}}
             put_json(folder / "paper_action_source.json", source)
             (folder / "paper_action.mp4").write_bytes(b"encoded movie inventory placeholder")
@@ -103,16 +119,39 @@ class ReleaseReceiptTest(unittest.TestCase):
         for side, commit in (("current", COMMIT), ("baseline", BASELINE)):
             put_json(self.evidence / f"pressure-{side}/presentation_stress_summary.json", {
                 "game_commit": commit, "probe_sha256": self.pressure_hash,
-                "cases": [{"name": name, "frame_avg_ms": 30.0} for name in ("96_legal_8echo_12support_standard", "96_legal_8echo_12support_reduced")],
+                "cases": [{"name": name, "frame_avg_ms": 30.0} for name in RECEIPTS.PRESSURE_CASES],
             })
-        (self.evidence / "pressure-baseline/source_commit.txt").write_text(BASELINE + "\n")
-        self.compat = {"success": True, "source_version": "0.17.0", "reader_version": VERSION,
-                       "source_game_commit": BASELINE, "reader_game_commit": COMMIT, "probe_sha256": self.compat_hash,
-                       "schema": 4, "scenarios": ["wave", "shop"],
-                       "details": [{"scenario": name, **dict.fromkeys(("full_snapshot_equal", "rng_preserved", "hazard_rng_preserved", "resumed"), True)} for name in ("wave", "shop")]}
-        self.writer = {"success": True, "source_version": "0.17.0", "game_commit": BASELINE, "probe_sha256": self.compat_hash, "schema": 4}
-        put_json(self.evidence / "save-compat/result.json", self.compat)
-        put_json(self.evidence / "save-compat/writer-result.json", self.writer)
+        put_json(self.evidence / "pressure-baseline/source.json", {"tag": "v0.18.0", "version": "0.18.0", "game_commit": BASELINE})
+        self.compats, self.writers, self.payloads = {}, {}, {}
+        for source_version, source_commit in (("0.17.0", OLD_WRITER), ("0.18.0", BASELINE)):
+            folder = self.evidence / "save-compat" / source_version
+            put_json(folder / "source.json", {"tag": f"v{source_version}", "version": source_version, "game_commit": source_commit})
+            snapshots, details = [], []
+            for name in ("shop", "wave"):
+                encoded = json.dumps({"version": 4, "fixture": f"{source_version}-{name}"})
+                snapshot = {"name": name, "snapshot_json": encoded, "snapshot_sha256": sha(encoded.encode()),
+                            "rng_seed": "11", "rng_state": "22", "hazard_rng_seed": "33", "hazard_rng_state": "44",
+                            "state": {"wave": 2, "phase": 1}}
+                snapshots.append(snapshot)
+                for side in ("old", "captured"):
+                    (folder / f"{name}-{side}-snapshot.json").write_bytes(encoded.encode())
+                details.append({"name": name, "snapshot_sha256": snapshot["snapshot_sha256"], "source_state": snapshot["state"],
+                                "resumed_action": "undo" if name == "shop" else "step",
+                                **dict.fromkeys(("full_snapshot_equal", "graph_json_domain_equal", "canonical_json_bytes_equal",
+                                                 "canonical_snapshot_sha256_equal", "state_json_domain_equal",
+                                                 "rng_preserved", "hazard_rng_preserved", "resumed"), True)})
+            payload = {"source_version": source_version, "game_commit": source_commit, "probe_sha256": self.compat_hash,
+                       "schema": 4, "scenarios": snapshots}
+            put_json(folder / "compat-payload.json", payload)
+            payload_hash = RECEIPTS.digest(folder / "compat-payload.json")
+            compat = {"success": True, "source_version": source_version, "reader_version": VERSION,
+                      "source_game_commit": source_commit, "reader_game_commit": COMMIT, "probe_sha256": self.compat_hash,
+                      "payload_sha256": payload_hash, "schema": 4, "scenarios": ["wave", "shop"], "details": details}
+            writer = {"success": True, "source_version": source_version, "game_commit": source_commit,
+                      "probe_sha256": self.compat_hash, "payload_sha256": payload_hash, "schema": 4, "scenarios": ["shop", "wave"]}
+            self.compats[source_version], self.writers[source_version], self.payloads[source_version] = compat, writer, payload
+            put_json(folder / "result.json", compat)
+            put_json(folder / "writer-result.json", writer)
         self.needs = self.root / "needs.json"
         self.gates = {name: {"result": "success"} for name in RECEIPTS.GATES}
         put_json(self.needs, self.gates)
@@ -150,12 +189,28 @@ class ReleaseReceiptTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             RECEIPTS.validate_exports(self.audit_dir, self.audit)
 
+    def test_native_case_contract_matches_the_actual_probe(self) -> None:
+        probe = (ROOT / "tools/paper_action_probe.gd").read_text()
+        # Read actual literal calls plus the two finite loops that expand cases;
+        # deriving fixtures from the gate alone cannot detect an incorrect name.
+        literal_cases = re.findall(r'_run_case\("([^"\n]+)",', probe)
+        weapon_block = re.search(r'const WEAPONS:.*?= \[(.*?)\n\]', probe, re.S).group(1)
+        weapon_cases = re.findall(r'"name": "([^"\n]+)"', weapon_block)
+        role_block = re.search(r'for role: StringName in \[(.*?)\]:', probe).group(1)
+        role_cases = [f"skill_{role}" for role in re.findall(r'&"([^"\n]+)"', role_block)]
+        actual = literal_cases + weapon_cases + role_cases
+        self.assertEqual(len(actual), len(set(actual)))
+        self.assertEqual(set(CASE_NAMES), set(actual))
+        self.assertIn("duplicate_slots", actual)
+
     def test_native_validates_three_actual_scopes_and_pixel_dimensions(self) -> None:
         valid = RECEIPTS.validate_native(self.evidence, COMMIT)
         self.assertEqual(set(valid), {"normal", "compact", "reduced"})
         self.assertEqual(valid["compact"]["canvas"], [960, 540])
         self.assertEqual(valid["compact"]["language"], "zh")
-        self.assertTrue(all(v["cases"] == 12 and v["png_count"] == 56 for v in valid.values()))
+        self.assertEqual(len(CASE_NAMES), 20)
+        self.assertTrue(all(v["cases"] == 20 and v["png_count"] == 95 for v in valid.values()))
+        self.assertTrue({"echo_machine", "rescue", *(f"skill_{role}" for role in ("solo", "looper", "mirror", "conductor", "mender", "overloader"))} <= set(CASE_NAMES))
 
     def test_native_rejects_wrong_identity_disclosure_language_or_capture_time(self) -> None:
         path = self.evidence / "compact/paper_action_source.json"
@@ -194,6 +249,33 @@ class ReleaseReceiptTest(unittest.TestCase):
             with self.subTest(mutation=index), self.assertRaises(ValueError):
                 RECEIPTS.validate_native(self.evidence, COMMIT)
 
+    def test_native_rejects_unlisted_case_phase_missing_active_proofs_and_new_view_failures(self) -> None:
+        path = self.evidence / "normal/paper_action_source.json"
+        original = RECEIPTS.read_json(path)
+        mutations = []
+        bad = copy.deepcopy(original)
+        bad["cases"][-1]["name"] = "unlisted_case"
+        mutations.append(bad)
+        bad = copy.deepcopy(original)
+        bad["screenshots"]["rescue/unknown"] = bad["screenshots"].pop("rescue/safe")
+        mutations.append(bad)
+        bad = copy.deepcopy(original)
+        bad["read_only_checks"] = [proof for proof in bad["read_only_checks"] if proof["frame"] == 30]
+        mutations.append(bad)
+        for case_name, field in (("skill_looper", "skill_body"), ("echo_machine", "echo_grip"), ("rescue", "rescue_safe_visible")):
+            bad = copy.deepcopy(original)
+            next(case for case in bad["cases"] if case["name"] == case_name)["view_proofs"][field] = False
+            mutations.append(bad)
+        for key, field, value in (("rescue/safe", "case_frame", 20), ("skill_looper/contact", "case_frame", 30),
+                                  ("echo_machine/grip", "case_frame", 12), ("pin/release", "width", 960)):
+            bad = copy.deepcopy(original)
+            bad["screenshots"][key][field] = value
+            mutations.append(bad)
+        for index, bad in enumerate(mutations):
+            put_json(path, bad)
+            with self.subTest(mutation=index), self.assertRaises(ValueError):
+                RECEIPTS.validate_native(self.evidence, COMMIT)
+
     def test_native_rejects_missing_png_and_movie_frame_or_audio_distortion(self) -> None:
         path = self.evidence / "normal/video.json"
         original = RECEIPTS.read_json(path)
@@ -207,7 +289,7 @@ class ReleaseReceiptTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             RECEIPTS.validate_native(self.evidence, COMMIT)
         put_json(path, original)
-        (self.evidence / "normal/sample-00.png").unlink()
+        (self.evidence / "normal/pin_release.png").unlink()
         with self.assertRaises(ValueError):
             RECEIPTS.validate_native(self.evidence, COMMIT)
 
@@ -219,25 +301,81 @@ class ReleaseReceiptTest(unittest.TestCase):
             put_json(path, {**original, field: value})
             with self.subTest(field=field), self.assertRaises(ValueError):
                 RECEIPTS.validate_performance(self.evidence, COMMIT, self.pressure_hash)
+        put_json(path, original)
+        path = self.evidence / "pressure-baseline/source.json"
+        source = RECEIPTS.read_json(path)
+        for field, value in (("version", "0.17.0"), ("tag", "v0.17.0"), ("game_commit", OLD_WRITER), ("game_commit", "short")):
+            put_json(path, {**source, field: value})
+            with self.subTest(source=field, value=value), self.assertRaises(ValueError):
+                RECEIPTS.validate_performance(self.evidence, COMMIT, self.pressure_hash)
 
-    def test_save_compatibility_requires_017_writer_018_reader_and_exact_resumption(self) -> None:
-        RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, BASELINE, self.compat_hash)
-        for field, value in (("success", False), ("source_version", "0.16.0"), ("reader_version", "0.17.0"),
-                             ("source_game_commit", COMMIT), ("reader_game_commit", BASELINE),
-                             ("probe_sha256", "c" * 64), ("schema", 3), ("scenarios", ["wave"])):
-            put_json(self.evidence / "save-compat/result.json", {**self.compat, field: value})
+    def test_save_compatibility_requires_both_actual_public_writers_and_current_reader(self) -> None:
+        valid = RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+        self.assertEqual(set(valid), {"0.17.0", "0.18.0"})
+        self.assertEqual(valid["0.17.0"]["source_game_commit"], OLD_WRITER)
+        self.assertEqual(valid["0.18.0"]["source_game_commit"], BASELINE)
+        for source_version, original in self.compats.items():
+            path = self.evidence / "save-compat" / source_version / "result.json"
+            for field, value in (("success", False), ("source_version", "0.16.0"), ("reader_version", "0.18.0"),
+                                 ("source_game_commit", COMMIT), ("reader_game_commit", BASELINE),
+                                 ("probe_sha256", "c" * 64), ("payload_sha256", "c" * 64),
+                                 ("schema", 3), ("scenarios", ["wave"]), ("scenarios", ["wave", "wave"])):
+                put_json(path, {**original, field: value})
+                with self.subTest(version=source_version, field=field, value=value), self.assertRaises(ValueError):
+                    RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+            put_json(path, original)
+
+    def test_save_compatibility_requires_exact_bytes_state_both_rngs_and_actual_action(self) -> None:
+        for source_version, original in self.compats.items():
+            folder = self.evidence / "save-compat" / source_version
+            for field in ("full_snapshot_equal", "graph_json_domain_equal", "canonical_json_bytes_equal",
+                          "canonical_snapshot_sha256_equal", "state_json_domain_equal", "rng_preserved", "hazard_rng_preserved", "resumed"):
+                bad = copy.deepcopy(original)
+                bad["details"][0][field] = False
+                put_json(folder / "result.json", bad)
+                with self.subTest(version=source_version, detail=field), self.assertRaises(ValueError):
+                    RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+            for field, value in (("name", "wave"), ("source_state", {}), ("resumed_action", "step"), ("snapshot_sha256", "f" * 64)):
+                bad = copy.deepcopy(original)
+                bad["details"][0][field] = value
+                put_json(folder / "result.json", bad)
+                with self.subTest(version=source_version, detail=field), self.assertRaises(ValueError):
+                    RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+            put_json(folder / "result.json", original)
+            for name in ("shop", "wave"):
+                path = folder / f"{name}-captured-snapshot.json"
+                before = path.read_bytes()
+                path.write_bytes(before + b" ")
+                with self.subTest(version=source_version, snapshot=name), self.assertRaises(ValueError):
+                    RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+                path.write_bytes(before)
+            path = folder / "compat-payload.json"
+            before = path.read_bytes()
+            path.write_bytes(before + b" ")
+            with self.subTest(version=source_version, payload=True), self.assertRaises(ValueError):
+                RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+            path.write_bytes(before)
+
+    def test_save_compatibility_rejects_missing_version_and_unrelated_writer_source(self) -> None:
+        folder = self.evidence / "save-compat/0.17.0"
+        path = folder / "writer-result.json"
+        original = RECEIPTS.read_json(path)
+        for field, value in (("game_commit", BASELINE), ("schema", 3), ("probe_sha256", "f" * 64), ("scenarios", ["shop"])):
+            put_json(path, {**original, field: value})
             with self.subTest(field=field), self.assertRaises(ValueError):
-                RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, BASELINE, self.compat_hash)
-        for field in ("full_snapshot_equal", "rng_preserved", "hazard_rng_preserved", "resumed"):
-            bad = copy.deepcopy(self.compat)
-            bad["details"][0][field] = False
-            put_json(self.evidence / "save-compat/result.json", bad)
-            with self.subTest(detail=field), self.assertRaises(ValueError):
-                RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, BASELINE, self.compat_hash)
-        put_json(self.evidence / "save-compat/result.json", self.compat)
-        put_json(self.evidence / "save-compat/writer-result.json", {**self.writer, "game_commit": COMMIT})
+                RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+        put_json(path, original)
+        for source_version in ("0.17.0", "0.18.0"):
+            path = self.evidence / "save-compat" / source_version / "source.json"
+            original = RECEIPTS.read_json(path)
+            for field, value in (("version", "0.16.0"), ("tag", "v0.16.0"), ("game_commit", "shortsha"), ("game_commit", COMMIT)):
+                put_json(path, {**original, field: value})
+                with self.subTest(version=source_version, field=field), self.assertRaises(ValueError):
+                    RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
+            put_json(path, original)
+        shutil.rmtree(self.evidence / "save-compat/0.18.0")
         with self.assertRaises(ValueError):
-            RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, BASELINE, self.compat_hash)
+            RECEIPTS.validate_save_compat(self.evidence, COMMIT, VERSION, self.compat_hash)
 
     def test_prepare_binds_same_run_gate_identity_and_generates_verifiable_receipts(self) -> None:
         RECEIPTS.prepare(self.args)

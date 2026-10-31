@@ -346,6 +346,8 @@ static func _chain(sim: Sim, f: AttackField, target_pos: Vector2, count: int, re
 
 
 static func _burst_release_event(sim: Sim, f: AttackField, count: int) -> void:
+	# AttackField v4 has stable owner identity but no saved mount slot. Keep the
+	# real release and its material feedback without guessing a duplicate mount.
 	sim.shot_sequence += 1
 	var info := ShotInfo.new()
 	info.source = f.source

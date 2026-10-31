@@ -13,6 +13,32 @@ from pathlib import Path
 
 GATES = {"test", "paper-feedback", "export-preview", "export-linux", "export-windows"}
 PACKAGES = {f"TakeStack-{platform}.zip" for platform in ("macos", "windows", "linux")}
+SOURCE_VERSIONS = ("0.17.0", "0.18.0")
+PRESSURE_CASES = ("96_legal_8echo_12support_standard", "96_legal_8echo_12support_reduced")
+ACTION_LABELS = ("release", "motion", "contact", "result")
+NATIVE_CASE_LABELS = {
+    **dict.fromkeys(("pin", "stamp", "cut", "ink", "arc", "retirement"), ACTION_LABELS),
+    "return": (*ACTION_LABELS, "returning"),
+    "repair": (*ACTION_LABELS, "support_spawn", "support_damage", "support_destroy", "support_remains", "machine_stopped"),
+    "machine": (*ACTION_LABELS, "grip"),
+    "shield": ("full_block", "block_followthrough", "partial_hp", "hurt_followthrough"),
+    "duplicate_slots": (*ACTION_LABELS, "second_slot"),
+    "gait": ("walk_right", "walk_left", "settled", "settled_end"),
+    "echo_machine": ("release", "motion", "grip", "result"),
+    **dict.fromkeys((f"skill_{role}" for role in ("solo", "looper", "mirror", "conductor", "mender", "overloader")),
+                    (*ACTION_LABELS, "settled")),
+    "rescue": ("danger", "release", "departure", "safe", "settled"),
+}
+NATIVE_INVARIANTS = ("full_snapshot_unchanged", "rng_unchanged", "hazard_rng_unchanged",
+                     "strict_snapshot_roundtrip", "native_process_and_draw")
+NATIVE_SAMPLE_FRAMES = {
+    **{f"skill_{role}": dict(zip((*ACTION_LABELS, "settled"), frames)) for role, frames in (
+        ("solo", (12, 16, 26, 52, 95)), ("looper", (72, 76, 86, 112, 143)),
+        ("mirror", (12, 16, 26, 52, 95)), ("conductor", (12, 16, 26, 52, 179)),
+        ("mender", (12, 16, 26, 52, 95)), ("overloader", (12, 16, 26, 52, 95)),
+    )},
+    "rescue": dict(zip(("danger", "release", "departure", "safe", "settled"), (0, 8, 20, 48, 80))),
+}
 
 
 def require(condition: bool, message: str) -> None:
@@ -92,23 +118,50 @@ def validate_native(evidence: Path, commit: str) -> dict:
         require(source.get("success") is True and source.get("commit") == commit, f"{variant} native source mismatch/failure")
         require(source.get("source") == "scripted fixture", "native evidence must disclose fixture scope")
         require(source.get("canvas") == canvas and source.get("language") == language, "native dimensions/language mismatch")
-        require(source.get("capture", {}).get("fps") == 60 and source["capture"].get("speed") == 1.0,
+        require(source.get("capture", {}).get("fps") == 60 and source["capture"].get("speed") == 1.0
+                and source["capture"].get("startup_config_pixels") == canvas,
                 "native capture must retain normal playback speed")
         cases = source.get("cases", [])
         case_names = {case["name"] for case in cases}
-        require(len(cases) == len(case_names) == 12, "native evidence must complete twelve unique cases")
+        require(len(cases) == len(case_names) and case_names == set(NATIVE_CASE_LABELS),
+                "native evidence must complete the exact twenty-case inventory")
         proofs = source.get("read_only_checks", [])
-        require(len(proofs) == 12 and {proof.get("case") for proof in proofs} == case_names,
-                "native evidence must prove every case read-only")
-        proof_keys = ("full_snapshot_unchanged", "rng_unchanged", "hazard_rng_unchanged",
-                      "strict_snapshot_roundtrip", "native_process_and_draw")
-        require(all(all(proof.get(key) is True for key in proof_keys) and proof.get("manual_view_delta") == 0.0
+        echo_case = next(case for case in cases if case["name"] == "echo_machine")
+        echo_action = echo_case.get("first_action_frame")
+        require(isinstance(echo_action, int) and echo_action >= 0, "Echo work needs its actual action frame")
+        proof_frames = {(proof.get("case"), proof.get("frame")) for proof in proofs}
+        required_proofs = {(name, 30) for name in case_names} | {("skill_looper", 86), ("echo_machine", echo_action + 16)}
+        require({proof.get("case") for proof in proofs} == case_names
+                and required_proofs <= proof_frames and len(proof_frames) == len(proofs),
+                "native evidence must prove every case and active Echo/Looper action read-only")
+        require(all(all(proof.get(key) is True for key in NATIVE_INVARIANTS) and proof.get("manual_view_delta") == 0.0
                     for proof in proofs), "native snapshot/RNG/process proof failed")
         screenshots = source.get("screenshots", {})
+        expected_samples = {f"{name}/{label}" for name, labels in NATIVE_CASE_LABELS.items() for label in labels}
+        require(set(screenshots) == expected_samples, "native screenshot phase inventory mismatch")
         declared = {row["file"] for row in screenshots.values()}
         actual = {path.name for path in folder.glob("*.png")}
-        require(len(actual) == 56 and actual == declared, "native screenshot inventory mismatch")
+        require(len(actual) == len(expected_samples) and actual == declared
+                and source.get("scene_count") == len(cases) and source.get("png_count") == len(actual),
+                "native screenshot inventory mismatch")
         require(all(Path(name).name == name for name in declared), "unsafe screenshot filename")
+        require(all([row.get("width"), row.get("height")] == canvas
+                    and isinstance(row.get("case_frame"), int) and row["case_frame"] >= 0
+                    and isinstance(row.get("native_frame"), int) and row["native_frame"] > 0
+                    for row in screenshots.values()), "native screenshot dimensions/frame provenance mismatch")
+        for case in cases:
+            name = case["name"]
+            require(case.get("screenshots") == {label: screenshots[f"{name}/{label}"] for label in NATIVE_CASE_LABELS[name]},
+                    f"{name} screenshot inventory differs from the source receipt")
+            expected_frames = (dict(zip(NATIVE_CASE_LABELS[name], (echo_action + offset for offset in (0, 4, 16, 78))))
+                               if name == "echo_machine" else NATIVE_SAMPLE_FRAMES.get(name, {}))
+            require(all(screenshots[f"{name}/{label}"]["case_frame"] == frame for label, frame in expected_frames.items()),
+                    f"{name} native phase timing mismatch")
+            view_keys = (("skill_body", "skill_settled") if name.startswith("skill_") else
+                         ("echo_uid", "echo_grip") if name == "echo_machine" else
+                         ("rescue_departure", "rescue_safe_visible", "rescue_receipt_expired") if name == "rescue" else ())
+            require(all(case.get("view_proofs", {}).get(key) is True for key in view_keys),
+                    f"{name} native body/action proof missing")
         movie = folder / "paper_action.mp4"
         require(movie.is_file() and movie.stat().st_size > 0, "native movie missing")
         streams = read_json(folder / "video.json")["streams"]
@@ -122,34 +175,74 @@ def validate_native(evidence: Path, commit: str) -> dict:
     return variants
 
 
+def validate_public_source(folder: Path, version: str, commit: str) -> dict:
+    source = read_json(folder / "source.json")
+    require(source.get("version") == version and source.get("tag") == f"v{version}", "public archive version/tag mismatch")
+    require(re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", str(source.get("game_commit", ""))) is not None
+            and source["game_commit"] != commit, "public archive needs its distinct full source SHA")
+    return source
+
+
 def validate_performance(evidence: Path, commit: str, probe_hash: str) -> dict:
     current = read_json(evidence / "pressure-current/presentation_stress_summary.json")
     baseline = read_json(evidence / "pressure-baseline/presentation_stress_summary.json")
     require(current.get("game_commit") == commit, "pressure candidate source mismatch")
-    baseline_commit = (evidence / "pressure-baseline/source_commit.txt").read_text().strip()
-    require(baseline.get("game_commit") == baseline_commit and baseline_commit != commit, "pressure baseline source mismatch")
+    source = validate_public_source(evidence / "pressure-baseline", "0.18.0", commit)
+    require(baseline.get("game_commit") == source["game_commit"], "pressure baseline source mismatch")
     require(current.get("probe_sha256") == baseline.get("probe_sha256") == probe_hash, "pressure harness differs between versions")
-    require(bool(current.get("cases")) and bool(baseline.get("cases")), "pressure cases missing")
-    require([c["name"] for c in current["cases"]] == [c["name"] for c in baseline["cases"]], "pressure case mismatch")
+    require(all([c["name"] for c in summary.get("cases", [])] == list(PRESSURE_CASES) for summary in (current, baseline)),
+            "pressure must compare both exact legal-cap cases")
     return {"scope": "same-run Linux software rendering fixture; not universal FPS or human playtesting",
-            "candidate": current, "baseline": baseline}
+            "candidate": current, "baseline": baseline, "baseline_source": source}
 
 
-def validate_save_compat(evidence: Path, commit: str, version: str, baseline_commit: str, probe_hash: str) -> dict:
-    result = read_json(evidence / "save-compat/result.json")
-    writer = read_json(evidence / "save-compat/writer-result.json")
-    require(result.get("success") is True and writer.get("success") is True, "cross-version save compatibility failed")
-    require(result.get("source_version") == writer.get("source_version") == "0.17.0" and result.get("reader_version") == version,
-            "save compatibility versions mismatch")
-    require(result.get("source_game_commit") == writer.get("game_commit") == baseline_commit
-            and result.get("reader_game_commit") == commit, "save compatibility source SHA mismatch")
-    require(result.get("probe_sha256") == writer.get("probe_sha256") == probe_hash, "save compatibility harness mismatch")
-    require(result.get("schema") == writer.get("schema") == 4 and set(result.get("scenarios", [])) == {"wave", "shop"},
-            "save compatibility must cover current wave/shop schema")
-    require(len(result.get("details", [])) == 2 and all(all(row.get(key) is True for key in
-            ("full_snapshot_equal", "rng_preserved", "hazard_rng_preserved", "resumed")) for row in result["details"]),
-            "save snapshots did not resume with exact state and both RNGs")
-    return result
+def validate_save_compat(evidence: Path, commit: str, version: str, probe_hash: str) -> dict:
+    results = {}
+    for source_version in SOURCE_VERSIONS:
+        folder = evidence / "save-compat" / source_version
+        source = validate_public_source(folder, source_version, commit)
+        result = read_json(folder / "result.json")
+        writer = read_json(folder / "writer-result.json")
+        payload = read_json(folder / "compat-payload.json")
+        require(result.get("success") is True and writer.get("success") is True, "cross-version save compatibility failed")
+        require(result.get("source_version") == writer.get("source_version") == payload.get("source_version") == source_version
+                and result.get("reader_version") == version, "save compatibility versions mismatch")
+        require(result.get("source_game_commit") == writer.get("game_commit") == payload.get("game_commit") == source["game_commit"]
+                and result.get("reader_game_commit") == commit, "save compatibility source SHA mismatch")
+        require(result.get("probe_sha256") == writer.get("probe_sha256") == payload.get("probe_sha256") == probe_hash,
+                "save compatibility harness mismatch")
+        require(result.get("payload_sha256") == writer.get("payload_sha256") == digest(folder / "compat-payload.json"),
+                "save compatibility payload bytes changed between writer and reader")
+        require(result.get("schema") == writer.get("schema") == payload.get("schema") == 4,
+                "save compatibility must retain Snapshot v4")
+        for record in (result, writer):
+            require(len(record.get("scenarios", [])) == 2 and set(record["scenarios"]) == {"wave", "shop"},
+                    "save compatibility must cover exact wave/shop scenarios")
+        details = result.get("details", [])
+        snapshots = payload.get("scenarios", [])
+        require(len(details) == len(snapshots) == 2
+                and {row.get("name") for row in details} == {row.get("name") for row in snapshots} == {"wave", "shop"},
+                "save compatibility snapshot/detail scenario mismatch")
+        exact_keys = ("full_snapshot_equal", "graph_json_domain_equal", "canonical_json_bytes_equal",
+                      "canonical_snapshot_sha256_equal", "state_json_domain_equal", "rng_preserved", "hazard_rng_preserved", "resumed")
+        require(all(all(row.get(key) is True for key in exact_keys) for row in details),
+                "save snapshots did not resume with exact bytes, full state and both RNGs")
+        for snapshot in snapshots:
+            name = snapshot["name"]
+            row = next(detail for detail in details if detail["name"] == name)
+            encoded = snapshot.get("snapshot_json", "").encode("utf-8")
+            snapshot_hash = hashlib.sha256(encoded).hexdigest()
+            require(encoded and snapshot.get("snapshot_sha256") == row.get("snapshot_sha256") == snapshot_hash
+                    and (folder / f"{name}-old-snapshot.json").read_bytes() == encoded
+                    and (folder / f"{name}-captured-snapshot.json").read_bytes() == encoded,
+                    "save compatibility original/captured snapshot bytes differ")
+            require(row.get("source_state") == snapshot.get("state")
+                    and row.get("resumed_action") == ("undo" if name == "shop" else "step"),
+                    "save compatibility resumed action/state mismatch")
+        results[source_version] = {"source": source, **result}
+    require(results["0.17.0"]["source_game_commit"] != results["0.18.0"]["source_game_commit"],
+            "public save writers must identify distinct archives")
+    return results
 
 
 def write_checksums(output: Path) -> None:
@@ -201,8 +294,9 @@ def prepare(args: argparse.Namespace) -> None:
     require(args.run_id.isdigit() and args.run_attempt.isdigit() and re.fullmatch(r"[\w.-]+/[\w.-]+", args.repository), "invalid CI run identity")
     variants = validate_native(args.evidence_dir, args.commit)
     perf = validate_performance(args.evidence_dir, args.commit, digest(args.repo / "tools/presentation_stress_probe.gd"))
-    compat = validate_save_compat(args.evidence_dir, args.commit, version, perf["baseline"]["game_commit"],
-                                  digest(args.repo / "tools/release_save_compat.gd"))
+    compat = validate_save_compat(args.evidence_dir, args.commit, version, digest(args.repo / "tools/release_save_compat.gd"))
+    require(compat["0.18.0"]["source_game_commit"] == perf["baseline"]["game_commit"],
+            "0.18 performance and save receipts must use the same actual public archive")
     run = {"repository": args.repository, "run_id": int(args.run_id), "run_attempt": int(args.run_attempt),
            "url": f"https://github.com/{args.repository}/actions/runs/{args.run_id}/attempts/{args.run_attempt}",
            "source_commit": args.commit, "ref": args.ref, "version": version}

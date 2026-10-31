@@ -16,9 +16,9 @@ func _draw() -> void:
 	ArenaPainter.arena(self)
 
 
-func set_presentation(time: float, reduced: bool, paused: bool) -> void:
+func set_presentation(time: float, reduced: bool, paused: bool, feedback: InteractionInk = null) -> void:
 	_ensure_depot()
-	_depot.set_presentation(time, reduced, paused)
+	_depot.set_presentation(time, reduced, paused, feedback)
 
 
 func set_world_profile(profile: Dictionary) -> void:

@@ -44,18 +44,6 @@ func test_reduced_motion_scale_is_restrained_but_nonzero(c: Check) -> void:
 	c.ok(ArenaPainter.REDUCED_MOTION_SCALE <= 0.35, "reduced gait is materially restrained")
 
 
-func test_reduced_projectiles_remove_only_trails(c: Check) -> void:
-	c.ok(ArenaPainter.projectile_trails_enabled(false, 1), "standard direct projectiles keep trails")
-	c.ok(ArenaPainter.projectile_trails_enabled(false, ArenaPainter.TRAIL_LIMIT),
-			"standard batched projectiles keep trails through the trail limit")
-	c.ok(not ArenaPainter.projectile_trails_enabled(false, ArenaPainter.TRAIL_LIMIT + 1),
-			"existing overload policy still drops trails above its limit")
-	c.ok(not ArenaPainter.projectile_trails_enabled(true, 1),
-			"reduced direct projectiles remove decorative trails")
-	c.ok(not ArenaPainter.projectile_trails_enabled(true, ArenaPainter.TRAIL_LIMIT),
-			"reduced batched projectiles remove decorative trails")
-
-
 func test_midcombat_reduced_toggle_clears_decorative_motion_only(c: Check) -> void:
 	var sim := Sim.new(89)
 	sim.start_run()

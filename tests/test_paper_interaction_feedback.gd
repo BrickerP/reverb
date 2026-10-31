@@ -321,3 +321,239 @@ func test_interaction_arm_follows_the_live_body_while_the_pivot_stays_on_the_mac
 		"target_pos": machine, "target_kind": &"press", "ok": true})
 	actor.pos = captured + Vector2(-20, 30)
 	c.eq(ink.profiles(VIEW, false, sim).back()["pos"], actor.pos, "a copy arm follows its UID rather than the original body")
+
+
+func test_real_echo_machine_work_uses_one_stable_uid_hand_without_replaying_output(c: Check) -> void:
+	var sim := Sim.new(508)
+	sim.start_run()
+	var ink := InteractionInk.new()
+	sim.world_event.connect(ink.consume_world)
+	sim.echo_work_performed.connect(ink.consume_echo_work)
+	var site: Dictionary = {}
+	var machine: Dictionary = {}
+	for row: Dictionary in sim.interactables:
+		if row["id"] == &"machine_1":
+			site = row
+	for row: Dictionary in sim.expedition["world"]["machines"]:
+		if row["id"] == &"machine_1":
+			machine = row
+	c.ok(not site.is_empty() and not machine.is_empty(), "existing conveyor has an actual UI interaction entry")
+	if site.is_empty() or machine.is_empty():
+		return
+	site["cooldown"] = 0.0
+	machine["status"] = &"operating"
+	machine["stopped"] = false
+	var take := EchoTake.new()
+	take.samples = PackedVector2Array([site["pos"], site["pos"]])
+	take.work_actions = [{"time": 0.0, "kind": &"conveyor", "target_id": &"machine_1",
+		"pos": site["pos"], "weapon_id": &"", "aim": Vector2.ZERO}]
+	sim.bank.add(take)
+	var actor := EchoActor.new(take, 0)
+	sim.echoes.append(actor)
+	var direction: Vector2 = site["direction"]
+	var money := sim.player.materials
+	var recorded := sim.recorder.work_actions.duplicate(true)
+	actor.t = 0.016
+	EchoWork.step(sim, actor, 0.0, 0.016)
+	c.eq(site["direction"], -direction, "real replay operates conveyor exactly once")
+	c.eq(take.condition, 96.0, "real replay pays only the normal work condition")
+	c.eq(sim.player.materials, money, "presentation spends no extra materials")
+	c.eq(sim.recorder.work_actions, recorded, "receipt cannot recursively record an action")
+	c.eq(ink.counts()["world"], 1, "machine_operated plus work event cannot duplicate the hand")
+	var shown := ink.profiles(VIEW, false, sim)[0]
+	c.eq(shown["actor_token"], take.uid, "working hand belongs to stable Echo UID")
+	c.eq(shown["target_id"], &"machine_1", "receipt preserves actual machine identity")
+	var other_take := EchoTake.new()
+	other_take.samples = PackedVector2Array([actor.pos + Vector2(40, 0)])
+	sim.bank.add(other_take)
+	var other := EchoActor.new(other_take, 1)
+	sim.echoes.push_front(other)
+	actor.index = 1
+	actor.pos += Vector2(10, 5)
+	shown = ink.profiles(VIEW, false, sim)[0]
+	c.eq(shown["pos"], actor.pos, "array reorder never moves work to another copy")
+	var pose := InteractionInk.interaction_pose(shown, 0.5)
+	c.ok((pose["hand"] as Vector2).distance_to(pose["grip"]) <= 1.0, "replayed worker grasps the real linkage")
+	sim.echoes.erase(actor)
+	c.eq(ink.profiles(VIEW, false, sim).size(), 0, "removed worker leaves no detached live arm")
+	c.eq(ink.profiles(VIEW).size(), 1, "detached audit receipt remains a bounded value")
+
+
+func test_unreachable_echo_failures_keep_reason_without_inventing_control_contact(c: Check) -> void:
+	var ink := InteractionInk.new()
+	for reason: StringName in [&"distant", &"muted", &"sealed", &"condition", &"unavailable"]:
+		ink.consume_echo_work({"uid": 91, "kind": &"press", "target_id": &"machine_0",
+			"pos": Vector2(500, 360), "target_pos": Vector2(1500, 360), "success": false, "reason": reason})
+		var p := ink.profiles(VIEW)[0]
+		c.eq(p["reason"], reason, "actual blocked cause survives in the receipt")
+		c.ok(not bool(p["ok"]), "unavailable work cannot become successful")
+		c.ok(not bool(InteractionInk.interaction_pose(p, 0.5)["visible"]), "blocked work has no invented remote lever grasp")
+		c.ok(not bool(ink.actor_pose(91)["active"]), "blocked replay cannot look like a completed working body stroke")
+	ink.consume_echo_work({"uid": 92, "kind": &"signature", "pos": Vector2(500, 360), "success": true})
+	c.eq(ink.counts()["world"], 1, "signature rich shot event owns its attack without an extra control arm")
+
+
+func test_skill_receipts_select_live_echo_uid_and_pause_without_simulation_changes(c: Check) -> void:
+	var sim := Sim.new(509)
+	sim.start_run()
+	var ink := InteractionInk.new()
+	var snapshot := RunSnapshot.capture(sim)
+	var event := {"kind": &"character_skill", "ability": &"mirror", "actor_token": -1,
+		"pos": Vector2(500, 360), "target_pos": Vector2(600, 360), "ok": true, "selected_uid": 82,
+		"anchors": [{"uid": 82, "from_pos": Vector2(600, 360), "to_pos": Vector2(500, 360)},
+			{"uid": 83, "from_pos": Vector2(700, 360), "to_pos": Vector2(700, 360)}]}
+	ink.consume_world(event)
+	event["anchors"][0]["uid"] = 999
+	event["selected_uid"] = 83
+	c.ok(bool(ink.actor_pose(-1)["active"]), "original receives its committed body action")
+	c.ok(bool(ink.actor_pose(82)["active"]), "selected UID receives the paired fold")
+	c.ok(not bool(ink.actor_pose(83)["active"]), "unselected copy does not borrow the skill")
+	ink.step(0.3)
+	var pose := ink.actor_pose(82)
+	ink.step(0.4, true)
+	c.eq(ink.actor_pose(82), pose, "pause freezes paper body sequence")
+	c.eq(RunSnapshot.capture(sim), snapshot, "drawing actions cannot move bodies or add invulnerability")
+	ink.step(InteractionInk.SKILL_TIME)
+	c.ok(not bool(ink.actor_pose(-1)["active"]), "skill choreography always settles")
+	ink.consume_world({"kind": &"character_skill", "ability": &"mirror", "pos": Vector2(500, 360), "ok": false})
+	c.eq(ink.counts()["active"], 0, "failed missing-Echo activation cannot create a success body pose")
+
+
+func test_real_rescue_captures_source_and_destination_without_duplicate_rewards(c: Check) -> void:
+	var sim := Sim.new(510)
+	sim.start_run()
+	var ink := InteractionInk.new()
+	var events: Array[Dictionary] = []
+	sim.world_event.connect(ink.consume_world)
+	sim.world_event.connect(func(info: Dictionary) -> void:
+		if info.get("kind") == &"worker_saved":
+			events.append(info.duplicate(true)))
+	var worker: Dictionary = sim.expedition["world"]["workers"][0]
+	var source: Vector2 = worker["pos"]
+	sim.player.pos = source
+	var money := sim.player.materials
+	c.ok(sim.interact(), "real nearest-worker input commits rescue")
+	c.eq(events.size(), 1, "one rescue emits one departure")
+	if events.is_empty():
+		return
+	var target: Vector2 = worker["pos"]
+	c.eq(events[0]["from_pos"], source, "rescue exposes old danger position")
+	c.eq(events[0]["target_pos"], target, "rescue exposes committed safe position")
+	c.eq(worker["state"], &"safe", "safe simulation commit remains immediate")
+	c.eq(sim.player.materials, money, "presentation adds no reward or cost")
+	var reward := int(sim.expedition["solidarity"])
+	sim.interact()
+	c.eq(sim.expedition["solidarity"], reward, "second input cannot reward rescue twice")
+	c.eq(events.size(), 1, "used rescue cannot add a second departure")
+	var receipt: Dictionary = {}
+	for p: Dictionary in ink.profiles(VIEW):
+		if p["family"] == &"rescue":
+			receipt = p
+	c.ok(not receipt.is_empty(), "rescue reaches physical feedback")
+	if receipt.is_empty():
+		return
+	events[0]["from_pos"] = Vector2.ZERO
+	c.eq(receipt["from_pos"], source, "rescue receipt keeps immutable source")
+	var start := ink.worker_pose(worker["id"])
+	c.ok(not bool(start["safe_visible"]), "departure owns the only body presentation before arrival")
+	c.ok(bool(ink.worker_pose(worker["id"], true)["safe_visible"]), "Reduced shows real safe body immediately")
+	c.eq(ink.worker_pose(worker["id"], true)["departure_alpha"], 0.0, "Reduced omits decorative travelling duplicate")
+	ink.step(0.25)
+	var departure := ink.worker_pose(worker["id"])
+	c.ok((departure["departure_pos"] as Vector2).distance_to(source) <= 42.0, "departure is a short source step, never a body crossing walls")
+	ink.step(0.3, true)
+	c.eq(ink.worker_pose(worker["id"]), departure, "pause freezes rescue before arrival")
+	ink.step(0.4)
+	c.ok(bool(ink.worker_pose(worker["id"])["safe_visible"]), "safe actual body settles after departing outline")
+	c.eq(ink.worker_pose(worker["id"])["departure_alpha"], 0.0, "source outline expires before the safe body appears")
+	ink.step(InteractionInk.RESCUE_TIME)
+	c.eq(ink.worker_pose(worker["id"])["safe_scale"], Vector2.ONE, "finished rescue leaves stable persistent survivor")
+	for row: Dictionary in sim.expedition["world"]["history"]:
+		c.ok(not row.has("from_pos") and not row.has("target_pos"), "presentation endpoints never enter strict persistent history schema")
+
+
+func test_rejected_rescue_and_reset_leave_no_hidden_safe_body(c: Check) -> void:
+	var ink := InteractionInk.new()
+	var event := {"kind": &"worker_saved", "subject": &"worker_1", "pos": Vector2(200, 200),
+		"from_pos": Vector2(600, 400), "target_pos": Vector2(200, 200), "ok": false}
+	ink.consume_world(event)
+	c.eq(ink.counts()["active"], 0, "rejected rescue cannot break shackles or hide safe body")
+	event["ok"] = true
+	event["from_pos"] = Vector2(NAN, 0)
+	ink.consume_world(event)
+	c.eq(ink.counts()["active"], 0, "invalid rescue source cannot become a false origin")
+	event["from_pos"] = Vector2(600, 400)
+	ink.consume_world(event)
+	c.ok(not bool(ink.worker_pose(&"worker_1")["safe_visible"]), "valid rescue starts finite departure")
+	ink.reset()
+	c.ok(bool(ink.worker_pose(&"worker_1")["safe_visible"]), "session reset cannot leave another registry body hidden")
+	c.eq(ink.counts()["active"], 0, "detached session retains no body actions")
+
+
+func test_real_skill_shift_does_not_count_as_a_stride_and_unbind_disconnects_receipts(c: Check) -> void:
+	var sim := Sim.new(511)
+	sim.start_run()
+	sim.player.pos = Vector2(600, 400)
+	var view := ArenaView.new()
+	view.bind(sim)
+	view._actor_motion[-1] = {"phase": 1.25, "moving": true, "amount": 0.7}
+	sim.role_effects["rewind_history"] = [Vector2(550, 400)]
+	c.ok(sim.activate_character_skill(), "real short Looper shift commits")
+	c.eq(view._actor_positions[-1], sim.player.pos, "short discontinuity updates the motion sample")
+	c.eq(view._actor_motion[-1]["phase"], 1.25, "skill does not advance or reset the distance gait phase")
+	c.ok(not bool(view._actor_motion[-1]["moving"]), "shift is not interpreted as one frame of walking")
+	c.ok(bool(view._interaction_ink.actor_pose(-1)["active"]), "world event reaches actual bound view body choreography")
+	view.set_paused(true)
+	var before := view._interaction_ink.profiles(VIEW)
+	view._process(0.4)
+	c.eq(view._interaction_ink.profiles(VIEW), before, "bound paused view freezes all action receipts")
+	view.unbind()
+	c.eq(view._interaction_ink.counts()["active"], 0, "unbind clears body and rescue sessions")
+	sim.world_event.emit({"kind": &"character_skill", "ability": &"solo", "actor_token": -1,
+		"pos": sim.player.pos, "target_pos": sim.player.pos, "ok": true})
+	sim.echo_work_performed.emit({"uid": 77, "kind": &"press", "target_id": &"machine_0",
+		"pos": sim.player.pos, "target_pos": sim.player.pos, "success": true, "reason": &"performed"})
+	c.eq(view._interaction_ink.counts()["active"], 0, "old simulator cannot send actions into a detached view")
+	view.free()
+
+
+func test_rejected_anchor_skill_keeps_new_selection_instead_of_previous_anchor(c: Check) -> void:
+	for role: StringName in [&"mirror", &"conductor"]:
+		for reason: StringName in [&"energy", &"cooldown", &"phase"]:
+			var sim := Sim.new(512)
+			Content.character(role).apply(sim)
+			sim.start_run()
+			var ink := InteractionInk.new()
+			var events: Array[Dictionary] = []
+			sim.world_event.connect(ink.consume_world)
+			sim.world_event.connect(func(info: Dictionary) -> void:
+				if info.get("kind") == &"character_skill":
+					events.append(info.duplicate(true)))
+			for index in 2:
+				var take := EchoTake.new()
+				take.samples = PackedVector2Array([Vector2(600 + index * 120, 400), Vector2(610 + index * 120, 400)])
+				take.weapons.append(Content.weapon(&"pistol"))
+				take.levels.append(0)
+				sim.bank.add(take)
+				sim.echoes.append(EchoActor.new(take, index))
+			var first_uid := sim.echoes[0].take.uid
+			var next_uid := sim.echoes[1].take.uid
+			sim.selected_echo_uid = first_uid
+			c.ok(sim.activate_character_skill(), "%s first activation anchors actual A" % role)
+			c.eq(events.back()["selected_uid"], first_uid, "successful event names committed A")
+			c.eq(sim.role_effects["anchor_uid"], first_uid, "previous anchor remains A during failure fixture")
+			ink.reset()
+			sim.selected_echo_uid = next_uid
+			sim.character_energy = 0.0 if reason == &"energy" else CharacterSkills.ENERGY_COST
+			sim.character_cooldown = 1.0 if reason == &"cooldown" else 0.0
+			if reason == &"phase":
+				sim.phase = Sim.Phase.SHOP
+			var before := RunSnapshot.capture(sim)
+			c.ok(not sim.activate_character_skill(), "%s rejects actual %s boundary" % [role, reason])
+			c.eq(events.size(), 2, "one failed input produces one result event")
+			c.eq(events.back()["selected_uid"], next_uid, "failed input names newly selected B, never stale anchor A")
+			c.eq(events.back()["reason"], reason, "failure retains actual rejection reason")
+			c.ok(not bool(events.back()["ok"]), "new selection cannot turn rejected input into success")
+			c.eq(RunSnapshot.capture(sim), before, "rejection spends and moves nothing")
+			c.eq(ink.counts()["active"], 0, "rejected result cannot add a success appearance")
+			c.ok(not bool(ink.actor_pose(next_uid)["active"]), "selected B cannot borrow A's previous pose")
