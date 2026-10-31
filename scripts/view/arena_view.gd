@@ -46,6 +46,8 @@ var _weapon_changes: Array[Dictionary] = []
 var _work_marks: Array[Dictionary] = []
 var _world_profile: Dictionary = {}
 var _last_event: Dictionary = {}
+var _retirement_note: Dictionary = {}
+var _retirement_note_time := 0.0
 var _noise_counter := 0
 var _director := BattleDirector.new()
 
@@ -202,6 +204,11 @@ func play_record_beat(s: Sim) -> void:
 		return
 	_beat_take = s.bank.takes[s.bank.takes.size() - 1]
 	_beat_time = 0.0
+	var retired: Array = s.expedition.get("bureau", {}).get("retired", [])
+	if not retired.is_empty() and int(retired.back().get("wave", 0)) == s.wave:
+		_retirement_note = retired.back().duplicate(true)
+		_retirement_note_time = 0.0
+	_refresh_world_presentation()
 	queue_redraw()
 
 
@@ -269,6 +276,8 @@ func _process(delta: float) -> void:
 	_expire_feedback(_hurts, delta)
 	_expire_feedback(_weapon_changes, delta)
 	_expire_feedback(_work_marks, delta)
+	if not _retirement_note.is_empty():
+		_retirement_note_time = minf(1.5, _retirement_note_time + delta)
 	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
 	for actor in _reveal.keys():
 		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
@@ -357,6 +366,8 @@ func _sync_backdrop() -> void:
 
 func _refresh_world_presentation() -> void:
 	_world_profile = Expedition.world_profile(sim) if sim != null else {}
+	if sim != null:
+		_world_profile["bureau"] = BureauEvents.profile(sim)
 	if _backdrop != null:
 		_backdrop.set_world_profile(_world_profile)
 
@@ -378,6 +389,7 @@ func _on_echo_work(info: Dictionary) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
+	BureauInk.draw(self, BureauInk.snapshot(sim, _display_rect), reduced_effects)
 	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
 		ArenaPainter.echo_paths(self, sim, _paths, _reveal, reduced_effects)
@@ -401,6 +413,11 @@ func _draw() -> void:
 	ArenaPainter.sparks(self, _sparks)
 	# The original remains legible through decorative debris and routine hit ink.
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
+	BureauInk.draw_carried(self, sim)
+	BureauInk.draw_direction(self, BureauInk.direction_profile(sim, _display_rect))
+	if sim.phase != Sim.Phase.WAVE and not _retirement_note.is_empty() and _retirement_note_time < 1.5:
+		BureauInk.draw_retirement(self, _retirement_note, _retirement_note_time / 1.5,
+			WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
 	if _victory:
 		ArenaPainter.victory(self, _victory_origin, _victory_color,
 				_victory_time / VICTORY_BEAT, reduced_effects)
@@ -718,6 +735,8 @@ func _clear_feedback() -> void:
 	_hurts.clear()
 	_weapon_changes.clear()
 	_work_marks.clear()
+	_retirement_note.clear()
+	_retirement_note_time = 0.0
 	_last_event.clear()
 
 

@@ -3,7 +3,7 @@ extends RefCounted
 
 # Saves only this closed family of data objects. A save never supplies a script
 # path, invokes a setter outside these classes, or carries signal connections.
-const VERSION := 3
+const VERSION := 4
 const MAX_OBJECTS := 16000
 const MAX_VALUES := 1000000
 const MAX_DEPTH := 48
@@ -478,6 +478,13 @@ func _validate_run(sim: Sim) -> bool:
 			or sim.shop.offers.size() > Shop.OFFER_COUNT \
 			or sim.shop.get("_undo_stack").size() > Shop.MAX_UNDO:
 		return false
+	var pending_act := BureauConfession.pending_act(sim)
+	if pending_act > 0:
+		var reversible := false
+		for state: ShopState in sim.shop.get("_undo_stack"):
+			reversible = reversible or sim.shop._before_signature(state, pending_act)
+		if not reversible:
+			return false
 	if sim.selected_echo_uid > 0 and not uids.has(sim.selected_echo_uid):
 		return false
 	if sim.active_contract != null:
@@ -662,6 +669,7 @@ func _undo_valid(state: ShopState) -> bool:
 			or not _investments_valid(state.weapon_investments, state.weapons.size()) \
 			or not _role_valid(state.role_effects, state.character_energy, state.character_cooldown) \
 			or not Expedition.validate_plain(state.expedition, state.interactables) \
+			or not _undo_bureau_valid(state) \
 			or state.expedition["world"]["resolution_pending"] \
 			or not SupportSystem.validate_state(state.support_units, state.next_support_uid):
 		return false
@@ -744,7 +752,22 @@ func _undo_valid(state: ShopState) -> bool:
 	return true
 
 
+func _undo_bureau_valid(state: ShopState) -> bool:
+	for row: Dictionary in state.expedition["bureau"]["confessions"]:
+		if row["state"] == &"active" or int(row["uid"]) >= state.next_echo_uid:
+			return false
+		if row["committed"]:
+			if int(row["wave"]) > state.wave:
+				return false
+		elif int(row["wave"]) != state.wave + 1:
+			return false
+	return true
+
+
 func _undo_world_links_valid(state: ShopState, echo_ids: Dictionary) -> bool:
+	for row: Dictionary in state.expedition["bureau"]["retired"]:
+		if echo_ids.has(int(row["uid"])) or int(row["uid"]) >= state.next_echo_uid:
+			return false
 	var world: Dictionary = state.expedition["world"]
 	var staff_uid: int = world["staff_uid"]
 	if staff_uid > 0 and not echo_ids.has(staff_uid):

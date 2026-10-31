@@ -1,6 +1,6 @@
 # Battle direction
 
-The 0.15 battlefield connects paper-puppet acting to real expedition rules.
+The 0.17 battlefield connects paper-puppet acting to real expedition rules.
 Warnings explain where damage will occur, support bodies communicate ownership
 and mortality, and role/Echo effects preserve their causal source. Decoration
 must never move a hit, hide a mission, or imply a reward the model did not grant.
@@ -110,17 +110,13 @@ skill.
 
 ## End and archive beats
 
-Boss defeat and final outcome are separate beats. Released, collective and
-indebted receipts use the applied model outcome, not inferred route flavor:
+Boss defeat and final outcome are separate beats. The last encounter enters a resumable discharge decision before recording a win. Released costs0 with clearance or12 cash otherwise and repairs retained copies; Collective releases actual living workers/crew and restores health; Takeover retains the latest copy as staff. Debt is independent of the chosen ending. Cancel returns to Pause; Resume and Continue reopen unresolved terms.
 
-- released repairs current Echoes and clears credit debt;
-- collective heals and restores or schedules one companion;
-- indebted adds 24 cash while leaving debt visible.
+EndUi allows any retained valid archive, including utility-only and lower-output routes, with explicit replacement confirmation. Actual-entry previews share the runtime normalization (opening grade0/budget/condition60), including character synergy and support values. Daily, Solo and debt blockers remain visible. Family-wall and shift-history drawer distinguish actual retained, archived, staff and retired identities.
 
-The end screen has an explicit archive button and a live best-Echo path preview.
-Daily, Solo and unpaid-debt states visibly disable it. A protected stronger
-record returns distinct feedback from a storage failure. The title archive view
-previews one record per eligible character and exposes the inheritance toggle.
+Bureau delivery in2/6/10 has actual pickup, lever, radius86 stamp and inbox. Warning1.1s/impact/recovery and the4s safety interval share the hit model; repeated transient feedback cannot overwrite world memory. E/X and old-route Echo lever replay emit one correct cue and show the named safety lever. An8-material reward is once-only. Inspection terminals expose an actual warned hazard, and the following Shop receipt states registered or unverified.
+
+Three merge ceremonies share the authored stapler poses but have actual skill-transfer, patch and clamp geometry; Undo reverses the visual using original data. Animation is passive/skippable and cannot commit twice. Safe-phase retirement receipts record actual successful work; cleanup uses actual rescued people.
 
 ## Bounded presentation
 
@@ -146,11 +142,4 @@ not create unlimited voices or change combat timing. Five synchronized
 - `tools/expedition_gameplay_probe.gd` is the integrated native gameplay probe
   replacing the obsolete 0.14 core probe.
 
-The gameplay probe completed EN 1280×720 (46 PNGs, 440 checks) and ZH Reduced
-960×540 (47 PNGs, 449 checks), both with empty failure lists. Each profile
-strictly restores the authoritative Snapshot around 43 Sim screenshots. These
-scripted fixtures are evidence of the production input/UI/model path, not a
-human playthrough. Export status is recorded separately in
-[closeout-acceptance.md](closeout-acceptance.md). Automated fixtures do not prove
-human readability speed, balance, addictiveness, physical-controller behavior,
-Windows GUI behavior or target-hardware frame rate.
+The current bureau gameplay probe covers EN1280 and ZHReduced960 with real Main input, full-snapshot/RNG invariance, strict JSON restoration and native pixels. Dedicated archive and world probes cover all four menu canvas/language combinations and actual warning, impact, safe, inspection and cleanup states. These clinical fixtures are not human playthroughs. Runtime exports, checksum receipts and public downloads are audited separately; physical-controller behavior, Windows GUI, long-term balance and universal frame rate remain separate validation.

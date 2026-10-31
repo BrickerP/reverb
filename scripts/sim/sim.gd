@@ -479,6 +479,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	Expedition.sync_roster(self)
 	_compact()
 	if player.hp <= 0.0:
+		BureauEvents.finish_wave(self, false)
 		phase = Phase.LOST
 		run_lost.emit()
 	elif is_boss_wave():

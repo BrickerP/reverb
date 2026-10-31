@@ -9,7 +9,7 @@ const FRIEND := Color("729585")
 const DANGER := Color("be5749")
 const MAX_TARGETS := 24
 const MAX_BOSS_WARNINGS := 4
-const TARGET_KINDS: Array[StringName] = [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate"]
+const TARGET_KINDS: Array[StringName] = [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate", &"bureau_pickup", &"bureau_switch", &"bureau_inbox", &"bureau_inspection"]
 
 static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
 
@@ -214,19 +214,20 @@ static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
 				var anchor := pos + direction * float(index - 1) * 40.0
 				var normal := Vector2(-direction.y, direction.x) * 7.0
 				ci.draw_polyline(PackedVector2Array([anchor - direction * 10 + normal, anchor, anchor - direction * 10 - normal]), INK, 2.0, true)
-	if kind in [&"part", &"terminal", &"negotiate"]:
-		ArenaPainter._draw_art(ci, &"mission_letter", pos - Vector2(0, 12), Vector2(34, 32), 0.0, Color.WHITE)
-	elif kind == &"repair":
-		ArenaPainter._draw_art_foot(ci, &"support_repair_station", pos + Vector2(0, 12), Vector2(42, 46), 0, Color.WHITE)
-	elif kind == &"rescue":
-		draw_worker(ci, pos, false)
-		var bar := Rect2(pos + Vector2(-20, -47), Vector2(40, 4))
-		ci.draw_rect(bar, INK)
-		ci.draw_rect(Rect2(bar.position, Vector2(40.0 * float(p["protected_hp"]), 4)), DANGER)
-	else:
-		ci.draw_circle(pos, 16, PAPER)
-		ci.draw_arc(pos, 16, 0, TAU, 16, INK, 2, true)
-		_glyph(ci, kind, pos, color)
+	if kind not in [&"bureau_pickup", &"bureau_switch", &"bureau_inbox", &"bureau_inspection"]:
+		if kind in [&"part", &"terminal", &"negotiate"]:
+			ArenaPainter._draw_art(ci, &"mission_letter", pos - Vector2(0, 12), Vector2(34, 32), 0.0, Color.WHITE)
+		elif kind == &"repair":
+			ArenaPainter._draw_art_foot(ci, &"support_repair_station", pos + Vector2(0, 12), Vector2(42, 46), 0, Color.WHITE)
+		elif kind == &"rescue":
+			draw_worker(ci, pos, false)
+			var bar := Rect2(pos + Vector2(-20, -47), Vector2(40, 4))
+			ci.draw_rect(bar, INK)
+			ci.draw_rect(Rect2(bar.position, Vector2(40.0 * float(p["protected_hp"]), 4)), DANGER)
+		else:
+			ci.draw_circle(pos, 16, PAPER)
+			ci.draw_arc(pos, 16, 0, TAU, 16, INK, 2, true)
+			_glyph(ci, kind, pos, color)
 	if bool(p["selected"]):
 		var label: Rect2 = p["label"]
 		ci.draw_rect(label, Color(PAPER, 0.97))
@@ -279,6 +280,8 @@ static func work_profile(info: Dictionary, view: Rect2) -> Dictionary:
 	var label := Rect2(anchor + Vector2(-102, -68), Vector2(204, 34))
 	label.position = label.position.clamp(view.position + Vector2(8, 8), view.end - label.size - Vector2(8, 8))
 	return {"visible": view.grow(24).has_point(anchor), "uid": int(info.get("uid", 0)), "kind": kind,
+		"target_id": StringName(info.get("target_id", &"")),
+		"name_key": "interaction.bureau_switch" if info.get("target_id", &"") == BureauEvents.SWITCH_ID else "work.kind." + String(kind),
 		"pos": anchor, "intent": (target - pos).normalized(), "success": success,
 		"reason": StringName(info.get("reason", &"unavailable")), "label": label,
 		"alpha": clampf(float(info.get("life", 1.0)) / 0.35, 0.0, 1.0)}
@@ -294,7 +297,10 @@ static func draw_work(ci: CanvasItem, marks: Array[Dictionary], view: Rect2, red
 		var alpha := float(p["alpha"])
 		var color := Color(FRIEND if p["success"] else INK, alpha)
 		if p["success"]:
-			if p["kind"] == &"signature":
+			if p["target_id"] == BureauEvents.SWITCH_ID:
+				ci.draw_polyline(PackedVector2Array([pos + Vector2(-7, 6), pos + Vector2(7, 6), pos + Vector2(0, 6), pos + Vector2(5, -6)]), color, 2.0, true)
+				ci.draw_circle(pos + Vector2(5, -6), 2.5, color)
+			elif p["kind"] == &"signature":
 				# A short old-aim compass is intent, never a projectile or hit area.
 				var direction: Vector2 = p["intent"]
 				if direction == Vector2.ZERO:
@@ -308,7 +314,7 @@ static func draw_work(ci: CanvasItem, marks: Array[Dictionary], view: Rect2, red
 			ci.draw_line(pos + Vector2(6, -6), pos + Vector2(-6, 6), color, 2, true)
 		var label: Rect2 = p["label"]
 		ci.draw_rect(label, Color(PAPER, alpha * 0.94))
-		var title := Loc.t("work.mark", [p["uid"], Loc.t("work.kind." + String(p["kind"]))])
+		var title := Loc.t("work.mark", [p["uid"], Loc.t(p["name_key"])])
 		var cause := Loc.t("work.reason." + String(p["reason"]))
 		ci.draw_string(UiTheme.font(), label.position + Vector2(6, 14), title, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 12, color)
 		ci.draw_string(UiTheme.font(), label.position + Vector2(6, 28), cause, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 12, color)

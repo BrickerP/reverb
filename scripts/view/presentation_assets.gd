@@ -55,6 +55,15 @@ const CHARACTER_BACK_KEYS := {
 }
 
 const PATHS := {
+	&"bureau_vending_closed": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_vending_open": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_copier_closed": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_copier_print": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_stamp_raised": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_stamp_down": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_inbox": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_cabinet": "res://assets/presentation/bureau/facilities.png",
+	&"bureau_binding": "res://assets/presentation/bureau/binding.png",
 	&"weapon_binding_writ": "res://assets/presentation/weapons/expedition_arsenal.png",
 	&"weapon_saw_swarm": "res://assets/presentation/weapons/expedition_arsenal.png",
 	&"weapon_surveyor_lance": "res://assets/presentation/weapons/expedition_arsenal.png",
@@ -138,6 +147,15 @@ const PATHS := {
 # Source-pixel bounds were measured offline at alpha >= 20/255. Runtime only
 # scales these rectangles to the imported texture size; it never scans PNG pixels.
 const SOURCE_METADATA := {
+	&"bureau_vending_closed": {"size": Vector2(1536, 1024), "region": Rect2(46, 84, 335, 416), "idle": Rect2(46, 84, 335, 416), "pivots": [Vector2(146.0, 416)]},
+	&"bureau_vending_open": {"size": Vector2(1536, 1024), "region": Rect2(405, 84, 351, 416), "idle": Rect2(405, 84, 351, 416), "pivots": [Vector2(171.0, 416)]},
+	&"bureau_copier_closed": {"size": Vector2(1536, 1024), "region": Rect2(779, 141, 373, 355), "idle": Rect2(779, 141, 373, 355), "pivots": [Vector2(181.0, 355)]},
+	&"bureau_copier_print": {"size": Vector2(1536, 1024), "region": Rect2(1152, 121, 358, 385), "idle": Rect2(1152, 121, 358, 385), "pivots": [Vector2(192.0, 385)]},
+	&"bureau_stamp_raised": {"size": Vector2(1536, 1024), "region": Rect2(29, 528, 340, 412), "idle": Rect2(29, 528, 340, 412), "pivots": [Vector2(163.0, 412)]},
+	&"bureau_stamp_down": {"size": Vector2(1536, 1024), "region": Rect2(404, 608, 342, 326), "idle": Rect2(404, 608, 342, 326), "pivots": [Vector2(172.0, 326)]},
+	&"bureau_inbox": {"size": Vector2(1536, 1024), "region": Rect2(768, 625, 384, 299), "idle": Rect2(768, 625, 384, 299), "pivots": [Vector2(192.0, 299)]},
+	&"bureau_cabinet": {"size": Vector2(1536, 1024), "region": Rect2(1152, 540, 359, 418), "idle": Rect2(1152, 540, 359, 418), "pivots": [Vector2(192.0, 418)]},
+	&"bureau_binding": {"size": Vector2(1536, 1024), "region": Rect2(4, 24, 376, 435), "idle": Rect2(22, 215, 358, 243), "pivots": [Vector2(188.0, 434), Vector2(188.0, 433), Vector2(188.0, 434), Vector2(188.0, 435), Vector2(188.0, 403), Vector2(188.0, 402), Vector2(188.0, 404), Vector2(188.0, 403)]},
 	&"weapon_binding_writ": {"size": Vector2(1448, 1086), "region": Rect2(30, 115, 332, 224), "idle": Rect2(30, 115, 332, 224), "pivots": [Vector2(166.0, 224)]},
 	&"weapon_saw_swarm": {"size": Vector2(1448, 1086), "region": Rect2(362, 101, 362, 254), "idle": Rect2(362, 101, 362, 254), "pivots": [Vector2(181.0, 254)]},
 	&"weapon_surveyor_lance": {"size": Vector2(1448, 1086), "region": Rect2(724, 100, 362, 262), "idle": Rect2(724, 100, 362, 262), "pivots": [Vector2(181.0, 262)]},
@@ -219,6 +237,7 @@ const SOURCE_METADATA := {
 }
 
 const ATLAS_LAYOUTS := {
+	&"bureau_binding": Vector2i(4, 2),
 	&"enemy_foreman": Vector2i(4, 2),
 	&"enemy_collector": Vector2i(4, 2),
 	&"shopkeeper": Vector2i(4, 1),

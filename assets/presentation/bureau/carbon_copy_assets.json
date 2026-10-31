@@ -1,0 +1,148 @@
+[
+  {
+    "id": "facilities",
+    "path": "assets/presentation/bureau/facilities.png",
+    "file": "assets/presentation/bureau/facilities.png",
+    "source_file": "/Users/yupeng/.codex/generated_images/01a18b4e-f3b2-7852-a4f0-e15203af1f7d/exec-e664e867-959e-4947-899d-a349bafea983.png",
+    "tool": "built-in imagegen",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "columns": 1,
+    "rows": 1,
+    "frame_count": 1,
+    "sha256": "7e9111fdb40a939733d0e33b461a6a2703f63165ecd269daf2c7538633233213",
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "transparent_pixels": 742491,
+    "pixels_preserved": true,
+    "pose_order": [
+      "vending_closed",
+      "vending_open",
+      "copier_closed",
+      "copier_print",
+      "stamp_raised",
+      "stamp_down",
+      "inbox",
+      "cabinet"
+    ],
+    "references": [
+      "assets/ideas/idea-06-yesterday-vending.jpg",
+      "assets/ideas/idea-07-staple-wedding.jpg",
+      "assets/ideas/idea-19-confession-copier.jpg",
+      "assets/ideas/idea-21-unstaple.jpg",
+      "assets/presentation/player.png"
+    ],
+    "authored_grid": [
+      4,
+      2
+    ],
+    "regions": {
+      "bureau_vending_closed": [
+        0,
+        0,
+        384,
+        512
+      ],
+      "bureau_vending_open": [
+        384,
+        0,
+        384,
+        512
+      ],
+      "bureau_copier_closed": [
+        768,
+        0,
+        384,
+        512
+      ],
+      "bureau_copier_print": [
+        1152,
+        0,
+        384,
+        512
+      ],
+      "bureau_stamp_raised": [
+        0,
+        512,
+        384,
+        512
+      ],
+      "bureau_stamp_down": [
+        384,
+        512,
+        384,
+        512
+      ],
+      "bureau_inbox": [
+        768,
+        512,
+        384,
+        512
+      ],
+      "bureau_cabinet": [
+        1152,
+        512,
+        384,
+        512
+      ]
+    },
+    "reference_sha256": {
+      "assets/ideas/idea-06-yesterday-vending.jpg": "ed2db14822d0bfdfa748330a66fe5e06b496e9a72bad572c4e190b5d006805c1",
+      "assets/ideas/idea-07-staple-wedding.jpg": "ad0145e849c2f11b9018e2ecb2a4c7bca29373a88d42c8ac56b220a5e7308419",
+      "assets/ideas/idea-19-confession-copier.jpg": "a7c1de1e419fd8b1ec142e64fdfda214afa5791cdc60dfac57b65e516e5d3181",
+      "assets/ideas/idea-21-unstaple.jpg": "dcc2beca75398dedc7b3a4548b0551a6d982fe7389ce22908a10a170fdb29f98",
+      "assets/presentation/player.png": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+    }
+  },
+  {
+    "id": "binding",
+    "path": "assets/presentation/bureau/binding.png",
+    "file": "assets/presentation/bureau/binding.png",
+    "source_file": "/Users/yupeng/.codex/generated_images/01a18b4e-f3b2-7852-a4f0-e15203af1f7d/exec-7d68a2c7-7ed3-45e9-89e6-fa895fe3a951.png",
+    "tool": "built-in imagegen",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "columns": 4,
+    "rows": 2,
+    "frame_count": 8,
+    "sha256": "29b3a97a14998d29561d2f95acde38ef3d9663069a203e071cf12a8bae2a7c34",
+    "alpha_extrema": [
+      0,
+      254
+    ],
+    "transparent_pixels": 997810,
+    "pixels_preserved": true,
+    "pose_order": [
+      "pair",
+      "stapler_descends",
+      "pressed",
+      "bound",
+      "bound_idle",
+      "unstapler_engages",
+      "separating",
+      "originals_restored"
+    ],
+    "references": [
+      "assets/ideas/idea-06-yesterday-vending.jpg",
+      "assets/ideas/idea-07-staple-wedding.jpg",
+      "assets/ideas/idea-19-confession-copier.jpg",
+      "assets/ideas/idea-21-unstaple.jpg",
+      "assets/presentation/player.png"
+    ],
+    "authored_grid": [
+      4,
+      2
+    ],
+    "reference_sha256": {
+      "assets/ideas/idea-06-yesterday-vending.jpg": "ed2db14822d0bfdfa748330a66fe5e06b496e9a72bad572c4e190b5d006805c1",
+      "assets/ideas/idea-07-staple-wedding.jpg": "ad0145e849c2f11b9018e2ecb2a4c7bca29373a88d42c8ac56b220a5e7308419",
+      "assets/ideas/idea-19-confession-copier.jpg": "a7c1de1e419fd8b1ec142e64fdfda214afa5791cdc60dfac57b65e516e5d3181",
+      "assets/ideas/idea-21-unstaple.jpg": "dcc2beca75398dedc7b3a4548b0551a6d982fe7389ce22908a10a170fdb29f98",
+      "assets/presentation/player.png": "a3aa105443b53e8824bafb02fc69a9a104ce01a778ca2b1864bcf05bc5e6d14a"
+    }
+  }
+]
