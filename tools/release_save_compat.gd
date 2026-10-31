@@ -174,22 +174,33 @@ func _read_payload() -> bool:
 		var captured := RunSnapshot.capture(restored)
 		var captured_text: String = JSON.stringify(captured, "", true, true)
 		var graph_equal: bool = captured == original
+		# Godot parses JSON numbers as floats. Compare both graphs in the same
+		# file domain; do not rewrite the payload or mutate the restored model.
+		# Actual game integers/floats remain protected by v4's i/f string tags.
+		var captured_json: Variant = JSON.parse_string(captured_text)
+		var graph_json_domain_equal: bool = captured_json is Dictionary and captured_json == original
 		var canonical_equal: bool = captured_text == encoded
-		var exact: bool = graph_equal and canonical_equal
+		var canonical_sha_equal: bool = captured_text.sha256_text() == encoded.sha256_text()
+		var exact: bool = graph_json_domain_equal and canonical_equal and canonical_sha_equal
 		var rng_exact: bool = str(restored.rng.seed) == row.get("rng_seed") and str(restored.rng.state) == row.get("rng_state")
 		var hazard_exact: bool = str(restored.hazard_rng.seed) == row.get("hazard_rng_seed") \
 			and str(restored.hazard_rng.state) == row.get("hazard_rng_state")
 		var state: Dictionary = _describe(restored)
-		var state_equal: bool = state == row.get("state")
+		var state_raw_equal: bool = state == row.get("state")
+		var state_json: Variant = JSON.parse_string(JSON.stringify(state, "", true, true))
+		var state_equal: bool = state_json is Dictionary and state_json == row.get("state")
 		var snapshot_differences: Array[Dictionary] = []
 		var state_differences: Array[Dictionary] = []
 		_diff(original, captured, "$.snapshot", snapshot_differences)
 		_diff(row.get("state"), state, "$.state", state_differences)
 		var diagnostic := {"scenario": name, "graph_equal": graph_equal,
-			"canonical_json_bytes_equal": canonical_equal, "rng_equal": rng_exact,
-			"hazard_rng_equal": hazard_exact, "state_equal": state_equal,
+			"graph_json_domain_equal": graph_json_domain_equal,
+			"comparison_domain": "same parsed JSON file domain; original payload and restored game state are unchanged",
+			"canonical_json_bytes_equal": canonical_equal, "canonical_snapshot_sha256_equal": canonical_sha_equal,
+			"rng_equal": rng_exact, "hazard_rng_equal": hazard_exact,
+			"state_raw_equal": state_raw_equal, "state_equal": state_equal,
 			"old_snapshot_sha256": encoded.sha256_text(), "captured_snapshot_sha256": captured_text.sha256_text(),
-			"snapshot_differences": snapshot_differences, "state_differences": state_differences,
+			"raw_snapshot_differences": snapshot_differences, "raw_state_differences": state_differences,
 			"old_snapshot_file": name + "-old-snapshot.json",
 			"captured_snapshot_file": name + "-captured-snapshot.json"}
 		(_result["diagnostics"] as Array).append(diagnostic)
@@ -218,7 +229,9 @@ func _read_payload() -> bool:
 			return false
 		names.append(name)
 		details.append({"name": name, "snapshot_sha256": row["snapshot_sha256"],
-			"full_snapshot_equal": exact, "rng_preserved": rng_exact, "hazard_rng_preserved": hazard_exact,
+			"full_snapshot_equal": exact, "graph_json_domain_equal": graph_json_domain_equal,
+			"canonical_json_bytes_equal": canonical_equal, "canonical_snapshot_sha256_equal": canonical_sha_equal,
+			"state_json_domain_equal": state_equal, "rng_preserved": rng_exact, "hazard_rng_preserved": hazard_exact,
 			"resumed_action": "undo" if name == "shop" else "step", "resumed": resumed,
 			"source_state": row["state"], "after_action": _describe(restored)})
 	_result["source_version"] = payload["source_version"]
