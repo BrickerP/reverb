@@ -1,42 +1,42 @@
-# 回响 / Take Stack
+# Take Stack / 回响
 
-[English](README.en.md) · [进入废件回收局](https://brickerp.github.io/reverb/)
+[简体中文](README.zh-CN.md) · [Enter the recycling bureau](https://brickerp.github.io/reverb/)
 
-**领取可玩的副本：** [macOS 下载](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-macos.zip) · [Windows 下载](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-windows.zip) · [Linux 下载](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-linux.zip)
+**Pick up a playable copy:** [Download for macOS](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-macos.zip) · [Download for Windows](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-windows.zip) · [Download for Linux](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-linux.zip)
 
-[![回响：昨天的你，是今天的耗材。疲惫纸偶与副本售货机组成的回收局公告。](docs/site-assets/readme-cover-zh.png)](https://brickerp.github.io/reverb/)
+[![Take Stack: You’re dead. Your shift isn’t. A tired paper clerk and a copy vending machine on the bureau noticeboard.](docs/site-assets/readme-cover-en.png?v=tone-20261031)](https://brickerp.github.io/reverb/)
 
-在废件回收局，昨天的自己也得回来加班。
+**You’re dead. Your shift isn’t.**
 
-《回响》是一款手绘纸偶自动射击 roguelite。你负责走位与构筑，每场战斗留下路线和装备，让过去的自己沿旧路再次作战。回响在播放中逐渐磨损；修补、合订，或提前报废，决定留给下一场的是什么。
+Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your previous routes. Move, build your loadout, and leave an Echo of each encounter's path and equipment. Copies wear down as they replay. Repair one, bind two together, or spend a copy on its final skill—you decide what survives into the next fight.
 
-![实机战斗动图：本体与回响共同对抗办公废件，由自动控制器操作。](docs/site-assets/combat-loop.gif)
+![Actual combat with an automatic controller: the player and recorded Echoes face hostile office waste.](docs/site-assets/combat-loop.gif)
 
-- **给过去安排工作。** 旧路线能分担火力，也能重放机器操作。按住选择回响，轻按报废，释放由它的装备决定的最后一招。
-- **把工位用起来。** 拉开关、送公文、躲过落章，把敌人引进机器的攻击范围。六名角色各有主动技，宠物、炮台和维修站也有生命与寿命。
-- **签字之前，先看代价。** 35 把武器、同级装配、家族进化分支与工作单构成商店的选择。修好的设备和救下的工友，会在这次远征中跨场保留。
-- **最后一页，自己签。** 三幕十二场，三个不同 Boss。离开、与工友共同离开，或者接管回收局；债务不替你选择结局。
+- **Put your past to work.** Old routes add firepower and replay recorded machine operations. Hold to choose an Echo; tap to scrap it for a final skill shaped by its equipment.
+- **Make use of the machinery.** Pull a lever, carry a document, dodge a stamp, or lure enemies into a press. Six roles have distinct abilities; pets, turrets and repair stations can be damaged and expire.
+- **Read the terms before signing.** Build from 35 weapons, matching-weapon assembly, family evolution branches and work orders. Repaired machines and rescued workers carry forward through the expedition.
+- **Sign your own last page.** Three acts, twelve encounters and three distinct bosses. Leave alone, leave with your colleagues, or take over the bureau. Debt does not choose the ending for you.
 
-[看完整介绍](https://brickerp.github.io/reverb/) · [版本说明与实机演示](https://github.com/BrickerP/reverb/releases/latest)
+[Explore the game](https://brickerp.github.io/reverb/) · [Release notes and in-game footage](https://github.com/BrickerP/reverb/releases/latest)
 
 <details>
-<summary>操作、安装与存档</summary>
+<summary>Controls, installation and saves</summary>
 
-- 移动：WASD／方向键／左摇杆。
-- 角色主动技：Shift／LB；机器交互：E／X。
-- 报废回响：轻按 Space／RB；选择回响：按住并松开确认。
-- 暂停：P／Esc／Start；暂停菜单可以保存并返回。
+- Move: WASD / arrow keys / left stick.
+- Role ability: Shift / LB. Machine interaction: E / X.
+- Scrap an Echo: tap Space / RB. Select one: hold, then release to confirm.
+- Pause: P / Esc / Start. Save and return from the pause menu.
 
-下载对应平台 ZIP，解压后运行。macOS 包为 ad-hoc 签名、未公证，首次打开请按包内 `MAC_START_HERE.txt` 操作。Windows 包未签名，可能显示系统提示。
+Download the ZIP for your platform, extract it, and run the game. The macOS build is ad-hoc signed and is not notarized; follow the included `MAC_START_HERE.txt` on first launch. Windows builds are unsigned and may show a system prompt.
 
-0.17 使用新的中途存档格式，需要开始新对局；永久角色解锁、设置和已保存的回响档案保留。
+Version 0.17 uses a new suspended-run format, so start a new run when upgrading. Permanent role unlocks, settings and saved Echo archives are kept.
 
 </details>
 
 <details>
-<summary>从源码运行</summary>
+<summary>Run from source</summary>
 
-使用 Godot **4.7.2**。以下命令取得与 0.17 公开版对应的源码：
+Use **Godot 4.7.2**. These commands check out the source corresponding to the public 0.17 release:
 
 ```bash
 git clone --branch v0.17.0 https://github.com/BrickerP/reverb.git
@@ -44,10 +44,10 @@ cd reverb
 make run
 ```
 
-也可以用 Godot 打开 `project.godot` 后按 F5。`make run-zh` 使用中文。
+You can also open `project.godot` in Godot and press F5. Use `make run-zh` for Chinese.
 
-[玩法接口](https://github.com/BrickerP/reverb/blob/v0.17.0/INTERFACES.md) · [美术方向](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/art-direction.md) · [验收范围](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/closeout-acceptance.md)
+[Gameplay interfaces](https://github.com/BrickerP/reverb/blob/v0.17.0/INTERFACES.md) · [Art direction](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/art-direction.md) · [Validation scope](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/closeout-acceptance.md)
 
 </details>
 
-代码与文档采用 [MIT](LICENSE)。美术及声音来源、字体许可见[美术方向](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/art-direction.md)与[第三方说明](THIRD_PARTY.md)。
+Code and docs are [MIT licensed](LICENSE). See the [art direction](https://github.com/BrickerP/reverb/blob/v0.17.0/docs/art-direction.md) and [third-party notices](THIRD_PARTY.md) for artwork provenance, audio sources and bundled font licenses.
