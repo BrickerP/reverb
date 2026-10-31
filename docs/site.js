@@ -83,6 +83,17 @@
     document.querySelectorAll('[data-i18n-aria]').forEach(node => { node.setAttribute('aria-label', zh ? chinese[node.dataset.i18nAria] : originals.get(node).aria); });
     document.querySelectorAll('[data-image]').forEach(node => { node.src = `site-assets/${node.dataset.image}-${zh ? 'zh' : 'en'}.png`; });
     document.querySelectorAll('[data-image-link]').forEach(node => { node.href = `site-assets/${node.dataset.imageLink}-${zh ? 'zh' : 'en'}.png`; });
+    const video = document.querySelector('.field-film video');
+    if (video) {
+      const source = video.querySelector('source');
+      const nextSrc = `site-assets/${zh ? 'combat-loop.mp4' : 'combat-loop-en.mp4'}`;
+      const nextPoster = `site-assets/${zh ? 'combat-cover.png' : 'combat-cover-en.png'}`;
+      if (source.getAttribute('src') !== nextSrc) {
+        source.setAttribute('src', nextSrc);
+        video.poster = nextPoster;
+        video.load();
+      }
+    }
     const toggle = document.getElementById('language');
     toggle.textContent = zh ? 'EN' : '中文';
     toggle.lang = zh ? 'en' : 'zh-CN';
