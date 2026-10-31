@@ -15,7 +15,7 @@ var _failed := false
 var _started := Time.get_ticks_msec()
 var _held_sims: Array[Sim] = []
 var _sim_references: Array[WeakRef] = []
-var _result: Dictionary = {"success": false, "schema": 4, "scenarios": []}
+var _result: Dictionary = {"success": false, "schema": 4, "scenarios": [], "diagnostics": []}
 
 
 func _initialize() -> void:
@@ -172,11 +172,34 @@ func _read_payload() -> bool:
 			return false
 		_hold(restored)
 		var captured := RunSnapshot.capture(restored)
-		var exact: bool = captured == original and JSON.stringify(captured, "", true, true) == encoded
+		var captured_text: String = JSON.stringify(captured, "", true, true)
+		var graph_equal: bool = captured == original
+		var canonical_equal: bool = captured_text == encoded
+		var exact: bool = graph_equal and canonical_equal
 		var rng_exact: bool = str(restored.rng.seed) == row.get("rng_seed") and str(restored.rng.state) == row.get("rng_state")
 		var hazard_exact: bool = str(restored.hazard_rng.seed) == row.get("hazard_rng_seed") \
 			and str(restored.hazard_rng.state) == row.get("hazard_rng_state")
-		if not _require(exact and rng_exact and hazard_exact and _describe(restored) == row.get("state"),
+		var state: Dictionary = _describe(restored)
+		var state_equal: bool = state == row.get("state")
+		var snapshot_differences: Array[Dictionary] = []
+		var state_differences: Array[Dictionary] = []
+		_diff(original, captured, "$.snapshot", snapshot_differences)
+		_diff(row.get("state"), state, "$.state", state_differences)
+		var diagnostic := {"scenario": name, "graph_equal": graph_equal,
+			"canonical_json_bytes_equal": canonical_equal, "rng_equal": rng_exact,
+			"hazard_rng_equal": hazard_exact, "state_equal": state_equal,
+			"old_snapshot_sha256": encoded.sha256_text(), "captured_snapshot_sha256": captured_text.sha256_text(),
+			"snapshot_differences": snapshot_differences, "state_differences": state_differences,
+			"old_snapshot_file": name + "-old-snapshot.json",
+			"captured_snapshot_file": name + "-captured-snapshot.json"}
+		(_result["diagnostics"] as Array).append(diagnostic)
+		print("release save compatibility diagnostics: " + JSON.stringify(diagnostic))
+		if not _save_text(_output.path_join(name + "-old-snapshot.json"), encoded) \
+				or not _save_text(_output.path_join(name + "-captured-snapshot.json"), captured_text) \
+				or not _save_text(_output.path_join(name + "-old-state.json"), JSON.stringify(row.get("state"), "  ", true, true)) \
+				or not _save_json(_output.path_join(name + "-captured-state.json"), state):
+			return false
+		if not _require(exact and rng_exact and hazard_exact and state_equal,
 				"%s restores the entire graph, original bytes and both RNGs exactly" % name):
 			return false
 		var resumed := false
@@ -205,6 +228,66 @@ func _read_payload() -> bool:
 	_result["scenarios"] = names
 	_result["details"] = details
 	return true
+
+
+func _diff(expected: Variant, actual: Variant, location: String, differences: Array[Dictionary]) -> void:
+	if differences.size() >= 20:
+		return
+	if typeof(expected) != typeof(actual):
+		_difference(location, expected, actual, differences)
+		return
+	if expected is Dictionary:
+		var expected_map: Dictionary = expected
+		var actual_map: Dictionary = actual
+		for key: Variant in expected_map:
+			if differences.size() >= 20:
+				return
+			var next: String = location + "." + str(key)
+			if not actual_map.has(key):
+				_difference(next, expected_map[key], null, differences, "actual key missing")
+			else:
+				_diff(expected_map[key], actual_map[key], next, differences)
+		for key: Variant in actual_map:
+			if differences.size() >= 20:
+				return
+			if not expected_map.has(key):
+				_difference(location + "." + str(key), null, actual_map[key], differences, "unexpected actual key")
+	elif expected is Array:
+		var expected_array: Array = expected
+		var actual_array: Array = actual
+		if expected_array.size() != actual_array.size():
+			_difference(location + ".length", expected_array.size(), actual_array.size(), differences)
+		for index in mini(expected_array.size(), actual_array.size()):
+			if differences.size() >= 20:
+				return
+			_diff(expected_array[index], actual_array[index], "%s[%d]" % [location, index], differences)
+	elif expected != actual:
+		_difference(location, expected, actual, differences)
+
+
+func _difference(location: String, expected: Variant, actual: Variant,
+		differences: Array[Dictionary], reason: String = "value or type mismatch") -> void:
+	if differences.size() >= 20:
+		return
+	differences.append({"path": location, "reason": reason,
+		"expected_type": type_string(typeof(expected)), "actual_type": type_string(typeof(actual)),
+		"expected": _preview(expected), "actual": _preview(actual)})
+
+
+func _preview(value: Variant) -> String:
+	var shown: String = JSON.stringify(value, "", true, true)
+	return shown.left(240) + "..." if shown.length() > 240 else shown
+
+
+func _save_text(filename: String, value: String) -> bool:
+	var file: FileAccess = FileAccess.open(filename, FileAccess.WRITE)
+	if not _require(file != null, "open isolated exact snapshot text output"):
+		return false
+	file.store_string(value)
+	file.flush()
+	var error: Error = file.get_error()
+	file.close()
+	return _require(error == OK, "flush exact snapshot text output")
 
 
 func _hold(sim: Sim) -> void:

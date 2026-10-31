@@ -107,6 +107,37 @@ jobs:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
         run: ./tools/checked.sh --headless --path . --import
 
+      - name: Prepare the public baseline and write actual0.17 saves
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
+        shell: bash
+        run: |
+          git fetch --depth=1 origin tag v0.17.0
+          baseline_commit="$(git rev-parse 'v0.17.0^{commit}')"
+          baseline="$RUNNER_TEMP/paper-feedback-baseline"
+          mkdir -p "$baseline"
+          mkdir -p "$REVERB_STRESS_OUTPUT"
+          git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
+          git archive v0.17.0 | tar -x -C "$baseline"
+          cp tools/presentation_stress_probe.gd "$baseline/tools/presentation_stress_probe.gd"
+          cp tools/release_save_compat.gd "$baseline/tools/release_save_compat.gd"
+          export REVERB_STRESS_COMMIT="$baseline_commit"
+          cd "$baseline"
+          ./tools/checked.sh --headless --path . --import
+          REVERB_STRESS_COMMIT="$baseline_commit" ./tools/checked.sh --headless --path . \
+            --script res://tools/release_save_compat.gd -- --mode=write \
+            --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+
+      - name: Resume actual public-version saves with the current decoder
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          REVERB_STRESS_COMMIT: ${{ github.sha }}
+        run: |
+          ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
+            --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+
       - name: Capture native paper actions at normal speed
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
@@ -156,37 +187,6 @@ jobs:
           xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
             --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only
-
-      - name: Prepare the public baseline and write actual0.17 saves
-        env:
-          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          LIBGL_ALWAYS_SOFTWARE: '1'
-          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
-        shell: bash
-        run: |
-          git fetch --depth=1 origin tag v0.17.0
-          baseline_commit="$(git rev-parse 'v0.17.0^{commit}')"
-          baseline="$RUNNER_TEMP/paper-feedback-baseline"
-          mkdir -p "$baseline"
-          mkdir -p "$REVERB_STRESS_OUTPUT"
-          git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
-          git archive v0.17.0 | tar -x -C "$baseline"
-          cp tools/presentation_stress_probe.gd "$baseline/tools/presentation_stress_probe.gd"
-          cp tools/release_save_compat.gd "$baseline/tools/release_save_compat.gd"
-          export REVERB_STRESS_COMMIT="$baseline_commit"
-          cd "$baseline"
-          ./tools/checked.sh --headless --path . --import
-          REVERB_STRESS_COMMIT="$baseline_commit" ./tools/checked.sh --headless --path . \
-            --script res://tools/release_save_compat.gd -- --mode=write \
-            --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
-
-      - name: Resume actual public-version saves with the current decoder
-        env:
-          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          REVERB_STRESS_COMMIT: ${{ github.sha }}
-        run: |
-          ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
-            --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
 
       - name: Measure the public baseline on the same runner
         env:
