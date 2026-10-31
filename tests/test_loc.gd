@@ -49,7 +49,19 @@ func _is_content_key(key: String) -> bool:
 			for kind: String in ["press", "conveyor", "recycler", "part", "terminal", "repair", "rescue", "negotiate"]:
 				if parts[1] in [kind, kind + ".desc"]:
 					return true
+			for kind: StringName in BureauEvents.TARGETS.values():
+				if parts[1] in [String(kind), String(kind) + ".desc"]:
+					return true
+			if parts[1] in [String(BureauConfession.TERMINAL_KIND), String(BureauConfession.TERMINAL_KIND) + ".desc"]:
+				return true
 			return false
+		"confession":
+			for choice: StringName in BureauConfession.CHOICES:
+				if parts[1] in [String(choice), String(choice) + ".desc"]:
+					return true
+			return false
+		"bureau":
+			return parts[1] in ["delivery.waiting", "delivery.carrying", "delivery.delivered", "delivery.missed"]
 		"expedition":
 			for value: String in ["compliance", "solidarity", "profit"]:
 				if parts[1] == "route." + value:

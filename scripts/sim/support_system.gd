@@ -19,7 +19,10 @@ const PROFILES := {
 
 
 static func spawn(sim: Sim, kind: StringName, pos: Vector2, actor_token: int = -1) -> bool:
-	return _spawn(sim, kind, pos, actor_token, -2, Color.WHITE)
+	if not _spawn(sim, kind, pos, actor_token, -2, Color.WHITE):
+		return false
+	_event(sim, sim.support_units.back(), &"spawn")
+	return true
 
 
 static func _spawn(sim: Sim, kind: StringName, pos: Vector2, actor_token: int,
@@ -66,7 +69,6 @@ static func _spawn(sim: Sim, kind: StringName, pos: Vector2, actor_token: int,
 		"level": 0, "reach": 430.0,
 	}
 	sim.support_units.append(unit)
-	_event(sim, unit, &"spawn")
 	return true
 
 
@@ -88,6 +90,7 @@ static func spawn_weapon(sim: Sim, weapon: WeaponDef, pos: Vector2, damage_amoun
 	var profile := weapon_profile(weapon, level, damage_amount, cadence_mult, reach_mult)
 	for key: String in ["hp", "max_hp", "life", "interval", "damage", "charges", "level", "reach"]:
 		unit[key] = profile[key]
+	_event(sim, unit, &"spawn")
 	return true
 
 
@@ -125,9 +128,11 @@ static func damage(sim: Sim, uid: int, amount: float) -> bool:
 	for unit: Dictionary in sim.support_units:
 		if int(unit.get("uid", -1)) != uid or float(unit.get("hp", 0.0)) <= 0.0:
 			continue
-		var actual := minf(float(unit["hp"]), amount)
+		var before := float(unit["hp"])
+		var actual := minf(before, amount)
 		unit["hp"] = maxf(0.0, float(unit["hp"]) - amount)
-		_event(sim, unit, &"damage", actual)
+		_event(sim, unit, &"damage", actual, [{"uid": uid, "target_type": &"support",
+			"pos": unit["pos"], "amount": actual, "before": before, "after": unit["hp"]}])
 		if float(unit["hp"]) <= 0.0:
 			_event(sim, unit, &"destroy")
 		return true
@@ -216,31 +221,34 @@ static func _mobile(sim: Sim, unit: Dictionary, delta: float, is_hound: bool) ->
 	pos = unit["pos"]
 	if pickup != null and pos.distance_squared_to(pickup.pos) <= 26.0 * 26.0:
 		var value := pickup.value
+		var pickup_pos := pickup.pos
 		if sim.collect_pickup(pickup, false):
-			_event(sim, unit, &"retrieve", float(value))
+			_event(sim, unit, &"retrieve", float(value), [{"uid": 0, "target_type": &"pickup",
+				"pos": pickup_pos, "amount": float(value), "before": value, "after": 0}])
 	if enemy == null or enemy.dead or float(unit["cooldown"]) > 0.0 or pos.distance_to(enemy.pos) > combat_reach + enemy.radius:
 		return
 	var count := 0
+	var targets: Array[Dictionary] = []
 	if kind == &"recruited_foreman":
 		for other: EnemyState in sim.enemies:
 			if not other.dead and pos.distance_squared_to(other.pos) <= pow(100.0 + other.radius, 2.0):
-				_hit(sim, unit, other, &"support_slam", 0.0, 0.0)
+				targets.append(_hit(sim, unit, other, &"support_slam", 0.0, 0.0))
 				count += 1
 				if count >= 4:
 					break
 	elif kind == &"recruited_collector":
 		for other: EnemyState in sim.enemies:
 			if not other.dead and enemy.pos.distance_squared_to(other.pos) <= pow(110.0 + other.radius, 2.0):
-				_hit(sim, unit, other, &"support_chain", 0.0, 0.0)
+				targets.append(_hit(sim, unit, other, &"support_chain", 0.0, 0.0))
 				count += 1
 				if count >= 3:
 					break
 	elif kind == &"recruited_paradox":
-		_hit(sim, unit, enemy, &"support_fold", 0.5, 0.8)
+		targets.append(_hit(sim, unit, enemy, &"support_fold", 0.5, 0.8))
 	else:
-		_hit(sim, unit, enemy, &"hound_bite", 0.0, 0.0)
+		targets.append(_hit(sim, unit, enemy, &"hound_bite", 0.0, 0.0))
 	unit["cooldown"] = float(unit["interval"])
-	_event(sim, unit, &"attack", float(unit["damage"]))
+	_event(sim, unit, &"attack", float(unit["damage"]), targets)
 
 
 static func _turret_shot(sim: Sim, unit: Dictionary, enemy: EnemyState) -> void:
@@ -262,17 +270,21 @@ static func _turret_shot(sim: Sim, unit: Dictionary, enemy: EnemyState) -> void:
 	projectile.effect = &"turret_bolt"
 	sim.projectiles.append(projectile)
 	unit["cooldown"] = float(unit["interval"])
-	_event(sim, unit, &"attack", projectile.damage)
+	_event(sim, unit, &"attack", projectile.damage, [{"uid": enemy.uid, "target_type": &"enemy",
+		"pos": enemy.pos, "amount": projectile.damage, "before": enemy.hp, "after": enemy.hp}])
 
 
 static func _hit(sim: Sim, unit: Dictionary, enemy: EnemyState, effect: StringName,
-		pin: float, ink: float) -> void:
+		pin: float, ink: float) -> Dictionary:
 	var pos: Vector2 = unit["pos"]
 	if Combat._clear_endpoint(pos, enemy.pos, 1.0).distance_squared_to(enemy.pos) > 1.0:
-		return
+		return {}
+	var before := enemy.hp
 	Combat._hit(sim, enemy, float(unit["damage"]), (enemy.pos - pos).normalized(), 35.0,
 		false, int(unit["source"]), int(unit["actor_token"]), unit["source_tint"],
 		StringName(unit["weapon_id"]), effect, pin, ink, false)
+	return {"uid": enemy.uid, "target_type": &"enemy", "pos": enemy.pos,
+		"amount": maxf(0.0, before - maxf(0.0, enemy.hp)), "before": before, "after": enemy.hp}
 
 
 static func _repair(sim: Sim, unit: Dictionary) -> void:
@@ -280,15 +292,22 @@ static func _repair(sim: Sim, unit: Dictionary) -> void:
 		return
 	var pos: Vector2 = unit["pos"]
 	var repaired := 0.0
+	var targets: Array[Dictionary] = []
 	if pos.distance_squared_to(sim.player.pos) <= 150.0 * 150.0:
 		var before := sim.player.hp
 		sim.player.hp = minf(sim.player.max_hp(), sim.player.hp + 1.5 * (1.0 + 0.15 * float(unit["level"])))
 		repaired += sim.player.hp - before
+		if sim.player.hp > before:
+			targets.append({"uid": -1, "target_type": &"player", "pos": sim.player.pos,
+				"amount": sim.player.hp - before, "before": before, "after": sim.player.hp})
 	for actor: EchoActor in sim.echoes:
 		if pos.distance_squared_to(actor.pos) <= 150.0 * 150.0:
 			var before := actor.take.condition
 			actor.take.condition = minf(100.0, before + 2.0 * (1.0 + 0.15 * float(unit["level"])))
 			repaired += actor.take.condition - before
+			if actor.take.condition > before:
+				targets.append({"uid": actor.take.uid, "target_type": &"echo", "pos": actor.pos,
+					"amount": actor.take.condition - before, "before": before, "after": actor.take.condition})
 	for ally: Dictionary in sim.support_units:
 		if int(ally["uid"]) == int(unit["uid"]) or float(ally["hp"]) <= 0.0:
 			continue
@@ -297,10 +316,13 @@ static func _repair(sim: Sim, unit: Dictionary) -> void:
 			var before := float(ally["hp"])
 			ally["hp"] = minf(float(ally["max_hp"]), before + 2.0 * (1.0 + 0.15 * float(unit["level"])))
 			repaired += float(ally["hp"]) - before
+			if float(ally["hp"]) > before:
+				targets.append({"uid": ally["uid"], "target_type": &"support", "pos": ally_pos,
+					"amount": float(ally["hp"]) - before, "before": before, "after": ally["hp"]})
 	if repaired > 0.0:
 		unit["charges"] = int(unit["charges"]) - 1
 		unit["cooldown"] = float(unit["interval"])
-		_event(sim, unit, &"repair", repaired)
+		_event(sim, unit, &"repair", repaired, targets)
 
 
 static func _produce(sim: Sim, unit: Dictionary) -> void:
@@ -316,7 +338,10 @@ static func _produce(sim: Sim, unit: Dictionary) -> void:
 	if produced > 0.0:
 		unit["charges"] = int(unit["charges"]) - 1
 		unit["cooldown"] = float(unit["interval"])
-		_event(sim, unit, &"produce", produced)
+		_event(sim, unit, &"produce", produced, [{"uid": -1, "target_type": &"player",
+			"pos": sim.player.pos, "amount": produced,
+			"before": {"shield": shield_before, "energy": energy_before},
+			"after": {"shield": sim.player.shield, "energy": sim.character_energy}}])
 
 
 static func _contact_damage(sim: Sim, unit: Dictionary) -> void:
@@ -332,11 +357,22 @@ static func _contact_damage(sim: Sim, unit: Dictionary) -> void:
 			return
 
 
-static func _event(sim: Sim, unit: Dictionary, kind: StringName, amount: float = 0.0) -> void:
+static func _event(sim: Sim, unit: Dictionary, kind: StringName, amount: float = 0.0,
+		targets: Array[Dictionary] = []) -> void:
+	var affected: Array[Dictionary] = []
+	for target in targets:
+		if not target.is_empty():
+			affected.append(target.duplicate(true))
+	var primary: Dictionary = affected[0] if not affected.is_empty() else {
+		"uid": unit["uid"], "target_type": &"support", "pos": unit["pos"]}
 	sim.support_event.emit({"kind": kind, "uid": int(unit["uid"]),
 		"unit_kind": StringName(unit["kind"]), "pos": unit["pos"],
 		"source": int(unit["source"]), "actor_token": int(unit["actor_token"]),
-		"weapon_id": StringName(unit["weapon_id"]), "amount": amount})
+		"source_tint": unit["source_tint"], "weapon_id": StringName(unit["weapon_id"]),
+		"amount": amount, "hp": unit["hp"], "max_hp": unit["max_hp"],
+		"life": unit["life"], "charges": unit["charges"], "targets": affected,
+		"target_uid": primary["uid"], "target_type": primary["target_type"],
+		"target_pos": primary["pos"]})
 
 
 # Shared by live checkpoints and transaction undo. Validation never repairs or

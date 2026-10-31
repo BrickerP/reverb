@@ -6,11 +6,11 @@ charcoal contours, recycled cream paper, tired expressions and restrained sage,
 yellow, blue and red accents. Readable identity and causal threats take priority
 over decoration.
 
-## 0.15 visual inventory
+## Production visual inventory
 
-The current production set contains **52 PNG source files**, **78 runtime
-identity keys**, and **22 animated strips**. The strips are twelve character
-front/back atlases, nine enemy atlases and the four-expression merchant atlas.
+The current production set contains **54 PNG source files**, **87 runtime
+identity keys**, and **23 animated strips**. The strips are twelve character
+front/back atlases, nine enemy atlases and the four-expression merchant atlas and the eight-pose binding ceremony.
 Characters and enemies use authored 4×2, eight-pose sheets; the merchant uses
 4×1. Static multi-object sheets use explicit regions and must never be inferred
 as animation from their aspect ratio.
@@ -119,13 +119,14 @@ REVERB_LANG=zh REVERB_PROBE_REDUCED=1 REVERB_PROBE_SIZE=960x540 godot --path . -
 `tools/requirements-dev.txt` pins NumPy 2.0.2 and Pillow 11.3.0 for score tools,
 alpha validation and Python CI. The shipped game has no Python runtime.
 
-The final gameplay-native capture completed EN 1280×720 with 46 PNGs/440 checks
-and ZH Reduced 960×540 with 47 PNGs/449 checks; both failure lists are empty.
-The 960 profile exercised native responsive Character Select, shop, End/Archive
-and HUD without off-screen enabled controls. Art probes stage declared fixtures
-and actual pixels. They are not human recognition-speed, controller, balance or
-target-device evidence. Final platform exports remain a separate pending gate.
+Current native evidence includes EN1280×720 and ZHReduced960×540, family-wall/vending, three distinct merge traits, confession states, actual delivery and Echo switch replay, and bounded cleanup. Probes explicitly disclose clinical staging, retain original pixels and validate full snapshots and both RNGs. Physical-controller recognition, subjective listening and human balance are separate playtests.
 
-All 52 source records live in group `carbon_copy_assets.json`, `manifest.json`
+All 54 source records live in group `carbon_copy_assets.json`, `manifest.json`
 and `SOURCES.md` files. Export auditing must inspect the actual immutable build;
 source-tree inventory alone is not release evidence.
+
+## Bureau facilities and rituals
+
+Two built-in imagegen RGBA atlases live under assets/presentation/bureau. Facilities has eight static machine states; binding has eight authored staple/unstaple poses. Blank vending bays and copier output receive the actual archived identity at runtime. Prompts, references, original source hashes and measured alpha regions are in that group's SOURCES.md and manifests; concept JPGs are references rather than bulk runtime assets.
+
+Family frames, receipts, local goal arrows and three trait overlays use native ink geometry. Stamp warnings and phase labels read actual radius/state/safe interval; completed payout text appears only when the model has rewarded it. Night cleanup is driven by actual safe workers and retirement records. Neither decoration nor cleanup removes living end-of-wave enemies.

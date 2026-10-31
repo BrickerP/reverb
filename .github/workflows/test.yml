@@ -7,6 +7,13 @@ on:
 env:
   REVERB_RUN_SOURCE: fixture
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
@@ -46,6 +53,14 @@ jobs:
           GODOT: ${{ matrix.godot_bin }}
         run: ./tools/checked.sh --headless --path . --script res://tests/run_tests.gd
 
+      - name: Check native evidence script
+        shell: bash
+        env:
+          GODOT: ${{ matrix.godot_bin }}
+        run: |
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/paper_action_probe.gd
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/release_save_compat.gd
+
       - name: Smoke test
         shell: bash
         env:
@@ -67,6 +82,190 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+  paper-feedback:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native capture tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgl1-mesa-dri ffmpeg
+
+      - name: Download Godot
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Import capture project
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+        run: ./tools/checked.sh --headless --path . --import
+
+      - name: Prepare the public baseline and write actual0.17 saves
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
+        shell: bash
+        run: |
+          git fetch --depth=1 origin tag v0.17.0
+          baseline_commit="$(git rev-parse 'v0.17.0^{commit}')"
+          baseline="$RUNNER_TEMP/paper-feedback-baseline"
+          mkdir -p "$baseline"
+          mkdir -p "$REVERB_STRESS_OUTPUT"
+          git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
+          git archive v0.17.0 | tar -x -C "$baseline"
+          cp tools/presentation_stress_probe.gd "$baseline/tools/presentation_stress_probe.gd"
+          cp tools/release_save_compat.gd "$baseline/tools/release_save_compat.gd"
+          export REVERB_STRESS_COMMIT="$baseline_commit"
+          cd "$baseline"
+          ./tools/checked.sh --headless --path . --import
+          REVERB_STRESS_COMMIT="$baseline_commit" ./tools/checked.sh --headless --path . \
+            --script res://tools/release_save_compat.gd -- --mode=write \
+            --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+
+      - name: Resume actual public-version saves with the current decoder
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          REVERB_STRESS_COMMIT: ${{ github.sha }}
+        run: |
+          ./tools/checked.sh --headless --path . --script res://tools/release_save_compat.gd -- \
+            --mode=read --output="$GITHUB_WORKSPACE/shots/paper-actions/save-compat"
+
+      - name: Capture native paper actions at normal speed
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_BUILD_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          trap 'rm -f override.cfg' EXIT
+          for variant in normal compact reduced; do
+            output="$GITHUB_WORKSPACE/shots/paper-actions/$variant"
+            mkdir -p "$output"
+            resolution=1280x720
+            language=en
+            if [ "$variant" = compact ]; then
+              resolution=960x540
+              language=zh
+            fi
+            # MovieWriter reads ProjectSettings before SceneTree._initialize;
+            # --resolution alone only requests a window size in Godot4.7.2.
+            python3 -c 'from pathlib import Path; import sys; w,h=map(int,sys.argv[1].split("x")); Path("override.cfg").write_text("[display]\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\n" % (w,h,w,h))' "$resolution"
+            capture_status=0
+            REVERB_LANG="$language" xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+              --path . --resolution "$resolution" --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+              --write-movie "$output/paper_action.avi" \
+              --script res://tools/paper_action_probe.gd -- \
+              --output="$output" --variant="$variant" || capture_status=$?
+            if [ -s "$output/paper_action.avi" ]; then
+              ffmpeg -hide_banner -loglevel error -i "$output/paper_action.avi" \
+                -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
+                -movflags +faststart "$output/paper_action.mp4"
+              rm "$output/paper_action.avi"
+              ffprobe -v error -show_streams -of json "$output/paper_action.mp4" > "$output/video.json"
+              python3 -c 'import json,sys; from fractions import Fraction; s=json.load(open(sys.argv[1]))["streams"]; v=next(x for x in s if x["codec_type"]=="video"); w,h=map(int,sys.argv[2].split("x")); assert (v["width"],v["height"])==(w,h), "movie must keep the native requested dimensions"; assert Fraction(v["avg_frame_rate"])==60, "movie must keep normal 60fps playback"; assert not any(x["codec_type"]=="audio" for x in s), "the visual fixture movie must be silent"' "$output/video.json" "$resolution"
+            fi
+            if [ "$capture_status" -ne 0 ]; then
+              exit "$capture_status"
+            fi
+          done
+
+      - name: Capture legal eight-Echo pressure
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-current
+          REVERB_STRESS_COMMIT: ${{ github.sha }}
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
+            --script res://tools/presentation_stress_probe.gd -- legal-only
+
+      - name: Measure the public baseline on the same runner
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
+        shell: bash
+        run: |
+          export REVERB_STRESS_COMMIT="$(cat "$REVERB_STRESS_OUTPUT/source_commit.txt")"
+          cd "$RUNNER_TEMP/paper-feedback-baseline"
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
+            --script res://tools/presentation_stress_probe.gd -- legal-only
+
+      - name: Upload native action and pressure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-action-evidence-${{ github.sha }}
+          path: shots/paper-actions/
+          if-no-files-found: warn
+          retention-days: 14
+
+  export-preview:
+    needs: test
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_macos.universal.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot.app/Contents/MacOS/Godot
+
+      - name: Cache export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/4.7.2.stable
+          key: godot-macos-export-templates-4.7.2-stable
+
+      - name: Download export templates
+        if: steps.templates.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p /tmp/templates
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates"
+          mv /tmp/templates/templates "$HOME/Library/Application Support/Godot/export_templates/4.7.2.stable"
+
+      - name: Build and audit the isolated preview
+        env:
+          GODOT: /tmp/godot/Godot.app/Contents/MacOS/Godot
+        run: |
+          python3 tools/export_release_audit.py --repo . --ref "$GITHUB_SHA" \
+            --stage-dir "$RUNNER_TEMP/paper-action-preview" --godot "$GODOT"
+
+      - name: Upload audited preview builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: take-stack-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/paper-action-preview-audit/artifacts/
+            ${{ runner.temp }}/paper-action-preview-audit/result.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: take-stack-preview-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/paper-action-preview-audit/logs/
+          if-no-files-found: warn
+          retention-days: 14
 
   export-linux:
     needs: test
@@ -168,5 +367,127 @@ jobs:
         env:
           GODOT: ./build/TakeStack.exe
         run: timeout 60 ./tools/checked.sh --headless --quit-after 60
+
+  package-release:
+    needs: [test, paper-feedback, export-preview, export-linux, export-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Download this run's immutable export audit
+        uses: actions/download-artifact@v4
+        with:
+          name: take-stack-preview-${{ github.sha }}
+          path: ${{ runner.temp }}/release-export
+
+      - name: Download this run's native and compatibility evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: paper-action-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/release-evidence
+
+      - name: Package audited binaries and write exact-run receipts
+        env:
+          RELEASE_GATES: ${{ toJSON(needs) }}
+        shell: bash
+        run: |
+          test "$(git rev-parse 'HEAD^{commit}')" = "$GITHUB_SHA"
+          version="$(python3 -c 'from pathlib import Path; import sys; sys.path.insert(0,"tools"); from release_receipts import project_version; print(project_version(Path(".")))')"
+          printf '%s\n' "$RELEASE_GATES" > "$RUNNER_TEMP/release-gates.json"
+          python3 tools/package_release.py --artifacts "$RUNNER_TEMP/release-export/artifacts" \
+            --out "$RUNNER_TEMP/packaged-release" --version "$version" --commit "$GITHUB_SHA"
+          python3 tools/release_receipts.py prepare --repo . --audit-dir "$RUNNER_TEMP/release-export" \
+            --evidence-dir "$RUNNER_TEMP/release-evidence" --out "$RUNNER_TEMP/packaged-release" \
+            --needs "$RUNNER_TEMP/release-gates.json" --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --repository "$GITHUB_REPOSITORY"
+
+      - name: Upload packaged public-release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-release-${{ github.sha }}
+          path: ${{ runner.temp }}/packaged-release/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [package-release, test, paper-feedback, export-preview, export-linux, export-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Download the packages built by this tag run
+        uses: actions/download-artifact@v4
+        with:
+          name: packaged-release-${{ github.sha }}
+          path: ${{ runner.temp }}/publish-release
+
+      - name: Validate the source tag and main ancestry
+        shell: bash
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          test "$(git rev-parse 'HEAD^{commit}')" = "$GITHUB_SHA"
+          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          version="$(python3 -c 'from pathlib import Path; import sys; sys.path.insert(0,"tools"); from release_receipts import project_version; print(project_version(Path(".")))')"
+          test "$GITHUB_REF_NAME" = "v$version"
+          python3 tools/release_receipts.py verify --out "$RUNNER_TEMP/publish-release" \
+            --version "$version" --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            > "$RUNNER_TEMP/local-release-verification.json"
+          printf 'RELEASE_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+
+      - name: Upload a draft, download every asset, then publish Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          title="$(head -n 1 RELEASE_NOTES.md)"
+          title="${title#\# }"
+          # Creation fails if this tag already has a release; no existing release is edited.
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag --target "$GITHUB_SHA" \
+            --title "$title" --notes-file RELEASE_NOTES.md
+          for asset in "$RUNNER_TEMP/publish-release/"*; do
+            gh release upload "$GITHUB_REF_NAME" "$asset"
+          done
+          gh release download "$GITHUB_REF_NAME" --dir "$RUNNER_TEMP/downloaded-release"
+          python3 tools/release_receipts.py verify --out "$RUNNER_TEMP/downloaded-release" \
+            --expected "$RUNNER_TEMP/publish-release" --version "$RELEASE_VERSION" \
+            --commit "$GITHUB_SHA" --ref "$GITHUB_REF" \
+            > "$RUNNER_TEMP/download-release-verification.json"
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest --verify-tag
+          gh release view "$GITHUB_REF_NAME" --json url,isDraft,tagName > "$RUNNER_TEMP/published-release.json"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)" = "$GITHUB_REF_NAME"
+          cat "$RUNNER_TEMP/published-release.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve upload and download verification receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-publication-receipts-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/local-release-verification.json
+            ${{ runner.temp }}/download-release-verification.json
+            ${{ runner.temp }}/published-release.json
+          if-no-files-found: warn
+          retention-days: 90
 
 

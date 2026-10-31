@@ -4,6 +4,7 @@ extends Node
 const POOL := 12
 const COMMON_POOL := 7
 const PROTECTED_POOL := 5
+const SUPPORT_PRIORITY := 10
 const PRESENTATION_DIR := "res://audio/presentation"
 const MUSIC_DB := -9.0
 const MUSIC_DIR := "res://audio/music"
@@ -415,6 +416,8 @@ func bind(sim: Sim) -> void:
 	sim.echo_spawned.connect(_on_echo)
 	sim.echo_retired.connect(_on_echo_retired)
 	sim.echo_work_performed.connect(_on_echo_work)
+	sim.world_event.connect(_on_world_event)
+	sim.support_event.connect(_on_support_event)
 	sim.wave_started.connect(_on_wave_start)
 	sim.wave_ended.connect(_on_wave_end)
 	sim.purchased.connect(_on_purchase)
@@ -436,6 +439,8 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.echo_spawned, _on_echo)
 		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
 		_disconnect_signal(_bound.echo_work_performed, _on_echo_work)
+		_disconnect_signal(_bound.world_event, _on_world_event)
+		_disconnect_signal(_bound.support_event, _on_support_event)
 		_disconnect_signal(_bound.wave_started, _on_wave_start)
 		_disconnect_signal(_bound.wave_ended, _on_wave_end)
 		_disconnect_signal(_bound.purchased, _on_purchase)
@@ -476,7 +481,8 @@ func _disconnect_signal(signal_value: Signal, handler: Callable) -> void:
 		signal_value.disconnect(handler)
 
 
-func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0) -> bool:
+func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0,
+		voice_priority: int = -1) -> bool:
 	var stream: AudioStream = _streams.get(name)
 	if stream == null or _players.is_empty():
 		return false
@@ -490,7 +496,7 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate
 	if _silent:
 		_plays[name] = int(_plays.get(name, 0)) + 1
 		return true
-	var player := _claim_player(name)
+	var player := _claim_player(name, voice_priority)
 	if player == null:
 		return false
 	player.stream = stream
@@ -506,7 +512,7 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate
 	return true
 
 
-func _claim_player(name: StringName) -> AudioStreamPlayer:
+func _claim_player(name: StringName, voice_priority: int = -1) -> AudioStreamPlayer:
 	var protected_voice := is_protected(name)
 	var pool := _protected_players if protected_voice else _common_players
 	if pool.is_empty():
@@ -519,7 +525,7 @@ func _claim_player(name: StringName) -> AudioStreamPlayer:
 		active.append(player.playing)
 		priorities.append(int(_player_priorities.get(player, 0)))
 		serials.append(int(_player_serials.get(player, 0)))
-	var incoming_priority := priority_for(name)
+	var incoming_priority := priority_for(name) if voice_priority < 0 else voice_priority
 	var chosen := voice_index(active, priorities, serials, incoming_priority, cursor)
 	if chosen < 0:
 		return null
@@ -645,6 +651,11 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
+	if info.full_block():
+		play(&"shield_block", -1.0, 0.91)
+		return
+	if info.amount <= 0.0:
+		return
 	var blast := info.effect == &"bomber_explosion"
 	play(&"hurt_blast" if blast else &"hurt_contact", 2.0 if info.lethal else 0.0,
 			0.90 if info.lethal else 1.0)
@@ -701,6 +712,8 @@ func _on_echo_retired(info: EchoRetirementInfo) -> void:
 func _on_echo_work(info: Dictionary) -> void:
 	if not bool(info.get("success", false)):
 		return
+	if info.get("target_id", &"") == BureauEvents.SWITCH_ID:
+		return
 	# Signature attacks already emit their own weapon cue. Devices use the same
 	# bounded dry palette and cooldowns as the rest of the bureau.
 	match info.get("kind", &""):
@@ -710,6 +723,51 @@ func _on_echo_work(info: Dictionary) -> void:
 
 func _on_wave_start(_wave: int) -> void:
 	play(&"wave_start")
+
+
+func _on_world_event(info: Dictionary) -> void:
+	match info.get("kind", &""):
+		&"dispatch_impact": play(&"weapon_rail_spike", -1.0, 0.62, 0.18)
+		&"dispatch_safe": play(&"click", -3.0, 0.92, 0.10)
+		&"dispatch_delivered": play(&"equipment_apply", -3.0, 1.05, 0.16)
+		&"dispatch_carried", &"inspection_registered": play(&"click", -3.0, 1.0, 0.12)
+		&"interaction_result":
+			if not bool(info.get("ok", false)):
+				play(&"click", -5.0, 0.62, 0.08)
+				return
+			match info.get("target_kind", &""):
+				&"repair", &"rescue", &"recycler": play(&"equipment_apply", -4.0, 1.12, 0.18)
+				&"press": play(&"weapon_rail_spike", -5.0, 0.71, 0.16)
+				&"conveyor": play(&"click", -4.0, 0.83, 0.12)
+		&"character_skill":
+			if not bool(info.get("ok", false)):
+				return
+			match info.get("ability", &""):
+				&"looper": play(&"echo", -3.0, 0.72, 0.24)
+				&"mirror": play(&"echo", -3.0, 1.12, 0.24)
+				&"solo": play(&"weapon_longbow", -3.0, 0.64, 0.20)
+				&"conductor": play(&"weapon_nova_core", -4.0, 0.86, 0.22)
+				# Mender's real support spawn and Overloader's real retirement own
+				# their sounds; a successful key press cannot play those twice.
+		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24)
+
+
+func _on_support_event(info: Dictionary) -> void:
+	# Support attacks are not ShotInfo events. They have their own finite bodies,
+	# and cannot animate or replay the deploying character's weapon.
+	match info.get("kind", &""):
+		&"spawn": play(&"echo", -8.0, 1.08, 0.14)
+		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20, SUPPORT_PRIORITY)
+		&"produce": play(&"click", -7.0, 1.16, 0.10, SUPPORT_PRIORITY)
+		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09)
+		&"damage": play(&"hit", -4.0, 0.77, 0.10)
+		&"destroy": play(&"kill", -3.0, 0.70, 0.24)
+		&"expire": play(&"echo", -9.0, 0.60, 0.18)
+		&"attack":
+			var profile := weapon_profile(StringName(info.get("weapon_id", &"")))
+			if not profile.is_empty():
+				play(profile["cue"], float(profile["volume"]) - 6.0,
+					float(profile["pitch"]), minf(0.16, float(profile.get("gate", 0.16))))
 
 
 func _on_wave_end(_wave: int) -> void:

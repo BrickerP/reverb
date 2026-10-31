@@ -40,6 +40,7 @@ var echo_wheel: EchoSelectionWheel
 var story_ui: StoryArchiveUi
 var receipt_ui: StoryReceipt
 var context_ui: ContextChoiceUi
+var vending_ui: VendingReceiptUi
 var _context_kind: StringName = &""
 var _replace_dialog: ConfirmationDialog
 var _pending_start: Dictionary = {}
@@ -108,10 +109,12 @@ func _ready() -> void:
 	story_ui = StoryArchiveUi.new()
 	receipt_ui = StoryReceipt.new()
 	context_ui = ContextChoiceUi.new()
+	vending_ui = VendingReceiptUi.new()
 	_add_layer(11, echo_wheel, theme)
 	_add_layer(10, story_ui, theme)
 	_add_layer(9, receipt_ui, theme)
 	_add_layer(13, context_ui, theme)
+	_add_layer(2, vending_ui, theme)
 	context_ui.chosen.connect(_on_context_chosen)
 	context_ui.save_requested.connect(save_and_return)
 	context_ui.closed.connect(_on_context_closed)
@@ -228,6 +231,8 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	_run_started_msec = Time.get_ticks_msec()
 	sim.start_run()
 	_phase = sim.phase
+	if inherited != null:
+		vending_ui.show_take(inherited, sim)
 
 
 func choose_character(id: StringName, seed_value: int = -1) -> void:
@@ -409,6 +414,8 @@ func _apply_reduced_effects() -> void:
 		end_ui.set_reduced_effects(settings.reduced_effects)
 	if echo_wheel != null:
 		echo_wheel.reduced_effects = settings.reduced_effects
+	if vending_ui != null:
+		vending_ui.set_reduced_effects(settings.reduced_effects)
 
 
 func show_select() -> void:
@@ -442,6 +449,8 @@ func _detach_presentation_session() -> void:
 	_context_kind = &""
 	if context_ui != null:
 		context_ui.reset()
+	if vending_ui != null:
+		vending_ui.reset()
 	if echo_archive_ui != null:
 		echo_archive_ui.close()
 	if echo_wheel != null:
@@ -510,9 +519,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if end_ui.visible and end_ui.replacement_pending:
 		return
+	if shop_ui.visible and shop_ui.confession != null and shop_ui.confession.visible:
+		if event.is_action_pressed(&"ui_cancel") or event.is_action_pressed(&"pause"):
+			shop_ui.confession.close()
+			get_viewport().set_input_as_handled()
+		return
 	if echo_archive_ui.visible:
 		if event.is_action_pressed(&"ui_cancel"):
-			echo_archive_ui.close()
+			if echo_archive_ui.memory != null and echo_archive_ui.memory.visible:
+				echo_archive_ui.memory.close()
+			else:
+				echo_archive_ui.close()
 			get_viewport().set_input_as_handled()
 		return
 	if echo_wheel.visible:
@@ -564,12 +581,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_history()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"character_skill") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
-		if sim.activate_character_skill():
-			audio.play(&"echo", -2.0, 1.05)
+		sim.activate_character_skill()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"interact") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
-		if sim.interact():
-			audio.play(&"equipment_apply", -3.0, 0.95)
+		sim.interact()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"retire_echo") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
 		_retire_pressed = true
@@ -610,6 +625,7 @@ func _sync_phase() -> void:
 	match _phase:
 		Sim.Phase.WAVE:
 			hud.visible = true
+			_persist_story()
 		Sim.Phase.SHOP:
 			# Hold on the arena for a beat: the wave is being recorded, then the shop opens.
 			hud.visible = true
@@ -643,6 +659,7 @@ func _record_run() -> void:
 	_recorded = true
 	SuspendStore.clear()
 	_persist_story()
+	meta.stage_bureau_report(sim, str(_run_context.get("run_id", "")))
 	if sim.endless:
 		meta.record_endless(sim)
 		if run_log != null:
@@ -791,6 +808,10 @@ func _set_paused(on: bool) -> void:
 		_view.set_paused(on)
 	if audio != null:
 		audio.set_paused(on)
+	if shop_ui != null:
+		shop_ui.set_paused(on)
+	if vending_ui != null:
+		vending_ui.set_paused(on)
 	if pause_ui == null:
 		return
 	if on:

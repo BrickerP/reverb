@@ -88,10 +88,14 @@ func test_rich_combat_signals_replace_legacy_duplicates(c: Check) -> void:
 
 	sim.player_hurt.emit(3.0)
 	var hurt := PlayerHurtInfo.new()
+	hurt.amount = 3.0
+	hurt.hp_loss = 3.0
 	sim.player_hurt_info.emit(hurt)
 	c.eq(audio.play_count(&"hurt"), 0, "legacy hurt is not double-bound")
 	c.eq(audio.play_count(&"hurt_contact"), 1, "rich contact hurt cue")
 	hurt = PlayerHurtInfo.new()
+	hurt.amount = 3.0
+	hurt.hp_loss = 3.0
 	hurt.effect = &"bomber_explosion"
 	sim.player_hurt_info.emit(hurt)
 	c.eq(audio.play_count(&"hurt_blast"), 1, "rich explosive hurt cue")
@@ -368,4 +372,56 @@ func test_ambient_duck_freezes_on_pause_and_clears_on_rebind(c: Check) -> void:
 	c.eq(audio.play_count(&"boss"), 0, "paused combat transition cannot play")
 	c.eq(audio._duck_remaining, 0.0, "blocked transition does not alter the bed")
 	c.ok(audio.play(&"click"), "UI keeps its physical paper click while paused")
+	audio.free()
+
+
+func test_bureau_cues_follow_real_events_and_detach_without_changing_world(c: Check) -> void:
+	var audio := _audio()
+	var sim := Sim.new(1701)
+	sim.start_run()
+	audio.bind(sim)
+	var before := RunSnapshot.capture(sim)
+	sim.world_event.emit({"kind": &"dispatch_safe"})
+	sim.world_event.emit({"kind": &"dispatch_impact"})
+	sim.world_event.emit({"kind": &"dispatch_delivered"})
+	c.eq(audio.play_count(&"click"), 1, "switch uses the dry existing palette")
+	c.eq(audio.play_count(&"weapon_rail_spike"), 1, "actual stamp impact owns its accent")
+	c.eq(audio.play_count(&"equipment_apply"), 1, "successful delivery has one confirmation")
+	c.eq(RunSnapshot.capture(sim), before, "event audio cannot change rules or RNG")
+	audio.bind(null)
+	sim.world_event.emit({"kind": &"dispatch_delivered"})
+	c.eq(audio.play_count(&"equipment_apply"), 1, "old world cannot make sound after detach")
+	audio.free()
+
+
+func test_actual_echo_safety_switch_has_only_its_canonical_lever_cue(c: Check) -> void:
+	var audio := _audio()
+	var sim := Sim.new(17017)
+	sim.start_run()
+	sim.start_wave(2)
+	sim._plan.clear()
+	var take := EchoTake.new()
+	take.wave = 2
+	take.samples = PackedVector2Array([BureauEvents.SWITCH, BureauEvents.SWITCH])
+	take.weapons.append(Content.weapon(&"pistol"))
+	take.levels.append(0)
+	take.work_actions.append({"time": 0.0, "kind": &"press", "target_id": BureauEvents.SWITCH_ID,
+		"pos": BureauEvents.SWITCH, "weapon_id": &"", "aim": Vector2.ZERO})
+	sim.bank.add(take)
+	var actor := EchoActor.new(take, 0)
+	sim.echoes.append(actor)
+	audio.bind(sim)
+	var events: Array[Dictionary] = []
+	sim.echo_work_performed.connect(func(info: Dictionary) -> void: events.append(info.duplicate(true)))
+	EchoWork.step(sim, actor, 0.0, 0.01)
+	c.eq(events.size(), 1, "actual recorded lever work executes once")
+	if not events.is_empty():
+		c.ok(events[0]["success"] and events[0]["target_id"] == BureauEvents.SWITCH_ID, "work carries authoritative target identity")
+		var mark := ExpeditionInk.work_profile(events[0], Sim.ARENA)
+		c.eq(mark["name_key"], "interaction.bureau_switch", "live cue identifies the safety lever")
+	c.eq(audio.play_count(&"click"), 1, "world success owns one lever click")
+	c.eq(audio.play_count(&"weapon_rail_spike"), 0, "safety lever cannot borrow heavy stamp impact audio")
+	var count := audio.play_count(&"weapon_rail_spike")
+	sim.echo_work_performed.emit({"success": true, "kind": &"press", "target_id": &"machine_0"})
+	c.eq(audio.play_count(&"weapon_rail_spike"), count + 1, "ordinary machine press retains its existing accent")
 	audio.free()

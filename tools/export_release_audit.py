@@ -54,6 +54,8 @@ PROVENANCE_FILES = [
     "assets/presentation/weapons/manifest.json",
     "assets/presentation/supports/SOURCES.md",
     "assets/presentation/supports/manifest.json",
+    "assets/presentation/bureau/SOURCES.md",
+    "assets/presentation/bureau/manifest.json",
     "audio/presentation/SOURCES.md",
     "audio/music/SOURCES.md",
     "audio/music/score.json",
@@ -178,8 +180,8 @@ def cue_names(audio_source: str) -> list[str]:
 
 def expected_inventory(stage: Path) -> dict[str, Any]:
     pngs = sorted(path.relative_to(stage).as_posix() for path in (stage / "assets/presentation").rglob("*.png"))
-    if len(pngs) != 52:
-        raise RuntimeError(f"expected 52 presentation PNGs, found {len(pngs)}")
+    if len(pngs) != 54:
+        raise RuntimeError(f"expected 54 presentation PNGs, found {len(pngs)}")
     names = cue_names((stage / "scripts/game/audio.gd").read_text())
     cues: list[str] = []
     for name in names:

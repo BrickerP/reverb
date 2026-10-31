@@ -1,60 +1,49 @@
-# Take Stack v0.10.0-rc.1
+# 回响 / Take Stack 0.18 · 纸上见真章
 
-Published 2026-10-25. Tag `v0.10.0-rc.1` points at
-`2288b9457366098beec338d5a5dc85a2c74ad141`.
+武器自动开火，纸做的身体现在更清楚地承担后果。
 
-This release is intentionally versioned as a release candidate but was explicitly marked
-**Latest** at the maintainer's request.
+- **六类纸张动作，覆盖35把武器。** 钉穿留下纸孔与夹钉，压印留下墨边，裁切错开纸片，墨迹落地晕开，回卷有真实返程钩尾，传导留下短缝线。目标沿真实来向压折，走路仍由实际位移驱动。
+- **身体与工位真的接触。** 修补落在受疗身体的胸袖并短暂挺直；回响按装备能力折叠、抽丝或压成废件；纸手与服务握柄连成压下、回弹的过程。
+- **四处反馈修正。** 同ID武器按实际装备槽独立后坐；完全挡住的攻击使用防守反馈，实际掉血才表现受伤；支援出生、攻击、维修、受伤、毁坏与过期接通画面和声音；修好且停机的机器仍显示补丁。
+- **保持回收局的纸与墨。** 沿用现有纸偶和办公废件美术，减少特效模式保留必要接触和结果。支援与回响使用真实身份、生命和寿命，不产生额外身体或奖励。
 
-## Scope
+This release keeps the existing paper cast and gives attacks a visible departure,
+contact and result. All 35 weapon profiles use six paper actions. Repairs,
+retirement and machine grips have physical feedback; equal weapons recoil in
+their actual slots, and full shield blocks are distinct from HP injury.
 
-20-wave single-screen arena roguelite vertical slice: record each wave's movement and build,
-then let a past self fight as an echo. 20 waves, Paradox boss, shop, four characters, Daily,
-Endless and Boss Rush.
+## 下载 / Downloads
 
-Highlights: 4 characters, 12 weapons (4 evolutions), 11 items, 3 item sets, echo overdub /
-collapse / refresh / undo, four elite rules, temporal rifts, contracts (including collapse),
-endless boons and rerolls, Ascension 0–3, Daily anomalies, streak, history replay, run logs.
+下载对应平台ZIP，解压后运行：
 
-## Artifacts
+- [macOS](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-macos.zip)
+- [Windows](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-windows.zip)
+- [Linux](https://github.com/BrickerP/reverb/releases/latest/download/TakeStack-linux.zip)
 
-| File | Size | SHA-256 |
-|---|---:|---|
-| `TakeStack-macos.zip` | 89,302,589 B | `0a30c5783db0167814ac1f06e42d69b343137d87ab764154bf6b64173c23cd79` |
-| `TakeStack-windows.zip` | 65,861,077 B | `506f23bfdd5a7cd87f8e932386e438eaea699b2fb6afdf5c97a5ab064ff6cc4c` |
-| `TakeStack-linux.zip` | 56,143,055 B | `5103687cf0a67134089b40bad479459dbcf881f4c08cea0cf5dad09ff17e97fd` |
+macOS包含有效ad-hoc完整性签名，尚未经过Apple公证；首次打开请按包内
+`MAC_START_HERE.txt` 操作。Windows包未签名。Linux可执行权限保留在ZIP中。
 
-Also attached: `SHA256SUMS.txt`, `AUDIT.json`, `BUILD_INFO.txt`.
+## 存档 / Saves
 
-## Install
+**0.18可继续0.17中途存档，无需重开。** Snapshot v4与既有永久档案格式未变；
+公开包继续使用 `TakeStack Preview` 目录。更早的中途存档格式需要新开对局，
+永久角色解锁、设置和回响档案保留。
 
-- **macOS**: unzip `TakeStack-macos.zip`, right-click `Take Stack.app` → Open. The build is
-  unsigned; if macOS says it is damaged, run
-  `xattr -dr com.apple.quarantine "Take Stack.app"`.
-- **Windows**: unzip `TakeStack-windows.zip` and run `TakeStack.exe`; keep the `.pck` beside it.
-  SmartScreen may require “More info → Run anyway”.
-- **Linux**: unzip `TakeStack-linux.zip`, then
-  `chmod +x TakeStack.x86_64 && ./TakeStack.x86_64`; keep the `.pck` beside the binary.
-- **Checksums**: `shasum -a 256 -c SHA256SUMS.txt` (macOS) or
-  `sha256sum -c SHA256SUMS.txt` (Linux).
+0.18 retains Snapshot v4 and the published 0.17 data directory. Existing 0.17 runs
+and permanent progress remain usable. Earlier suspended-run formats need a new run.
 
-## Verification
+## 构建与验证 / Build and evidence
 
-- Godot: **6683 tests passed**
-- smoke passed
-- Python report tests passed
-- exact-head export audit passed for macOS, Windows and Linux
-- 18 provenance files, 79 checked resources, 317 inventory items, no forbidden paths
-- macOS package launched 30 frames with isolated user data
-- Linux executable permission preserved
-- `main` CI green
-- Remote assets were downloaded and all checksums/zip integrity checks passed before
-  publication
+本版从tag指向的完整提交在远端流水线重新构建。三平台测试、导出启动、资源审计、
+Mac签名与存档隔离，以及普通／中文960／减少特效三套原生动作样板是发版门禁。
+最终来源、版本、Godot版本和各文件SHA256以附带 `BUILD_INFO.txt`、`AUDIT.json`、
+`VERIFICATION.json`、`PERFORMANCE.json` 与 `SHA256SUMS.txt` 为准。
 
-## Known limits
+原生样板是脚本夹具：三套各12场景、56张原尺寸PNG，附60fps静音原速录像、
+完整状态／双RNG不变和严格存档往返证据；并非真人通关或平衡结论。
+压力对照固定96敌人、8回响、12支援物和既有弹量上限，使用同一探针SHA与同一runner；
+性能结果是软件渲染诊断，不能换算为所有设备的FPS承诺。极限叠堆仍不能逐个分辨每具身体。
 
-- No human playtest data: difficulty, readability, defensive builds, Boss Rush and Daily balance
-  remain unverified.
-- Formal `Take Stack` trademark clearance is not complete.
-- Windows/Linux packages passed native CI export startup smoke; they were not launched on the
-  maintainer's macOS host.
+Human feel, subjective audio, physical controllers and target-device performance
+remain playtest work. The attached source/evidence receipts describe what was
+actually built and measured, without relabelling automated fixtures as human play.

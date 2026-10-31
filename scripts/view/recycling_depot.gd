@@ -26,6 +26,8 @@ var _language := ""
 var _world_profile: Dictionary = {}
 var _machine_profiles: Array[Dictionary] = []
 var _safe_workers: Array[Dictionary] = []
+var _retired_count := 0
+var _worker_pad: InkStyleBox
 var _act_id := 1
 static var _atlas: Texture2D
 
@@ -49,6 +51,7 @@ func set_world_profile(profile: Dictionary) -> void:
 	if profile == _world_profile:
 		return
 	_world_profile = profile.duplicate(true)
+	_retired_count = mini(6, profile.get("bureau", {}).get("retired", []).size())
 	_act_id = clampi(int(profile.get("act_id", 1)), 1, 3)
 	_machine_profiles.clear()
 	_safe_workers.clear()
@@ -118,6 +121,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	_draw_machines(profile)
 	_draw_safe_workers()
+	_draw_cleanup()
 
 
 func _draw_machines(profile: Dictionary) -> void:
@@ -155,32 +159,51 @@ func _draw_machines(profile: Dictionary) -> void:
 
 func _draw_machine_state(machine: Dictionary, art: Rect2) -> void:
 	var center := art.get_center()
-	if machine.get("stopped", false):
-		# A physical lock bar crosses the mechanism, rather than a colour change.
-		draw_line(center + Vector2(-22, -9), center + Vector2(22, 9), PAPER, 8, true)
-		draw_line(center + Vector2(-22, -9), center + Vector2(22, 9), INK, 3, true)
-		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), PAPER)
-		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), INK, false, 2)
-	elif machine.get("status") == &"fault":
+	var marks := machine_marks(machine, art)
+	if machine.get("status") == &"fault":
 		var crack := PackedVector2Array([center + Vector2(-9, -20), center + Vector2(2, -9), center + Vector2(-5, -1), center + Vector2(9, 14)])
 		draw_polyline(crack, PAPER, 7, true)
 		draw_polyline(crack, INK, 3, true)
 		draw_line(center + Vector2(14, -21), center + Vector2(20, -9), INK, 3, true)
 		draw_circle(center + Vector2(22, -4), 2, INK)
 	elif machine.get("status") == &"repaired":
-		var patch := Rect2(center + Vector2(-18, -14), Vector2(36, 24))
+		var patch: Rect2 = marks["patch"]
 		draw_rect(patch, PAPER)
 		draw_rect(patch, INK, false, 2)
-		for dx in [-13.0, 13.0]:
-			draw_line(center + Vector2(dx, -18), center + Vector2(dx, -10), INK, 2)
-			draw_line(center + Vector2(dx, 6), center + Vector2(dx, 14), INK, 2)
-		draw_polyline(PackedVector2Array([center + Vector2(-7, -2), center + Vector2(-2, 3), center + Vector2(8, -7)]), INK, 2.5, true)
-	else:
+		for staple: PackedVector2Array in marks["staples"]:
+			draw_polyline(staple, INK, 2, true)
+		var check_center := patch.get_center()
+		draw_polyline(PackedVector2Array([check_center + Vector2(-7, -2), check_center + Vector2(-2, 3), check_center + Vector2(8, -7)]), INK, 2.5, true)
+	elif not bool(machine.get("stopped", false)):
 		var direction: Vector2 = machine.get("direction", Vector2.RIGHT)
 		var normal := Vector2(-direction.y, direction.x)
 		for step in 2:
 			var anchor := center + direction * float(step * 11 - 5)
 			draw_polyline(PackedVector2Array([anchor - direction * 5 - normal * 5, anchor, anchor - direction * 5 + normal * 5]), Color(INK, 0.7), 2, true)
+	# Repair and stopping are independent facts. Place the patch above the lock
+	# rather than letting the lock's branch erase the completed repair.
+	var lock: PackedVector2Array = marks["lock"]
+	if not lock.is_empty():
+		draw_polyline(lock, PAPER, 8, true)
+		draw_polyline(lock, INK, 3, true)
+		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), PAPER)
+		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), INK, false, 2)
+
+
+static func machine_marks(machine: Dictionary, art: Rect2) -> Dictionary:
+	var center := art.get_center()
+	var patch := Rect2()
+	var staples: Array[PackedVector2Array] = []
+	var lock := PackedVector2Array()
+	if machine.get("status") == &"repaired":
+		var shift := Vector2(0, -24) if bool(machine.get("stopped", false)) else Vector2.ZERO
+		patch = Rect2(center + Vector2(-18, -14) + shift, Vector2(36, 24))
+		for dx in [-13.0, 13.0]:
+			staples.append(PackedVector2Array([center + Vector2(dx, -18) + shift, center + Vector2(dx, -10) + shift]))
+			staples.append(PackedVector2Array([center + Vector2(dx, 6) + shift, center + Vector2(dx, 14) + shift]))
+	if machine.get("stopped", false):
+		lock = PackedVector2Array([center + Vector2(-22, -9), center + Vector2(22, 9)])
+	return {"patch": patch, "staples": staples, "lock": lock}
 
 
 func _draw_safe_workers() -> void:
@@ -190,7 +213,15 @@ func _draw_safe_workers() -> void:
 	_draw_label(Loc.t("world.safe_registry"), Rect2(first + Vector2(-36, -72), Vector2(300, 24)), 17, INK)
 	for worker in _safe_workers:
 		var pos: Vector2 = worker["pos"]
-		ExpeditionInk.draw_worker(self, pos, true)
+		if _worker_pad == null:
+			_worker_pad = UiTheme.paper_panel(PAPER)
+			_worker_pad.shape = InkStyleBox.Shape.TAG
+			_worker_pad.variant = 2
+			_worker_pad.shadow_size = 0.0
+		_worker_pad.draw(get_canvas_item(), Rect2(pos + Vector2(-23, -48), Vector2(46, 72)))
+		draw_set_transform(pos, 0.0, Vector2(1.12, 1.12))
+		ExpeditionInk.draw_worker(self, Vector2.ZERO, true)
+		draw_set_transform(Vector2.ZERO)
 		_draw_label(str(worker["stage"]), Rect2(pos + Vector2(-10, 21), Vector2(20, 14)), 11, INK)
 		if worker["testimony_used"]:
 			# A signed page remains beside its living witness.
@@ -357,3 +388,26 @@ static func _closed(points: PackedVector2Array) -> PackedVector2Array:
 	if not closed.is_empty():
 		closed.append(closed[0])
 	return closed
+
+
+func _draw_cleanup() -> void:
+	# The first real survivor takes the night-shift broom. No additional worker,
+	# corpse, reward or enemy removal is invented by this quiet edge animation.
+	if _safe_workers.is_empty() or _retired_count <= 0:
+		return
+	var at: Vector2 = _safe_workers[0]["pos"]
+	var sweep := 0.0 if _reduced_effects else sin(_visual_time * 1.7) * 4.0
+	var head := at + Vector2(24.0 + sweep, 19)
+	draw_line(at + Vector2(10, -5), head, INK, 2.8, true)
+	draw_line(head + Vector2(-9, 1), head + Vector2(10, 1), MARK, 4.0, true)
+	for index in 5:
+		draw_line(head + Vector2(-8 + index * 4, 3), head + Vector2(-10 + index * 5, 9), INK, 1.2, true)
+	for index in _retired_count:
+		var pos := at + Vector2(40 + index * 8, 26 + (index % 2) * 4)
+		var scrap := PackedVector2Array([pos + Vector2(-3, -3), pos + Vector2(4, -2), pos + Vector2(2, 4), pos + Vector2(-4, 2)])
+		draw_colored_polygon(scrap, PAPER)
+		scrap.append(scrap[0])
+		draw_polyline(scrap, Color(INK, 0.55), 1.0, true)
+	var caption := Rect2(at + Vector2(25, 38), Vector2(162, 22))
+	_worker_pad.draw(get_canvas_item(), caption)
+	_draw_label(Loc.t("bureau.cleanup"), caption, 12, INK)

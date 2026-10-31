@@ -66,9 +66,9 @@ def measure(path: Path, columns: int = 1, rows: int = 1,
 def authored_layouts() -> dict[Path, tuple[int, int]]:
     """Production manifests own layout; image aspect ratios never imply a clip."""
     layouts = {}
-    for group in ("characters", "enemies", "surfaces"):
+    for group in ("characters", "enemies", "surfaces", "bureau"):
         data = json.loads((ART / group / "carbon_copy_assets.json").read_text())
-        for asset in data["assets"]:
+        for asset in data["assets"] if isinstance(data, dict) else data:
             columns, rows = int(asset["columns"]), int(asset["rows"])
             if columns * rows != int(asset["frame_count"]):
                 raise ValueError(f"inconsistent authored frame count: {asset['file']}")
@@ -79,9 +79,9 @@ def authored_layouts() -> dict[Path, tuple[int, int]]:
 def authored_visible_rects() -> dict[Path, dict[int, list[list[int]]]]:
     """Optional source slices suppress disconnected neighboring-cell fragments."""
     visible = {}
-    for group in ("characters", "enemies", "surfaces"):
+    for group in ("characters", "enemies", "surfaces", "bureau"):
         data = json.loads((ART / group / "carbon_copy_assets.json").read_text())
-        for asset in data["assets"]:
+        for asset in data["assets"] if isinstance(data, dict) else data:
             frames = asset.get("frame_visible_rects", {})
             if frames:
                 visible[ROOT / asset["file"]] = {int(frame): rects for frame, rects in frames.items()}
@@ -92,7 +92,7 @@ def authored_regions() -> dict[str, tuple[Path, tuple[int, int, int, int]]]:
     """Static atlas regions are authored source-pixel XYWH rectangles per key."""
     regions = {}
     assets = []
-    for group in ("weapons", "supports"):
+    for group in ("weapons", "supports", "bureau"):
         assets.extend(json.loads((ART / group / "carbon_copy_assets.json").read_text()))
     for asset in assets:
         for key, rect in asset.get("regions", {}).items():
@@ -157,7 +157,7 @@ def main() -> None:
     start = source.index("const SOURCE_METADATA := {")
     end = source.index("static var _textures", start)
     CATALOG.write_text(source[:start] + replacement + source[end:])
-    for folder in [ART, ART / "characters", ART / "enemies", ART / "items", ART / "weapons", ART / "supports", ART / "surfaces", ART / "app_icon"]:
+    for folder in [ART, ART / "characters", ART / "enemies", ART / "items", ART / "weapons", ART / "supports", ART / "surfaces", ART / "app_icon", ART / "bureau"]:
         assets = []
         for path in sorted(folder.glob("*.png")):
             assets.append(records.get(path) or measure(path))

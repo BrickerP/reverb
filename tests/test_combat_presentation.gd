@@ -10,6 +10,7 @@ func _view(sim: Sim) -> ArenaView:
 func _shot(id: StringName = &"pistol") -> ShotInfo:
 	var info := ShotInfo.new()
 	info.weapon_id = id
+	info.weapon_slot = 0
 	info.origin = Vector2(200.0, 220.0)
 	info.direction = Vector2(3.0, 4.0).normalized()
 	info.target = Vector2(500.0, 620.0)
@@ -112,6 +113,8 @@ func test_direction_reduction_explosion_cause_and_lethal_hurt_are_preserved(c: C
 	sim.explosion_info.emit(blast)
 	c.eq(view.event_last_data()["cause"], ExplosionInfo.BOMBER, "bomber cause remains explicit")
 	var hurt := PlayerHurtInfo.new()
+	hurt.amount = 2.0
+	hurt.hp_loss = 2.0
 	hurt.pos = sim.player.pos
 	hurt.direction = Vector2.UP
 	hurt.source = &"bomber"
@@ -137,6 +140,8 @@ func test_directionless_aoe_and_overlap_do_not_invent_vectors(c: Check) -> void:
 	c.eq(last["direction"], Vector2.ZERO, "directionless AOE remains directionless")
 	c.ok(not bool(last["has_direction"]), "AOE exposes symmetric impact contract")
 	var hurt := PlayerHurtInfo.new()
+	hurt.amount = 2.0
+	hurt.hp_loss = 2.0
 	hurt.pos = sim.player.pos
 	hurt.direction = Vector2.ZERO
 	hurt.effect = &"overlap"
@@ -176,6 +181,8 @@ func test_feedback_queues_are_capped_expire_and_clear_on_phase(c: Check) -> void
 	c.eq(view.feedback_counts()["explosions"], ArenaView.MAX_EXPLOSIONS, "explosion queue is capped")
 	for i in ArenaView.MAX_HURTS + 3:
 		var hurt := PlayerHurtInfo.new()
+		hurt.amount = 1.0
+		hurt.hp_loss = 1.0
 		hurt.pos = sim.player.pos
 		sim.player_hurt_info.emit(hurt)
 	c.eq(view.feedback_counts()["hurts"], ArenaView.MAX_HURTS, "hurt queue is capped")

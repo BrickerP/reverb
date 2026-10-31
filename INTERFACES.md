@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.16 contract. Simulation owns rules and mutation. UI,
+This is the current 0.18 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -14,7 +14,7 @@ or saved-run outcomes.
 | Equipment | `Content`, `WeaponDef`, `Combat`, `SupportSystem` | 35 weapon profiles, hit identity, support bodies and bounded allocation |
 | Roles and copies | `CharacterSkills`, `EchoSystem`, `EchoBank`, `EchoArchive` | Role actions, copy wear/retirement, host-preserving merge and cross-run archive |
 | Transactions | `Shop`, `ShopState`, `ShopResult`, `Offer`, `AnomalyContract` | Six goods, quotes, order replacement, assembly, refit, branching and atomic undo |
-| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Snapshot v3, atomic storage, permanent unlock/archive data and route clues |
+| Persistence | `RunSnapshot`, `SuspendStore`, `Meta`, `StoryLedger` | Snapshot v4, atomic storage, permanent unlock/archive data and route clues |
 | Presentation | `Hud`, `ArenaView`, `ExpeditionInk`, `BattleDirector`, `GameAudio` | Read-only, bounded, localized visual/audio feedback |
 
 Main detaches prior session listeners before binding a new or restored session.
@@ -156,16 +156,16 @@ Echo recordings retain the route, wave-end build, retirement skill and up to six
 
 Archive records are permanent Meta data. EndUi selects any retained candidate; raw DPS never decides replacement. An existing file requires an explicit comparison and confirmation, including lower-output and utility-only choices. Solo, Daily, debt, invalid gear/routes/stats and missing capacity are rejected. `EchoArchive.normalize` is the shared pure load/preview path: a real slot, at most60 condition, grade0 at opening, combat budget no more than0.75 of starter DPS and matching normalized utility stats. The stored original keeps its identity/grade. Conductor opening copy synergy and Mirror starter gear are included in actual-entry previews. Old permanent records may omit `work_actions`, decoded as an empty list in the same closed decoder.
 
-## Snapshot v3 and atomic storage
+## Snapshot v4 and atomic storage
 
-`RunSnapshot.VERSION == 3`. The graph includes expedition, debt/outcome,
+`RunSnapshot.VERSION == 4`. The graph includes expedition, debt/outcome,
 interactables, character energy/cooldown/effects, support units and next UID,
 graded offers, paid investment, assembly annotations, order aliases, Echo merge
 metadata, key-work cursors and rewind high-water state, archive-loaded flags, persistent world/roster/witness references, pending boss terms and final resolution. It preserves exact RNG and
 shared references while accepting only known classes, canonical content and
 finite bounded values.
 
-The old 0.15 and earlier suspended-run schemas is intentionally incompatible. There is no
+The old 0.16 and earlier suspended-run schemas are intentionally incompatible. There is no
 legacy fallback or migration branch. Permanent Meta unlocks, clues, archives
 and settings remain separate.
 
@@ -199,3 +199,16 @@ Current evidence entry points are:
 Native probes use original1280×720 and960×540 canvases, including EN/ZH and Reduced Effects. Clinical fixtures disclose setup, use real Main/UI inputs and validate snapshots around rendering; they are not human playthroughs. `tests/probe_native_theme_ui.gd` checks bounded full rosters and decision sheets, while `tools/theme_performance_probe.gd` supplies deterministic CPU comparisons. Build and release receipts accompany the exact immutable exported commit.
 
 Scripted evidence does not establish human balance, addictiveness, physical-controller behavior, Windows GUI behavior, notarization or universal frame-rate acceptance.
+
+## Bureau rituals
+
+`BureauEvents` owns the closed expedition.bureau delivery, confession, retired and work state; `BureauConfession` owns its bounded act choices. All new world targets use existing E/X interaction and the canonical model. Campaign2/6/10 announces an optional document delivery. A radius86 stamp warns1.1s in a4s cycle; the safety lever grants4s, including from actual recorded Echo work. Successful inbox delivery pays8 materials once. Failure has no surprise fee and every role can time the crossing alone.
+
+`ShopResult.CONFESS` signs once per upcoming act. Truth automatically repairs the most-worn eligible copy (lowestUID tie) by at most12 condition, or heals up to6HP when none needs repair. Polish grants12 cash and declares the next encounter's inspection terminal/hazard. Story commits only at departure. Pending/registered/unverified outcomes remain visible across acts. A pending signature holds reroll until undone; purchase, refit and departure remain available. The existing32-state history protects the pre-signature anchor and rejects an action rather than silently evicting it.
+
+`Meta.stage_bureau_report(sim,run_id)` upserts at most12 actual shifts, each with at most6 retired identities. Original recording stage is independent of current-run retirement stage. A retained body cannot simultaneously be a retired record. Transient switch, carry and impact signals never consume the48-entry causal world history. Event target_id distinguishes lever feedback from physical press impact.
+
+Family-wall selection and actual entry preview share existing archive rules. The inherited-copy print is passive0.7s, validates actual bank identity and never creates an extra body. Merge/Undo ceremonies consume actual ShopResult snapshots; skill transfer, repair patch and power clamp have distinct read-only geometry. Reduced Effects/skip/pause alter presentation only. TooltipPanel/TooltipLabel use an opaque paper surface and readable ink.
+
+
+The 0.18 event/presentation contract is documented in [paper-action-feedback.md](docs/paper-action-feedback.md). ShotInfo captures the actual weapon slot, PlayerHurtInfo separates absorbed impact and HP loss, and DamageInfo captures the target radius. These are event values rather than saved-run fields; Snapshot v4 remains unchanged.

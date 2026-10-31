@@ -105,6 +105,7 @@ static func step_weapons(sim: Sim, origin: Vector2, stats: Stats, weapons: Array
 		info.actor_token = actor_token
 		info.source_tint = tint
 		info.weapon_id = w.id
+		info.weapon_slot = i
 		info.origin = origin
 		info.direction = (target_pos - origin).normalized()
 		info.target = target_pos

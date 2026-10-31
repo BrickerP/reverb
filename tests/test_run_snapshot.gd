@@ -344,6 +344,9 @@ func _expedition_sim(role: StringName = &"looper", stage: int = 2) -> Sim:
 
 
 func _buy_order(sim: Sim, kind: StringName) -> ShopResult:
+	# Clinical shop fixtures retain their stated cash/loadout, but settle any
+	# ambient work before switching phase just as the real wave exit does.
+	BureauEvents.finish_wave(sim, true)
 	sim.phase = Sim.Phase.SHOP
 	var offer := Offer.new()
 	offer.contract = AnomalyContract.create(kind, sim.next_wave_number())
@@ -357,7 +360,7 @@ func _encoded(value: Variant) -> Variant:
 	return RunSnapshot.encode_envelope({"value": value}).d[0][1]
 
 
-func test_v3_active_role_support_loan_and_echo_metadata_continue_exactly(c: Check) -> void:
+func test_v4_active_role_support_loan_and_echo_metadata_continue_exactly(c: Check) -> void:
 	var sim := _expedition_sim(&"conductor")
 	c.ok(_buy_order(sim, &"credit").ok, "actual loan order purchases")
 	sim.start_wave(3)
@@ -367,7 +370,7 @@ func test_v3_active_role_support_loan_and_echo_metadata_continue_exactly(c: Chec
 	c.ok(SupportSystem.spawn(sim, &"paper_tree", sim.player.pos), "production unit is actual bounded state")
 	sim.player.weapon_investments[0] = 27
 	var before := RunSnapshot.capture(sim)
-	c.eq(before.version, 3, "new schema has a clean version break")
+	c.eq(before.version, 4, "new schema has a clean version break")
 	var restored := RunSnapshot.restore(_json_roundtrip(before))
 	c.ok(restored != null, "role/support/credit state resumes: %s" % RunSnapshot.last_error)
 	if restored == null:
@@ -387,8 +390,9 @@ func test_v3_active_role_support_loan_and_echo_metadata_continue_exactly(c: Chec
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "actual resumed relay/pet/production/loan battle remains deterministic")
 
 
-func test_v3_shop_graded_offer_assembly_and_two_undos_preserve_economy(c: Check) -> void:
+func test_v4_shop_graded_offer_assembly_and_two_undos_preserve_economy(c: Check) -> void:
 	var sim := _expedition_sim()
+	BureauEvents.finish_wave(sim, true)
 	sim.phase = Sim.Phase.SHOP
 	sim.player.weapon_levels[0] = 2
 	sim.player.weapon_investments[0] = 14
@@ -413,7 +417,7 @@ func test_v3_shop_graded_offer_assembly_and_two_undos_preserve_economy(c: Check)
 	c.eq(restored.player.weapon_investments, [14], "two undos restore original paid ledger")
 
 
-func test_v3_loan_purchase_alias_and_full_undo_survive_resume(c: Check) -> void:
+func test_v4_loan_purchase_alias_and_full_undo_survive_resume(c: Check) -> void:
 	var sim := _expedition_sim()
 	c.ok(_buy_order(sim, &"credit").ok, "credit purchases through actual offer transaction")
 	c.ok(sim.shop.apply(ShopResult.UPGRADE, sim, null, 0).ok, "equipment purchase follows loan")
@@ -431,7 +435,7 @@ func test_v3_loan_purchase_alias_and_full_undo_survive_resume(c: Check) -> void:
 	c.eq(restored.active_contract, null, "loan undo does not leave accepted work behind")
 
 
-func test_v3_manual_repayment_and_loan_alias_undo_resume_exactly(c: Check) -> void:
+func test_v4_manual_repayment_and_loan_alias_undo_resume_exactly(c: Check) -> void:
 	var sim := _expedition_sim()
 	c.ok(_buy_order(sim, &"credit").ok, "repayment starts from a real loan order")
 	var before_repayment := RunSnapshot.capture(sim)
@@ -451,7 +455,7 @@ func test_v3_manual_repayment_and_loan_alias_undo_resume_exactly(c: Check) -> vo
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "repayment and loan undo stay identical after restore")
 
 
-func test_v3_boss_negotiation_resumes_into_actual_recruitment_and_story(c: Check) -> void:
+func test_v4_boss_negotiation_resumes_into_actual_recruitment_and_story(c: Check) -> void:
 	var sim := _expedition_sim(&"looper", 3)
 	c.ok(_buy_order(sim, &"recruit").ok, "recruitment work order purchases")
 	sim.start_wave(4)
@@ -478,7 +482,7 @@ func test_v3_boss_negotiation_resumes_into_actual_recruitment_and_story(c: Check
 	c.ok(StoryLedger.discovered(restored).has(&"order_recruit"), "actual recruit work order has story consequence")
 
 
-func test_v3_each_role_effect_can_resume_without_extra_energy_or_bodies(c: Check) -> void:
+func test_v4_each_role_effect_can_resume_without_extra_energy_or_bodies(c: Check) -> void:
 	for role: StringName in Content.characters():
 		var sim := _expedition_sim(role)
 		if role == &"solo":
@@ -498,7 +502,7 @@ func test_v3_each_role_effect_can_resume_without_extra_energy_or_bodies(c: Check
 		c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "%s continued ability matches without duplicating effects" % role)
 
 
-func test_v3_rejects_bad_roles_units_orders_ledgers_and_new_state_versions(c: Check) -> void:
+func test_v4_rejects_bad_roles_units_orders_ledgers_and_new_state_versions(c: Check) -> void:
 	var sim := _expedition_sim(&"conductor")
 	c.ok(sim.activate_character_skill(), "valid effect fixture activates")
 	c.ok(SupportSystem.spawn(sim, &"hound", sim.player.pos), "valid support fixture spawns")
@@ -547,7 +551,7 @@ func test_v3_rejects_bad_roles_units_orders_ledgers_and_new_state_versions(c: Ch
 	c.eq(RunSnapshot.capture(sim), before, "all malformed restores leave authoritative run untouched")
 
 
-func test_v3_rejects_bad_grade_and_plain_undo_order_metadata(c: Check) -> void:
+func test_v4_rejects_bad_grade_and_plain_undo_order_metadata(c: Check) -> void:
 	var sim := _expedition_sim()
 	c.ok(_buy_order(sim, &"credit").ok, "valid work-order undo fixture")
 	c.ok(sim.shop.apply(ShopResult.UPGRADE, sim, null, 0).ok, "valid equipment undo fixture")
@@ -569,7 +573,7 @@ func test_v3_rejects_bad_grade_and_plain_undo_order_metadata(c: Check) -> void:
 	c.eq(RunSnapshot.restore(damaged), null, "undo cannot reactivate unaccepted work order")
 
 
-func test_v3_missing_echo_levels_keep_existing_level_zero_semantics(c: Check) -> void:
+func test_v4_missing_echo_levels_keep_existing_level_zero_semantics(c: Check) -> void:
 	var sim := _expedition_sim()
 	sim.bank.takes[0].levels.clear()
 	var before := RunSnapshot.capture(sim)
@@ -607,7 +611,7 @@ func _recruit_boss(sim: Sim, stage: int, kind: StringName, choice: StringName) -
 	return true
 
 
-func test_v3_actual_recorded_machine_work_resumes_without_duplicate_execution(c: Check) -> void:
+func test_v4_actual_recorded_machine_work_resumes_without_duplicate_execution(c: Check) -> void:
 	var sim := Sim.new(941)
 	sim.start_run()
 	sim._plan.clear()
@@ -647,7 +651,7 @@ func test_v3_actual_recorded_machine_work_resumes_without_duplicate_execution(c:
 		c.eq(repeated.size(), 0, "resume cannot repeat an already performed key work event")
 
 
-func test_v3_world_rescue_repair_and_injury_survive_all_act_transitions(c: Check) -> void:
+func test_v4_world_rescue_repair_and_injury_survive_all_act_transitions(c: Check) -> void:
 	var sim := Sim.new(942)
 	sim.start_run()
 	sim._plan.clear()
@@ -674,7 +678,7 @@ func test_v3_world_rescue_repair_and_injury_survive_all_act_transitions(c: Check
 		c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "world continuation stays deterministic across act boundary")
 
 
-func test_v3_deploy_and_credit_restore_one_atomic_undo_with_real_roster(c: Check) -> void:
+func test_v4_deploy_and_credit_restore_one_atomic_undo_with_real_roster(c: Check) -> void:
 	var sim := Sim.new(943)
 	sim.start_run()
 	sim.player.materials = 500
@@ -705,7 +709,7 @@ func test_v3_deploy_and_credit_restore_one_atomic_undo_with_real_roster(c: Check
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "credit undo after deployment remains exact")
 
 
-func test_v3_pending_final_resolution_is_exact_and_each_exit_applies_once(c: Check) -> void:
+func test_v4_pending_final_resolution_is_exact_and_each_exit_applies_once(c: Check) -> void:
 	for choice in [&"released", &"collective", &"takeover"]:
 		var sim := Sim.new(944)
 		sim.start_run()
@@ -729,7 +733,7 @@ func test_v3_pending_final_resolution_is_exact_and_each_exit_applies_once(c: Che
 		c.eq(restored.expedition["ending"], choice, "receipt stores the actual explicit choice")
 
 
-func test_v3_rejects_disconnected_crew_and_staff_inside_saved_undo(c: Check) -> void:
+func test_v4_rejects_disconnected_crew_and_staff_inside_saved_undo(c: Check) -> void:
 	var sim := Sim.new(945)
 	sim.start_run()
 	sim.player.materials = 500
@@ -754,13 +758,13 @@ func test_v3_rejects_disconnected_crew_and_staff_inside_saved_undo(c: Check) -> 
 	c.eq(RunSnapshot.capture(sim), before, "invalid undo data cannot mutate authoritative crew")
 
 
-func test_v3_rejects_old_runs_unknown_world_rows_caps_and_forged_work_cursors(c: Check) -> void:
+func test_v4_rejects_old_runs_unknown_world_rows_caps_and_forged_work_cursors(c: Check) -> void:
 	var sim := _expedition_sim()
 	var before := RunSnapshot.capture(sim)
-	for version in [1, 2, 4]:
+	for version in [1, 2, 3, 5]:
 		var damaged := before.duplicate(true)
 		damaged["version"] = version
-		c.eq(RunSnapshot.restore(damaged), null, "only the direct current v3 runtime shape is loaded")
+		c.eq(RunSnapshot.restore(damaged), null, "only the direct current v4 runtime shape is loaded")
 	for corruption in [&"unknown", &"workers", &"roster", &"history", &"pending"]:
 		var state := sim.expedition.duplicate(true)
 		match corruption:

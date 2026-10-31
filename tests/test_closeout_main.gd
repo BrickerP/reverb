@@ -52,6 +52,29 @@ func _pad(code: JoyButton) -> InputEventJoypadButton:
 	return event
 
 
+func test_real_main_inputs_have_one_authoritative_interaction_and_ability_sound(c: Check) -> void:
+	var main := _main()
+	main.choose_character(&"looper", 1863)
+	var sim: Sim = main.sim
+	sim._plan.clear()
+	for item: Dictionary in sim.interactables:
+		if item["kind"] == &"repair":
+			sim.player.pos = item["pos"]
+			break
+	var repairs: int = main.audio.play_count(&"equipment_apply")
+	main._unhandled_input(_key(KEY_E))
+	c.eq(main.audio.play_count(&"equipment_apply"), repairs + 1,
+		"real E input produces one committed repair sound, without a second Main cue")
+	c.ok(main._view.feedback_counts()["interactions"] > 0,
+		"real Main interaction reaches the body/target presentation")
+	var echoes: int = main.audio.play_count(&"echo")
+	main._unhandled_input(_key(KEY_SHIFT))
+	c.ok(sim.character_cooldown > 0.0, "real Shift input activates the role action")
+	c.eq(main.audio.play_count(&"echo"), echoes + 1,
+		"real role input sounds once from the committed skill event")
+	_dispose(main)
+
+
 func _archive_action(main: Node) -> Button:
 	for button: Button in main.character_select._secondary_actions:
 		if button.text == Loc.t("archive.open"):

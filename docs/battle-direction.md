@@ -1,9 +1,18 @@
 # Battle direction
 
-The 0.15 battlefield connects paper-puppet acting to real expedition rules.
+The 0.18 battlefield connects paper-puppet acting to real expedition rules.
 Warnings explain where damage will occur, support bodies communicate ownership
 and mortality, and role/Echo effects preserve their causal source. Decoration
 must never move a hit, hide a mission, or imply a reward the model did not grant.
+
+The current action pass is defined in [paper-action-feedback.md](paper-action-feedback.md):
+pin, stamp, cut, ink, return and arc have distinct release gestures and contact
+results across all 35 weapon profiles. Dark local edges and paper deformation
+make contact readable without enlarging collision bodies or adding a global
+hit-stop. A confirmed actor token, equipment slot and weapon ID select exactly
+one mounted tool; delayed output without a known slot never guesses a duplicate.
+Full shield absorption uses a defensive clamp and shield sound, while actual HP
+loss uses the body-hurt path.
 
 ## Spatial hierarchy
 
@@ -67,8 +76,10 @@ current `E / X` label from InputMap and appears only when the player is in range
 
 Audit interaction exposes the danger zone it creates. Repair visibly disables
 the faulty press. Rescue health loss comes from actual enemy contact. Recruit
-keeps the defeated Boss present during the eight-second negotiation window;
-autofire does not play an ordinary loot/death beat first.
+keeps the defeated Boss present while simulation waits for an explicit choice;
+there is no running negotiation countdown. Autofire does not play an ordinary
+loot/death beat first. A committed recruitment tears the old badge and places a
+temporary paper badge on the actual new companion.
 
 ## Support ownership and failure
 
@@ -78,9 +89,12 @@ outline. Every body exposes HP and remaining-life state without looking like a
 cash pickup.
 
 Spawn, attack, repair, production, damage, destroy, retrieve and expire visuals
-come from `support_event` snapshots. Source slot, stable Echo token, tint and
-weapon ID survive delayed attacks and save/restore. Presentation never resolves
-an old slot to a different Echo.
+come from `support_event` value snapshots. Stable helper UID, Echo owner token,
+target identity and actual HP/life/charges identify the body and result.
+Repairs follow still-living recipients by type and UID, and retain captured
+positions after a recipient leaves. Concurrent repair and damage results do
+not overwrite each other. Presentation never resolves an old slot to a
+different Echo.
 
 Natural expiry folds or powers down. Destruction uses a distinct hurt/failure
 beat. A paper tree shows limited deliveries of shield/energy; it never emits a
@@ -93,7 +107,7 @@ Role readiness is driven by the authoritative 0–100 energy meter and six-secon
 cooldown. Each successful ability has a bounded, recognizable emblem:
 
 - Looper: backward route ticks and a brief clock-fold;
-- Solo: one paper dash strip and parry crease;
+- Solo: one paper dash strip and an invulnerable guard crease;
 - Mirror: a two-point swap stitch;
 - Conductor: one selected-Echo anchor and three relay pulses;
 - Mender: a real repair-station placement;
@@ -108,19 +122,21 @@ preview is not a temporary live body. Active retirement uses the actual skill
 profile; natural exhaustion uses a smaller terminal beat and grants no full
 skill.
 
+The retiring copy itself remains briefly visible, with its captured tint,
+weapon and condition. Its paper body folds, pulls apart or compresses according
+to the actual final skill. Exhaustion uses a quiet fold rather than the same
+particle burst. Repairs, lever operations and rejected operations likewise
+have body/contact/result drawings driven by the committed model event.
+
 ## End and archive beats
 
-Boss defeat and final outcome are separate beats. Released, collective and
-indebted receipts use the applied model outcome, not inferred route flavor:
+Boss defeat and final outcome are separate beats. The last encounter enters a resumable discharge decision before recording a win. Released costs0 with clearance or12 cash otherwise and repairs retained copies; Collective releases actual living workers/crew and restores health; Takeover retains the latest copy as staff. Debt is independent of the chosen ending. Cancel returns to Pause; Resume and Continue reopen unresolved terms.
 
-- released repairs current Echoes and clears credit debt;
-- collective heals and restores or schedules one companion;
-- indebted adds 24 cash while leaving debt visible.
+EndUi allows any retained valid archive, including utility-only and lower-output routes, with explicit replacement confirmation. Actual-entry previews share the runtime normalization (opening grade0/budget/condition60), including character synergy and support values. Daily, Solo and debt blockers remain visible. Family-wall and shift-history drawer distinguish actual retained, archived, staff and retired identities.
 
-The end screen has an explicit archive button and a live best-Echo path preview.
-Daily, Solo and unpaid-debt states visibly disable it. A protected stronger
-record returns distinct feedback from a storage failure. The title archive view
-previews one record per eligible character and exposes the inheritance toggle.
+Bureau delivery in2/6/10 has actual pickup, lever, radius86 stamp and inbox. Warning1.1s/impact/recovery and the4s safety interval share the hit model; repeated transient feedback cannot overwrite world memory. E/X and old-route Echo lever replay emit one correct cue and show the named safety lever. An8-material reward is once-only. Inspection terminals expose an actual warned hazard, and the following Shop receipt states registered or unverified.
+
+Three merge ceremonies share the authored stapler poses but have actual skill-transfer, patch and clamp geometry; Undo reverses the visual using original data. Animation is passive/skippable and cannot commit twice. Safe-phase retirement receipts record actual successful work; cleanup uses actual rescued people.
 
 ## Bounded presentation
 
@@ -145,12 +161,10 @@ not create unlimited voices or change combat timing. Five synchronized
 - `tools/expedition_art_probe.gd` captures EN/ZH and 1280×720/960×540 fixtures.
 - `tools/expedition_gameplay_probe.gd` is the integrated native gameplay probe
   replacing the obsolete 0.14 core probe.
+- `tests/test_paper_*`, `test_action_event_contracts` and the real Main input
+  regression cover the action pass. CI runs `tools/paper_action_probe.gd` at
+  normal speed in EN1280, ZH960 and Reduced1280, saves native phase PNGs and
+  silent movies, and compares legal eight-Echo pressure with public 0.17 on
+  the same runner. These are disclosed scripted fixtures, not human playtests.
 
-The gameplay probe completed EN 1280×720 (46 PNGs, 440 checks) and ZH Reduced
-960×540 (47 PNGs, 449 checks), both with empty failure lists. Each profile
-strictly restores the authoritative Snapshot around 43 Sim screenshots. These
-scripted fixtures are evidence of the production input/UI/model path, not a
-human playthrough. Export status is recorded separately in
-[closeout-acceptance.md](closeout-acceptance.md). Automated fixtures do not prove
-human readability speed, balance, addictiveness, physical-controller behavior,
-Windows GUI behavior or target-hardware frame rate.
+The current bureau gameplay probe covers EN1280 and ZHReduced960 with real Main input, full-snapshot/RNG invariance, strict JSON restoration and native pixels. Dedicated archive and world probes cover all four menu canvas/language combinations and actual warning, impact, safe, inspection and cleanup states. These clinical fixtures are not human playthroughs. Runtime exports, checksum receipts and public downloads are audited separately; physical-controller behavior, Windows GUI, long-term balance and universal frame rate remain separate validation.

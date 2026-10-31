@@ -2,6 +2,9 @@ class_name Meta
 extends RefCounted
 
 const DEFAULT_PATH := "user://reverb_save.json"
+const MAX_BUREAU_REPORTS := 12
+const BUREAU_REPORT_KEYS := ["run_id", "character_id", "stage", "ending", "rescued", "repairs", "staff_uid", "retired"]
+const RETIRED_KEYS := ["uid", "wave", "recorded_wave", "weapon_id", "reason", "work", "condition", "merged"]
 
 var path: String
 var last_error: String = ""
@@ -20,6 +23,7 @@ var unlocked: Dictionary = {}
 var story_clues: Array[StringName] = []
 var echo_archives: Dictionary = {}
 var inherit_echo: bool = true
+var bureau_reports: Array[Dictionary] = []
 
 
 func _init(save_path: String = DEFAULT_PATH) -> void:
@@ -44,6 +48,7 @@ func _defaults() -> void:
 	story_clues.clear()
 	echo_archives.clear()
 	inherit_echo = true
+	bureau_reports.clear()
 	for def: CharacterDef in Content.characters().values():
 		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
 
@@ -79,6 +84,16 @@ func _load() -> void:
 			var character_id := StringName(str(key))
 			if EchoArchive.eligible(character_id) and EchoArchive.decode(saved_archives[key]) != null:
 				echo_archives[String(character_id)] = saved_archives[key].duplicate(true)
+	var saved_reports: Variant = data.get("bureau_reports", [])
+	if typeof(saved_reports) == TYPE_ARRAY and saved_reports.size() <= MAX_BUREAU_REPORTS:
+		var report_ids := {}
+		for value: Variant in saved_reports:
+			var report := _decode_bureau_report(value)
+			if report.is_empty() or report_ids.has(report["run_id"]):
+				bureau_reports.clear()
+				break
+			report_ids[report["run_id"]] = true
+			bureau_reports.append(report)
 	var saved_clues: Variant = data.get("story_clues", [])
 	if typeof(saved_clues) == TYPE_ARRAY:
 		for value: Variant in saved_clues:
@@ -124,6 +139,7 @@ func save() -> bool:
 		"story_clues": story_clues,
 		"echo_archives": echo_archives,
 		"inherit_echo": inherit_echo,
+		"bureau_reports": bureau_reports,
 	}, "\t"))
 	file.flush()
 	var error := file.get_error()
@@ -220,3 +236,89 @@ func discover_story(ids: Array[StringName]) -> bool:
 		story_clues = before
 		return false
 	return changed
+
+
+# Stage the same persisted run id before record_run/record_endless performs the
+# ordinary atomic profile write. Continuing a victory into Endless replaces its
+# report rather than creating a second history entry.
+func stage_bureau_report(sim: Sim, run_id: String) -> bool:
+	if sim == null or sim.phase not in [Sim.Phase.LOST, Sim.Phase.WON]:
+		return false
+	var source: Variant = sim.expedition.get("bureau", {}).get("retired", [])
+	if typeof(source) != TYPE_ARRAY or source.size() > 6:
+		return false
+	for row: Variant in source:
+		if typeof(row) != TYPE_DICTIONARY:
+			return false
+	var value := {"run_id": run_id, "character_id": String(sim.character_id), "stage": sim.wave,
+		"ending": String(sim.expedition.get("ending", &"")), "rescued": int(sim.expedition.get("rescued", 0)),
+		"repairs": int(sim.expedition.get("repairs", 0)),
+		"staff_uid": int(sim.expedition.get("world", {}).get("staff_uid", 0)),
+		"retired": source.duplicate(true)}
+	# Runtime names serialize as strings; use one strict decoder for memory and disk.
+	for retired: Dictionary in value["retired"]:
+		retired["weapon_id"] = String(retired.get("weapon_id", &""))
+		retired["reason"] = String(retired.get("reason", &""))
+	var report := _decode_bureau_report(value)
+	if report.is_empty():
+		return false
+	for index in range(bureau_reports.size() - 1, -1, -1):
+		if bureau_reports[index]["run_id"] == run_id:
+			bureau_reports.remove_at(index)
+	bureau_reports.append(report)
+	while bureau_reports.size() > MAX_BUREAU_REPORTS:
+		bureau_reports.pop_front()
+	return true
+
+
+static func _decode_bureau_report(value: Variant) -> Dictionary:
+	if typeof(value) != TYPE_DICTIONARY or not _exact_keys(value, BUREAU_REPORT_KEYS):
+		return {}
+	var row: Dictionary = value
+	if typeof(row["run_id"]) != TYPE_STRING or row["run_id"].is_empty() or row["run_id"].length() > 128 \
+			or typeof(row["character_id"]) != TYPE_STRING or Content.character(StringName(row["character_id"])) == null \
+			or typeof(row["ending"]) != TYPE_STRING or row["ending"] not in ["", "released", "collective", "takeover"] \
+			or not _report_integer(row["stage"], 1, 100000) or not _report_integer(row["rescued"], 0, 12) \
+			or not _report_integer(row["repairs"], 0, 100000) or not _report_integer(row["staff_uid"], 0, 2147483647) \
+			or typeof(row["retired"]) != TYPE_ARRAY or row["retired"].size() > 6:
+		return {}
+	for character: String in row["run_id"]:
+		if character.unicode_at(0) < 32 or character.unicode_at(0) > 126:
+			return {}
+	if (row["ending"] != "" and int(row["stage"]) < WaveDirector.FINAL_WAVE) \
+			or (int(row["staff_uid"]) > 0 and row["ending"] != "takeover"):
+		return {}
+	var retired_rows: Array[Dictionary] = []
+	var ids := {}
+	for retired: Variant in row["retired"]:
+		if typeof(retired) != TYPE_DICTIONARY or not _exact_keys(retired, RETIRED_KEYS) \
+				or not _report_integer(retired["uid"], 1, 2147483647) or ids.has(int(retired["uid"])) \
+				or not _report_integer(retired["wave"], 1, int(row["stage"])) \
+				or not _report_integer(retired["recorded_wave"], 0, 100000) \
+				or typeof(retired["weapon_id"]) != TYPE_STRING or Content.weapon(StringName(retired["weapon_id"])) == null \
+				or typeof(retired["reason"]) != TYPE_STRING or retired["reason"] not in ["active", "exhausted"] \
+				or not _report_integer(retired["work"], 0, 1000000) or typeof(retired["merged"]) != TYPE_BOOL \
+				or typeof(retired["condition"]) not in [TYPE_FLOAT, TYPE_INT] \
+				or not is_finite(float(retired["condition"])) or float(retired["condition"]) < 0.0 or float(retired["condition"]) > 100.0:
+			return {}
+		ids[int(retired["uid"])] = true
+		retired_rows.append({"uid": int(retired["uid"]), "wave": int(retired["wave"]), "recorded_wave": int(retired["recorded_wave"]),
+			"weapon_id": retired["weapon_id"], "reason": retired["reason"], "work": int(retired["work"]),
+			"condition": float(retired["condition"]), "merged": retired["merged"]})
+	return {"run_id": row["run_id"], "character_id": row["character_id"], "stage": int(row["stage"]),
+		"ending": row["ending"], "rescued": int(row["rescued"]), "repairs": int(row["repairs"]),
+		"staff_uid": int(row["staff_uid"]), "retired": retired_rows}
+
+
+static func _exact_keys(row: Dictionary, keys: Array) -> bool:
+	if row.size() != keys.size():
+		return false
+	for key: Variant in row:
+		if typeof(key) != TYPE_STRING or not keys.has(key):
+			return false
+	return true
+
+
+static func _report_integer(value: Variant, minimum: int, maximum: int) -> bool:
+	return typeof(value) in [TYPE_FLOAT, TYPE_INT] and is_finite(float(value)) \
+		and float(value) >= float(minimum) and float(value) <= float(maximum) and float(int(value)) == float(value)

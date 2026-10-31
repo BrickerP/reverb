@@ -13,7 +13,7 @@ const BOSS_IDS: Array[StringName] = [&"foreman", &"collector", &"paradox"]
 const EXIT_IDS: Array[StringName] = [&"released", &"collective", &"takeover"]
 const STATE_KEYS := ["route", "ending", "debt", "credit_taken", "completed_orders", "failed_orders",
 	"recruited_boss", "recruited_bosses", "rescued", "repairs", "audits", "solidarity", "profit",
-	"mission", "negotiation", "cash_issued", "tail_clock", "ending_outcome", "world"]
+	"mission", "negotiation", "cash_issued", "tail_clock", "ending_outcome", "world", "bureau"]
 const WORLD_KEYS := ["act_id", "machines", "workers", "roster", "witnesses", "history", "clearance", "settled_wave", "resolution_pending", "staff_uid"]
 const MACHINE_KEYS := ["id", "kind", "pos", "status", "repaired_wave", "stopped", "direction"]
 const WORKER_KEYS := ["id", "stage", "pos", "hp", "state", "testimony_used", "aid_used"]
@@ -31,6 +31,7 @@ static func initialize(sim: Sim) -> void:
 	for site in WorldArena.machine_sites():
 		sim.expedition["world"]["machines"].append({"id": site["id"], "kind": site["kind"],
 			"pos": site["pos"], "status": &"operating", "repaired_wave": 0, "stopped": false, "direction": site["direction"]})
+	BureauEvents.initialize(sim)
 
 
 static func ensure(sim: Sim) -> void:
@@ -145,6 +146,7 @@ static func begin_wave(sim: Sim) -> void:
 	var mission: Dictionary = sim.expedition["mission"]
 	if mission.is_empty() or mission.get("state") != &"pending":
 		sim.expedition["mission"] = {}
+		BureauEvents.begin_wave(sim)
 		return
 	mission["state"] = &"active"
 	mission["wave"] = sim.wave
@@ -166,6 +168,7 @@ static func begin_wave(sim: Sim) -> void:
 				sim._plan.append(event)
 				sim._plan.sort_custom(func(a: SpawnEvent, b: SpawnEvent) -> bool: return a.time < b.time)
 		&"credit": _add_opponents(sim, &"silencer", 3)
+	BureauEvents.begin_wave(sim)
 
 
 static func _add_opponents(sim: Sim, id: StringName, count: int) -> void:
@@ -222,19 +225,77 @@ static func interaction(sim: Sim) -> Dictionary:
 		and (machine.is_empty() or (machine["status"] != &"repaired" and not machine["stopped"]))
 	closest["name_key"] = "interaction." + String(closest["kind"])
 	closest["description_key"] = "interaction." + String(closest["kind"]) + ".desc"
+	BureauEvents.decorate_interaction(sim, closest)
 	return closest
 
 
 static func interact(sim: Sim) -> bool:
+	var choice := interaction(sim) if sim.phase == Sim.Phase.WAVE else {}
+	var before := _interaction_snapshot(sim, choice)
+	var accepted := sim.phase == Sim.Phase.WAVE and not choice.is_empty() \
+		and bool(choice.get("available", false)) and _apply_interaction(sim, choice)
+	var reason: StringName = &""
+	if not accepted:
+		if sim.phase != Sim.Phase.WAVE:
+			reason = &"phase"
+		elif choice.is_empty():
+			reason = &"no_target"
+		elif sim.player.materials < int(choice.get("cost", 0)):
+			reason = &"poor"
+		elif float(choice.get("cooldown", 0.0)) > 0.0:
+			reason = &"cooldown"
+		else:
+			reason = StringName(choice.get("reason_key", "unavailable"))
+			if reason == &"":
+				reason = &"unavailable"
+	sim.world_event.emit({"kind": &"interaction_result", "stage": sim.wave,
+		"subject": choice.get("id", &""), "target_id": choice.get("id", &""),
+		"target_kind": choice.get("kind", &""), "pos": sim.player.pos,
+		"target_pos": choice.get("pos", sim.player.pos), "source": -1, "actor_token": -1,
+		"ok": accepted, "reason": reason, "before": before,
+		"after": _interaction_snapshot(sim, choice)})
+	return accepted
+
+
+static func _interaction_snapshot(sim: Sim, choice: Dictionary) -> Dictionary:
+	var values := {"hp": sim.player.hp, "materials": sim.player.materials,
+		"energy": sim.character_energy}
+	if choice.is_empty():
+		return values
+	var id := StringName(choice.get("id", &""))
+	var machine := _machine(sim, StringName(String(id).trim_prefix("repair_")))
+	if not machine.is_empty():
+		values["status"] = machine["status"]
+		values["stopped"] = machine["stopped"]
+		values["direction"] = machine["direction"]
+	var worker := _worker(sim, id)
+	if not worker.is_empty():
+		values["status"] = worker["state"]
+		values["target_pos"] = worker["pos"]
+	for item in sim.interactables:
+		if item["id"] == id:
+			values["used"] = item["used"]
+			values["cooldown"] = item["cooldown"]
+			values["warning"] = item["warning"]
+			break
+	var delivery: Dictionary = sim.expedition.get("bureau", {}).get("delivery", {})
+	if String(id).begins_with("bureau_dispatch_") and not delivery.is_empty():
+		values["status"] = delivery["state"]
+		values["safe_left"] = delivery["safe_left"]
+	return values
+
+
+static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 	if sim.phase != Sim.Phase.WAVE:
 		return false
-	var choice := interaction(sim)
 	if choice.is_empty() or not bool(choice["available"]):
 		return false
 	for item in sim.interactables:
 		if item["id"] != choice["id"]:
 			continue
 		var mission: Dictionary = sim.expedition["mission"]
+		if String(item["kind"]).begins_with("bureau_"):
+			return BureauEvents.interact(sim, item)
 		match item["kind"]:
 			&"press", &"conveyor":
 				if not _operate(sim, item):
@@ -317,6 +378,8 @@ static func _operate(sim: Sim, item: Dictionary) -> bool:
 
 
 static func replay_work_status(sim: Sim, actor: EchoActor, action: Dictionary) -> Dictionary:
+	if action.get("target_id", &"") == BureauEvents.SWITCH_ID and action.get("kind", &"") == &"press":
+		return BureauEvents.replay_status(sim, actor)
 	var machine := _machine(sim, action.get("target_id", &""))
 	if machine.is_empty() or machine["kind"] != action.get("kind", &""):
 		return {"target_pos": actor.pos, "reason": &"unavailable"}
@@ -335,6 +398,8 @@ static func replay_work_status(sim: Sim, actor: EchoActor, action: Dictionary) -
 
 
 static func replay_work(sim: Sim, actor: EchoActor, action: Dictionary) -> bool:
+	if action.get("target_id", &"") == BureauEvents.SWITCH_ID and action.get("kind", &"") == &"press":
+		return BureauEvents.replay_switch(sim, actor)
 	if sim.phase != Sim.Phase.WAVE or action.get("kind", &"") not in [&"press", &"conveyor"] \
 			or replay_work_status(sim, actor, action)["reason"] != &"ready":
 		return false
@@ -350,8 +415,11 @@ static func step(sim: Sim, delta: float) -> void:
 	ensure(sim)
 	if is_negotiating(sim):
 		return
+	BureauEvents.step(sim, delta)
 	var world: Dictionary = sim.expedition["world"]
 	for item in sim.interactables:
+		if String(item["kind"]).begins_with("bureau_"):
+			continue
 		item["cooldown"] = maxf(0.0, float(item.get("cooldown", 0.0)) - delta)
 		var machine := _machine(sim, item["id"])
 		if not machine.is_empty() and (machine["stopped"] or machine["status"] == &"repaired"):
@@ -547,7 +615,15 @@ static func choose_negotiation(sim: Sim, choice: StringName) -> bool:
 		sim.expedition["recruited_bosses"].append(kind)
 	sim.expedition["solidarity"] += 2
 	_progress(sim, &"recruit")
-	_event(sim, &"companion_signed", kind, negotiation["pos"])
+	var companion_pos := sim.player.pos
+	for unit in sim.support_units:
+		if int(unit["uid"]) == int(roster["uid"]):
+			companion_pos = unit["pos"]
+	_event(sim, &"companion_signed", kind, negotiation["pos"], {
+		"source": -1, "actor_token": -1, "source_pos": sim.player.pos,
+		"boss_kind": kind, "target_uid": int(roster["uid"]), "target_type": &"support",
+		"target_pos": companion_pos, "from_pos": negotiation["pos"],
+		"ok": roster["state"] == &"active", "hp": roster["hp"], "life": roster["life"]})
 	_resolve_negotiation(sim)
 	return true
 
@@ -636,7 +712,8 @@ static func _deploy(sim: Sim, kind: StringName) -> bool:
 	if keep.size() >= SupportSystem.MAX_UNITS:
 		return false
 	sim.support_units = keep
-	if not SupportSystem.spawn(sim, StringName("recruited_" + String(kind)), sim.player.pos):
+	if not SupportSystem._spawn(sim, StringName("recruited_" + String(kind)), sim.player.pos,
+			-1, -2, Color.WHITE):
 		sim.support_units.append_array(removed)
 		return false
 	for old in sim.expedition["world"]["roster"]:
@@ -648,6 +725,7 @@ static func _deploy(sim: Sim, kind: StringName) -> bool:
 	unit["life"] = target["life"]
 	target["uid"] = unit["uid"]
 	target["state"] = &"active"
+	SupportSystem._event(sim, unit, &"spawn")
 	return true
 
 
@@ -656,6 +734,7 @@ static func finish_wave(sim: Sim, success: bool) -> void:
 	var world: Dictionary = sim.expedition["world"]
 	if int(world["settled_wave"]) >= sim.wave:
 		return
+	BureauEvents.finish_wave(sim, success)
 	world["settled_wave"] = sim.wave
 	sync_roster(sim)
 	for worker in world["workers"]:
@@ -774,13 +853,16 @@ static func _unused_witness(sim: Sim) -> Dictionary:
 	return {}
 
 
-static func _event(sim: Sim, kind: StringName, subject: StringName, pos: Vector2) -> void:
+static func _event(sim: Sim, kind: StringName, subject: StringName, pos: Vector2,
+		details: Dictionary = {}) -> void:
 	var event := {"kind": kind, "subject": subject, "stage": sim.wave, "pos": pos}
 	var history: Array = sim.expedition["world"]["history"]
 	history.append(event)
 	while history.size() > MAX_HISTORY:
 		history.pop_front()
-	sim.world_event.emit(event.duplicate(true))
+	var snapshot := event.duplicate(true)
+	snapshot.merge(details.duplicate(true))
+	sim.world_event.emit(snapshot)
 	StoryLedger.on_world_event(sim, kind)
 
 
@@ -847,7 +929,7 @@ static func validate_plain(state: Dictionary, items: Array) -> bool:
 				or typeof(negotiation["choice_pending"]) != TYPE_BOOL or not negotiation["choice_pending"] \
 				or mission.get("kind", &"") != &"recruit" or mission.get("state", &"") != &"active":
 			return false
-	if items.size() > 16:
+	if items.size() > 20:
 		return false
 	var identities: Dictionary = {}
 	for value in items:
@@ -857,7 +939,7 @@ static func validate_plain(state: Dictionary, items: Array) -> bool:
 		if not _keys_exact(item, ["id", "kind", "pos", "range", "cost", "warning", "active", "cooldown", "used", "direction"]):
 			return false
 		if typeof(item["id"]) != TYPE_STRING_NAME or String(item["id"]).length() > 32 or item["id"] == &"" or identities.has(item["id"]) \
-				or not _name_in(item["kind"], [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate"]) \
+				or not _name_in(item["kind"], [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate", &"bureau_pickup", &"bureau_switch", &"bureau_inbox", &"bureau_inspection"]) \
 				or not _world_point(item["pos"]) or typeof(item["used"]) != TYPE_BOOL \
 				or typeof(item["direction"]) != TYPE_VECTOR2 or item["direction"] not in [Vector2.LEFT, Vector2.RIGHT] \
 				or not _number_between(item["range"], 112.0, 180.0) or not _integer_between(item["cost"], 0, 8) \
@@ -866,7 +948,7 @@ static func validate_plain(state: Dictionary, items: Array) -> bool:
 				or not _number_between(item["cooldown"], 0.0, 70.0):
 			return false
 		identities[item["id"]] = true
-	return true
+	return BureauEvents.validate_plain(state["bureau"], items)
 
 
 static func _validate_world(world: Dictionary) -> bool:
@@ -946,6 +1028,8 @@ static func _validate_world(world: Dictionary) -> bool:
 
 static func validate_state(sim: Sim) -> bool:
 	if sim == null or not validate_plain(sim.expedition, sim.interactables):
+		return false
+	if not BureauEvents.validate_state(sim):
 		return false
 	var world: Dictionary = sim.expedition["world"]
 	if int(sim.expedition["cash_issued"]) > WaveDirector.cash_budget(sim.wave) \

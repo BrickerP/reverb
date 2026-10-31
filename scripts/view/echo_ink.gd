@@ -191,3 +191,41 @@ static func _map(points: PackedVector2Array, bounds: Rect2) -> PackedVector2Arra
 	for point in points:
 		result.append(_point(point, bounds))
 	return result
+
+
+# Retirement drawings use the consumed take's value receipt. Exhaustion always
+# folds quietly and never borrows the active skill's attack mark.
+static func retirement_pose(kind: StringName, progress: float, exhausted: bool) -> Dictionary:
+	var t := clampf(progress if is_finite(progress) else 0.0, 0.0, 1.0)
+	if exhausted:
+		return {"scale": Vector2(1.0 + t * 0.08, 1.0 - t * 0.8), "offset": Vector2(0, t * 4)}
+	match kind:
+		&"pin": return {"scale": Vector2(1.0 - t * 0.82, 1.0 - t * 0.35), "offset": Vector2(0, 0)}
+		&"stamp": return {"scale": Vector2(1.0 + t * 0.26, 1.0 - t * 0.92), "offset": Vector2(0, t * 3)}
+		&"cut": return {"scale": Vector2(1.0 - t * 0.2, 1.0 - t * 0.7), "offset": Vector2(t * 8, t * 3)}
+		&"ink": return {"scale": Vector2(1.0 - t * 0.7, 1.0 - t * 0.4), "offset": Vector2(0, t * 6)}
+		&"return": return {"scale": Vector2(1.0 - t * 0.55, 1.0 - t * 0.7), "offset": Vector2(-t * 18, -sin(t * PI) * 12)}
+		&"arc": return {"scale": Vector2(1.0 - t * 0.65, 1.0 - t * 0.6), "offset": Vector2(0, -sin(t * PI) * 6)}
+	return {"scale": Vector2.ONE, "offset": Vector2.ZERO}
+
+
+static func retirement_lines(kind: StringName, pos: Vector2, progress: float) -> Array[PackedVector2Array]:
+	var output: Array[PackedVector2Array] = []
+	if not pos.is_finite() or not is_finite(progress):
+		return output
+	var t := clampf(progress, 0.0, 1.0)
+	match kind:
+		&"pin":
+			for side in [-1.0, 1.0]:
+				output.append(PackedVector2Array([pos + Vector2(side * 7, -28), pos + Vector2(side * 7, -17), pos + Vector2(side * 3, -17)]))
+		&"stamp": output.append(PackedVector2Array([pos + Vector2(-16, -18 + t * 16), pos + Vector2(16, -18 + t * 16), pos + Vector2(16, -12 + t * 16)]))
+		&"cut":
+			for side in [-1.0, 1.0]:
+				output.append(PackedVector2Array([pos + Vector2(side * 3, -27), pos + Vector2(side * (6 + t * 8), -18), pos + Vector2(side * 4, -9)]))
+		&"ink":
+			for index in 3:
+				var x := float(index - 1) * 6.0
+				output.append(PackedVector2Array([pos + Vector2(x, -22), pos + Vector2(x * 0.5, -10 + t * 8), pos + Vector2(x * 0.3, t * 9)]))
+		&"return": output.append(PackedVector2Array([pos + Vector2(-8 - t * 12, -20), pos + Vector2(5 - t * 12, -12), pos + Vector2(-8 - t * 12, -5), pos + Vector2(-3 - t * 12, -12), pos + Vector2(-8 - t * 12, -20)]))
+		&"arc": output.append(PackedVector2Array([pos + Vector2(-8, -27), pos + Vector2(4, -18), pos + Vector2(-3, -10), pos + Vector2(8, -2)]))
+	return output

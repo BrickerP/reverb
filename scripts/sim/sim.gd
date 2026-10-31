@@ -479,6 +479,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	Expedition.sync_roster(self)
 	_compact()
 	if player.hp <= 0.0:
+		BureauEvents.finish_wave(self, false)
 		phase = Phase.LOST
 		run_lost.emit()
 	elif is_boss_wave():
@@ -563,6 +564,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.source_tint = source_tint
 	info.weapon_id = weapon_id
 	info.target_uid = e.uid
+	info.target_radius = e.radius
 	info.pos = e.pos
 	info.amount = actual
 	info.crit = crit
@@ -759,12 +761,16 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 		direction: Vector2, grant_iframes: bool = true, source_uid: int = -1) -> void:
 	if not is_finite(amount) or amount <= 0.0 or Expedition.is_negotiating(self):
 		return
+	var shield_before := player.shield
 	var had_shield := player.shield > 0.0
 	var absorbed := minf(player.shield, amount)
 	player.shield -= absorbed
 	if had_shield and player.shield <= 0.0 \
 			and bool(player.set_bonus_applied.get(&"field", false)):
 		_shield_break_burst()
+	# A shield burst may synchronously kill a bomber and produce a separate
+	# damage event. Report only this hit's own HP change, not that nested hit.
+	var hp_before := player.hp
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt
@@ -781,6 +787,11 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	hurt.source_uid = source_uid
 	hurt.amount = dealt
 	hurt.absorbed = absorbed
+	hurt.hp_before = hp_before
+	hurt.hp_after = player.hp
+	hurt.hp_loss = maxf(0.0, hp_before - maxf(0.0, player.hp))
+	hurt.shield_before = shield_before
+	hurt.shield_after = player.shield
 	hurt.pos = pos
 	hurt.direction = direction
 	hurt.effect = effect
@@ -913,6 +924,9 @@ func replay_signature(actor: EchoActor, action: Dictionary) -> bool:
 	info.actor_token = actor.take.uid
 	info.source_tint = actor.take.tint()
 	info.weapon_id = weapon.id
+	# Recorded work predates slot identity. A unique recorded weapon can be
+	# located, but duplicate IDs and Mirror's live loadout cannot be inferred.
+	info.weapon_slot = index if not live_echo and actor.take.weapons.count(weapon) == 1 else -1
 	info.origin = actor.pos
 	info.target = status["target_pos"]
 	info.direction = (info.target - info.origin).normalized()

@@ -16,6 +16,14 @@ const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
 const REDUCED_MOTION_SCALE := 0.3
 const CULL_ART_MARGIN := 100.0
 const CULL_SHAKE_MARGIN := 9.0
+const WEAPON_MOUNTS := {
+	1: [Vector2(21.0, 0.0)],
+	2: [Vector2(17.0, -15.0), Vector2(17.0, 15.0)],
+	3: [Vector2(21.0, 0.0), Vector2(-3.0, -22.0), Vector2(-3.0, 22.0)],
+	4: [Vector2(18.0, -16.0), Vector2(18.0, 16.0), Vector2(-16.0, -16.0), Vector2(-16.0, 16.0)],
+	5: [Vector2(22.0, 0.0), Vector2(7.0, -23.0), Vector2(7.0, 23.0), Vector2(-19.0, -15.0), Vector2(-19.0, 15.0)],
+	6: [Vector2(20.0, -16.0), Vector2(20.0, 16.0), Vector2(0.0, -27.0), Vector2(0.0, 27.0), Vector2(-20.0, -16.0), Vector2(-20.0, 16.0)],
+}
 
 static var _arena_floor_texture: Texture2D
 
@@ -293,7 +301,10 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false, visual_time
 			facing = Vector2.RIGHT
 		var art_size := _enemy_bounds(e.def.id) * e.radius / maxf(1.0, e.def.radius)
 		art_size *= gait["scale"] as Vector2
-		var art_tint := Color(1.0, 0.76, 0.68) if e.flash > 0.0 else Color.WHITE
+		var fold := director.enemy_fold(e.uid, reduced) if director != null else {"scale": Vector2.ONE, "rotation": 0.0, "ink": 0.0}
+		art_size *= fold["scale"] as Vector2
+		# A short local ink value drop keeps the paper face readable; no white flash.
+		var art_tint := Color.WHITE.lerp(Color("b2a98d"), float(fold["ink"]))
 		var frame := actor_frame(key, phase, moving, e.flash > 0.0, reduced)
 		if director != null:
 			frame = director.enemy_pose(key, e.uid, phase, moving, reduced)
@@ -304,6 +315,8 @@ static func enemies(ci: CanvasItem, sim: Sim, reduced: bool = false, visual_time
 				frame = mini(5, PresentationAssets.frame_count(key) - 1)
 		var foot := e.pos + Vector2(0.0, e.radius * 0.72 + float(gait["bob"]))
 		var rotation := _warden_rotation(facing) if e.def.id == &"warden" else 0.0
+		if e.def.id != &"warden":
+			rotation += float(fold["rotation"])
 		var flip := facing.x > 0.0 and e.def.id != &"warden"
 		if e.def.is_boss:
 			var roaring := director != null and director.is_boss_roaring()
@@ -356,6 +369,8 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		var foot := actor.pos + Vector2(0.0, r + bob)
 		var paper_scale: Vector2 = profile["paper_scale"]
 		var art_size := _character_bounds(character_id) * paper_scale * (gait["scale"] as Vector2)
+		if director != null:
+			art_size *= director.repair_pose(token, reduced)
 		var print_offset: Vector2 = profile["print_offset"]
 		_draw_art_foot(ci, key, foot + print_offset, art_size, 0.0,
 				Color(c, float(profile["offset_alpha"])), _horizontal_flip(facing), frame)
@@ -364,7 +379,7 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 				Color(body_tint, alpha), _horizontal_flip(facing), frame)
 		var weapons: Array[WeaponDef] = sim.player.weapons if sim.live_echo else actor.take.weapons
 		_draw_weapon_loadout(ci, sim, actor.pos, weapons, facing, bob, alpha,
-				c, 0.45, 0.82, token, recoils)
+				c, 0.45, 0.82, token, recoils, reduced)
 		var fitted := _fitted_art_size(key, art_size)
 		var art_rect := Rect2(Vector2(foot.x - fitted.x * 0.5, foot.y - fitted.y), fitted)
 		EchoInk.draw_marks(ci, actor, art_rect, profile, reduced)
@@ -446,6 +461,8 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	var breath := sin(visual_time * 1.6) * 0.004 * (0.3 if reduced else 1.0) if not moving else 0.0
 	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
 	var art_size := _character_bounds(character_id) * (gait["scale"] as Vector2) * Vector2(1.0 - breath * 0.4, 1.0 + breath)
+	if director != null:
+		art_size *= director.repair_pose(-1, reduced)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
 	var foot := pl.pos + Vector2(0.0, r + bob)
 	var frame := actor_frame(key, phase, moving, pl.iframes > 0.22, reduced)
@@ -459,11 +476,11 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	_draw_art_foot(ci, key, foot, art_size, sway, Color(1.0, 1.0, 1.0, alpha),
 			_horizontal_flip(facing), frame)
 	var count := pl.weapons.size()
-	# Mounts track the nearest living target between shot events. ShotInfo has no
-	# weapon slot, so duplicate IDs deliberately share one actor's recoil group.
+	# Idle mounts track a living target; an active shot keeps its captured aim and
+	# exact weapon slot, even when the actor carries two equal weapons.
 	if count > 0 and pl.hp > 0.0:
 		_draw_weapon_loadout(ci, sim, pl.pos, pl.weapons, pl.facing, bob, alpha,
-				Color.WHITE, 0.0, 1.0, -1, recoils)
+				Color.WHITE, 0.0, 1.0, -1, recoils, reduced)
 	if pl.hp > 0.0:
 		var fitted := _fitted_art_size(key, art_size)
 		var body := Rect2(Vector2(foot.x - fitted.x * 0.5, foot.y - fitted.y), fitted)
@@ -683,6 +700,17 @@ static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Ar
 		var t := float(data["life"]) / float(data["max_life"])
 		var direction: Vector2 = data["direction"]
 		var pos: Vector2 = data["pos"]
+		if bool(data.get("blocked", false)):
+			# A real full absorption stays a closed, friendly paper clamp. It must
+			# never borrow the red HP-loss arc or imply an incoming damage window.
+			var angle := direction.angle() if bool(data["has_direction"]) else -PI * 0.5
+			var radius := 22.0 + (0.0 if reduced else (1.0 - t) * 3.0)
+			ci.draw_arc(pos, radius, angle - 0.95, angle + 0.95, 16, Color(PAPER, t * 0.9), 5.0, true)
+			ci.draw_arc(pos, radius, angle - 0.95, angle + 0.95, 16, Color(Color("729585"), t), 2.0, true)
+			for edge: float in [-0.95, 0.95]:
+				var at := pos + Vector2.from_angle(angle + edge) * radius
+				ci.draw_line(at, at - Vector2.from_angle(angle + edge) * 5.0, Color(INK, t), 2.0, true)
+			continue
 		if bool(data["has_direction"]):
 			ci.draw_arc(pos, 20.0 + (1.0 - t) * 8.0, direction.angle() - 0.8,
 					direction.angle() + 0.8, 16, Color(UiTheme.WARN, 0.85 * t), 3.0)
@@ -872,55 +900,49 @@ static func _echo_facing(actor: EchoActor) -> Vector2:
 static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 		weapons: Array[WeaponDef], fallback: Vector2, bob: float, alpha: float,
 		actor_tint: Color, tint_weight: float, size_mult: float, actor_token: int = -1,
-		recoils: Array[Dictionary] = []) -> void:
+		recoils: Array[Dictionary] = [], reduced: bool = false) -> void:
 	var count := weapons.size()
 	if count <= 0:
 		return
-	var aim := _aim_direction(sim, origin, fallback)
-	var normal := Vector2(-aim.y, aim.x)
+	var resting_aim := _aim_direction(sim, origin, fallback)
 	var crowd_scale := 0.78 if count >= 5 else (0.86 if count == 4 else 1.0)
 	for i in count:
 		var w: WeaponDef = weapons[i]
 		var slot := _weapon_slot(i, count)
-		var recoil := _mounted_recoil(recoils, actor_token, w.id)
-		var mount := origin + aim * (slot.x - recoil) + normal * slot.y + Vector2(0.0, bob)
+		var shot := _mounted_shot(recoils, actor_token, w.id, i)
+		var aim: Vector2 = shot.get("direction", resting_aim)
+		if not aim.is_finite() or aim == Vector2.ZERO:
+			aim = resting_aim
+		aim = aim.normalized()
+		var normal := Vector2(-aim.y, aim.x)
+		# The previous recoil/profile.recoil ratio is exactly this event lifetime,
+		# including Reduced's captured half-recoil profile. Do not scan it twice.
+		var strength := WeaponInk._life(shot)
+		var gesture := WeaponInk.mount_pose(w.id, strength, reduced)
+		var offset: Vector2 = gesture["offset"]
+		var mount := origin + aim * (slot.x + offset.x) + normal * (slot.y + offset.y) + Vector2(0.0, bob)
 		var key := PresentationAssets.weapon_key(w)
-		var size := _weapon_size(key) * crowd_scale * size_mult
+		var size := _weapon_size(key) * crowd_scale * size_mult * (gesture["scale"] as Vector2)
 		var color := Color.WHITE.lerp(actor_tint, tint_weight * 0.55)
-		_draw_art(ci, key, mount, size, aim.angle(), Color(color, alpha))
+		_draw_art(ci, key, mount, size, aim.angle() + float(gesture["rotation"]), Color(color, alpha))
 
 
-static func _mounted_recoil(recoils: Array[Dictionary], actor_token: int, weapon_id: StringName) -> float:
-	# ShotInfo has no slot. Duplicates kick together per take identity and weapon ID;
-	# collapsing another copy must not transfer this reaction to a reused index.
-	var amount := 0.0
-	for data in recoils:
-		if int(data["actor_token"]) != actor_token or data["weapon_id"] != weapon_id:
-			continue
-		var profile: Dictionary = data["profile"]
-		amount = maxf(amount, float(profile["recoil"]) * float(data["life"]) / float(data["max_life"]))
-	return amount
+static func _mounted_shot(recoils: Array[Dictionary], actor_token: int,
+		weapon_id: StringName, weapon_slot: int) -> Dictionary:
+	# Missing historical slot attribution never makes two equal weapons kick.
+	# Identity, actual slot and weapon must all match the captured firing event.
+	if weapon_slot < 0:
+		return {}
+	for index in range(recoils.size() - 1, -1, -1):
+		var data: Dictionary = recoils[index]
+		if int(data["actor_token"]) == actor_token and data["weapon_id"] == weapon_id \
+				and int(data.get("weapon_slot", -1)) == weapon_slot and WeaponInk._life(data) > 0.0:
+			return data
+	return {}
 
 
 static func _weapon_slot(index: int, count: int) -> Vector2:
-	var slots: Array[Vector2] = []
-	match count:
-		1:
-			slots = [Vector2(21.0, 0.0)]
-		2:
-			slots = [Vector2(17.0, -15.0), Vector2(17.0, 15.0)]
-		3:
-			slots = [Vector2(21.0, 0.0), Vector2(-3.0, -22.0), Vector2(-3.0, 22.0)]
-		4:
-			slots = [Vector2(18.0, -16.0), Vector2(18.0, 16.0),
-					Vector2(-16.0, -16.0), Vector2(-16.0, 16.0)]
-		5:
-			slots = [Vector2(22.0, 0.0), Vector2(7.0, -23.0), Vector2(7.0, 23.0),
-					Vector2(-19.0, -15.0), Vector2(-19.0, 15.0)]
-		_:
-			slots = [Vector2(20.0, -16.0), Vector2(20.0, 16.0),
-					Vector2(0.0, -27.0), Vector2(0.0, 27.0),
-					Vector2(-20.0, -16.0), Vector2(-20.0, 16.0)]
+	var slots: Array = WEAPON_MOUNTS.get(count, WEAPON_MOUNTS[6])
 	if index < slots.size():
 		return slots[index]
 	var angle := TAU * float(index) / float(maxi(1, count))

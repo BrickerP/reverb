@@ -50,7 +50,7 @@ func setup(take: EchoTake, entry: Dictionary, compact: bool = false) -> void:
 		extra.append(utility_summary(profile))
 	for action: Dictionary in entry.get("work", []):
 		extra.append(Loc.t("archive.work_detail", [Loc.t("archive.work." + String(action.kind)), float(action.time),
-			Loc.t("archive.machine", [int(String(action.target_id).trim_prefix("machine_")) + 1]) if action.target_id != &"" else Loc.weapon_name(action.weapon_id)]))
+			work_target_name(action.target_id) if action.target_id != &"" else Loc.weapon_name(action.weapon_id)]))
 	for i in range(0, extra.size(), 2):
 		var text := Loc.t("archive.entry_detail")
 		for j in range(i, mini(i + 2, extra.size())):
@@ -59,6 +59,16 @@ func setup(take: EchoTake, entry: Dictionary, compact: bool = false) -> void:
 	_page = mini(_page, _pages.size() - 1)
 	detail_button.visible = _pages.size() > 1
 	_show_page()
+
+
+static func work_target_name(id: StringName) -> String:
+	if id == BureauEvents.SWITCH_ID:
+		return Loc.t("interaction.bureau_switch")
+	var sites := WorldArena.machine_sites()
+	for index in sites.size():
+		if sites[index]["id"] == id:
+			return Loc.t("archive.machine", [index + 1])
+	return Loc.t("archive.work_target_missing")
 
 
 func _show_page() -> void:

@@ -46,8 +46,11 @@ var _weapon_changes: Array[Dictionary] = []
 var _work_marks: Array[Dictionary] = []
 var _world_profile: Dictionary = {}
 var _last_event: Dictionary = {}
+var _retirement_note: Dictionary = {}
+var _retirement_note_time := 0.0
 var _noise_counter := 0
 var _director := BattleDirector.new()
+var _interaction_ink := InteractionInk.new()
 
 
 func _ready() -> void:
@@ -81,6 +84,7 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_paused = false
 	_noise_counter = 0
 	_clear_feedback()
+	_interaction_ink.reset()
 	_director.clear()
 	_reset_motion()
 	_update_camera()
@@ -92,6 +96,7 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.weapon_changed.connect(_on_weapon_changed)
 	sim.echo_work_performed.connect(_on_echo_work)
 	sim.world_event.connect(_on_world_event)
+	sim.support_event.connect(_on_support_event)
 	sim.echo_spawned.connect(_on_echo)
 	sim.boss_spawned.connect(_on_boss_spawned)
 	sim.boss_phase_changed.connect(_on_boss_phase_changed)
@@ -123,6 +128,7 @@ func unbind() -> void:
 	_reveal.clear()
 	_sparks.clear()
 	_clear_feedback()
+	_interaction_ink.reset()
 	_director.clear()
 	_actor_motion.clear()
 	_actor_positions.clear()
@@ -202,6 +208,11 @@ func play_record_beat(s: Sim) -> void:
 		return
 	_beat_take = s.bank.takes[s.bank.takes.size() - 1]
 	_beat_time = 0.0
+	var retired: Array = s.expedition.get("bureau", {}).get("retired", [])
+	if not retired.is_empty() and int(retired.back().get("wave", 0)) == s.wave:
+		_retirement_note = retired.back().duplicate(true)
+		_retirement_note_time = 0.0
+	_refresh_world_presentation()
 	queue_redraw()
 
 
@@ -243,6 +254,7 @@ func _physics_process(_delta: float) -> void:
 func _process(delta: float) -> void:
 	if sim == null or _paused:
 		return
+	_interaction_ink.step(delta)
 	var running := sim.phase == Sim.Phase.WAVE
 	if running:
 		_director.step(delta)
@@ -269,6 +281,8 @@ func _process(delta: float) -> void:
 	_expire_feedback(_hurts, delta)
 	_expire_feedback(_weapon_changes, delta)
 	_expire_feedback(_work_marks, delta)
+	if not _retirement_note.is_empty():
+		_retirement_note_time = minf(1.5, _retirement_note_time + delta)
 	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
 	for actor in _reveal.keys():
 		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
@@ -357,12 +371,28 @@ func _sync_backdrop() -> void:
 
 func _refresh_world_presentation() -> void:
 	_world_profile = Expedition.world_profile(sim) if sim != null else {}
+	if sim != null:
+		_world_profile["bureau"] = BureauEvents.profile(sim)
 	if _backdrop != null:
 		_backdrop.set_world_profile(_world_profile)
 
 
-func _on_world_event(_info: Dictionary) -> void:
+func _on_world_event(info: Dictionary) -> void:
+	_interaction_ink.consume_world(info)
 	_refresh_world_presentation()
+
+
+func _on_support_event(info: Dictionary) -> void:
+	_interaction_ink.consume_support(info)
+	if info.get("kind", &"") == &"repair":
+		for target: Dictionary in info.get("targets", []):
+			if float(target.get("amount", 0.0)) <= 0.0:
+				continue
+			if target.get("target_type", &"") == &"player":
+				_director.actor_repaired(-1)
+			elif target.get("target_type", &"") == &"echo" and int(target.get("uid", 0)) > 0:
+				_director.actor_repaired(int(target["uid"]))
+	queue_redraw()
 
 
 func _on_echo_work(info: Dictionary) -> void:
@@ -378,6 +408,7 @@ func _on_echo_work(info: Dictionary) -> void:
 func _draw() -> void:
 	if sim == null:
 		return
+	BureauInk.draw(self, BureauInk.snapshot(sim, _display_rect), reduced_effects)
 	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
 		ArenaPainter.echo_paths(self, sim, _paths, _reveal, reduced_effects)
@@ -388,7 +419,7 @@ func _draw() -> void:
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
 	WeaponInk.draw_fields(self, sim, reduced_effects)
-	ExpeditionInk.draw(self, sim, _visual_time, reduced_effects, _world_profile)
+	ExpeditionInk.draw(self, sim, _visual_time, reduced_effects, _world_profile, _interaction_ink)
 	ExpeditionInk.draw_work(self, _work_marks, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
 	ArenaPainter.actor_remains(self, _director, reduced_effects)
 	ArenaPainter.boss_tear_body(self, _director, reduced_effects)
@@ -401,6 +432,12 @@ func _draw() -> void:
 	ArenaPainter.sparks(self, _sparks)
 	# The original remains legible through decorative debris and routine hit ink.
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
+	_interaction_ink.draw(self, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects, sim)
+	BureauInk.draw_carried(self, sim)
+	BureauInk.draw_direction(self, BureauInk.direction_profile(sim, _display_rect))
+	if sim.phase != Sim.Phase.WAVE and not _retirement_note.is_empty() and _retirement_note_time < 1.5:
+		BureauInk.draw_retirement(self, _retirement_note, _retirement_note_time / 1.5,
+			WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
 	if _victory:
 		ArenaPainter.victory(self, _victory_origin, _victory_color,
 				_victory_time / VICTORY_BEAT, reduced_effects)
@@ -443,34 +480,38 @@ func _on_shot_info(info: ShotInfo) -> void:
 		var profile_color: Color = profile["color"]
 		profile["color"] = profile_color.lerp(info.source_tint, 0.45)
 	var direction := info.direction.normalized() if info.direction != Vector2.ZERO else Vector2.RIGHT
-	_push_feedback(_muzzles, {"life": 0.14, "max_life": 0.14, "pos": info.origin + direction * 14.0,
+	var muzzle_life := float(profile["muzzle_life"])
+	_push_feedback(_muzzles, {"life": muzzle_life, "max_life": muzzle_life, "pos": info.origin + direction * 14.0,
 			"origin": info.origin, "direction": direction, "source": info.source,
 			"actor_token": actor_token, "source_tint": info.source_tint,
-			"weapon_id": info.weapon_id, "level": info.level, "count": info.count,
+			"weapon_id": info.weapon_id, "weapon_slot": info.weapon_slot, "level": info.level, "count": info.count,
 			"sequence": info.sequence, "profile": profile}, MAX_MUZZLES)
-	_last_event = {"kind": &"shot", "weapon_id": info.weapon_id, "direction": direction,
+	_last_event = {"kind": &"shot", "weapon_id": info.weapon_id, "weapon_slot": info.weapon_slot, "direction": direction,
 			"origin": info.origin, "source": info.source, "count": info.count,
 			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"sequence": info.sequence, "profile": profile}
 
 
 func _on_damage_info(info: DamageInfo) -> void:
-	_director.enemy_hit(info.target_uid)
+	_director.enemy_hit(info.target_uid, info.hit_dir)
 	var has_direction := info.hit_dir != Vector2.ZERO
 	var direction := info.hit_dir.normalized() if has_direction else Vector2.ZERO
 	var hit_color := Color.WHITE
 	if BattleDirector.is_copy_token(info.actor_token):
 		hit_color = info.source_tint
-	var weapon := Content.weapon(info.weapon_id)
-	var heavy := weapon != null and weapon.attack_style in [&"slam", &"line", &"cone"]
-	var hit_life := 0.28 if info.crit else (0.24 if heavy else 0.15)
+	var profile := ArenaPainter.weapon_feedback_profile(info.weapon_id)
+	var hit_life := float(profile["hit_life"]) + (0.04 if info.crit else 0.0)
+	var target_radius := maxf(0.0, info.target_radius) if is_finite(info.target_radius) else 0.0
+	var contact_pos := info.pos + Vector2(0.0, target_radius * 0.72 + 6.0)
 	_push_feedback(_hits, {"life": hit_life, "max_life": hit_life,
 			"pos": info.pos, "direction": direction, "crit": info.crit, "reduced": info.reduced,
+			"contact_pos": contact_pos, "target_radius": target_radius,
 			"weapon_id": info.weapon_id, "source": info.source, "effect": info.effect,
 			"target_uid": info.target_uid, "actor_token": info.actor_token,
 			"source_tint": info.source_tint, "color": hit_color, "has_direction": has_direction}, MAX_HITS)
 	_last_event = {"kind": &"damage", "weapon_id": info.weapon_id, "direction": direction,
 			"pos": info.pos, "source": info.source, "crit": info.crit,
+			"contact_pos": contact_pos, "target_radius": target_radius,
 			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"reduced": info.reduced, "effect": info.effect, "has_direction": has_direction}
 	var color := hit_color.lerp(Color(1.0, 1.0, 0.55), 0.8) if info.crit else hit_color
@@ -502,16 +543,25 @@ func _on_hit(pos: Vector2, amount: float, crit: bool, source: int) -> void:
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
-	_director.player_hurt(info.source_uid if info.effect == &"contact" else -1)
+	var blocked := info.full_block()
+	if not blocked and info.amount <= 0.0:
+		return
+	if not blocked:
+		_director.player_hurt(info.source_uid if info.effect == &"contact" else -1)
+	else:
+		_director.enemy_contact(info.source_uid if info.effect == &"contact" else -1)
 	var has_direction := info.direction != Vector2.ZERO
 	var direction := info.direction.normalized() if has_direction else Vector2.ZERO
-	_push_feedback(_hurts, {"life": 0.35 if info.lethal else 0.22, "max_life": 0.35 if info.lethal else 0.22,
+	var life := 0.24 if blocked else (0.35 if info.lethal else 0.22)
+	_push_feedback(_hurts, {"life": life, "max_life": life,
 			"pos": info.pos, "direction": direction, "lethal": info.lethal, "effect": info.effect,
-			"source": info.source, "source_uid": info.source_uid, "has_direction": has_direction}, MAX_HURTS)
-	_last_event = {"kind": &"hurt", "direction": direction, "lethal": info.lethal,
+			"source": info.source, "source_uid": info.source_uid, "has_direction": has_direction,
+			"blocked": blocked, "absorbed": info.absorbed, "hp_loss": info.hp_loss}, MAX_HURTS)
+	_last_event = {"kind": &"block" if blocked else &"hurt", "direction": direction, "lethal": info.lethal,
 			"pos": info.pos, "effect": info.effect, "source": info.source,
-			"has_direction": has_direction}
-	if shake_enabled and not reduced_effects:
+			"has_direction": has_direction, "blocked": blocked, "absorbed": info.absorbed,
+			"hp_loss": info.hp_loss}
+	if not blocked and shake_enabled and not reduced_effects:
 		_shake = minf(1.0, _shake + (0.8 if info.lethal else 0.45))
 
 
@@ -534,10 +584,7 @@ func react_retirement(info: EchoRetirementInfo) -> void:
 	_last_event = {"kind": &"retirement", "reason": info.reason, "uid": info.uid,
 		"actor_token": info.actor_token, "skill": info.kind, "pos": info.pos,
 		"source_tint": info.tint, "weapon_id": info.weapon_id}
-	var count := 3 if info.exhausted or reduced_effects else 9
-	for index in count:
-		var tint := ArenaPainter.PAPER if index % 3 == 0 else info.tint
-		_spark(info.pos, tint, 25.0 if info.exhausted else 80.0, 0.3)
+	_interaction_ink.consume_retirement(info, PresentationAssets.character_key(character_id))
 	_actor_positions.erase(info.uid)
 	_actor_motion.erase(info.uid)
 	for actor in _paths.keys():
@@ -601,7 +648,7 @@ func _on_echo_silence(info: EchoSilenceInfo) -> void:
 	if sim == null:
 		return
 	if info.kind == EchoSilenceInfo.CONTACT:
-		if not _director.enemy_action(info.source_uid):
+		if not _director.enemy_contact(info.source_uid):
 			return
 	elif info.kind == EchoSilenceInfo.BOSS:
 		_director.boss_roar()
@@ -669,6 +716,7 @@ func feedback_counts() -> Dictionary:
 	return {"muzzles": _muzzles.size(), "hits": _hits.size(), "explosions": _explosions.size(),
 			"hurts": _hurts.size(), "recoils": _muzzles.size(),
 			"weapon_changes": _weapon_changes.size(), "sparks": _sparks.size(),
+			"interactions": int(_interaction_ink.counts()["active"]),
 			"corpses": _director.corpses.size(), "actor_actions": int(_director.counts()["shots"])}
 
 
@@ -683,12 +731,16 @@ func motion_stats() -> Dictionary:
 			"max_recoil": recoil_amount()}
 
 
-func recoil_amount(source: int = -999, weapon_id: StringName = &"") -> float:
+func recoil_amount(source: int = -999, weapon_id: StringName = &"", weapon_slot: int = -1) -> float:
 	var amount := 0.0
 	for data in _muzzles:
+		if int(data.get("weapon_slot", -1)) < 0:
+			continue
 		if source != -999 and int(data["source"]) != source:
 			continue
 		if weapon_id != &"" and data["weapon_id"] != weapon_id:
+			continue
+		if weapon_slot >= 0 and int(data["weapon_slot"]) != weapon_slot:
 			continue
 		var profile: Dictionary = data["profile"]
 		amount = maxf(amount, float(profile["recoil"]) * float(data["life"]) / float(data["max_life"]))
@@ -718,6 +770,8 @@ func _clear_feedback() -> void:
 	_hurts.clear()
 	_weapon_changes.clear()
 	_work_marks.clear()
+	_retirement_note.clear()
+	_retirement_note_time = 0.0
 	_last_event.clear()
 
 
@@ -730,6 +784,7 @@ func _on_wave_phase(_wave: int) -> void:
 
 func _on_wave_started(_wave: int) -> void:
 	_clear_feedback()
+	_interaction_ink.reset()
 	_refresh_world_presentation()
 	_director.clear()
 	_motion_amount = 0.0
@@ -774,6 +829,7 @@ func _disconnect_sim(s: Sim) -> void:
 		[s.damage_event, _on_damage_info], [s.player_hurt_info, _on_hurt_info],
 		[s.explosion_info, _on_explosion_info], [s.weapon_changed, _on_weapon_changed],
 		[s.echo_work_performed, _on_echo_work], [s.world_event, _on_world_event],
+		[s.support_event, _on_support_event],
 		[s.echo_spawned, _on_echo], [s.boss_spawned, _on_boss_spawned],
 		[s.boss_phase_changed, _on_boss_phase_changed],
 		[s.boss_shard_spawned, _on_boss_shard_spawned],
