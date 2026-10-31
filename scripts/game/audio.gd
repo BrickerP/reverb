@@ -758,7 +758,7 @@ func _on_support_event(info: Dictionary) -> void:
 	match info.get("kind", &""):
 		&"spawn": play(&"echo", -8.0, 1.08, 0.14)
 		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20, SUPPORT_PRIORITY)
-		&"produce": play(&"click", -7.0, 1.16, 0.10)
+		&"produce": play(&"click", -7.0, 1.16, 0.10, SUPPORT_PRIORITY)
 		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09)
 		&"damage": play(&"hit", -4.0, 0.77, 0.10)
 		&"destroy": play(&"kill", -3.0, 0.70, 0.24)

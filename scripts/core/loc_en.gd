@@ -463,7 +463,6 @@ const TABLE := {
 	"archive.unavailable": "No eligible recording; daily and Solo runs do not inherit Echoes.",
 	"archive.rule": "One chosen recording per character. It uses an Echo slot, starts at grade 1 with at most 60 condition, and shares the opening damage budget. Daily challenges do not inherit it.",
 	"archive.open": "Echo archive",
-	"combat.press_impact": "REJECTED",
 	"world.scrap": "REJECT PROCESSING",
 	"world.notice_small": "NO ORIGINALS RETURNED",
 	"select.awaiting_release": "%s. Not released yet.",

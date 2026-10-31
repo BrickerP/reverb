@@ -463,7 +463,6 @@ const TABLE := {
 	"archive.unavailable": "当前没有可归档回响；每日挑战和拒收件不带入回响。",
 	"archive.rule": "每名角色保留一份选定档案，带入占一个回响槽位；装备降为1级，耐久最多60，伤害按开局预算计算。每日挑战不继承。",
 	"archive.open": "常驻回响档案",
-	"combat.press_impact": "作废",
 	"world.scrap": "报废工位",
 	"world.notice_small": "原件概不退还",
 	"select.awaiting_release": "%s。暂未放行。",
