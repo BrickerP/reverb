@@ -48,6 +48,7 @@ const MAGNET_ACCEL := 1800.0
 const START_MATERIALS := 20
 const INTEREST_RATE := 0.02
 const INTEREST_CAP := 5
+const FIRST_WAVE_TRAVEL := 140.0
 const BOSS_SILENCE_TIME := 3.0
 const BOSS_SILENCE_EVERY := 8.0
 const BOSS_MINION_EVERY := 10.0
@@ -96,6 +97,11 @@ var daily_modifier: StringName = &""
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
+var wave_travel: float = 0.0
+var cue_slot: int = -1
+var action_notice_key: StringName = &""
+var action_notice_text: String = ""
+var action_notice_until: float = 0.0
 var wave_duration: float = 0.0
 var kills: int = 0
 var wave_kills: int = 0
@@ -371,6 +377,10 @@ func begin_boss_rush() -> bool:
 func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
+	wave_travel = 0.0
+	action_notice_key = &""
+	action_notice_text = ""
+	action_notice_until = 0.0
 	wave_duration = WaveDirector.duration_for(n)
 	wave_kills = 0
 	wave_elite_kills = 0
@@ -487,10 +497,18 @@ func step(delta: float, move_dir: Vector2) -> void:
 			_end_wave()
 	elif boss != null and boss_alive_count() == 0 and expedition.get("mission", {}).get("kind", &"") == &"recruit":
 		_end_wave()
-	elif wave_time >= wave_duration and not Expedition.is_negotiating(self):
+	elif _encounter_finished() and not Expedition.is_negotiating(self):
 		var mission: Dictionary = expedition.get("mission", {})
 		if mission.get("kind", &"") != &"recruit" or boss == null or boss_alive_count() == 0:
 			_end_wave()
+
+
+func _encounter_finished() -> bool:
+	if wave_time < wave_duration:
+		return false
+	if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL:
+		return false
+	return true
 
 
 func _fit_echo_cooldowns(actor: EchoActor) -> void:
@@ -839,7 +857,9 @@ func _move_player(delta: float, move_dir: Vector2) -> void:
 	var dir := move_dir.limit_length(1.0)
 	if dir != Vector2.ZERO:
 		player.facing = dir.normalized()
-	player.pos = WorldArena.move_body(player.pos, dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta, PlayerState.RADIUS)
+	var step := dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta
+	wave_travel += step.length()
+	player.pos = WorldArena.move_body(player.pos, step, PlayerState.RADIUS)
 	player.iframes = maxf(0.0, player.iframes - delta)
 	player.hp = minf(player.max_hp(), player.hp + player.stats.get_stat(Stats.HP_REGEN) * delta)
 

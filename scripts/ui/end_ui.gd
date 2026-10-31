@@ -59,7 +59,7 @@ func _ready() -> void:
 	visible = false
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(UiTheme.EDGE, 0.84)
+	dim.color = Color(0.10, 0.09, 0.08, 0.97)
 	add_child(dim)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var center := CenterContainer.new()
@@ -74,6 +74,12 @@ func _ready() -> void:
 	sheet.variant = 16
 	panel.add_theme_stylebox_override("panel", sheet)
 	center.add_child(panel)
+	var backing := ColorRect.new()
+	backing.color = UiTheme.PAPER
+	backing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backing.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(backing)
+	panel.move_child(backing, 0)
 	_margin = MarginContainer.new()
 	var margin := _margin
 	for side in ["left", "right", "top", "bottom"]:

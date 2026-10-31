@@ -29,6 +29,8 @@ var _materials: Label
 var _interest: Label
 var _prep_status: Label
 var _footer: Label
+var _offer_lock: Button
+var _focused_offer: Offer
 var _warning: Label
 var workshop: WorkshopUi
 var _workshop_slot := 0
@@ -180,6 +182,9 @@ func close_session() -> void:
 	_replacing = null
 	_replacing_index = -1
 	_weapon_detail = ""
+	_focused_offer = null
+	if _offer_lock != null:
+		_offer_lock.visible = false
 	if offers_box != null:
 		UiTheme.clear(offers_box)
 	if build_panel != null:
@@ -202,7 +207,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
 	_interest.text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
-			Sim.interest_for(sim.player.materials)])
+			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
 	var world := Expedition.world_profile(sim)
@@ -225,14 +230,24 @@ func refresh(animate_echo: bool = false) -> void:
 		card.pressed.connect(_on_offer.bind(o, card))
 		card.replacement_requested.connect(_begin_replace)
 		card.lock_toggled.connect(_on_lock_offer)
+		var show_decision := func() -> void:
+			_arm_lock(o)
+		card.focus_entered.connect(show_decision)
+		card.mouse_entered.connect(show_decision)
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("workshop.reroll_prices", [cost, sim.shop.next_reroll_cost(sim.wave)])
 	var reroll_quote := sim.shop.quote(ShopResult.REROLL, sim)
 	reroll_button.disabled = not reroll_quote.ok
+	if reroll_button.disabled:
+		reroll_button.text += " · " + _drop_reason_text(reroll_quote.reason)
 	reroll_button.tooltip_text = _drop_reason_text(reroll_quote.reason) if not reroll_quote.ok else reroll_button.text
 	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
+	undo_button.tooltip_text = Loc.t("shop.undo_hint")
+	if undo_button.disabled:
+		undo_button.text += " · " + Loc.t("shop.undo_blocked")
+	undo_button.accessibility_description = undo_button.tooltip_text
 	crew_button.text = Loc.t("crew.open")
 	crew_button.accessibility_name = crew_button.text
 	crew_button.tooltip_text = Loc.t("crew.summary")
@@ -245,8 +260,10 @@ func refresh(animate_echo: bool = false) -> void:
 	confession_button.accessibility_name = confession_button.text
 	confession_button.accessibility_description = confession_button.tooltip_text
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
+	if not sim.can_start_wave():
+		start_button.text += " · " + Loc.t("shop.need_discard")
 	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
-	start_button.accessibility_description = start_button.tooltip_text
+	start_button.accessibility_description = start_button.tooltip_text if start_button.tooltip_text != "" else start_button.text
 	start_button.disabled = not sim.can_start_wave()
 	var over := sim.bank.overflow(sim.echo_capacity())
 	echo_panel.size_flags_stretch_ratio = 1.0
@@ -300,15 +317,43 @@ func _build_footer() -> Control:
 	WorkshopUi.fit_button(crew_button, 15, 34.0)
 	crew_button.pressed.connect(_open_crew)
 	actions.add_child(crew_button)
-	for button: Button in [reroll_button, undo_button, start_button]:
+	for button: Button in [reroll_button, undo_button]:
 		WorkshopUi.fit_button(button, 16, 34.0)
 		actions.add_child(button)
-	_footer = UiTheme.label(Loc.t("shop.keys"), 13, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(28.0, 0.0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	actions.add_child(gap)
+	WorkshopUi.fit_button(start_button, 16, 34.0)
+	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(start_button)
+	_offer_lock = Button.new()
+	_offer_lock.visible = false
+	_offer_lock.pressed.connect(_lock_focused)
+	WorkshopUi.fit_button(_offer_lock, 14, 34.0)
+	actions.add_child(_offer_lock)
+	_footer = UiTheme.label(Loc.t("shop.keys"), 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.clip_text = true
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_footer.custom_minimum_size = Vector2(0.0, 19.0)
+	_footer.custom_minimum_size = Vector2(0.0, 18.0)
 	box.add_child(_footer)
 	return tray
+
+
+func _arm_lock(o: Offer) -> void:
+	_focused_offer = o
+	if _footer != null and sim != null:
+		_footer.text = OfferCard.decision(o, sim)
+		_footer.tooltip_text = _footer.text
+	if _offer_lock == null or o == null:
+		return
+	_offer_lock.visible = not o.sold
+	_offer_lock.text = Loc.t("shop.unlock_fact") if o.locked else Loc.t("shop.lock_fact")
+
+
+func _lock_focused() -> void:
+	if _focused_offer != null:
+		_on_lock_offer(_focused_offer)
 
 
 func _on_weapon_detail(text: String) -> void:
@@ -451,6 +496,9 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 	var index := sim.shop.offers.find(o)
 	var result := sim.shop.apply(ShopResult.BUY, sim, o)
 	if result.ok:
+		if o.is_weapon():
+			build_panel.marked_slot = sim.player.weapons.size() - 1
+			sim.cue_slot = sim.player.weapons.size() - 1
 		refresh()
 		_focus_card(index)
 	else:
@@ -470,10 +518,14 @@ func _focus_offer_lock(index: int) -> bool:
 	if index < 0 or index >= offers_box.get_child_count():
 		return false
 	var card := offers_box.get_child(index) as OfferCard
-	if card == null or card.lock_button == null or card.lock_button.disabled:
-		return false
-	card.lock_button.grab_focus()
-	return true
+	if card != null:
+		_arm_lock(card.offer)
+	if _offer_lock != null and _offer_lock.visible:
+		_offer_lock.grab_focus()
+		return true
+	if card != null:
+		card.grab_focus()
+	return card != null
 
 
 func is_replacing() -> bool:
@@ -699,7 +751,10 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 	if visible and sim != null and sim == _connected_sim:
 		match result.action:
 			ShopResult.REROLL: _react_vendor(&"reroll", result)
-			ShopResult.UNDO: _react_vendor(&"undo", result)
+			ShopResult.UNDO:
+				_react_vendor(&"undo", result)
+				if sim != null:
+					sim.cue_slot = -1
 			ShopResult.SELL: _react_vendor(&"sell", result)
 			ShopResult.ECHO_MERGE: _react_vendor(&"merge", result)
 			ShopResult.ECHO_DISCARD: _react_vendor(&"discard", result)
@@ -988,7 +1043,11 @@ func quote_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 
 
 func clear_drop_hint() -> void:
-	if _footer != null:
+	if _footer == null:
+		return
+	if _focused_offer != null and sim != null:
+		_footer.text = OfferCard.decision(_focused_offer, sim)
+	else:
 		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else Loc.t("shop.keys")
 
 
@@ -1526,9 +1585,26 @@ func _on_crew_closed() -> void:
 func _open_merge_hosts() -> void:
 	_workshop_origin = &"echo"
 	var choices: Array[Dictionary] = []
-	for take: EchoTake in sim.bank.takes:
-		choices.append({"text": Loc.t("workshop.echo_choice", [take.uid, take.wave, int(ceil(take.condition))]), "value": take})
-	workshop.show_choices(Loc.t("workshop.merge_host"), Loc.t("workshop.merge_host_hint"), choices, func(value: Variant) -> void: _open_merge_donors(value as EchoTake))
+	for host: EchoTake in sim.bank.takes:
+		for donor: EchoTake in sim.bank.takes:
+			if donor == host:
+				continue
+			for merge_trait: StringName in [&"skill", &"repair", &"power"]:
+				var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
+				var result := sim.bank.preview_merge(host, donor, merge_trait)
+				if result == null:
+					continue
+				var text := Loc.t("shop.decision", [
+					Loc.t("echo.identity", [host.uid, host.wave]),
+					Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
+					Loc.t("workshop.trait_" + String(merge_trait))])
+				choices.append({"text": text, "value": {"host": host, "donor": donor, "trait": merge_trait},
+					"disabled": not quote.ok, "hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
+	workshop.show_choices(Loc.t("workshop.merge_host"), Loc.t("workshop.merge_one_screen") + "\n" + Loc.t("workshop.merge_host_hint"), choices,
+		func(value: Variant) -> void:
+			var row: Dictionary = value
+			_on_merge(row["host"], row["donor"], row["trait"])
+			workshop.close())
 
 
 func _open_merge_donors(host: EchoTake) -> void:
@@ -1553,7 +1629,10 @@ func _open_merge_preview(host: EchoTake, donor: EchoTake, merge_trait: StringNam
 	var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
 	if result == null:
 		return
-	var text := Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])
+	var text := Loc.t("shop.decision", [
+		Loc.t("echo.identity", [host.uid, host.wave]),
+		Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
+		Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])])
 	text += "\n" + Loc.t("workshop.trait_" + String(merge_trait) + "_desc")
 	text += "\n" + Loc.echo_profile(EchoSystem.skill_profile(result, sim))
 	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_merge", [quote.cost]), "value": merge_trait, "disabled": not quote.ok}]

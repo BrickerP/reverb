@@ -1,14 +1,14 @@
-# Take Stack 0.18.1 · Hands required. Staff optional.
+# Take Stack 0.18.2 · Read the terms before you sign.
 
-The paper crew now follows through on its work: Echoes reach for the machines they recorded, role abilities move the paper body, and rescued workers visibly leave their restraints.
+Before you confirm, the shop says what you keep, what you spend, and what you get. Those words use the same per-shot numbers as the rules.
 
-- **Readable fire in busy fights.** Six compact material accents distinguish pins, stamps, cuts, ink, returns and arcs. Dense and Reduced Effects scenes keep a bounded, fairly sampled set of accents while every real projectile head remains visible.
-- **Echoes operate the machinery.** Recorded work drives the actual copy's hand and the real lever. Missing, muted, sealed or out-of-range workers cannot animate a successful operation.
-- **Six role actions.** Rewind, dash, swap, relay, repair and overload have finite body gestures tied to their committed result. Movement settles without restarting the old automatic-fire body tremor.
-- **Rescue has a departure.** Shackles open at the worker's original position, a paper silhouette leaves for safety, and the real safe worker settles into view. This adds no extra damageable actor or reward.
-- **Keep your shift.** Snapshot v4 and the published data directory remain unchanged. Real 0.17 and 0.18 wave/shop saves are resumed by the release gates.
+- **One sentence per offer.** A new gun states damage per shot, the gap between shots, and whether it fills an empty slot or replaces one you already carry. An upgrade shows the current shot and the next shot. Interest states what you earned, what you were paid, and the next threshold.
+- **The first fight requires a walk.** Wave 1 does not end on the timer until you have moved. One line says so. The ability is not advertised until the second fight.
+- **The floor prompt is the action.** Rescue, repair, and the recycler use one `[E]` sentence. Negotiation is the choice sheet; there is no second prompt on the floor. A rescue or repair result stays up long enough to read.
+- **Comparison stays in one place.** Lock sits with the decision, not on the card. Echo merge is one screen: host, donor, trait. The ending report is opaque paper over the press.
+- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, and 0.18.1 wave/shop saves continue.
 
-回响会伸手压下旧路线上的拉杆；六名角色的技能有了身体动作；被救下的工友会先挣脱、再离开。高弹量和减少特效模式保留有上限的纸张材质线索，避免所有攻击只剩细线与小点。
+确认前，商店写出留下什么、花掉什么、得到什么，数字和规则是同一套。第 1 场要先走路才结束。救援、维修、回收是同一句 `[E]`。谈判不再在地上多放一个提示。存档格式不变。
 
 ## Downloads / 下载
 
@@ -22,9 +22,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.1 continues 0.17 and 0.18 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.2 continues 0.17, 0.18, and 0.18.1 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 

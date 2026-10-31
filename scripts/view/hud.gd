@@ -162,6 +162,11 @@ func _process(delta: float) -> void:
 		var cd := sim.player.cooldowns[i]
 		if cd > _prev_cd[i] + 0.001:
 			_flash[i] = 1.0
+			if i == sim.cue_slot:
+				sim.action_notice_key = &"hud.slot_fired"
+				sim.action_notice_text = Loc.t("hud.slot_fired", [i + 1, Loc.weapon_name(sim.player.weapons[i].id)])
+				sim.action_notice_until = sim.wave_time + 1.4
+				sim.cue_slot = -1
 		_prev_cd[i] = cd
 		_flash[i] = maxf(0.0, _flash[i] - delta * 8.0)
 	queue_redraw()
@@ -501,8 +506,12 @@ func _draw_controls() -> void:
 	if not profile.is_empty() and (is_compact() or interaction.is_empty()):
 		var stock: Rect2 = retirement_hint_profile().rect
 		_stock(&"retirement_hint", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), stock)
-		var status := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition)), profile.seconds])
-		var action := Loc.t("echo.compact_input", [Controls.retire_label()]) if sim.can_retire_echo() else Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
+		var status := Loc.t("echo.route", [profile.seconds])
+		var action := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition)), profile.seconds])
+		if float(profile.condition) < 40.0 and sim.can_retire_echo():
+			action = Loc.t("echo.compact_input", [Controls.retire_label()])
+		elif not sim.can_retire_echo():
+			action = Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
 		_text(status if is_compact() else status + " · " + Loc.echo_profile(profile), stock.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, stock.size.x - 34.0)
 		_text(Loc.echo_profile(profile) + " · " + action if is_compact() else action, stock.position + Vector2(10.0, 29.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, stock.size.x - 20.0)
 		if profile.offscreen:
@@ -531,8 +540,7 @@ func _draw_controls() -> void:
 
 
 func _draw_onboarding() -> void:
-	if paused:
-		return
+	return
 	var alpha := hint_alpha()
 	if alpha <= 0.0:
 		return
@@ -665,26 +673,39 @@ func _draw_expedition() -> void:
 	if sim == null:
 		return
 	var skill_rect: Rect2 = layout_regions().ability
-	_stock(&"ability_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), skill_rect)
-	var skill_name := Loc.t("ability.%s.name" % sim.character_id)
-	var skill_text := Loc.t("hud.skill", [Controls.skill_label(), skill_name, roundi(sim.character_energy)])
-	if sim.character_cooldown > 0.0:
-		_text(skill_text, skill_rect.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
-		_text(Loc.t("hud.skill_cooldown", [sim.character_cooldown]), skill_rect.position + Vector2(10.0, 29.0), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
-	else:
-		_text(skill_text, skill_rect.position + Vector2(10.0, 22.0), 14, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
-	_meter(Rect2(skill_rect.position + Vector2(10.0, skill_rect.size.y - 2.0), Vector2(skill_rect.size.x - 20.0, 2.0)), sim.character_energy / 100.0, UiTheme.ACCENT, Color(UiTheme.INK, 0.15), &"role_energy", 2.0)
+	if sim.wave > 1 or sim.endless:
+		_stock(&"ability_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), skill_rect)
+		var skill_name := Loc.t("ability.%s.name" % sim.character_id)
+		var skill_text := Loc.t("hud.skill", [Controls.skill_label(), skill_name, roundi(sim.character_energy)])
+		if sim.character_cooldown > 0.0:
+			_text(skill_text, skill_rect.position + Vector2(10.0, 14.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+			_text(Loc.t("hud.skill_cooldown", [sim.character_cooldown]), skill_rect.position + Vector2(10.0, 29.0), 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+		else:
+			_text(skill_text, skill_rect.position + Vector2(10.0, 22.0), 14, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, skill_rect.size.x - 20.0)
+		_meter(Rect2(skill_rect.position + Vector2(10.0, skill_rect.size.y - 2.0), Vector2(skill_rect.size.x - 20.0, 2.0)), sim.character_energy / 100.0, UiTheme.ACCENT, Color(UiTheme.INK, 0.15), &"role_energy", 2.0)
 	var status := Expedition.status(sim)
 	var interaction: Dictionary = status.interaction
-	if is_compact() or selected_echo_profile().is_empty() or not interaction.is_empty():
+	var holding_result := sim.action_notice_key != &"" and sim.wave_time < sim.action_notice_until
+	if holding_result:
+		interaction = {}
+	var teach_move := sim.wave == 1 and sim.wave_travel < 140.0 and interaction.is_empty()
+	if is_compact() or selected_echo_profile().is_empty() or not interaction.is_empty() or holding_result or teach_move:
 		var hint_rect: Rect2 = layout_regions().interaction
 		_stock(&"interaction_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 8).draw(get_canvas_item(), hint_rect)
 		if _world_language != Loc.lang:
 			_world_language = Loc.lang
 			_causal_status = Loc.t("hud.world_status", [_safe_workers, _faults])
 		var hint := _causal_status
-		if not interaction.is_empty():
-			hint = Loc.t("hud.interact", [Controls.interact_label(), Loc.t(interaction.name_key)])
+		if teach_move:
+			hint = Loc.t("hud.walk_first")
+		elif sim.action_notice_key != &"" and sim.wave_time < sim.action_notice_until:
+			hint = sim.action_notice_text if sim.action_notice_text != "" else Loc.t(sim.action_notice_key)
+		elif not interaction.is_empty():
+			var action_name := Loc.t(interaction.name_key)
+			if int(interaction.get("cost", 0)) > 0:
+				hint = Loc.t("hud.interact_cost", [Controls.interact_label(), action_name, int(interaction["cost"])])
+			else:
+				hint = Loc.t("hud.interact", [Controls.interact_label(), action_name])
 		var debt := Loc.t("hud.debt", [status.debt]) if int(status.debt) > 0 else ""
 		var condition := ""
 		if not interaction.is_empty():

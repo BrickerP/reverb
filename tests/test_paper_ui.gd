@@ -262,4 +262,4 @@ func test_secondary_actions_have_idle_stitches_without_changing_their_focus_obje
 
 func _assert_role_detail(c: Check, select: CharacterSelectUi, id: StringName, label: String) -> void:
 	c.ok(select._detail.text.begins_with(Loc.character_desc(id)), label + " · passive tradeoff")
-	c.ok(select._detail.text.contains(Loc.t("ability.%s.name" % id)) and select._detail.text.contains(Loc.t("ability.%s.desc" % id)) and select._detail.text.contains(Controls.skill_label()), label + " · active ability and real input hint")
+	c.ok(select._detail.text == Loc.character_desc(id), label + " · opening description without the active ability")

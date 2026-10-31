@@ -215,6 +215,8 @@ static func interaction(sim: Sim) -> Dictionary:
 		if bool(item.get("used", false)):
 			continue
 		var d := sim.player.pos.distance_to(item["pos"])
+		if item.get("kind", &"") == &"negotiate":
+			continue
 		if d <= float(item.get("range", INTERACTION_RANGE)) and d < distance:
 			closest = item.duplicate(true)
 			distance = d
@@ -320,6 +322,9 @@ static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 				item["used"] = true
 				sim.expedition["repairs"] += 1
 				sim.expedition["solidarity"] += 1
+				sim.action_notice_key = &"hud.repair_done"
+				sim.action_notice_text = ""
+				sim.action_notice_until = sim.wave_time + 1.6
 				_progress(sim, &"repair")
 				_event(sim, &"machine_repaired", machine["id"], item["pos"])
 			&"rescue":
@@ -333,6 +338,9 @@ static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 				item["used"] = true
 				sim.expedition["rescued"] += 1
 				sim.expedition["solidarity"] += 2
+				sim.action_notice_key = &"hud.rescue_done"
+				sim.action_notice_text = ""
+				sim.action_notice_until = sim.wave_time + 1.6
 				_progress(sim, &"rescue")
 				_event(sim, &"worker_saved", worker["id"], worker["pos"],
 					{"from_pos": source, "target_pos": worker["pos"], "ok": true})
@@ -492,8 +500,6 @@ static func try_negotiate(sim: Sim, enemy: EnemyState) -> bool:
 	enemy.brain_state = &"defeated"
 	sim.expedition["negotiation"] = {"uid": enemy.uid, "kind": enemy.def.id, "pos": enemy.pos,
 		"remaining": NEGOTIATION_TIME, "choice_pending": true}
-	_add_target_at(sim, &"boss_negotiation", &"negotiate", enemy.pos)
-	sim.interactables.back()["range"] = 180.0
 	for other in sim.enemies:
 		if other != enemy:
 			other.dead = true
@@ -1079,11 +1085,7 @@ static func validate_state(sim: Sim) -> bool:
 					or enemy.def.id != negotiation["kind"] or enemy.pos != negotiation["pos"] or not sim.boss_shards.has(enemy):
 				return false
 			found = true
-	var choice := false
-	for item in sim.interactables:
-		if item["kind"] == &"negotiate" and not item["used"] and item["pos"] == negotiation["pos"]:
-			choice = true
-	return found and choice
+	return found
 
 
 static func _name_in(value: Variant, allowed: Array) -> bool:

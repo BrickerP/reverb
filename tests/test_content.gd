@@ -137,6 +137,8 @@ func test_solo_does_not_record_takes(c: Check) -> void:
 	Content.character(&"solo").apply(s)
 	s.start_run()
 	s.wave_duration = 0.001
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	s.step(0.01, Vector2.ZERO)
 	c.eq(s.phase, Sim.Phase.SHOP, "wave ended")
 	c.eq(s.bank.takes.size(), 0, "no take is recorded without echo slots")

@@ -397,35 +397,32 @@ func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 	card.add_child(card.portrait)
 	card.name_label = UiTheme.label(Loc.character_name(def.id), 24, card.paper_color, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(card.name_label)
-	var slots := int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS]))
-	var power := float(def.overrides.get(Stats.ECHO_POWER, Stats.DEFAULTS[Stats.ECHO_POWER]))
-	var core: String
-	if slots <= 0:
-		core = Loc.t("select.solo_core")
-	elif def.live_echo:
-		core = Loc.t("select.live_echo")
-	elif def.id == &"mender":
-		core = Loc.t("select.mender_core")
-	elif def.id == &"overloader":
-		core = Loc.t("select.overloader_core")
-	elif def.id == &"conductor":
-		core = Loc.t("select.conductor_core")
-	else:
-		core = Loc.t("select.echo_line", [slots, int(round(power * 100.0))])
-	card.trait_label = UiTheme.label(core, 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	card.trait_label = UiTheme.label(_opening_line(def), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	card.trait_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.trait_label)
-	var status := Loc.t("select.ready")
-	if locked:
-		status = Loc.t("select.locked_wins") if def.unlock_wins > 0 else Loc.t("select.locked", [def.unlock_wave])
+	var status := Loc.t("select.awaiting_release", [Loc.character_name(def.id)]) if locked else Loc.t("select.ready")
 	card.status_label = UiTheme.label(status, 13, UiTheme.WARN if locked else UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
 	card.status_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.status_label)
-	card.tooltip_text = Loc.character_desc(def.id) + "\n" + Loc.t("ability.%s.name" % def.id) + ": " + Loc.t("ability.%s.desc" % def.id)
+	card.tooltip_text = Loc.character_desc(def.id)
 	card.accessibility_description = "%s · %s" % [Loc.character_desc(def.id), status]
 	return card
+
+
+func _opening_line(def: CharacterDef) -> String:
+	if int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS])) <= 0:
+		return Loc.t("select.solo_core")
+	if def.live_echo:
+		return Loc.t("select.live_echo")
+	if def.id == &"mender":
+		return Loc.t("select.mender_core")
+	if def.id == &"overloader":
+		return Loc.t("select.overloader_core")
+	if def.id == &"conductor":
+		return Loc.t("select.conductor_core")
+	return Loc.t("select.starts_with", [Loc.weapon_name(def.starting_weapon)])
 
 
 func _show_character(id: StringName) -> void:
@@ -460,7 +457,7 @@ func _preview_character(id: StringName) -> void:
 		var actor := raw as CastButton
 		actor.previewed = actor.get_meta(&"character_id") == id
 		actor.queue_redraw()
-	_detail.text = Loc.character_desc(id) + "\n" + Controls.skill_label() + " · " + Loc.t("ability.%s.name" % id) + ": " + Loc.t("ability.%s.desc" % id)
+	_detail.text = Loc.character_desc(id)
 	_selection_note.text = Loc.t("select.current_use", [Loc.character_name(id)]) if _meta != null \
 		and _meta.is_unlocked(id) else Loc.t("select.awaiting_release", [Loc.character_name(id)])
 

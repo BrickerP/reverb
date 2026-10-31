@@ -7,6 +7,7 @@ signal lock_toggled(offer: Offer)
 const HEIGHT := 100.0
 
 var offer: Offer
+var _sim: Sim
 var blocked_reason: StringName = &""
 var swap_button: Button
 var lock_button: Button
@@ -59,6 +60,7 @@ static func weapon_dps(w: WeaponDef, stats: Stats, level: int = 0,
 func setup(o: Offer, sim: Sim, selected: bool = false,
 		payload_provider: Callable = Callable(), clear_drag_hint: Callable = Callable()) -> void:
 	offer = o
+	_sim = sim
 	_order_context = ShopUi.forecast_description(sim) if o.is_contract() else ""
 	swap_button = null
 	lock_button = null
@@ -104,16 +106,26 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 2)
 	margin.add_child(box)
-	box.add_child(_title_row(o, reason, selected, not sim.player.weapons.is_empty()))
+	var slots_full := sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS
+	var can_swap := slots_full or reason == &"poor" or reason == &"full"
+	clip_contents = true
+	box.add_child(_title_row(o, reason, selected, slots_full))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
 	else:
-		var desc := UiTheme.label(_description(o).replace("\n", " · "), 14, UiTheme.DIM)
+		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 14, UiTheme.DIM)
+		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		desc.clip_text = true
 		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		desc.tooltip_text = _description(o)
+		desc.tooltip_text = _visible_blurb(o)
 		box.add_child(desc)
-	box.add_child(_actions_row(o, reason, not sim.player.weapons.is_empty()))
+	if reason != &"" and reason != &"sold":
+		var why := UiTheme.label(_blocked_text(reason), 13, UiTheme.WARN)
+		why.clip_text = true
+		why.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		box.add_child(why)
+	box.add_child(_actions_row(o, reason, can_swap))
+	_sim = null
 
 
 func _get_drag_data(at_position: Vector2) -> Variant:
@@ -277,25 +289,13 @@ func _actions_row(o: Offer, reason: StringName, can_swap: bool) -> Control:
 		swap_button = Button.new()
 		swap_button.text = Loc.t("shop.replace_action")
 		swap_button.tooltip_text = Loc.t("shop.replace", [Loc.weapon_name(o.id())])
+		swap_button.accessibility_description = swap_button.tooltip_text
 		swap_button.custom_minimum_size = Vector2(62.0, 28.0)
 		swap_button.add_theme_font_size_override("font_size", 12)
 		swap_button.mouse_filter = Control.MOUSE_FILTER_STOP
 		swap_button.pressed.connect(_on_swap_pressed)
 		WorkshopUi.fit_button(swap_button, 12, 24.0)
 		row.add_child(swap_button)
-	if reason != &"sold":
-		lock_button = Button.new()
-		lock_button.text = Loc.t("shop.unlock") if o.locked else Loc.t("shop.lock")
-		lock_button.tooltip_text = Loc.t("shop.lock_hint")
-		lock_button.accessibility_description = Loc.t("shop.lock_hint")
-		lock_button.custom_minimum_size = Vector2(52.0, 28.0)
-		lock_button.add_theme_font_size_override("font_size", 12)
-		lock_button.mouse_filter = Control.MOUSE_FILTER_STOP
-		if o.locked:
-			UiTheme.stamp_button(lock_button)
-		lock_button.pressed.connect(_on_lock_pressed)
-		WorkshopUi.fit_button(lock_button, 12, 24.0)
-		row.add_child(lock_button)
 	return row
 
 
@@ -368,23 +368,19 @@ func _dps_row(w: WeaponDef, sim: Sim, level: int = 0) -> Control:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 10)
 	if w.support_kind != &"":
-		row.add_child(UiTheme.label(Loc.t("role." + String(w.role)) + " · " + Loc.t("carrier." + String(w.carrier)), 14, UiTheme.ECHO))
+		var support := UiTheme.label(Loc.support_short(w, level), 13, UiTheme.ECHO)
+		support.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		support.clip_text = true
+		support.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		row.add_child(support)
 		return row
-	var before := total_dps(sim.player)
-	var family_damage := Combat.family_damage_mult(sim.player.weapons, w.family)
-	var family_cooldown := Combat.family_cooldown_mult(sim.player.weapons, w.family)
-	var added := weapon_dps(w, sim.player.stats, level, family_damage, family_cooldown)
-	if sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS:
-		# With full slots this is a replacement, not an addition: show what the new
-		# weapon brings, without promising a total that depends on the discarded slot.
-		row.add_child(UiTheme.label(Loc.t("shop.take_dps", [int(round(added))]) + " · " + Loc.t("shop.replace_action"), 14, UiTheme.COIN))
-		return row
-	var after := dps_with_added(sim.player, w, level)
-	row.add_child(UiTheme.label(Loc.t("shop.dps_arrow", [int(round(before)), int(round(after))]), 14, UiTheme.COIN))
-	var gain := UiTheme.label("+%d" % int(round(after - before)), 14, UiTheme.COIN)
-	gain.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gain.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(gain)
+	var per_shot := Loc.number(w.damage * w.level_mult(level))
+	var slot := Loc.t("shop.keep_swap") if sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS else Loc.t("shop.keep_slot")
+	var line := UiTheme.label(Loc.t("shop.offer_shot", [per_shot, w.cooldown, slot]), 14, UiTheme.COIN)
+	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.clip_text = true
+	line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	row.add_child(line)
 	return row
 
 
@@ -419,10 +415,71 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 	return UiTheme.label(str(o.price), 20, color, right)
 
 
+func _visible_blurb(o: Offer) -> String:
+	if o.is_contract():
+		var line := Loc.t("order.credit_fact") if o.contract.kind == AnomalyContract.CREDIT \
+				else Loc.t("order.payoff", [o.contract.deposit, o.contract.reward])
+		if o.contract.kind == AnomalyContract.REPAIR:
+			line += " · " + Loc.t("order.repair.stay")
+		line += "\n" + _next_encounter(o)
+		return line
+	return _description(o)
+
+
+func _next_encounter(o: Offer) -> String:
+	if _sim == null or o.contract == null:
+		return ""
+	var forecast := Expedition.forecast(_sim, _sim.next_wave_number())
+	match o.contract.kind:
+		AnomalyContract.REPAIR:
+			return Loc.t("order.repair.next_yes" if forecast["repair_available"] else "order.repair.next_no")
+		AnomalyContract.RESCUE:
+			return Loc.t("order.rescue.next_yes" if forecast["worker_available"] else "order.rescue.next_no")
+		AnomalyContract.SALVAGE:
+			return Loc.t("order.salvage.next")
+		AnomalyContract.AUDIT:
+			return Loc.t("order.audit.next")
+		AnomalyContract.RECRUIT:
+			return Loc.t("order.recruit.next")
+		_:
+			return Loc.t("order.credit.next")
+
+
+func _blocked_text(reason: StringName) -> String:
+	match reason:
+		&"full": return Loc.t("shop.full_reason")
+		&"maxed": return Loc.t("shop.maxed")
+		&"poor": return Loc.t("shop.drop_poor")
+		&"debt": return Loc.t("workshop.reason_debt")
+		&"order_active": return Loc.t("workshop.replace_order")
+		_: return Loc.t("shop.drop_poor")
+
+
+static func decision(o: Offer, sim: Sim) -> String:
+	if o == null or sim == null:
+		return ""
+	if o.is_contract():
+		var got := Loc.t("order.%s.name" % o.contract.kind)
+		if o.contract.kind == AnomalyContract.CREDIT:
+			return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.credit_fact"), got])
+		return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.payoff", [o.contract.deposit, o.contract.reward]), got])
+	if o.is_weapon():
+		var keep := Loc.t("shop.keep_slot") if sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS else Loc.t("shop.keep_swap")
+		return Loc.t("shop.decision", [keep, str(o.price), Loc.weapon_name(o.id()) + " · " + Loc.weapon_line(o.weapon, o.weapon_level)])
+	return Loc.t("shop.decision", [Loc.t("shop.keep_run"), str(o.price), Loc.item_desc(o.item, sim)])
+
+
 func _description(o: Offer) -> String:
 	if o.is_contract():
-		return Loc.t("order.%s.desc" % o.contract.kind) + " · " + _order_context
-	return Loc.weapon_desc(o.weapon.id) + " · " + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item)
+		var payoff := Loc.t("order.credit_fact") if o.contract.kind == AnomalyContract.CREDIT \
+				else Loc.t("order.payoff", [o.contract.deposit, o.contract.reward])
+		if o.contract.kind == AnomalyContract.REPAIR:
+			payoff += " · " + Loc.t("order.repair.stay")
+		var body := Loc.t("order.%s.desc" % o.contract.kind)
+		if not _order_context.is_empty():
+			body += "\n" + _order_context
+		return payoff + "\n" + body
+	return Loc.weapon_desc(o.weapon.id) + "\n" + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item, _sim)
 
 
 func _offer_name(o: Offer) -> String:
