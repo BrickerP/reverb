@@ -172,9 +172,9 @@ func _read_payload() -> bool:
 			return false
 		_hold(restored)
 		var captured := RunSnapshot.capture(restored)
-		var exact := captured == original and JSON.stringify(captured, "", true, true) == encoded
-		var rng_exact := str(restored.rng.seed) == row.get("rng_seed") and str(restored.rng.state) == row.get("rng_state")
-		var hazard_exact := str(restored.hazard_rng.seed) == row.get("hazard_rng_seed") \
+		var exact: bool = captured == original and JSON.stringify(captured, "", true, true) == encoded
+		var rng_exact: bool = str(restored.rng.seed) == row.get("rng_seed") and str(restored.rng.state) == row.get("rng_state")
+		var hazard_exact: bool = str(restored.hazard_rng.seed) == row.get("hazard_rng_seed") \
 			and str(restored.hazard_rng.state) == row.get("hazard_rng_state")
 		if not _require(exact and rng_exact and hazard_exact and _describe(restored) == row.get("state"),
 				"%s restores the entire graph, original bytes and both RNGs exactly" % name):
