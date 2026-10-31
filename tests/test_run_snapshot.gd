@@ -793,3 +793,22 @@ func test_v4_rejects_old_runs_unknown_world_rows_caps_and_forged_work_cursors(c:
 				row["fields"]["work_actions"] = _encoded(work)
 		c.eq(RunSnapshot.restore(damaged), null, "work cannot spend recycler currency or exceed its bounded action budget")
 	c.eq(RunSnapshot.capture(sim), before, "all invalid snapshots leave the authoritative run untouched")
+
+
+func test_presentation_cues_stay_out_of_snapshot_v4(c: Check) -> void:
+	var sim := Sim.new(7)
+	sim.start_run()
+	sim.wave_travel = 90.0
+	sim.cue_slot = 2
+	sim.action_notice_key = &"hud.rescue_done"
+	sim.action_notice_text = "rescued"
+	sim.action_notice_until = 4.0
+	var restored := RunSnapshot.restore(RunSnapshot.capture(sim))
+	c.ok(restored != null, "a run with live cues still restores: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(restored.wave_travel, 0.0, "wave travel is not saved")
+	c.eq(restored.cue_slot, -1, "the slot cue is not saved")
+	c.eq(String(restored.action_notice_key), "", "the action notice is not saved")
+	c.eq(restored.action_notice_text, "", "the action sentence is not saved")
+	c.eq(restored.action_notice_until, 0.0, "the action hold is not saved")
