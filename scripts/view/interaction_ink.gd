@@ -273,7 +273,7 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 		&"repair":
 			for target: Dictionary in p["targets"]:
 				if bool(target.get("visible", true)):
-					_patch(ci, target["pos"] + Vector2(0, -18), progress, alpha)
+					_patch(ci, target["pos"] + Vector2(-8, -5), progress, alpha, true)
 		&"produce", &"retrieve":
 			var to: Vector2 = p["target_pos"]
 			var origin: Vector2 = to if p["kind"] == &"retrieve" else pos
@@ -323,15 +323,24 @@ static func _draw_interaction(ci: CanvasItem, p: Dictionary) -> void:
 		ci.draw_multiline(PackedVector2Array([at + Vector2(-3, -3), at + Vector2(3, 3), at + Vector2(-3, 3), at + Vector2(3, -3)]), Color(WARN, alpha), 1.5, true)
 
 
-static func _patch(ci: CanvasItem, pos: Vector2, progress: float, alpha: float) -> void:
-	var fall := pow(1.0 - progress, 2.0) * 12.0
-	var patch := Rect2(pos + Vector2(-9, -6 - fall), Vector2(18, 12))
+static func _patch(ci: CanvasItem, pos: Vector2, progress: float, alpha: float, recipient: bool = false) -> void:
+	# Living recipients keep their face/eyes free. The small patch lands on a
+	# coat/shoulder and compresses locally; a machine keeps its larger old patch.
+	var width := 16.0 if recipient else 18.0
+	var height := 10.0 if recipient else 12.0
+	var contact := minf(1.0, progress * 4.0) if recipient else progress
+	var fall := pow(1.0 - contact, 2.0) * (4.0 if recipient else 12.0)
+	var pressure := sin(minf(1.0, progress / 0.45) * PI) if recipient else 0.0
+	var patch := Rect2(pos + Vector2(-width * 0.5, -height * 0.5 - fall), Vector2(width, height * (1.0 - pressure * 0.18)))
 	ci.draw_rect(patch, Color(PAPER, alpha))
 	ci.draw_rect(patch, Color(FRIEND, alpha), false, 1.5)
 	for side: float in [-1.0, 1.0]:
-		var x: float = pos.x + side * (5.0 + (1.0 - progress) * 3.0)
-		ci.draw_polyline(PackedVector2Array([Vector2(x, pos.y - 8 - fall), Vector2(x, pos.y - 4 - fall), Vector2(x + side * 2, pos.y - 4 - fall)]), Color(INK, alpha), 1.7, true)
-	ci.draw_line(pos + Vector2(-3, -1 - fall), pos + Vector2(4, -1 - fall), Color(INK, alpha), 1.0, true)
+		var x: float = pos.x + side * (width * 0.28 + (1.0 - progress) * 2.0)
+		var top := patch.position.y
+		ci.draw_polyline(PackedVector2Array([Vector2(x, top - 3), Vector2(x, top + 2), Vector2(x + side * 2, top + 2)]), Color(INK, alpha), 1.8, true)
+	ci.draw_line(pos + Vector2(-3, -1 - fall), pos + Vector2(4, -1 - fall), Color(INK, alpha), 1.2, true)
+	if pressure > 0.0:
+		ci.draw_line(patch.position + Vector2(2, -2 - pressure * 2), Vector2(patch.end.x - 2, patch.position.y - 2 - pressure * 2), Color(INK, alpha), 2.0, true)
 
 
 static func _draw_retirement(ci: CanvasItem, p: Dictionary) -> void:

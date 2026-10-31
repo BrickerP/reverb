@@ -50,6 +50,12 @@ jobs:
           GODOT: ${{ matrix.godot_bin }}
         run: ./tools/checked.sh --headless --path . --script res://tests/run_tests.gd
 
+      - name: Check native evidence script
+        shell: bash
+        env:
+          GODOT: ${{ matrix.godot_bin }}
+        run: ./tools/checked.sh --headless --path . --check-only --script res://tools/paper_action_probe.gd
+
       - name: Smoke test
         shell: bash
         env:
@@ -106,15 +112,21 @@ jobs:
           for variant in normal compact reduced; do
             output="$GITHUB_WORKSPACE/shots/paper-actions/$variant"
             mkdir -p "$output"
+            capture_status=0
             xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
               --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
               --write-movie "$output/paper_action.avi" \
               --script res://tools/paper_action_probe.gd -- \
-              --output="$output" --variant="$variant"
-            ffmpeg -hide_banner -loglevel error -i "$output/paper_action.avi" \
-              -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
-              -movflags +faststart "$output/paper_action.mp4"
-            rm "$output/paper_action.avi"
+              --output="$output" --variant="$variant" || capture_status=$?
+            if [ -s "$output/paper_action.avi" ]; then
+              ffmpeg -hide_banner -loglevel error -i "$output/paper_action.avi" \
+                -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
+                -movflags +faststart "$output/paper_action.mp4"
+              rm "$output/paper_action.avi"
+            fi
+            if [ "$capture_status" -ne 0 ]; then
+              exit "$capture_status"
+            fi
           done
 
       - name: Capture legal eight-Echo pressure
@@ -152,6 +164,63 @@ jobs:
         with:
           name: paper-action-evidence-${{ github.sha }}
           path: shots/paper-actions/
+          if-no-files-found: warn
+          retention-days: 14
+
+  export-preview:
+    needs: test
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_macos.universal.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot.app/Contents/MacOS/Godot
+
+      - name: Cache export templates
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/4.7.2.stable
+          key: godot-macos-export-templates-4.7.2-stable
+
+      - name: Download export templates
+        if: steps.templates.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p /tmp/templates
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates"
+          mv /tmp/templates/templates "$HOME/Library/Application Support/Godot/export_templates/4.7.2.stable"
+
+      - name: Build and audit the isolated preview
+        env:
+          GODOT: /tmp/godot/Godot.app/Contents/MacOS/Godot
+        run: |
+          python3 tools/export_release_audit.py --repo . --ref "$GITHUB_SHA" \
+            --stage-dir "$RUNNER_TEMP/paper-action-preview" --godot "$GODOT"
+
+      - name: Upload audited preview builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: take-stack-preview-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/paper-action-preview-audit/artifacts/
+            ${{ runner.temp }}/paper-action-preview-audit/result.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: take-stack-preview-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/paper-action-preview-audit/logs/
           if-no-files-found: warn
           retention-days: 14
 

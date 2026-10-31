@@ -5,6 +5,15 @@ Warnings explain where damage will occur, support bodies communicate ownership
 and mortality, and role/Echo effects preserve their causal source. Decoration
 must never move a hit, hide a mission, or imply a reward the model did not grant.
 
+The current action pass is defined in [paper-action-feedback.md](paper-action-feedback.md):
+pin, stamp, cut, ink, return and arc have distinct release gestures and contact
+results across all 35 weapon profiles. Dark local edges and paper deformation
+make contact readable without enlarging collision bodies or adding a global
+hit-stop. A confirmed actor token, equipment slot and weapon ID select exactly
+one mounted tool; delayed output without a known slot never guesses a duplicate.
+Full shield absorption uses a defensive clamp and shield sound, while actual HP
+loss uses the body-hurt path.
+
 ## Spatial hierarchy
 
 The standard 1280×720 canvas shows a 1200×600 follow-camera window inside the
@@ -67,8 +76,10 @@ current `E / X` label from InputMap and appears only when the player is in range
 
 Audit interaction exposes the danger zone it creates. Repair visibly disables
 the faulty press. Rescue health loss comes from actual enemy contact. Recruit
-keeps the defeated Boss present during the eight-second negotiation window;
-autofire does not play an ordinary loot/death beat first.
+keeps the defeated Boss present while simulation waits for an explicit choice;
+there is no running negotiation countdown. Autofire does not play an ordinary
+loot/death beat first. A committed recruitment tears the old badge and places a
+temporary paper badge on the actual new companion.
 
 ## Support ownership and failure
 
@@ -78,9 +89,12 @@ outline. Every body exposes HP and remaining-life state without looking like a
 cash pickup.
 
 Spawn, attack, repair, production, damage, destroy, retrieve and expire visuals
-come from `support_event` snapshots. Source slot, stable Echo token, tint and
-weapon ID survive delayed attacks and save/restore. Presentation never resolves
-an old slot to a different Echo.
+come from `support_event` value snapshots. Stable helper UID, Echo owner token,
+target identity and actual HP/life/charges identify the body and result.
+Repairs follow still-living recipients by type and UID, and retain captured
+positions after a recipient leaves. Concurrent repair and damage results do
+not overwrite each other. Presentation never resolves an old slot to a
+different Echo.
 
 Natural expiry folds or powers down. Destruction uses a distinct hurt/failure
 beat. A paper tree shows limited deliveries of shield/energy; it never emits a
@@ -93,7 +107,7 @@ Role readiness is driven by the authoritative 0–100 energy meter and six-secon
 cooldown. Each successful ability has a bounded, recognizable emblem:
 
 - Looper: backward route ticks and a brief clock-fold;
-- Solo: one paper dash strip and parry crease;
+- Solo: one paper dash strip and an invulnerable guard crease;
 - Mirror: a two-point swap stitch;
 - Conductor: one selected-Echo anchor and three relay pulses;
 - Mender: a real repair-station placement;
@@ -107,6 +121,12 @@ Merge preview keeps the host path and renders only the chosen donor trait. The
 preview is not a temporary live body. Active retirement uses the actual skill
 profile; natural exhaustion uses a smaller terminal beat and grants no full
 skill.
+
+The retiring copy itself remains briefly visible, with its captured tint,
+weapon and condition. Its paper body folds, pulls apart or compresses according
+to the actual final skill. Exhaustion uses a quiet fold rather than the same
+particle burst. Repairs, lever operations and rejected operations likewise
+have body/contact/result drawings driven by the committed model event.
 
 ## End and archive beats
 
@@ -141,5 +161,10 @@ not create unlimited voices or change combat timing. Five synchronized
 - `tools/expedition_art_probe.gd` captures EN/ZH and 1280×720/960×540 fixtures.
 - `tools/expedition_gameplay_probe.gd` is the integrated native gameplay probe
   replacing the obsolete 0.14 core probe.
+- `tests/test_paper_*`, `test_action_event_contracts` and the real Main input
+  regression cover the action pass. CI runs `tools/paper_action_probe.gd` at
+  normal speed in EN1280, ZH960 and Reduced1280, saves native phase PNGs and
+  silent movies, and compares legal eight-Echo pressure with public 0.17 on
+  the same runner. These are disclosed scripted fixtures, not human playtests.
 
 The current bureau gameplay probe covers EN1280 and ZHReduced960 with real Main input, full-snapshot/RNG invariance, strict JSON restoration and native pixels. Dedicated archive and world probes cover all four menu canvas/language combinations and actual warning, impact, safe, inspection and cleanup states. These clinical fixtures are not human playthroughs. Runtime exports, checksum receipts and public downloads are audited separately; physical-controller behavior, Windows GUI, long-term balance and universal frame rate remain separate validation.

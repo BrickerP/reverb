@@ -6,6 +6,7 @@ extends SceneTree
 const DT := 1.0 / 60.0
 const CASE_FRAMES := 96
 const DEADLINE_MSEC := 180000
+const MACHINE_ID := &"machine_3"
 const WEAPONS: Array[Dictionary] = [
 	{"name": "pin", "weapon": &"stapler"},
 	{"name": "stamp", "weapon": &"stamp"},
@@ -25,6 +26,9 @@ var _native_frames := 0
 var _case_frame := -1
 var _first_action := -1
 var _first_contact := -1
+var _result_frame := -1
+var _first_hit_life := 0.0
+var _return_sample: Dictionary = {}
 var _second_slot := -1
 var _case_events: Dictionary = {}
 var _proofs: Dictionary = {}
@@ -37,6 +41,8 @@ var _repair_pad := Vector2.INF
 var _repair_body := Vector2.INF
 var _current_mode := ""
 var _gait_rows: Array[Dictionary] = []
+var _last_interaction: Dictionary = {}
+var _support_rows: Array[Dictionary] = []
 var _isolated: Array[String] = []
 var _summary: Dictionary = {"source": "scripted fixture", "cases": [], "screenshots": {},
 	"read_only_checks": [], "success": false}
@@ -109,6 +115,12 @@ func _run() -> void:
 				and bool(_proofs.get("shot_view", false)) and bool(_proofs.get("damage_view", false)),
 				"%s real Combat attack and contact reached Main's ArenaView" % row["name"]):
 			return
+		if row["weapon"] == &"paper_saw":
+			if not _require(not _return_sample.is_empty() and bool(_return_sample["returning"])
+					and float(_return_sample["age"]) >= float(_return_sample["return_time"]),
+					"paper saw returning screenshot comes from a real returning projectile"):
+				return
+			result["returning_projectile"] = _return_sample.duplicate(true)
 		(_summary["cases"] as Array).append(result)
 	_begin_case(&"pistol")
 	_add_stationary_copy(&"pistol", 60.0)
@@ -117,15 +129,27 @@ func _run() -> void:
 	var repairs: Dictionary = await _run_case("repair", "repair", CASE_FRAMES)
 	if repairs.is_empty() or not _require(int(_case_events.get("support.repair", 0)) > 0
 			and int(_case_events.get("support.damage", 0)) > 0 and bool(_proofs.get("support_view", false))
+			and int(_case_events.get("support.destroy", 0)) == 1
+			and bool(_proofs.get("support_separated_visible", false))
+			and bool(_proofs.get("support_destroy_view", false))
+			and bool(_proofs.get("support_remains_view", false))
 			and int(_case_events.get("world.machine_repaired", 0)) > 0,
 			"real finite station damage and useful repairs reached the bound view"):
 		return
+	repairs["support_event_values"] = _support_rows.duplicate(true)
 	(_summary["cases"] as Array).append(repairs)
 	_begin_case(&"pistol")
 	_disable_weapons()
 	for item: Dictionary in _main.sim.interactables:
-		if item["id"] == &"machine_0":
-			_main.sim.player.pos = item["pos"] + Vector2(0.0, 80.0)
+		if item["id"] == MACHINE_ID:
+			# A naturally operating first-act press stays idle once its initial
+			# cooldown elapses. The first press is faulty and auto-cycles instead.
+			_main.sim.player.pos = item["pos"] + Vector2(-80.0, 0.0)
+			break
+	if not (await _wait_for_machine_ready()):
+		return
+	for item: Dictionary in _main.sim.interactables:
+		if item["id"] == MACHINE_ID:
 			_add_target(item["pos"] + Vector2(75.0, 0.0))
 			break
 	var machine: Dictionary = await _run_case("machine", "machine", 120)
@@ -194,7 +218,7 @@ func _run() -> void:
 	_summary["capture"] = {"fps": 60, "speed": 1.0, "audio": "master muted; real route counters checked",
 		"simulation": "one real Sim.step(1/60) per native rendered frame; Main physics suppressed",
 		"visual_clock": "normal native engine clock, including each screenshot frame",
-		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture",
+		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture; repair station separated at player+(100,-50), real spawn@8/damage@18/useful repair/lethal damage@36/remains@44/machine repair@48",
 		"scope": "presentation evidence; not human playtesting, balance or a normal campaign completion",
 		"movie": "continuous CLI --write-movie recording; no skipped or slowed simulation steps"}
 	if not _write_summary():
@@ -233,6 +257,9 @@ func _begin_case(weapon_id: StringName) -> void:
 	_case_frame = -1
 	_first_action = -1
 	_first_contact = -1
+	_result_frame = -1
+	_first_hit_life = 0.0
+	_return_sample.clear()
 	_second_slot = -1
 	_support_uid = 0
 	_retire_uid = 0
@@ -240,6 +267,8 @@ func _begin_case(weapon_id: StringName) -> void:
 	_repair_body = Vector2.INF
 	_current_mode = ""
 	_gait_rows.clear()
+	_last_interaction.clear()
+	_support_rows.clear()
 	_case_events.clear()
 	_proofs.clear()
 	_peaks.clear()
@@ -295,6 +324,65 @@ func _add_target(pos: Vector2) -> void:
 	enemy.damage = 0.0
 
 
+func _wait_for_machine_ready() -> bool:
+	var sim: Sim = _main.sim
+	var native_start := _native_frames
+	var initial := _interaction_diagnostic(MACHINE_ID)
+	for frame in 600:
+		if _failed:
+			return false
+		var nearest := Expedition.interaction(sim)
+		if nearest.get("id", &"") == MACHINE_ID and bool(nearest.get("available", false)) \
+				and float(nearest.get("warning", 0.0)) <= 0.0:
+			_summary["machine_warmup"] = {"machine_id": String(MACHINE_ID),
+				"frames": frame, "seconds": frame * DT, "normal_speed": true,
+				"movie_start_frame": native_start, "movie_end_frame": _native_frames,
+				"scope": "native readiness warmup, before the measured 120-frame machine case",
+				"initial": initial, "ready": _interaction_diagnostic(MACHINE_ID)}
+			return true
+		# Wait through the real initial cooldown; no direct machine/cooldown edit.
+		sim.step(DT, Vector2.ZERO)
+		_main._view.queue_redraw()
+		_main.hud.queue_redraw()
+		await process_frame
+		await RenderingServer.frame_post_draw
+	_fail("operating press did not become the nearest available interaction during native warmup")
+	return false
+
+
+func _interaction_diagnostic(expected_id: StringName = &"") -> Dictionary:
+	var sim: Sim = _main.sim
+	var nearest := Expedition.interaction(sim)
+	var expected: Dictionary = {}
+	for item: Dictionary in sim.interactables:
+		if item["id"] == expected_id:
+			expected = item
+	var result := {"player_pos": [sim.player.pos.x, sim.player.pos.y], "wave": sim.wave,
+		"wave_time": sim.wave_time, "materials": sim.player.materials,
+		"nearest": _interaction_row(nearest, sim.player.pos),
+		"expected": _interaction_row(expected, sim.player.pos)}
+	for machine: Dictionary in sim.expedition.get("world", {}).get("machines", []):
+		if machine["id"] == expected_id:
+			result["machine_status"] = String(machine["status"])
+			result["machine_stopped"] = bool(machine["stopped"])
+	result["last_result"] = {"ok": bool(_last_interaction.get("ok", false)),
+		"reason": String(_last_interaction.get("reason", &"")),
+		"target_id": String(_last_interaction.get("target_id", &"")),
+		"target_kind": String(_last_interaction.get("target_kind", &""))}
+	return result
+
+
+func _interaction_row(item: Dictionary, player_pos: Vector2) -> Dictionary:
+	if item.is_empty():
+		return {}
+	var pos: Vector2 = item["pos"]
+	return {"id": String(item.get("id", &"")), "kind": String(item.get("kind", &"")),
+		"available": item.get("available", null), "used": bool(item.get("used", false)),
+		"pos": [pos.x, pos.y], "distance": player_pos.distance_to(pos),
+		"range": float(item.get("range", 0.0)), "cost": int(item.get("cost", 0)),
+		"cooldown": float(item.get("cooldown", 0.0)), "warning": float(item.get("warning", 0.0))}
+
+
 func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 	if _failed:
 		return {}
@@ -341,6 +429,9 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 			if not _require(bool(_proofs["repaired_machine_visible"]),
 					"camera follows the real repair action and contains the machine body and service pad"):
 				return {}
+		if mode == "repair" and frame in [8, 36, 44]:
+			if not _check_support_evidence(frame):
+				return {}
 		if frame == 30:
 			if not _require(sim.rng.state == rng_before and sim.hazard_rng.state == hazard_before
 					and RunSnapshot.capture(sim) == read_only_before,
@@ -361,7 +452,12 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		"normal_speed": true, "movie_start_frame": movie_start, "movie_end_frame": _native_frames,
 		"events": _case_events.duplicate(true), "view_proofs": _proofs.duplicate(true),
 		"feedback_peaks": _peaks.duplicate(true), "audio_route_delta": audio_delta,
-		"screenshots": _samples.duplicate(true), "rng_before": first_rng, "rng_after": str(sim.rng.state),
+		"screenshots": _samples.duplicate(true), "first_contact_frame": _first_contact,
+		"result_frame": int(_samples["result"]["case_frame"]) if _samples.has("result") else -1,
+		"first_hit_life": _first_hit_life,
+		"result_sample_rule": "first_contact + max(2,round(profile.hit_life*60*0.60))" \
+			if mode in ["weapon", "duplicates"] else "case-specific native frame",
+		"rng_before": first_rng, "rng_after": str(sim.rng.state),
 		"hazard_rng_before": first_hazard, "hazard_rng_after": str(sim.hazard_rng.state)}
 
 
@@ -370,12 +466,23 @@ func _trigger(mode: String, frame: int) -> bool:
 	if mode == "repair":
 		if frame == 8:
 			if not _require(SupportSystem.spawn_weapon(sim, Content.weapon(&"repair_kit"),
-					sim.player.pos + Vector2(30.0, -30.0), 0.0, -1, -1, Color.WHITE, 1),
+					sim.player.pos + Vector2(100.0, -50.0), 0.0, -1, -1, Color.WHITE, 1),
 					"fixture deploys a real finite repair station"):
 				return false
 			_support_uid = int(sim.support_units.back()["uid"])
 		elif frame == 18:
 			if not _require(SupportSystem.damage(sim, _support_uid, 5.0), "real support body receives damage"):
+				return false
+		elif frame == 36:
+			var station: Dictionary = {}
+			for unit: Dictionary in sim.support_units:
+				if int(unit["uid"]) == _support_uid:
+					station = unit
+			if not _require(not station.is_empty() and float(station["hp"]) > 0.0,
+					"station remains a living finite body before the deliberate lethal hit"):
+				return false
+			if not _require(SupportSystem.damage(sim, _support_uid, float(station["hp"])),
+					"real lethal damage destroys the same station after its useful repair"):
 				return false
 		elif frame == 48:
 			# An actual faulty machine is stopped by the same E interaction used in game.
@@ -399,10 +506,10 @@ func _trigger(mode: String, frame: int) -> bool:
 			return false
 		var started := false
 		for item: Dictionary in sim.interactables:
-			if item["id"] == &"machine_0":
+			if item["id"] == MACHINE_ID:
 				started = float(item["warning"]) > 0.0
 		for machine: Dictionary in sim.expedition["world"]["machines"]:
-			if machine["id"] == &"machine_0":
+			if machine["id"] == MACHINE_ID:
 				started = started and not bool(machine["stopped"])
 		_proofs["machine_started"] = started
 		if not _require(started, "one actual E starts the press warning and leaves the machine operating"):
@@ -447,8 +554,33 @@ func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool
 				labels.append("motion")
 		if _first_contact >= 0 and frame == maxi(_first_action + 1, _first_contact):
 			labels.append("contact")
-		if _first_contact >= 0 and frame == maxi(_first_action + 32, _first_contact + 12):
+		if mode == "repair" and frame == 32:
+			if not _require(int(_case_events.get("support.repair", 0)) > 0,
+					"repair result screenshot follows actual useful treatment"):
+				return false
 			labels.append("result")
+		elif mode in ["weapon", "duplicates"] and _result_frame >= 0 and frame == _result_frame:
+			labels.append("result")
+		elif mode not in ["repair", "weapon", "duplicates"] and _first_contact >= 0 \
+				and frame == maxi(_first_action + 32, _first_contact + 12):
+			labels.append("result")
+		if name == "return" and mode == "weapon" and _return_sample.is_empty():
+			var sim: Sim = _main.sim
+			for projectile: Projectile in sim.projectiles:
+				if projectile.weapon_id != &"paper_saw" or not projectile.returning:
+					continue
+				_return_sample = {"frame": frame, "native_frame": _native_frames,
+					"returning": projectile.returning, "pos": [projectile.pos.x, projectile.pos.y],
+					"vel": [projectile.vel.x, projectile.vel.y], "radius": projectile.radius,
+					"return_time": projectile.return_time, "age": projectile.age,
+					"source": projectile.source, "actor_token": projectile.actor_token}
+				_proofs["returned_in_model"] = true
+				labels.append("returning")
+				break
+		if mode == "repair":
+			var support_frames := {8: "support_spawn", 18: "support_damage", 36: "support_destroy", 44: "support_remains"}
+			if support_frames.has(frame):
+				labels.append(support_frames[frame])
 		if mode == "repair" and frame == 48:
 			labels.append("machine_stopped")
 		if mode == "duplicates" and frame == _second_slot and _second_slot >= 0:
@@ -457,6 +589,34 @@ func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool
 		if not _samples.has(label) and not _save_frame(name, label, frame):
 			return false
 	return true
+
+
+func _check_support_evidence(frame: int) -> bool:
+	var sim: Sim = _main.sim
+	var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+	if frame == 8:
+		for unit: Dictionary in sim.support_units:
+			if int(unit["uid"]) != _support_uid:
+				continue
+			var pos: Vector2 = unit["pos"]
+			var separated := camera.has_point(pos) and pos.distance_to(sim.player.pos) >= 90.0
+			for actor: EchoActor in sim.echoes:
+				separated = separated and pos.distance_to(actor.pos) >= 60.0
+			_proofs["support_separated_visible"] = separated
+			return _require(separated, "real station is visible and separated from both receiving bodies")
+		return _require(false, "real station exists for its birth screenshot")
+	for unit: Dictionary in sim.support_units:
+		if int(unit["uid"]) == _support_uid:
+			return _require(false, "destroyed station no longer exists in the authoritative support array")
+	var profiles: Array[Dictionary] = _main._view._interaction_ink.profiles(camera, _variant == "reduced", sim)
+	var terminal := false
+	for profile: Dictionary in profiles:
+		if profile["family"] == &"support" and int(profile.get("uid", 0)) == _support_uid \
+				and profile["kind"] == &"destroy":
+			terminal = true
+	var key := "support_destroy_view" if frame == 36 else "support_remains_view"
+	_proofs[key] = terminal
+	return _require(terminal, "actual destroy event leaves its finite receipt visible after the body is removed")
 
 
 func _save_frame(name: String, label: String, frame: int) -> bool:
@@ -492,10 +652,14 @@ func _on_shot(info: ShotInfo) -> void:
 			_second_slot = _case_frame
 
 
-func _on_damage(_info: DamageInfo) -> void:
+func _on_damage(info: DamageInfo) -> void:
 	_count("damage")
 	if _case_frame >= 0 and _first_contact < 0:
 		_first_contact = _case_frame
+		if _current_mode in ["weapon", "duplicates"]:
+			var profile := ArenaPainter.weapon_feedback_profile(info.weapon_id)
+			_first_hit_life = float(profile["hit_life"])
+			_result_frame = _first_contact + maxi(2, roundi(_first_hit_life * 60.0 * 0.60))
 	_proofs["damage_view"] = bool(_proofs.get("damage_view", false)) \
 		or int(_main._view.feedback_counts()["hits"]) > 0
 
@@ -516,6 +680,8 @@ func _on_retirement(_info: EchoRetirementInfo) -> void:
 func _on_world(info: Dictionary) -> void:
 	var kind := String(info.get("kind", &""))
 	_count("world." + kind)
+	if kind == "interaction_result":
+		_last_interaction = info.duplicate(true)
 	if kind == "interaction_result" and bool(info.get("ok", false)):
 		if _case_frame >= 0 and _first_action < 0:
 			_first_action = _case_frame
@@ -526,6 +692,12 @@ func _on_world(info: Dictionary) -> void:
 func _on_support(info: Dictionary) -> void:
 	var kind := String(info.get("kind", &""))
 	_count("support." + kind)
+	if _current_mode == "repair" and _support_rows.size() < 16:
+		var pos: Vector2 = info.get("pos", Vector2.ZERO)
+		_support_rows.append({"frame": _case_frame, "kind": kind, "uid": int(info.get("uid", 0)),
+			"pos": [pos.x, pos.y], "hp": float(info.get("hp", 0.0)),
+			"life": float(info.get("life", 0.0)), "charges": int(info.get("charges", 0)),
+			"amount": float(info.get("amount", 0.0))})
 	if _case_frame >= 0 and _first_action < 0:
 		_first_action = _case_frame
 	if kind == "repair" and _case_frame >= 0 and _first_contact < 0:
@@ -575,7 +747,11 @@ func _fail(message: String) -> void:
 	_summary["success"] = false
 	_summary["failure"] = message
 	_summary["variant"] = _variant
+	if _main != null and is_instance_valid(_main) and _main.get("sim") is Sim:
+		_summary["interaction_diagnostic"] = _interaction_diagnostic(MACHINE_ID)
 	printerr("paper action probe FAILED: " + message)
+	if _summary.has("interaction_diagnostic"):
+		printerr("paper action interaction: " + JSON.stringify(_summary["interaction_diagnostic"]))
 	if not _output.is_empty():
 		var file := FileAccess.open(_output.path_join("paper_action_source.json"), FileAccess.WRITE)
 		if file != null:

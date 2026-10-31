@@ -384,6 +384,14 @@ func _on_world_event(info: Dictionary) -> void:
 
 func _on_support_event(info: Dictionary) -> void:
 	_interaction_ink.consume_support(info)
+	if info.get("kind", &"") == &"repair":
+		for target: Dictionary in info.get("targets", []):
+			if float(target.get("amount", 0.0)) <= 0.0:
+				continue
+			if target.get("target_type", &"") == &"player":
+				_director.actor_repaired(-1)
+			elif target.get("target_type", &"") == &"echo" and int(target.get("uid", 0)) > 0:
+				_director.actor_repaired(int(target["uid"]))
 	queue_redraw()
 
 
@@ -493,13 +501,17 @@ func _on_damage_info(info: DamageInfo) -> void:
 		hit_color = info.source_tint
 	var profile := ArenaPainter.weapon_feedback_profile(info.weapon_id)
 	var hit_life := float(profile["hit_life"]) + (0.04 if info.crit else 0.0)
+	var target_radius := maxf(0.0, info.target_radius) if is_finite(info.target_radius) else 0.0
+	var contact_pos := info.pos + Vector2(0.0, target_radius * 0.72 + 6.0)
 	_push_feedback(_hits, {"life": hit_life, "max_life": hit_life,
 			"pos": info.pos, "direction": direction, "crit": info.crit, "reduced": info.reduced,
+			"contact_pos": contact_pos, "target_radius": target_radius,
 			"weapon_id": info.weapon_id, "source": info.source, "effect": info.effect,
 			"target_uid": info.target_uid, "actor_token": info.actor_token,
 			"source_tint": info.source_tint, "color": hit_color, "has_direction": has_direction}, MAX_HITS)
 	_last_event = {"kind": &"damage", "weapon_id": info.weapon_id, "direction": direction,
 			"pos": info.pos, "source": info.source, "crit": info.crit,
+			"contact_pos": contact_pos, "target_radius": target_radius,
 			"actor_token": info.actor_token, "source_tint": info.source_tint,
 			"reduced": info.reduced, "effect": info.effect, "has_direction": has_direction}
 	var color := hit_color.lerp(Color(1.0, 1.0, 0.55), 0.8) if info.crit else hit_color
@@ -536,6 +548,8 @@ func _on_hurt_info(info: PlayerHurtInfo) -> void:
 		return
 	if not blocked:
 		_director.player_hurt(info.source_uid if info.effect == &"contact" else -1)
+	else:
+		_director.enemy_contact(info.source_uid if info.effect == &"contact" else -1)
 	var has_direction := info.direction != Vector2.ZERO
 	var direction := info.direction.normalized() if has_direction else Vector2.ZERO
 	var life := 0.24 if blocked else (0.35 if info.lethal else 0.22)
@@ -634,7 +648,7 @@ func _on_echo_silence(info: EchoSilenceInfo) -> void:
 	if sim == null:
 		return
 	if info.kind == EchoSilenceInfo.CONTACT:
-		if not _director.enemy_action(info.source_uid):
+		if not _director.enemy_contact(info.source_uid):
 			return
 	elif info.kind == EchoSilenceInfo.BOSS:
 		_director.boss_roar()

@@ -58,7 +58,7 @@ func test_full_shield_blocks_never_borrow_injury_pose_shake_or_sound(c: Check) -
 	c.ok(view._hurts[0]["blocked"], "draw receives the defensive clamp path")
 	c.eq(view._hurts[0]["hp_loss"], 0.0, "full block does not claim lost health")
 	c.eq(view._shake, 0.0, "a shield block does not add injury shake")
-	c.eq(view._director.counts()["contacts"], 0, "full block cannot trigger the body's hurt contact")
+	c.eq(view._director.counts()["contacts"], 1, "the actual attacker still follows through into the block")
 	c.eq(audio.play_count(&"shield_block"), 1, "full block plays the defensive cue")
 	c.eq(audio.play_count(&"hurt_contact"), 0, "full block plays no body injury cue")
 	sim.player.iframes = 0.0
@@ -112,3 +112,57 @@ func test_unknown_slot_is_visible_as_a_release_but_never_guesses_a_gun(c: Check)
 	c.ok(view.recoil_amount(-1, &"pistol", 1) > 0.0, "actual second slot receives its recoil")
 	c.eq(view.event_last_data()["weapon_slot"], 1, "diagnostics retain the actual slot")
 	view.free()
+
+
+func test_contact_receipt_keeps_the_actual_body_extent_after_a_target_changes(c: Check) -> void:
+	var sim := _sim()
+	var view := ArenaView.new()
+	view.bind(sim)
+	var enemy := EnemyState.new()
+	enemy.uid = sim._next_uid
+	sim._next_uid += 1
+	enemy.def = Content.enemy(&"grunt")
+	enemy.radius = enemy.def.radius
+	enemy.pos = sim.player.pos + Vector2(100.0, 0.0)
+	enemy.hp = 20.0
+	enemy.max_hp = 20.0
+	sim.enemies.append(enemy)
+	var radius := enemy.radius
+	var position := enemy.pos
+	sim.damage_enemy(enemy, 1.0, Vector2.ZERO, false, -1, Vector2.RIGHT, &"stapler")
+	c.eq(view._hits[0]["target_radius"], radius, "hit owns a value snapshot of its actual target extent")
+	c.eq(view._hits[0]["pos"], position, "true contact geometry remains unchanged")
+	var receipt: Vector2 = position + Vector2(0.0, radius * 0.72 + 6.0)
+	c.eq(view._hits[0]["contact_pos"], receipt, "readable paper receipt clears the target face")
+	enemy.pos += Vector2(50.0, 0.0)
+	enemy.radius *= 2.0
+	c.eq(view._hits[0]["contact_pos"], receipt, "a later target cannot move an old contact mark")
+	view.free()
+
+
+func test_automatic_repairs_cannot_crowd_out_player_injury_sound(c: Check) -> void:
+	var active: Array[bool] = [true, true, true, true, true]
+	var priorities: Array[int] = [GameAudio.SUPPORT_PRIORITY, GameAudio.SUPPORT_PRIORITY,
+		GameAudio.priority_for(&"boss"), GameAudio.priority_for(&"lose"), GameAudio.priority_for(&"win")]
+	var order: Array[int] = [1, 2, 3, 4, 5]
+	var injury := GameAudio.priority_for(&"hurt_contact")
+	c.eq(GameAudio.voice_index(active, priorities, order, injury), 0,
+		"a real injury can always displace the oldest automatic repair")
+	c.eq(GameAudio.voice_index(active, priorities, order, GameAudio.SUPPORT_PRIORITY), 0,
+		"another repair can replace its own low-priority voice without taking a critical cue")
+	var critical: Array[int] = [injury, injury, injury, injury, injury]
+	c.eq(GameAudio.voice_index(active, critical, order, GameAudio.SUPPORT_PRIORITY), -1,
+		"automatic patch sounds cannot interrupt five active injury cues")
+
+
+func test_overlapping_station_repairs_do_not_restart_a_body_mid_recovery(c: Check) -> void:
+	var director := BattleDirector.new()
+	director.actor_repaired(-1)
+	director.step(0.10)
+	var settling := director.repair_pose(-1)
+	for _station in SupportSystem.MAX_UNITS:
+		director.actor_repaired(-1)
+	c.eq(director.repair_pose(-1), settling,
+		"several true repairs keep the current recovery instead of jittering the body back to frame zero")
+	director.step(BattleDirector.REPAIR_TIME)
+	c.eq(director.repair_pose(-1), Vector2.ONE, "overlapping helpers still let the body stand straight")

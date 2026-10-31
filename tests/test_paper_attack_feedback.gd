@@ -100,6 +100,106 @@ func test_directional_fold_uses_only_the_actual_target_and_recovers(c: Check) ->
 	c.ok((director.enemy_fold(15)["scale"] as Vector2).is_finite(), "invalid direction never reaches drawing as NaN")
 
 
+func test_shield_contact_animates_only_the_attacker_without_injuring_the_defender(c: Check) -> void:
+	var director := BattleDirector.new()
+	var phase := PI * 0.5
+	c.ok(not director.enemy_contact(-1), "a directionless blast cannot invent a contact attacker")
+	c.eq(director.counts()["contacts"], 0, "missing identity leaves no attack pose")
+	c.ok(director.enemy_contact(42), "a real shield contact still has an attacking body")
+	c.eq(director.enemy_pose(&"enemy_runner", 42, phase, true, false), 5, "the actual attacker starts on impact, without a false windup")
+	c.eq(director.enemy_pose(&"enemy_runner", 43, phase, true, false), 1, "a neighboring enemy keeps its own step")
+	c.eq(director.player_pose(&"character_looper_front", phase, true, false), 1, "full absorption leaves the defender walking rather than hurt")
+	c.eq(director.player_pose(&"character_looper_front", phase, true, true), 1, "Reduced keeps the same uninjured defender")
+	c.ok(not director.enemy_contact(42), "the same contact cannot restart its pose every frame")
+	director.step(BattleDirector.CONTACT_TIME * 0.65)
+	c.eq(director.enemy_pose(&"enemy_runner", 42, phase, true, false), 4, "shield impact follows through into recovery")
+	c.eq(director.player_pose(&"character_looper_front", phase, true, false), 1, "attacker recovery never becomes defender pain")
+	director.step(BattleDirector.CONTACT_TIME)
+	c.eq(director.enemy_pose(&"enemy_runner", 42, phase, true, false), 1, "contact returns to the held gait phase")
+	director.player_hurt(43)
+	c.eq(director.enemy_pose(&"enemy_runner", 43, phase, true, false), 5, "actual HP injury reuses the same immediate contact action")
+	c.eq(director.player_pose(&"character_looper_front", phase, true, false), 3, "actual HP injury still has the defender's separate hurt pose")
+
+
+func test_repaired_bodies_compress_straighten_and_keep_their_own_gait(c: Check) -> void:
+	var director := BattleDirector.new()
+	director.actor_repaired(-1)
+	director.actor_repaired(41)
+	c.ok(director.repair_pose(-1).y < 1.0, "a real repair starts with a small planted-foot compression")
+	c.eq(director.repair_pose(42), Vector2.ONE, "an unhealed copy cannot borrow its neighbor's repair")
+	c.eq(director.repair_pose(41, true), Vector2.ONE, "Reduced leaves the patch without optional body motion")
+	c.eq(director.player_pose(&"character_looper_front", PI * 0.5, true, false), 1,
+		"repair extent never replaces or resets the held walking drawing")
+	director.step(BattleDirector.REPAIR_TIME * 0.32)
+	c.ok(director.repair_pose(-1).y > 1.0, "the patched paper stands slightly straighter before settling")
+	c.ok(director.repair_pose(41).y > 1.0, "the actual repaired Echo has the same small recovery")
+	director.step(BattleDirector.REPAIR_TIME)
+	c.eq(director.repair_pose(-1), Vector2.ONE, "the original settles to authored size within .32 seconds")
+	c.eq(director.repair_pose(41), Vector2.ONE, "the Echo also leaves no permanent body stretch")
+	for token in [0, -2, -300]:
+		director.actor_repaired(token)
+		c.eq(director.repair_pose(token), Vector2.ONE, "enemy and unknown tokens cannot enter the repair lane")
+	for token in 100:
+		director.actor_repaired(token + 1)
+	c.ok(director._repairs.size() <= BattleDirector.MAX_SHOT_ACTORS, "repair reactions have at most one original plus eight copy slots")
+	director.end_actions()
+	c.ok(director._repairs.size() > 0, "an actual last-tick repair survives into the short record beat")
+	director.step_terminal(BattleDirector.REPAIR_TIME + 0.01)
+	c.eq(director._repairs.size(), 0, "terminal presentation finishes the recovery without advancing the model")
+	director.actor_repaired(-1)
+	director.clear()
+	c.eq(director._repairs.size(), 0, "a new run discards the previous body's repair")
+
+
+func test_repair_body_clock_freezes_on_pause_and_never_touches_model_or_rng(c: Check) -> void:
+	var sim := Sim.new(92103)
+	sim.start_run()
+	var view := ArenaView.new()
+	view.bind(sim)
+	view._director.actor_repaired(-1)
+	var before := RunSnapshot.capture(sim)
+	var pose := view._director.repair_pose(-1)
+	var gait: float = view.motion_stats()["gait_phase"]
+	view.set_paused(true)
+	view._process(0.2)
+	c.eq(view._director.repair_pose(-1), pose, "pause holds the patch compression clock")
+	view.set_paused(false)
+	view._process(0.1)
+	c.ok(view._director.repair_pose(-1).y > 1.0, "resume continues the same finite recovery")
+	c.eq(view.motion_stats()["gait_phase"], gait, "recovery does not consume a stride")
+	c.eq(RunSnapshot.capture(sim), before, "recovery cannot heal again, shift feet, consume energy or change either RNG")
+	view.unbind()
+	c.eq(view._director._repairs.size(), 0, "detaching cannot lend a repair to a later run")
+	view.free()
+
+
+func test_pin_and_stamp_leave_readable_floor_results_below_the_body(c: Check) -> void:
+	var pin := WeaponInk.contact_geometry(&"pin", 0.4)
+	var pin_size := WeaponInk.hit_mark_size(WeaponInk.profile(&"stapler")["impact"], 1.0)
+	var holes: Array = pin["holes"]
+	c.ok((holes[0] as Vector2).distance_to(holes[1]) * pin_size >= 9.0,
+		"two native paper holes have room for separate ink cores and paper rims")
+	c.ok(float(WeaponInk.profile(&"stapler")["hit_life"]) >= 0.3,
+		"the pin's identifying clamp outlasts a generic brief hurt pose")
+	var stamp: PackedVector2Array = WeaponInk.contact_geometry(&"stamp", 0.4)["blot"]
+	for point in stamp:
+		c.ok(point.y > 0.0, "solid stamp ink stays below the captured foot instead of covering the face")
+	var field := AttackField.new()
+	field.weapon_id = &"stamp"
+	field.style = &"slam"
+	field.pos = Vector2(640, 380)
+	field.radius = 70.0
+	field.windup = 0.03
+	var at := field.pos
+	var radius := field.radius
+	for reduced in [false, true]:
+		var projection := WeaponInk.press_projection(field, reduced)
+		c.ok((projection["center"] as Vector2).y + float(projection["height"]) * 0.5 < field.pos.y - field.radius,
+			"the raised tool never enters the target's face before impact")
+	c.eq(field.pos, at, "moving raised artwork cannot move the actual slam")
+	c.eq(field.radius, radius, "native legibility never changes the damage radius")
+
+
 func test_paused_and_reduced_feedback_is_bounded_and_keeps_the_model_unchanged(c: Check) -> void:
 	var sim := Sim.new(92102)
 	sim.start_run()

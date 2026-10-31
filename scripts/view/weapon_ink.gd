@@ -120,6 +120,8 @@ static func profile(id: StringName) -> Dictionary:
 		&"guard_decoy":
 			result.merge({"style": &"press", "color": Color("748894"), "length": 21.0, "recoil": 3.0, "evolved": false, "glyph": &"guard_decoy", "muzzle": &"guard_decoy", "impact": &"guard_decoy"}, true)
 	match result["action"]:
+		&"pin":
+			result["hit_life"] = 0.32
 		&"stamp":
 			result["muzzle_life"] = 0.22
 			result["hit_life"] = 0.30
@@ -210,11 +212,11 @@ static func contact_geometry(action: StringName, progress: float, reduced: bool 
 	var blot := PackedVector2Array()
 	match action:
 		&"pin":
-			holes = [Vector2(-0.3, -0.45), Vector2(-0.3, 0.45)]
-			lines.append(PackedVector2Array([Vector2(0.5, -0.45), holes[0], holes[1], Vector2(0.5, 0.45)]))
+			holes = [Vector2(-0.6, 0.3), Vector2(0.6, 0.3)]
+			lines.append(PackedVector2Array([Vector2(-0.6, -0.1), holes[0], holes[1], Vector2(0.6, -0.1)]))
 		&"stamp":
-			blot = PackedVector2Array([Vector2(-0.9, -0.48), Vector2(0.9, -0.43), Vector2(0.85, 0.5), Vector2(-0.88, 0.45)])
-			lines.append(PackedVector2Array([Vector2(-0.55, 0), Vector2(0.55, 0)]))
+			blot = PackedVector2Array([Vector2(-0.9, 0.12), Vector2(0.9, 0.16), Vector2(0.85, 0.45), Vector2(-0.88, 0.42)])
+			lines.append(PackedVector2Array([Vector2(-0.55, 0.28), Vector2(0.55, 0.28)]))
 		&"cut":
 			lines.append(PackedVector2Array([Vector2(-1.0, 0.18), Vector2(1.0, -0.18)]))
 			pieces.append(PackedVector2Array([Vector2(-0.65, -spread), Vector2(0.25, -spread - 0.1), Vector2(-0.1, -spread - 0.45)]))
@@ -508,6 +510,8 @@ static func draw_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Arra
 		if not direction.is_finite():
 			direction = Vector2.ZERO
 		var hit_profile := profile(StringName(data.get("weapon_id", &"")))
+		if hit_profile["action"] in [&"pin", &"stamp"]:
+			pos = data.get("contact_pos", pos)
 		if BattleDirector.is_copy_token(int(data.get("actor_token", -1))):
 			hit_profile["color"] = (hit_profile["color"] as Color).lerp(data.get("source_tint", PAPER), 0.55)
 		_draw_hit(ci, pos, direction.normalized(), hit_profile,
@@ -571,7 +575,9 @@ static func _draw_hit(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Dicti
 		# Directionless AOE can leave a local result, never an invented attack ray.
 		direction = Vector2.RIGHT
 	var shape := contact_geometry(action, 1.0 - t, reduced)
-	ci.draw_set_transform(pos, direction.angle())
+	# These two results are paper imprints below the captured body foot. Keeping
+	# them on the floor also prevents upward shots rotating a mark over the face.
+	ci.draw_set_transform(pos, 0.0 if action in [&"pin", &"stamp"] else direction.angle())
 	var blot: PackedVector2Array = shape["blot"]
 	if not blot.is_empty():
 		var polygon := PackedVector2Array()
@@ -598,7 +604,8 @@ static func _draw_hit(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Dicti
 		ci.draw_circle(hole * size, 2.8, paper, true, -1.0, true)
 		ci.draw_circle(hole * size, 1.6, ink, true, -1.0, true)
 	if crit:
-		ci.draw_line(Vector2(-size * 0.25, -size - 2.0), Vector2(size * 0.25, -size - 2.0), Color(GOLD, t), 2.3, true)
+		var underline := size + 3.0 if action in [&"pin", &"stamp"] else -size - 2.0
+		ci.draw_line(Vector2(-size * 0.25, underline), Vector2(size * 0.25, underline), Color(GOLD, t), 2.3, true)
 	if shielded:
 		ci.draw_arc(Vector2.ZERO, 10.0, -0.65, 0.65, 12, paper, 2.5, true)
 	ci.draw_set_transform(Vector2.ZERO)
@@ -679,6 +686,8 @@ static func field_in_view(field: AttackField, view: Rect2) -> bool:
 static func hit_mark_size(glyph: StringName, strength: float, reduced: bool = false) -> float:
 	var base := 5.0
 	match glyph:
+		&"stitch", &"punch", &"clamp", &"nail", &"ruler", &"twin", \
+				&"binding_writ", &"surveyor_lance", &"debt_sentry": base = 8.0
 		&"stamp": base = 19.0
 		&"mallet": base = 17.0
 		&"hydraulic": base = 22.0
@@ -695,7 +704,9 @@ static func press_projection(field: AttackField, reduced: bool = false) -> Dicti
 	var width := 58.0 if field.weapon_id == &"hydraulic_press" else 48.0
 	if field.weapon_id == &"mallet":
 		width = 60.0
-	var drop := 28.0 if reduced else 12.0 + 46.0 * (1.0 - progress * progress)
+	# The raised tool finishes above the true attack circle. It never has to
+	# cover a live face to explain the downward strike; the floor gets its print.
+	var drop := maxf(1.0, field.radius) + 8.0 + (0.0 if reduced else 18.0 * pow(1.0 - progress, 2.0))
 	if field.windup <= 0.0:
 		height *= 0.5
 		drop = 3.0
@@ -714,23 +725,20 @@ static func _draw_press(ci: CanvasItem, field: AttackField, reduced: bool) -> vo
 	for index in 4:
 		var radial := Vector2.from_angle(float(index) * PI * 0.5)
 		ci.draw_line(field.pos + radial * (r - 7.0), field.pos + radial * r, Color(INK, 0.8), 3.0, true)
-	var stamp_size := Vector2(minf(52.0, r * 1.15), minf(26.0, r * 0.55))
-	ci.draw_rect(Rect2(field.pos - stamp_size * 0.5, stamp_size), Color(INK, 0.8), false, 2.0)
-	ci.draw_line(field.pos - Vector2(stamp_size.x * 0.3, 0), field.pos + Vector2(stamp_size.x * 0.3, 0), Color(accent, 0.9), 3.0, true)
-	var projection := press_projection(field, reduced)
-	var size := Vector2(projection["width"], projection["height"])
-	var key := StringName("weapon_" + String(field.weapon_id))
-	var texture := PresentationAssets.texture(key)
-	var region := PresentationAssets.region(key)
-	if texture != null and region.has_area():
-		ci.draw_texture_rect_region(texture, Rect2(projection["center"] - size * 0.5, size), region, Color(1, 1, 1, 0.95))
 	if active:
-		var text := Loc.t("combat.press_impact")
-		var font := UiTheme.font()
-		var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16)
-		var label := field.pos + Vector2(-text_size.x * 0.5, 15.0)
-		ci.draw_rect(Rect2(label + Vector2(-4.0, -17.0), text_size + Vector2(8.0, 4.0)), Color(INK, 0.85))
-		ci.draw_string(font, label, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 16, Color(PAPER, 0.95))
+		var stamp_size := Vector2(minf(52.0, r * 1.15), minf(10.0, r * 0.2))
+		var imprint := Rect2(field.pos + Vector2(-stamp_size.x * 0.5, 10.0), stamp_size)
+		ci.draw_rect(imprint, Color(INK, 0.68))
+		ci.draw_rect(imprint, Color(PAPER, 0.85), false, 1.2)
+		ci.draw_line(imprint.position + Vector2(5.0, 3.0), imprint.end - Vector2(5.0, 3.0), Color(accent, 0.75), 1.5, true)
+	else:
+		var projection := press_projection(field, reduced)
+		var size := Vector2(projection["width"], projection["height"])
+		var key := StringName("weapon_" + String(field.weapon_id))
+		var texture := PresentationAssets.texture(key)
+		var region := PresentationAssets.region(key)
+		if texture != null and region.has_area():
+			ci.draw_texture_rect_region(texture, Rect2(projection["center"] - size * 0.5, size), region, Color(1, 1, 1, 0.95))
 
 
 static func _draw_pool(ci: CanvasItem, field: AttackField, reduced: bool) -> void:

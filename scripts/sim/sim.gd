@@ -564,6 +564,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.source_tint = source_tint
 	info.weapon_id = weapon_id
 	info.target_uid = e.uid
+	info.target_radius = e.radius
 	info.pos = e.pos
 	info.amount = actual
 	info.crit = crit

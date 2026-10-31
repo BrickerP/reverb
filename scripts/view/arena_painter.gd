@@ -361,6 +361,8 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		var foot := actor.pos + Vector2(0.0, r + bob)
 		var paper_scale: Vector2 = profile["paper_scale"]
 		var art_size := _character_bounds(character_id) * paper_scale * (gait["scale"] as Vector2)
+		if director != null:
+			art_size *= director.repair_pose(token, reduced)
 		var print_offset: Vector2 = profile["print_offset"]
 		_draw_art_foot(ci, key, foot + print_offset, art_size, 0.0,
 				Color(c, float(profile["offset_alpha"])), _horizontal_flip(facing), frame)
@@ -451,6 +453,8 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	var breath := sin(visual_time * 1.6) * 0.004 * (0.3 if reduced else 1.0) if not moving else 0.0
 	var facing := pl.facing if pl.facing != Vector2.ZERO else Vector2.RIGHT
 	var art_size := _character_bounds(character_id) * (gait["scale"] as Vector2) * Vector2(1.0 - breath * 0.4, 1.0 + breath)
+	if director != null:
+		art_size *= director.repair_pose(-1, reduced)
 	var key := PresentationAssets.character_key(character_id, _uses_back_art(facing))
 	var foot := pl.pos + Vector2(0.0, r + bob)
 	var frame := actor_frame(key, phase, moving, pl.iframes > 0.22, reduced)

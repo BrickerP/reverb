@@ -11,6 +11,7 @@ const SHOT_INTERVAL := 0.55
 const HURT_TIME := 0.10
 const HURT_INTERVAL := 0.24
 const CONTACT_TIME := 0.24
+const REPAIR_TIME := 0.32
 const PLAYER_DEATH_TIME := 0.55
 const TEAR_TIME := 0.62
 const TEAR_TENSION_TIME := 0.16
@@ -22,6 +23,7 @@ var player_death: Dictionary = {}
 var _shots: Dictionary = {}
 var _enemy_hurts: Dictionary = {}
 var _enemy_contacts: Dictionary = {}
+var _repairs: Dictionary = {}
 var _player_hurt := 0.0
 var _player_hurt_cooldown := 0.0
 var _boss_roar := 0.0
@@ -31,6 +33,7 @@ func clear() -> void:
 	corpses.clear()
 	tear.clear()
 	player_death.clear()
+	_repairs.clear()
 	end_actions()
 
 
@@ -69,11 +72,13 @@ func step(delta: float) -> void:
 	_tick_reactions(_shots, delta)
 	_tick_reactions(_enemy_hurts, delta)
 	_tick_reactions(_enemy_contacts, delta)
+	_tick_reactions(_repairs, delta)
 	_tick_terminal(delta)
 
 
 func step_terminal(delta: float) -> void:
 	if is_finite(delta) and delta > 0.0:
+		_tick_reactions(_repairs, delta)
 		_tick_terminal(delta)
 
 
@@ -144,18 +149,38 @@ func player_hurt(uid: int) -> void:
 		_player_hurt = HURT_TIME
 		_player_hurt_cooldown = HURT_INTERVAL
 	if uid >= 0:
-		# The damaging contact has already happened. Start on the bite/impact pose,
-		# then recover; this is never an invulnerable anticipation window.
-		enemy_action(uid)
+		enemy_contact(uid)
 
 
-func enemy_action(uid: int) -> bool:
+# Contact has already landed, whether HP or a shield received it. The attacker
+# starts on impact and recovers; the defender's hurt pose is a separate outcome.
+func enemy_contact(uid: int) -> bool:
 	if uid < 0:
 		return false
 	if _enemy_contacts.has(uid) and float(_enemy_contacts[uid]["cooldown"]) > 0.0:
 		return false
 	_insert_reaction(_enemy_contacts, uid, CONTACT_TIME, CONTACT_TIME + 0.10, MAX_REACTIONS)
 	return true
+
+
+func actor_repaired(token: int) -> void:
+	if token != -1 and not is_copy_token(token):
+		return
+	if _repairs.has(token) and float(_repairs[token]["cooldown"]) > 0.0:
+		return
+	_insert_reaction(_repairs, token, REPAIR_TIME, REPAIR_TIME, MAX_SHOT_ACTORS)
+
+
+# The patch lands, the paper briefly compresses and stands straight again.
+# Only its extent changes around the authored foot; clocks and gait stay owned
+# by ArenaView. Reduced keeps the separately drawn patch without body motion.
+func repair_pose(token: int, reduced: bool = false) -> Vector2:
+	if reduced or not _repairs.has(token):
+		return Vector2.ONE
+	var progress := 1.0 - clampf(float(_repairs[token]["left"]) / REPAIR_TIME, 0.0, 1.0)
+	var height := lerpf(0.94, 1.035, smoothstep(0.0, 0.3, progress)) if progress < 0.3 \
+		else lerpf(1.035, 1.0, smoothstep(0.3, 1.0, progress))
+	return Vector2(1.0 + (1.0 - height) * 0.5, height)
 
 
 func boss_roar() -> void:

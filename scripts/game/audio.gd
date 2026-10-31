@@ -4,6 +4,7 @@ extends Node
 const POOL := 12
 const COMMON_POOL := 7
 const PROTECTED_POOL := 5
+const SUPPORT_PRIORITY := 10
 const PRESENTATION_DIR := "res://audio/presentation"
 const MUSIC_DB := -9.0
 const MUSIC_DIR := "res://audio/music"
@@ -480,7 +481,8 @@ func _disconnect_signal(signal_value: Signal, handler: Callable) -> void:
 		signal_value.disconnect(handler)
 
 
-func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0) -> bool:
+func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0,
+		voice_priority: int = -1) -> bool:
 	var stream: AudioStream = _streams.get(name)
 	if stream == null or _players.is_empty():
 		return false
@@ -494,7 +496,7 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate
 	if _silent:
 		_plays[name] = int(_plays.get(name, 0)) + 1
 		return true
-	var player := _claim_player(name)
+	var player := _claim_player(name, voice_priority)
 	if player == null:
 		return false
 	player.stream = stream
@@ -510,7 +512,7 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate
 	return true
 
 
-func _claim_player(name: StringName) -> AudioStreamPlayer:
+func _claim_player(name: StringName, voice_priority: int = -1) -> AudioStreamPlayer:
 	var protected_voice := is_protected(name)
 	var pool := _protected_players if protected_voice else _common_players
 	if pool.is_empty():
@@ -523,7 +525,7 @@ func _claim_player(name: StringName) -> AudioStreamPlayer:
 		active.append(player.playing)
 		priorities.append(int(_player_priorities.get(player, 0)))
 		serials.append(int(_player_serials.get(player, 0)))
-	var incoming_priority := priority_for(name)
+	var incoming_priority := priority_for(name) if voice_priority < 0 else voice_priority
 	var chosen := voice_index(active, priorities, serials, incoming_priority, cursor)
 	if chosen < 0:
 		return null
@@ -755,7 +757,7 @@ func _on_support_event(info: Dictionary) -> void:
 	# and cannot animate or replay the deploying character's weapon.
 	match info.get("kind", &""):
 		&"spawn": play(&"echo", -8.0, 1.08, 0.14)
-		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20)
+		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20, SUPPORT_PRIORITY)
 		&"produce": play(&"click", -7.0, 1.16, 0.10)
 		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09)
 		&"damage": play(&"hit", -4.0, 0.77, 0.10)
