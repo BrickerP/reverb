@@ -96,6 +96,9 @@ var daily_modifier: StringName = &""
 var phase: Phase = Phase.SHOP
 var wave: int = 0
 var wave_time: float = 0.0
+var wave_travel: float = 0.0
+var action_notice_key: StringName = &""
+var action_notice_until: float = 0.0
 var wave_duration: float = 0.0
 var kills: int = 0
 var wave_kills: int = 0
@@ -371,6 +374,9 @@ func begin_boss_rush() -> bool:
 func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
+	wave_travel = 0.0
+	action_notice_key = &""
+	action_notice_until = 0.0
 	wave_duration = WaveDirector.duration_for(n)
 	wave_kills = 0
 	wave_elite_kills = 0
@@ -839,7 +845,9 @@ func _move_player(delta: float, move_dir: Vector2) -> void:
 	var dir := move_dir.limit_length(1.0)
 	if dir != Vector2.ZERO:
 		player.facing = dir.normalized()
-	player.pos = WorldArena.move_body(player.pos, dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta, PlayerState.RADIUS)
+	var step := dir * player.stats.get_stat(Stats.MOVE_SPEED) * delta
+	wave_travel += step.length()
+	player.pos = WorldArena.move_body(player.pos, step, PlayerState.RADIUS)
 	player.iframes = maxf(0.0, player.iframes - delta)
 	player.hp = minf(player.max_hp(), player.hp + player.stats.get_stat(Stats.HP_REGEN) * delta)
 

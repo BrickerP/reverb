@@ -51,11 +51,18 @@ func show_choices(title: String, body: String, choices: Array[Dictionary], selec
 	_content.add_child(grid)
 	for choice in choices:
 		var button := Button.new()
+		var hint := str(choice.get("hint", ""))
 		button.text = str(choice.get("text", ""))
-		button.clip_text = true
-		button.tooltip_text = str(choice.get("hint", ""))
-		button.accessibility_description = button.tooltip_text
+		button.tooltip_text = hint
+		button.accessibility_description = hint if hint != "" else button.text
 		button.disabled = bool(choice.get("disabled", false))
+		if button.disabled and hint != "":
+			button.text += "\n" + hint
+			button.clip_text = false
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			button.custom_minimum_size = Vector2(0.0, 64.0)
+		else:
+			button.clip_text = true
 		button.custom_minimum_size = Vector2(0.0, 40.0)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_font_size_override("font_size", 15)

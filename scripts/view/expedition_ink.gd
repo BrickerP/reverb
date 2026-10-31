@@ -213,6 +213,8 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
 	var pos: Vector2 = p["pos"]
 	var kind: StringName = p["kind"]
+	if kind == &"negotiate":
+		return
 	var machine := kind in [&"press", &"conveyor", &"recycler"]
 	var color := DANGER if float(p["warning"]) > 0.0 else FRIEND
 	if machine and float(p["radius"]) > 0.0:

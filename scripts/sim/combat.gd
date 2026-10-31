@@ -63,6 +63,10 @@ static func combo_profile(weapons: Array[WeaponDef]) -> Array[Dictionary]:
 	var ink := false
 	var arc := false
 	for w in weapons:
+		# Paper trees, repair stations and decoys share a family with real weapons
+		# but never apply pin, press, ink or arc. Counting them marks a combo ready.
+		if w.support_kind in [&"repair_station", &"paper_tree", &"decoy"]:
+			continue
 		pin = pin or w.pin_duration > 0.0 or (w.family == &"marksman" and family_count(weapons, &"marksman") >= 4)
 		press = press or w.family == &"press"
 		ink = ink or w.ink_duration > 0.0

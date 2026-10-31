@@ -179,6 +179,9 @@ func test_combo_readiness_requires_real_producer_and_consumer(c: Check) -> void:
 	c.ok(not bool(Combat.combo_profile(weapons)[1]["ready"]),"ink alone is not its own arc consumer")
 	weapons.append(Content.weapon(&"hex_bolt"))
 	c.ok(bool(Combat.combo_profile(weapons)[1]["ready"]),"wet producer plus arc consumer is ready")
+	weapons = [Content.weapon(&"guard_decoy"), Content.weapon(&"paper_seed")]
+	c.ok(not bool(Combat.combo_profile(weapons)[0]["ready"]), "a decoy is not a press trigger")
+	c.ok(not bool(Combat.combo_profile(weapons)[1]["ready"]), "a paper tree is not an arc trigger")
 
 
 func test_all_six_masteries_change_execution(c: Check) -> void:

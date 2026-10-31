@@ -10,6 +10,7 @@ signal workshop_requested(index: int)
 var weapons_label: Label
 var items_label: Label
 var replacing: bool = false
+var marked_slot := -1
 var slot_drop_targets: Array[ShopDropTarget] = []
 var empty_drop_target: ShopDropTarget
 var items_drop_target: ShopDropTarget
@@ -219,6 +220,8 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 			workshop_requested.emit(index))
 	box.add_child(select)
 	_slot_buttons.append(select)
+	if index == marked_slot:
+		box.add_child(UiTheme.label(Loc.t("shop.just_equipped"), 12, UiTheme.ACCENT))
 	var upgrade := Button.new()
 	upgrade.custom_minimum_size = Vector2(0.0, 25.0)
 	upgrade.clip_text = true
@@ -228,9 +231,12 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 		upgrade.disabled = w.evolution_options.is_empty()
 		upgrade.pressed.connect(func() -> void: evolve_requested.emit(index))
 	else:
-		upgrade.text = Loc.t("shop.upgrade", [Shop.upgrade_cost(w, level)])
+		var now := w.damage * w.level_mult(level)
+		var nxt := w.damage * w.level_mult(level + 1)
+		upgrade.text = Loc.t("shop.upgrade_result", [Shop.upgrade_cost(w, level), Loc.number(now), Loc.number(nxt)])
 		upgrade.disabled = not sim.shop.quote(ShopResult.UPGRADE, sim, null, index).ok
 		if upgrade.disabled:
+			upgrade.text += " · " + Loc.t("shop.drop_poor")
 			upgrade.tooltip_text = Loc.t("shop.drop_poor")
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
 	box.add_child(upgrade)
@@ -342,9 +348,10 @@ func _detail_text(index: int) -> String:
 
 
 func _detail_text_for(w: WeaponDef, level: int) -> String:
-	var text := Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1,
-			Loc.weapon_family(w.family), Loc.weapon_line(w, level)])
-	text += "  ·  " + Loc.weapon_desc(w.id)
+	var spend := str(Shop.upgrade_cost(w, level)) if level < WeaponDef.MAX_LEVEL else Loc.t("shop.max_level")
+	var text := Loc.t("shop.decision", [Loc.weapon_name(w.id), spend, Loc.weapon_line(w, mini(level + 1, WeaponDef.MAX_LEVEL))])
+	text += "\n" + Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1, Loc.weapon_family(w.family), Loc.weapon_line(w, level)])
+	text += "\n" + Loc.weapon_desc(w.id)
 	text += "  ·  " + Loc.rarity_name(w.rarity)
 	text += "\n" + " · ".join([Loc.t("school." + String(w.school)), Loc.t("carrier." + String(w.carrier)), Loc.t("role." + String(w.role)), Loc.t("cost." + String(w.cost)), Loc.t("target." + String(w.target_mode))])
 	if w.explosion_radius > 0.0:

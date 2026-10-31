@@ -720,6 +720,8 @@ func _on_boon_reroll() -> void:
 
 func _show_end() -> void:
 	_end_delay = 0.0
+	if hud != null:
+		hud.visible = false
 	if sim != null and not end_ui.visible:
 		end_ui.show_result(sim, _unlock_text, meta)
 

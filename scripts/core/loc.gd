@@ -138,7 +138,15 @@ static func stat_name(id: StringName) -> String:
 
 
 static func number(x: float) -> String:
-	return "%d" % int(round(x)) if is_equal_approx(x, round(x)) else "%.1f" % x
+	if not is_finite(x):
+		return "0"
+	if is_equal_approx(x, round(x)):
+		return "%d" % int(round(x))
+	# 0.65 must stay 0.65. One decimal rounds it to 0.7.
+	var hundredths := int(round(absf(x) * 100.0))
+	if hundredths % 10 == 0:
+		return "%.1f" % x
+	return "%.2f" % x
 
 
 static func stat_value(id: StringName, amount: float, signed: bool = true) -> String:
@@ -151,23 +159,74 @@ static func stat_value(id: StringName, amount: float, signed: bool = true) -> St
 	return text + "%" if Stats.PERCENT.has(id) else text
 
 
-static func item_desc(it: ItemDef) -> String:
+static func item_desc(it: ItemDef, sim: Sim = null) -> String:
+	if it != null and it.id == &"long_play":
+		var before := Stats.DEFAULTS[Stats.ECHO_DURATION] if sim == null else sim.echo_duration()
+		var after := before + float(it.mods.get(Stats.ECHO_DURATION, 0.0))
+		return t("item.long_play_fact", [number(before), number(after)])
+	if it != null and it.id == &"loud_speaker":
+		var before := Stats.DEFAULTS[Stats.ECHO_POWER] if sim == null else sim.echo_power()
+		var after := before + float(it.mods.get(Stats.ECHO_POWER, 0.0))
+		return t("item.loud_speaker_fact", [int(round(before * 100.0)), int(round(after * 100.0))])
 	var parts := PackedStringArray()
 	for stat: StringName in it.mods:
 		parts.append("%s %s" % [stat_value(stat, float(it.mods[stat])), stat_name(stat)])
+	if it.mods.has(Stats.MAX_HP):
+		parts.append(t("item.max_hp_now"))
 	return "  ".join(parts)
 
 
 static func weapon_line(w: WeaponDef, level: int = 0) -> String:
-	var dmg := number(w.damage * w.level_mult(level))
-	if w.pellets > 1:
-		dmg += "x%d" % w.pellets
-	var line := t("weapon.line", [dmg, 1.0 / w.cooldown, int(w.reach)])
+	if w.support_kind != &"":
+		return support_line(w, level)
+	var per_shot := number(w.damage * w.level_mult(level))
+	var line := t("weapon.burst_line", [per_shot, w.pellets, w.cooldown, int(w.reach)]) if w.pellets > 1 \
+			else t("weapon.line", [per_shot, w.cooldown, int(w.reach)])
 	if w.pierce >= 50:
 		line += " · " + t("weapon.pierce_all")
 	elif w.pierce > 0:
 		line += " · " + t("weapon.pierce", [w.pierce])
 	return line
+
+
+static func support_line(w: WeaponDef, level: int = 0) -> String:
+	var profile := SupportSystem.weapon_profile(w, level, w.damage)
+	if profile.is_empty():
+		return weapon_desc(w.id)
+	return _support_text(w, profile, false)
+
+
+static func support_short(w: WeaponDef, level: int = 0) -> String:
+	var profile := SupportSystem.weapon_profile(w, level, w.damage)
+	if profile.is_empty():
+		return weapon_desc(w.id)
+	return _support_text(w, profile, true)
+
+
+static func _support_text(w: WeaponDef, profile: Dictionary, short: bool) -> String:
+	var interval := float(profile["interval"])
+	var life := float(profile["life"])
+	var reach := int(profile["reach"])
+	match w.support_kind:
+		&"repair_station":
+			if short:
+				return t("weapon.support_repair_short", [interval, int(profile["charges"]), life])
+			return t("weapon.support_repair", [interval, int(profile["charges"]), life, reach])
+		&"paper_tree":
+			if short:
+				return t("weapon.support_tree_short", [interval, int(profile["charges"]), life])
+			return t("weapon.support_tree", [interval, int(profile["charges"]), life, reach])
+		&"decoy":
+			if short:
+				return t("weapon.support_decoy_short", [float(profile["hp"]), life])
+			return t("weapon.support_decoy", [float(profile["hp"]), life, reach])
+		&"turret":
+			var damage := float(profile["damage"])
+			if short:
+				return t("weapon.support_debt_short", [number(damage), number(damage * 1.25)])
+			return t("weapon.support_debt", [number(damage), number(damage * 1.25), life, reach])
+		_:
+			return t("weapon.support_generic", [interval, life, reach])
 
 
 static func weapon_desc(id: StringName) -> String:

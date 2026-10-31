@@ -215,6 +215,8 @@ static func interaction(sim: Sim) -> Dictionary:
 		if bool(item.get("used", false)):
 			continue
 		var d := sim.player.pos.distance_to(item["pos"])
+		if item.get("kind", &"") == &"negotiate":
+			continue
 		if d <= float(item.get("range", INTERACTION_RANGE)) and d < distance:
 			closest = item.duplicate(true)
 			distance = d
@@ -333,6 +335,8 @@ static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 				item["used"] = true
 				sim.expedition["rescued"] += 1
 				sim.expedition["solidarity"] += 2
+				sim.action_notice_key = &"hud.rescue_done"
+				sim.action_notice_until = sim.wave_time + 1.6
 				_progress(sim, &"rescue")
 				_event(sim, &"worker_saved", worker["id"], worker["pos"],
 					{"from_pos": source, "target_pos": worker["pos"], "ok": true})
@@ -492,6 +496,8 @@ static func try_negotiate(sim: Sim, enemy: EnemyState) -> bool:
 	enemy.brain_state = &"defeated"
 	sim.expedition["negotiation"] = {"uid": enemy.uid, "kind": enemy.def.id, "pos": enemy.pos,
 		"remaining": NEGOTIATION_TIME, "choice_pending": true}
+	# The choice itself is the modal sheet. The marker stays so the saved boss
+	# reference remains valid, and it is not offered as a second E prompt.
 	_add_target_at(sim, &"boss_negotiation", &"negotiate", enemy.pos)
 	sim.interactables.back()["range"] = 180.0
 	for other in sim.enemies:

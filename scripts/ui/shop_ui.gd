@@ -225,10 +225,17 @@ func refresh(animate_echo: bool = false) -> void:
 		card.pressed.connect(_on_offer.bind(o, card))
 		card.replacement_requested.connect(_begin_replace)
 		card.lock_toggled.connect(_on_lock_offer)
+		var show_decision := func() -> void:
+			if _footer != null:
+				_footer.text = OfferCard.decision(o, sim)
+		card.focus_entered.connect(show_decision)
+		card.mouse_entered.connect(show_decision)
 	var cost := sim.shop.reroll_cost(sim.wave)
 	reroll_button.text = Loc.t("workshop.reroll_prices", [cost, sim.shop.next_reroll_cost(sim.wave)])
 	var reroll_quote := sim.shop.quote(ShopResult.REROLL, sim)
 	reroll_button.disabled = not reroll_quote.ok
+	if reroll_button.disabled:
+		reroll_button.text += " · " + _drop_reason_text(reroll_quote.reason)
 	reroll_button.tooltip_text = _drop_reason_text(reroll_quote.reason) if not reroll_quote.ok else reroll_button.text
 	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
@@ -300,13 +307,18 @@ func _build_footer() -> Control:
 	WorkshopUi.fit_button(crew_button, 15, 34.0)
 	crew_button.pressed.connect(_open_crew)
 	actions.add_child(crew_button)
-	for button: Button in [reroll_button, undo_button, start_button]:
+	for button: Button in [reroll_button, undo_button]:
 		WorkshopUi.fit_button(button, 16, 34.0)
 		actions.add_child(button)
-	_footer = UiTheme.label(Loc.t("shop.keys"), 13, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
-	_footer.clip_text = true
-	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_footer.custom_minimum_size = Vector2(0.0, 19.0)
+	var depart := HBoxContainer.new()
+	depart.add_theme_constant_override("separation", 10)
+	box.add_child(depart)
+	WorkshopUi.fit_button(start_button, 18, 42.0)
+	start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	depart.add_child(start_button)
+	_footer = UiTheme.label(Loc.t("shop.keys"), 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
+	_footer.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_footer.custom_minimum_size = Vector2(0.0, 36.0)
 	box.add_child(_footer)
 	return tray
 
@@ -451,6 +463,8 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 	var index := sim.shop.offers.find(o)
 	var result := sim.shop.apply(ShopResult.BUY, sim, o)
 	if result.ok:
+		if o.is_weapon():
+			build_panel.marked_slot = sim.player.weapons.size() - 1
 		refresh()
 		_focus_card(index)
 	else:
@@ -1553,7 +1567,10 @@ func _open_merge_preview(host: EchoTake, donor: EchoTake, merge_trait: StringNam
 	var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
 	if result == null:
 		return
-	var text := Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])
+	var text := Loc.t("shop.decision", [
+		Loc.t("echo.identity", [host.uid, host.wave]),
+		Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
+		Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])])
 	text += "\n" + Loc.t("workshop.trait_" + String(merge_trait) + "_desc")
 	text += "\n" + Loc.echo_profile(EchoSystem.skill_profile(result, sim))
 	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_merge", [quote.cost]), "value": merge_trait, "disabled": not quote.ok}]
