@@ -109,12 +109,22 @@ jobs:
           REVERB_BUILD_COMMIT: ${{ github.sha }}
         shell: bash
         run: |
+          trap 'rm -f override.cfg' EXIT
           for variant in normal compact reduced; do
             output="$GITHUB_WORKSPACE/shots/paper-actions/$variant"
             mkdir -p "$output"
+            resolution=1280x720
+            language=en
+            if [ "$variant" = compact ]; then
+              resolution=960x540
+              language=zh
+            fi
+            # MovieWriter reads ProjectSettings before SceneTree._initialize;
+            # --resolution alone only requests a window size in Godot4.7.2.
+            python3 -c 'from pathlib import Path; import sys; w,h=map(int,sys.argv[1].split("x")); Path("override.cfg").write_text("[display]\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\n" % (w,h,w,h))' "$resolution"
             capture_status=0
-            xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
-              --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            REVERB_LANG="$language" xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+              --path . --resolution "$resolution" --audio-driver Dummy --fixed-fps 60 --disable-vsync \
               --write-movie "$output/paper_action.avi" \
               --script res://tools/paper_action_probe.gd -- \
               --output="$output" --variant="$variant" || capture_status=$?
@@ -123,6 +133,8 @@ jobs:
                 -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
                 -movflags +faststart "$output/paper_action.mp4"
               rm "$output/paper_action.avi"
+              ffprobe -v error -show_streams -of json "$output/paper_action.mp4" > "$output/video.json"
+              python3 -c 'import json,sys; from fractions import Fraction; s=json.load(open(sys.argv[1]))["streams"]; v=next(x for x in s if x["codec_type"]=="video"); w,h=map(int,sys.argv[2].split("x")); assert (v["width"],v["height"])==(w,h), "movie must keep the native requested dimensions"; assert Fraction(v["avg_frame_rate"])==60, "movie must keep normal 60fps playback"; assert not any(x["codec_type"]=="audio" for x in s), "the visual fixture movie must be silent"' "$output/video.json" "$resolution"
             fi
             if [ "$capture_status" -ne 0 ]; then
               exit "$capture_status"
@@ -134,9 +146,10 @@ jobs:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           LIBGL_ALWAYS_SOFTWARE: '1'
           REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-current
+          REVERB_STRESS_COMMIT: ${{ github.sha }}
         run: |
           xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
-            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only
 
       - name: Measure the public baseline on the same runner
@@ -147,15 +160,18 @@ jobs:
         shell: bash
         run: |
           git fetch --depth=1 origin tag v0.17.0
+          baseline_commit="$(git rev-parse 'v0.17.0^{commit}')"
           baseline="$RUNNER_TEMP/paper-feedback-baseline"
           mkdir -p "$baseline"
           mkdir -p "$REVERB_STRESS_OUTPUT"
           git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
           git archive v0.17.0 | tar -x -C "$baseline"
+          cp tools/presentation_stress_probe.gd "$baseline/tools/presentation_stress_probe.gd"
+          export REVERB_STRESS_COMMIT="$baseline_commit"
           cd "$baseline"
           ./tools/checked.sh --headless --path . --import
           xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
-            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync --verbose \
             --script res://tools/presentation_stress_probe.gd -- legal-only
 
       - name: Upload native action and pressure evidence

@@ -79,9 +79,7 @@ func _run() -> void:
 		print("legal pressure headless runtime: %s" % JSON.stringify({"frames": 480,
 			"projectiles": _main.sim.projectiles.size(), "support_events": _support_events,
 			"role_fields": _main.sim.role_effects.size(), "energy": _main.sim.character_energy}))
-		_main.free()
-		print("legal pressure headless fixture: OK")
-		quit()
+		_finish.call_deferred()
 		return
 	if not _check_pure_view_tick():
 		return
@@ -101,19 +99,68 @@ func _run() -> void:
 		if result.is_empty():
 			return
 		(_summary["cases"] as Array).append(result)
+	# Complete this coroutine before teardown so its awaited case/capture frames
+	# cannot keep local model references alive during the exit check.
+	_finish.call_deferred()
+
+
+func _finish() -> void:
 	_release_input()
+	_main.set_process(false)
+	_main.set_physics_process(false)
+	_main._view.set_process(false)
+	_main._view.set_physics_process(false)
+	_main.hud.set_process(false)
+	_main.hud.set_physics_process(false)
+	_main.audio.set_process(false)
+	var main_reference: WeakRef = weakref(_main)
+	var sim_reference: WeakRef
+	var final_sim: Sim = _main.sim
+	if final_sim != null:
+		sim_reference = weakref(final_sim)
+		if final_sim.support_event.is_connected(_on_support_event):
+			final_sim.support_event.disconnect(_on_support_event)
 	_main.audio.stop_all()
-	_main.show_select()
-	if not _require(_main.sim == null and _main._view.sim == null and _main.hud.sim == null,
-			"stress teardown releases the active simulation through the title-screen path"):
+	_main._detach_presentation_session()
+	# bind(null) resets the ordinary session to menu music. Stop again after
+	# detaching; exiting a probe must not start that new playback session.
+	_main.audio.stop_all()
+	var audio_state: Dictionary = _main.audio.binding_state()
+	if not _require(_main.sim == null and _main._view.sim == null and _main.hud.sim == null
+			and _main.shop_ui.sim == null and not bool(audio_state["sim_bound"])
+			and not bool(audio_state["shop_bound"]) and not bool(audio_state["music_playing"])
+			and int(audio_state["active_sfx"]) == 0,
+			"stress finish detaches every active session and stops menu music and SFX"):
 		return
 	_main.queue_free()
 	_main = null
+	final_sim = null
 	await _wait_frames(2)
-	_summary["teardown"] = {"simulation_released": true, "main_freed": true}
-	_write_summary()
-	print("presentation stress probe: %s" % JSON.stringify(_summary["cases"]))
-	print("presentation stress probe: OK")
+	var main_released: bool = main_reference.get_ref() == null
+	var sim_released: bool = sim_reference == null or sim_reference.get_ref() == null
+	if not _require(main_released and sim_released, "stress finish releases the actual Main and final Sim"):
+		return
+	RenderingServer.force_draw()
+	await _wait_frames(2)
+	_summary["teardown"] = {"simulation_released": sim_released, "main_freed": main_released,
+		"probe_support_listener_disconnected": true, "music_playing": false, "active_sfx": 0,
+		"deferred_finish": true, "native_frames_waited": 4, "renderer_flushed": true,
+		"presentation_caches": {"cleared": false,
+			"reason": "normal process caches retained; no specific leaked resource has been identified"}}
+	if not OS.get_cmdline_user_args().has("validate-fixture"):
+		_write_summary()
+	if not _failed:
+		# Quit only after this finish coroutine has returned and released its locals.
+		_quit_success.call_deferred()
+
+
+func _quit_success() -> void:
+	if OS.get_cmdline_user_args().has("validate-fixture"):
+		print("legal pressure teardown: %s" % JSON.stringify(_summary["teardown"]))
+		print("legal pressure headless fixture: OK")
+	else:
+		print("presentation stress probe: %s" % JSON.stringify(_summary["cases"]))
+		print("presentation stress probe: OK")
 	quit()
 
 
@@ -644,7 +691,12 @@ func _content_sample_count(image: Image) -> int:
 
 
 func _write_summary() -> void:
-	_summary["source_head"] = _git_head()
+	var game_commit := OS.get_environment("REVERB_STRESS_COMMIT").strip_edges()
+	if game_commit.is_empty():
+		game_commit = _git_head()
+	_summary["source_head"] = game_commit
+	_summary["game_commit"] = game_commit
+	_summary["probe_sha256"] = FileAccess.get_sha256("res://tools/presentation_stress_probe.gd")
 	_summary["environment"] = {"os": OS.get_name(), "godot": Engine.get_version_info(),
 		"display": DisplayServer.get_name(), "renderer": RenderingServer.get_current_rendering_method(),
 		"adapter": RenderingServer.get_video_adapter_name(),

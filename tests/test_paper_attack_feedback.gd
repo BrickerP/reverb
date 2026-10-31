@@ -47,15 +47,15 @@ func test_equal_weapons_react_only_in_the_captured_actor_and_weapon_slot(c: Chec
 	var view := ArenaView.new()
 	view.bind(sim)
 	view._on_shot_info(_shot(0, 41))
-	c.ok(ArenaPainter._mounted_recoil(view._muzzles, 41, &"stapler", 0) > 0.0, "firing weapon kicks")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, 41, &"stapler", 1), 0.0, "another equal weapon stays still")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, 42, &"stapler", 0), 0.0, "another copy cannot inherit the kick")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, 41, &"pistol", 0), 0.0, "a replaced weapon cannot inherit an old event")
+	c.ok(not ArenaPainter._mounted_shot(view._muzzles, 41, &"stapler", 0).is_empty(), "firing weapon keeps its actual shot")
+	c.ok(ArenaPainter._mounted_shot(view._muzzles, 41, &"stapler", 1).is_empty(), "another equal weapon stays still")
+	c.ok(ArenaPainter._mounted_shot(view._muzzles, 42, &"stapler", 0).is_empty(), "another copy cannot inherit the kick")
+	c.ok(ArenaPainter._mounted_shot(view._muzzles, 41, &"pistol", 0).is_empty(), "a replaced weapon cannot inherit an old event")
 	c.eq(ArenaPainter._mounted_shot(view._muzzles, 41, &"stapler", 0)["direction"], Vector2.UP, "motion keeps actual firing direction")
 	view._muzzles.clear()
 	view._on_shot_info(_shot(-1, 41))
 	for slot in 6:
-		c.eq(ArenaPainter._mounted_recoil(view._muzzles, 41, &"stapler", slot), 0.0,
+		c.ok(ArenaPainter._mounted_shot(view._muzzles, 41, &"stapler", slot).is_empty(),
 			"unattributed delayed fire never guesses an equal weapon slot")
 	view.free()
 
@@ -82,6 +82,38 @@ func test_mount_gestures_settle_and_reduced_motion_preserves_identity(c: Check) 
 		c.eq(director.player_pose(&"character_looper_front", PI * 0.5, true, false), 1,
 			"repeated pin fire remains on the mount while the body keeps its step")
 		director.step(1.0 / 60.0)
+
+
+func test_single_lookup_preserves_old_strength_for_normal_and_reduced_shots(c: Check) -> void:
+	var sim := Sim.new(92104)
+	sim.start_run()
+	var view := ArenaView.new()
+	view.bind(sim)
+	var before := RunSnapshot.capture(sim)
+	for reduced in [false, true]:
+		view.set_reduced_effects(reduced)
+		for id: StringName in WeaponInk.IDS:
+			var info := _shot()
+			info.weapon_id = id
+			view._on_shot_info(info)
+			var captured: Dictionary = view._muzzles.back()
+			captured["life"] = float(captured["max_life"]) * 0.37
+			var stored_profile: Dictionary = captured["profile"]
+			var stored_recoil := float(stored_profile["recoil"])
+			c.near(stored_recoil, float(WeaponInk.profile(id)["recoil"]) * (0.5 if reduced else 1.0), 0.00001,
+				"reference calculation includes Reduced's real captured half-recoil profile")
+			var previous_strength := stored_recoil * WeaponInk._life(captured) / maxf(0.001, stored_recoil)
+			var shot := ArenaPainter._mounted_shot(view._muzzles, -1, id, 0)
+			var direct_strength := WeaponInk._life(shot)
+			c.near(direct_strength, previous_strength, 0.000001, "one exact lookup keeps the previous normalized event strength")
+			var previous_pose := WeaponInk.mount_pose(id, previous_strength, reduced)
+			var direct_pose := WeaponInk.mount_pose(id, direct_strength, reduced)
+			c.near((direct_pose["offset"] as Vector2).distance_to(previous_pose["offset"]), 0.0, 0.00001,
+				"deduplication does not change normal or Reduced motion amplitude")
+			c.near(float(direct_pose["rotation"]), float(previous_pose["rotation"]), 0.00001, "deduplication preserves the authored turn")
+			c.near((direct_pose["scale"] as Vector2).distance_to(previous_pose["scale"]), 0.0, 0.00001, "deduplication preserves the body of every weapon gesture")
+	c.eq(RunSnapshot.capture(sim), before, "lookup optimization cannot change simulation or either RNG")
+	view.free()
 
 
 func test_directional_fold_uses_only_the_actual_target_and_recovers(c: Check) -> void:

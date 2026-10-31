@@ -16,6 +16,14 @@ const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
 const REDUCED_MOTION_SCALE := 0.3
 const CULL_ART_MARGIN := 100.0
 const CULL_SHAKE_MARGIN := 9.0
+const WEAPON_MOUNTS := {
+	1: [Vector2(21.0, 0.0)],
+	2: [Vector2(17.0, -15.0), Vector2(17.0, 15.0)],
+	3: [Vector2(21.0, 0.0), Vector2(-3.0, -22.0), Vector2(-3.0, 22.0)],
+	4: [Vector2(18.0, -16.0), Vector2(18.0, 16.0), Vector2(-16.0, -16.0), Vector2(-16.0, 16.0)],
+	5: [Vector2(22.0, 0.0), Vector2(7.0, -23.0), Vector2(7.0, 23.0), Vector2(-19.0, -15.0), Vector2(-19.0, 15.0)],
+	6: [Vector2(20.0, -16.0), Vector2(20.0, 16.0), Vector2(0.0, -27.0), Vector2(0.0, 27.0), Vector2(-20.0, -16.0), Vector2(-20.0, 16.0)],
+}
 
 static var _arena_floor_texture: Texture2D
 
@@ -907,10 +915,9 @@ static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 			aim = resting_aim
 		aim = aim.normalized()
 		var normal := Vector2(-aim.y, aim.x)
-		var recoil := _mounted_recoil(recoils, actor_token, w.id, i)
-		var strength := 0.0
-		if not shot.is_empty():
-			strength = recoil / maxf(0.001, float((shot["profile"] as Dictionary)["recoil"]))
+		# The previous recoil/profile.recoil ratio is exactly this event lifetime,
+		# including Reduced's captured half-recoil profile. Do not scan it twice.
+		var strength := WeaponInk._life(shot)
 		var gesture := WeaponInk.mount_pose(w.id, strength, reduced)
 		var offset: Vector2 = gesture["offset"]
 		var mount := origin + aim * (slot.x + offset.x) + normal * (slot.y + offset.y) + Vector2(0.0, bob)
@@ -918,14 +925,6 @@ static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,
 		var size := _weapon_size(key) * crowd_scale * size_mult * (gesture["scale"] as Vector2)
 		var color := Color.WHITE.lerp(actor_tint, tint_weight * 0.55)
 		_draw_art(ci, key, mount, size, aim.angle() + float(gesture["rotation"]), Color(color, alpha))
-
-
-static func _mounted_recoil(recoils: Array[Dictionary], actor_token: int,
-		weapon_id: StringName, weapon_slot: int) -> float:
-	var data := _mounted_shot(recoils, actor_token, weapon_id, weapon_slot)
-	if data.is_empty():
-		return 0.0
-	return float((data["profile"] as Dictionary)["recoil"]) * WeaponInk._life(data)
 
 
 static func _mounted_shot(recoils: Array[Dictionary], actor_token: int,
@@ -943,24 +942,7 @@ static func _mounted_shot(recoils: Array[Dictionary], actor_token: int,
 
 
 static func _weapon_slot(index: int, count: int) -> Vector2:
-	var slots: Array[Vector2] = []
-	match count:
-		1:
-			slots = [Vector2(21.0, 0.0)]
-		2:
-			slots = [Vector2(17.0, -15.0), Vector2(17.0, 15.0)]
-		3:
-			slots = [Vector2(21.0, 0.0), Vector2(-3.0, -22.0), Vector2(-3.0, 22.0)]
-		4:
-			slots = [Vector2(18.0, -16.0), Vector2(18.0, 16.0),
-					Vector2(-16.0, -16.0), Vector2(-16.0, 16.0)]
-		5:
-			slots = [Vector2(22.0, 0.0), Vector2(7.0, -23.0), Vector2(7.0, 23.0),
-					Vector2(-19.0, -15.0), Vector2(-19.0, 15.0)]
-		_:
-			slots = [Vector2(20.0, -16.0), Vector2(20.0, 16.0),
-					Vector2(0.0, -27.0), Vector2(0.0, 27.0),
-					Vector2(-20.0, -16.0), Vector2(-20.0, 16.0)]
+	var slots: Array = WEAPON_MOUNTS.get(count, WEAPON_MOUNTS[6])
 	if index < slots.size():
 		return slots[index]
 	var angle := TAU * float(index) / float(maxi(1, count))

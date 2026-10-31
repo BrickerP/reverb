@@ -76,6 +76,10 @@ func _initialize() -> void:
 			DirAccess.remove_absolute(path)
 	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
 	OS.set_environment("REVERB_LANG", "zh" if _variant == "compact" else "en")
+	# Loc is a static script and may already have detected the process language
+	# before this SceneTree initializes. Set the requested fixture before Main
+	# creates any localized controls, rather than relabelling existing widgets.
+	Loc.lang = "zh" if _variant == "compact" else "en"
 	root.size = _canvas
 	root.content_scale_size = _canvas
 	DisplayServer.window_set_size(_canvas)
@@ -214,18 +218,22 @@ func _run() -> void:
 	_summary["commit"] = commit
 	_summary["variant"] = _variant
 	_summary["language"] = Loc.lang
+	if not _require(Loc.lang == ("zh" if _variant == "compact" else "en"), "native fixture retained its requested language"):
+		return
 	_summary["canvas"] = [_canvas.x, _canvas.y]
 	_summary["isolated_data_paths"] = _isolated.duplicate()
 	_summary["environment"] = {"godot": Engine.get_version_info(), "display": DisplayServer.get_name(),
 		"renderer": RenderingServer.get_current_rendering_method(), "native_frames": _native_frames}
 	_summary["capture"] = {"fps": 60, "speed": 1.0, "audio": "master muted; real route counters checked",
+		"startup_config_pixels": [int(ProjectSettings.get_setting("display/window/size/viewport_width")),
+			int(ProjectSettings.get_setting("display/window/size/viewport_height"))],
 		"simulation": "one real Sim.step(1/60) per native rendered frame; Main physics suppressed",
 		"visual_clock": "normal native engine clock, including each screenshot frame",
 		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture; repair station separated at player+(100,-50), real spawn@8/damage@18/useful repair/lethal damage@36/remains@44/machine repair@48",
 		"scope": "presentation evidence; not human playtesting, balance or a normal campaign completion",
 		"movie": "continuous CLI --write-movie recording; no skipped or slowed simulation steps"}
-	_main.audio.stop_all()
 	_main._detach_presentation_session()
+	_main.audio.stop_all()
 	if not _require(_main.sim == null and _main._view.sim == null and _main.hud.sim == null,
 			"successful native probe detaches simulation and presentation before cleanup"):
 		return

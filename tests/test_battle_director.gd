@@ -341,9 +341,9 @@ func test_copy_recoil_survives_slot_reordering_without_jumping_to_another_take(c
 	c.eq(view._muzzles[0]["actor_token"], second.uid, "drawing separately keeps the take identity")
 	sim.echoes.remove_at(0)
 	sim.echoes[0].index = 0
-	c.ok(ArenaPainter._mounted_recoil(view._muzzles, second.uid, &"pistol", 0) > 0.0,
+	c.ok(not ArenaPainter._mounted_shot(view._muzzles, second.uid, &"pistol", 0).is_empty(),
 			"the same paper copy keeps its recoil after another copy retires")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, first.uid, &"pistol", 0), 0.0,
+	c.ok(ArenaPainter._mounted_shot(view._muzzles, first.uid, &"pistol", 0).is_empty(),
 			"removed/reused slots cannot steal a different copy's shot reaction")
 	view.free()
 

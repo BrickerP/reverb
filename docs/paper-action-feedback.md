@@ -84,3 +84,16 @@ actions, pause/reduced behavior and finite snapshots. Native CI captures are
 disclosed scripted fixtures, not human playthroughs or subjective feel/audio
 approval. All Godot import, compilation, tests and rendering run remotely in
 GitHub Actions, in accordance with the project's development constraint.
+
+Capture dimensions and language are established before the Godot process starts.
+Godot4.7.2 starts MovieWriter from ProjectSettings before the probe initializes;
+changing the Window later does not change the recorded movie header. The CI-only
+ignored `override.cfg` pins native startup dimensions and is removed on exit;
+ffprobe checks the delivered video dimensions,60fps and absence of an audio track.
+See [the pinned engine startup](https://github.com/godotengine/godot/blob/4.7.2-stable/main/main.cpp#L4840-L4855).
+
+Paired pressure runs use the same probe SHA on the candidate and archived public
+game. The shared harness changes teardown only: timing, simulation, fixtures and
+captures are unchanged. Exit checks retain every engine error, verify weak Main/
+Sim references and stop audio after detaching the session. Measurements from a
+software renderer describe that controlled diagnostic, not client-device FPS.
