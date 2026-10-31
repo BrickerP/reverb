@@ -10,7 +10,7 @@
 
 Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your previous routes. Move, build your loadout, and leave an Echo of each encounter's path and equipment. Copies wear down as they replay. Repair one, bind two together, or spend a copy on its final skill—you decide what survives into the next fight.
 
-![Actual combat with an automatic controller: English HUD, the player and recorded Echoes face hostile office waste.](docs/site-assets/combat-loop-en.gif)
+![Actual combat with an automatic controller: English HUD, the player and recorded Echoes face hostile office waste.](docs/site-assets/combat-loop-en.gif?v=motion)
 
 - **Put your past to work.** Old routes add firepower and replay recorded machine operations. Hold to choose an Echo; tap to scrap it for a final skill shaped by its equipment.
 - **Make use of the machinery.** Pull a lever, carry a document, dodge a stamp, or lure enemies into a press. Six roles have distinct abilities; pets, turrets and repair stations can be damaged and expire.

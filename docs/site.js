@@ -86,8 +86,8 @@
     const video = document.querySelector('.field-film video');
     if (video) {
       const source = video.querySelector('source');
-      const nextSrc = `site-assets/${zh ? 'combat-loop.mp4' : 'combat-loop-en.mp4'}`;
-      const nextPoster = `site-assets/${zh ? 'combat-cover.png' : 'combat-cover-en.png'}`;
+      const nextSrc = `site-assets/${zh ? 'combat-loop.mp4' : 'combat-loop-en.mp4'}?v=motion`;
+      const nextPoster = `site-assets/${zh ? 'combat-cover.png' : 'combat-cover-en.png'}?v=motion`;
       if (source.getAttribute('src') !== nextSrc) {
         source.setAttribute('src', nextSrc);
         video.poster = nextPoster;
