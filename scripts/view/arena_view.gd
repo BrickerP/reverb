@@ -424,7 +424,7 @@ func _draw() -> void:
 	ArenaPainter.sparks(self, _sparks)
 	# The original remains legible through decorative debris and routine hit ink.
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director)
-	_interaction_ink.draw(self, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
+	_interaction_ink.draw(self, WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects, sim)
 	BureauInk.draw_carried(self, sim)
 	BureauInk.draw_direction(self, BureauInk.direction_profile(sim, _display_rect))
 	if sim.phase != Sim.Phase.WAVE and not _retirement_note.is_empty() and _retirement_note_time < 1.5:

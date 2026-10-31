@@ -581,15 +581,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		open_history()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"character_skill") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
-		if sim.activate_character_skill():
-			audio.play(&"echo", -2.0, 1.05)
+		sim.activate_character_skill()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"interact") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
-		var interaction := Expedition.interaction(sim)
-		var kind := StringName(interaction.get("kind", &""))
-		var bureau_action := BureauEvents.TARGETS.values().has(kind) or kind == BureauConfession.TERMINAL_KIND
-		if sim.interact() and not bureau_action:
-			audio.play(&"equipment_apply", -3.0, 0.95)
+		sim.interact()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"retire_echo") and not event.is_echo() and not paused and sim != null and sim.phase == Sim.Phase.WAVE:
 		_retire_pressed = true

@@ -74,6 +74,8 @@ func test_midcombat_reduced_toggle_clears_decorative_motion_only(c: Check) -> vo
 	blast.radius = 24.0
 	view._on_explosion_info(blast)
 	var hurt := PlayerHurtInfo.new()
+	hurt.amount = 2.0
+	hurt.hp_loss = 2.0
 	hurt.pos = sim.player.pos
 	hurt.direction = Vector2.LEFT
 	view._on_hurt_info(hurt)

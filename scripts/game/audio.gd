@@ -738,8 +738,15 @@ func _on_world_event(info: Dictionary) -> void:
 				&"press": play(&"weapon_rail_spike", -5.0, 0.71, 0.16)
 				&"conveyor": play(&"click", -4.0, 0.83, 0.12)
 		&"character_skill":
-			if bool(info.get("ok", false)) and info.get("ability", &"") in [&"looper", &"mirror"]:
-				play(&"echo", -3.0, 0.72 if info["ability"] == &"looper" else 1.12, 0.24)
+			if not bool(info.get("ok", false)):
+				return
+			match info.get("ability", &""):
+				&"looper": play(&"echo", -3.0, 0.72, 0.24)
+				&"mirror": play(&"echo", -3.0, 1.12, 0.24)
+				&"solo": play(&"weapon_longbow", -3.0, 0.64, 0.20)
+				&"conductor": play(&"weapon_nova_core", -4.0, 0.86, 0.22)
+				# Mender's real support spawn and Overloader's real retirement own
+				# their sounds; a successful key press cannot play those twice.
 		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24)
 
 

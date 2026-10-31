@@ -49,7 +49,7 @@ func consume_support(info: Dictionary) -> void:
 		"targets": _targets(info.get("targets", []))}
 	# Repeated fire replaces its own small pose; terminal receipts survive after
 	# the unit leaves the live array, and take precedence over a last damage tick.
-	_replace(&"support", int(info["uid"]), kind in [&"destroy", &"expire"])
+	_replace(&"support", int(info["uid"]), kind, kind in [&"destroy", &"expire"])
 	_push(mark, 0.66 if kind in [&"destroy", &"expire"] else 0.5)
 
 
@@ -109,20 +109,26 @@ func step(delta: float, paused: bool = false) -> void:
 			_marks.remove_at(index)
 
 
-func profiles(view: Rect2, reduced: bool = false) -> Array[Dictionary]:
+func profiles(view: Rect2, reduced: bool = false, sim: Sim = null) -> Array[Dictionary]:
 	var output: Array[Dictionary] = []
 	var retired := 0
+	var visible_area := view.grow(76.0)
 	for index in range(_marks.size() - 1, -1, -1):
 		var mark: Dictionary = _marks[index]
-		var pos: Vector2 = mark["pos"]
-		var target: Vector2 = mark.get("target_pos", pos)
-		if not view.grow(76.0).has_point(pos) and not view.grow(76.0).has_point(target):
+		var p := mark.duplicate(true)
+		var pos: Vector2 = p["pos"]
+		var target: Vector2 = p.get("target_pos", pos)
+		var visible := visible_area.has_point(pos) or visible_area.has_point(target)
+		for affected: Dictionary in p.get("targets", []):
+			affected["pos"] = _target_position(affected, sim)
+			affected["visible"] = visible_area.has_point(affected["pos"])
+			visible = visible or bool(affected["visible"])
+		if not visible:
 			continue
 		if mark["family"] == &"retirement":
 			if retired >= MAX_RETIRED:
 				continue
 			retired += 1
-		var p := mark.duplicate(true)
 		var progress := clampf(float(mark["age"]) / float(mark["duration"]), 0.0, 1.0)
 		p["progress"] = 1.0 if reduced else progress
 		p["alpha"] = clampf((1.0 - progress) / 0.24, 0.0, 1.0)
@@ -153,10 +159,10 @@ func support_pose(uid: int, reduced: bool = false) -> Dictionary:
 	return result
 
 
-func draw(ci: CanvasItem, view: Rect2, reduced: bool = false) -> void:
+func draw(ci: CanvasItem, view: Rect2, reduced: bool = false, sim: Sim = null) -> void:
 	if ci == null:
 		return
-	for p: Dictionary in profiles(view, reduced):
+	for p: Dictionary in profiles(view, reduced, sim):
 		match p["family"]:
 			&"support": _draw_support(ci, p)
 			&"retirement": _draw_retirement(ci, p)
@@ -174,12 +180,13 @@ func _push(mark: Dictionary, duration: float) -> void:
 		_marks.pop_front()
 
 
-func _replace(family: StringName, uid: int, terminal: bool = false) -> void:
+func _replace(family: StringName, uid: int, kind: StringName = &"", terminal: bool = false) -> void:
 	for index in range(_marks.size() - 1, -1, -1):
 		var mark: Dictionary = _marks[index]
 		var identity := int(mark.get("uid", mark.get("actor_token", 0)))
 		if mark["family"] == family and identity == uid:
-			if terminal or mark.get("kind") not in [&"destroy", &"expire"]:
+			var committed_result: bool = mark.get("kind") in [&"repair", &"produce", &"retrieve"]
+			if (terminal and not committed_result) or (not terminal and (kind == &"" or mark.get("kind") == kind)):
 				_marks.remove_at(index)
 
 
@@ -210,6 +217,28 @@ static func _targets(values: Variant) -> Array[Dictionary]:
 	return output
 
 
+static func _target_position(target: Dictionary, sim: Sim) -> Vector2:
+	var captured: Vector2 = target["pos"]
+	if sim == null:
+		return captured
+	var uid := int(target["uid"])
+	match target["target_type"]:
+		&"player":
+			if uid == -1 and sim.player.pos.is_finite():
+				return sim.player.pos
+		&"echo":
+			for actor: EchoActor in sim.echoes:
+				if actor != null and actor.take != null and actor.take.uid == uid and actor.pos.is_finite():
+					return actor.pos
+		&"support":
+			for unit: Dictionary in sim.support_units:
+				if int(unit["uid"]) == uid and (unit["pos"] as Vector2).is_finite():
+					return unit["pos"]
+	# Removal does not erase a committed result. Keep its captured position for
+	# the short terminal receipt, never an object or a new lookup identity.
+	return captured
+
+
 static func _anchors(values: Variant) -> Array[Dictionary]:
 	var output: Array[Dictionary] = []
 	if not values is Array:
@@ -234,20 +263,21 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 		&"destroy", &"expire":
 			var kind: StringName = p["unit_kind"]
 			var key := PresentationAssets.support_key(kind)
-			var quiet := p["kind"] == &"expire"
+			var quiet: bool = p["kind"] == &"expire"
 			var scale := Vector2(1.0 + progress * 0.12, maxf(0.08, 1.0 - progress * 0.88))
 			var extent := Vector2(70, 66) if SupportSystem.COMPANIONS.has(kind) else Vector2(44, 48)
 			_draw_paper(ci, key, pos + Vector2(0, 11), extent, scale, alpha * (0.55 if quiet else 0.85))
 			if not quiet:
-				for side in [-1.0, 1.0]:
+				for side: float in [-1.0, 1.0]:
 					ci.draw_line(pos + Vector2(side * 7, -12), pos + Vector2(side * (12 + progress * 6), -6), ink, 1.5, true)
 		&"repair":
 			for target: Dictionary in p["targets"]:
-				_patch(ci, target["pos"] + Vector2(0, -18), progress, alpha)
+				if bool(target.get("visible", true)):
+					_patch(ci, target["pos"] + Vector2(0, -18), progress, alpha)
 		&"produce", &"retrieve":
 			var to: Vector2 = p["target_pos"]
-			var origin := to if p["kind"] == &"retrieve" else pos
-			var destination := pos if p["kind"] == &"retrieve" else to
+			var origin: Vector2 = to if p["kind"] == &"retrieve" else pos
+			var destination: Vector2 = pos if p["kind"] == &"retrieve" else to
 			var at := origin.lerp(destination, 1.0 if bool(p["reduced"]) else 1.0 - pow(1.0 - progress, 3.0))
 			var sheet := Rect2(at + Vector2(-5, -16), Vector2(10, 12))
 			ci.draw_rect(sheet, Color(PAPER, alpha))
@@ -298,8 +328,8 @@ static func _patch(ci: CanvasItem, pos: Vector2, progress: float, alpha: float) 
 	var patch := Rect2(pos + Vector2(-9, -6 - fall), Vector2(18, 12))
 	ci.draw_rect(patch, Color(PAPER, alpha))
 	ci.draw_rect(patch, Color(FRIEND, alpha), false, 1.5)
-	for side in [-1.0, 1.0]:
-		var x := pos.x + side * (5.0 + (1.0 - progress) * 3.0)
+	for side: float in [-1.0, 1.0]:
+		var x: float = pos.x + side * (5.0 + (1.0 - progress) * 3.0)
 		ci.draw_polyline(PackedVector2Array([Vector2(x, pos.y - 8 - fall), Vector2(x, pos.y - 4 - fall), Vector2(x + side * 2, pos.y - 4 - fall)]), Color(INK, alpha), 1.7, true)
 	ci.draw_line(pos + Vector2(-3, -1 - fall), pos + Vector2(4, -1 - fall), Color(INK, alpha), 1.0, true)
 
@@ -362,7 +392,7 @@ static func _draw_recruit(ci: CanvasItem, p: Dictionary) -> void:
 	# The tear reaches contact during the first 0.3s, before the recording beat
 	# can yield to the shop. The committed replacement is readable immediately.
 	var tear := minf(1.0, progress * 2.5)
-	for side in [-1.0, 1.0]:
+	for side: float in [-1.0, 1.0]:
 		var old := Rect2(pos + Vector2(side * tear * 9 - 7, -11 + tear * 8), Vector2(7, 12))
 		ci.draw_rect(old, Color(PAPER, alpha * (1.0 - tear)))
 		ci.draw_rect(old, Color(WARN, alpha * (1.0 - tear)), false, 1.2)
@@ -382,7 +412,7 @@ static func _draw_rescue(ci: CanvasItem, p: Dictionary) -> void:
 	var alpha := float(p["alpha"])
 	# Open shackles and lowered sleeves mark a real saved person. The persistent
 	# living worker remains owned by RecyclingDepot's authoritative world profile.
-	for side in [-1.0, 1.0]:
+	for side: float in [-1.0, 1.0]:
 		var wrist := at + Vector2(side * 15, -12)
 		ci.draw_arc(wrist, 4, 0.4, TAU - 0.6, 10, Color(INK, alpha), 1.8, true)
 		ci.draw_line(wrist, wrist + Vector2(side * (4 + float(p["progress"]) * 7), 9), Color(FRIEND, alpha), 2, true)

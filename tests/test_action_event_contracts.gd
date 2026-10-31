@@ -1,6 +1,12 @@
 extends RefCounted
 
 
+class ShieldCascadeSim extends Sim:
+	func _shield_break_burst() -> void:
+		# A burst can kill a bomber synchronously before the outer hit is done.
+		_hurt_player(4.0, &"bomber", &"bomber_explosion", player.pos, Vector2.LEFT)
+
+
 func _sim() -> Sim:
 	var sim := Sim.new(812)
 	sim.start_run()
@@ -164,6 +170,22 @@ func test_actual_hp_loss_is_bounded_by_health_and_respects_second_wind(c: Check)
 	sim._hurt_player(9.0, &"grunt", &"contact", sim.player.pos, Vector2.RIGHT)
 	c.eq(hurts[1].hp_loss, 1.0, "overkill never fabricates nine points of lost health")
 	c.ok(hurts[1].lethal, "real terminal state remains visible")
+
+
+func test_nested_shield_burst_damage_is_not_reported_twice_as_body_loss(c: Check) -> void:
+	var sim := ShieldCascadeSim.new()
+	sim.start_run()
+	sim.player.hp = 20.0
+	sim.player.shield = 6.0
+	sim.player.set_bonus_applied[&"field"] = true
+	var hurts: Array[PlayerHurtInfo] = []
+	sim.player_hurt_info.connect(func(info: PlayerHurtInfo) -> void: hurts.append(info))
+	sim._hurt_player(6.0, &"grunt", &"contact", sim.player.pos, Vector2.RIGHT)
+	c.eq(hurts.size(), 2, "nested explosion and original block remain separate real hits")
+	c.eq(hurts[0].hp_loss, 4.0, "bomber event owns its actual health loss")
+	c.ok(hurts[1].full_block(), "outer hit remains fully blocked")
+	c.eq(hurts[1].hp_loss, 0.0, "outer shield event cannot claim the nested loss again")
+	c.eq(sim.player.hp, 16.0, "presentation data does not change the cascade damage rule")
 
 
 func test_world_interaction_reports_success_failure_and_detached_values(c: Check) -> void:

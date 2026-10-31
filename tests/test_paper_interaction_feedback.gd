@@ -169,3 +169,83 @@ func test_feedback_pause_reduced_culling_budgets_and_rng(c: Check) -> void:
 	c.eq(ink.counts()["active"], 0, "all event classes leave a bounded scene")
 	c.eq(sim.rng.state, rng, "feedback has no gameplay RNG access")
 	c.eq(sim.wave_time, wave_time, "feedback never changes simulation time")
+
+
+func test_one_support_keeps_distinct_same_tick_results(c: Check) -> void:
+	var ink := InteractionInk.new()
+	ink.consume_support(_support(17, &"repair"))
+	ink.consume_support(_support(17, &"damage"))
+	var kinds: Array[StringName] = []
+	for p: Dictionary in ink.profiles(VIEW):
+		kinds.append(p["kind"])
+	c.ok(kinds.has(&"repair") and kinds.has(&"damage"), "taking damage cannot erase a repair that already happened")
+	ink.consume_support(_support(17, &"damage"))
+	c.eq(ink.counts()["support"], 2, "only repeated same-kind feedback is coalesced")
+	ink.consume_support(_support(18, &"retrieve"))
+	ink.consume_support(_support(18, &"attack"))
+	kinds.clear()
+	for p: Dictionary in ink.profiles(VIEW):
+		kinds.append(p["kind"])
+	c.ok(kinds.has(&"retrieve") and kinds.has(&"attack"), "a helper can visibly collect and attack in the same tick")
+	ink.consume_support(_support(17, &"destroy"))
+	kinds.clear()
+	for p: Dictionary in ink.profiles(VIEW):
+		if int(p["uid"]) == 17:
+			kinds.append(p["kind"])
+	c.ok(kinds.has(&"destroy") and kinds.has(&"repair"), "terminal folding keeps repairs already committed to other bodies")
+	c.ok(not kinds.has(&"damage") and not kinds.has(&"spawn") and not kinds.has(&"attack"),
+		"terminal folding replaces the dead helper's old body actions")
+
+
+func test_repair_patches_follow_live_identity_but_keep_detached_exit_receipts(c: Check) -> void:
+	var sim := Sim.new(506)
+	sim.player.pos = Vector2(500, 360)
+	var take := EchoTake.new()
+	take.samples = PackedVector2Array([Vector2(550, 360)])
+	sim.bank.add(take)
+	var actor := EchoActor.new(take, 0)
+	sim.echoes.append(actor)
+	SupportSystem.spawn(sim, &"hound", Vector2(580, 360))
+	var unit: Dictionary = sim.support_units[0]
+	var event := _support(99, &"repair")
+	event["targets"] = [
+		{"uid": -1, "target_type": &"player", "pos": sim.player.pos, "amount": 1.0},
+		{"uid": take.uid, "target_type": &"echo", "pos": actor.pos, "amount": 2.0},
+		{"uid": int(unit["uid"]), "target_type": &"support", "pos": unit["pos"], "amount": 2.0},
+	]
+	var old_echo_pos := actor.pos
+	var old_support_pos: Vector2 = unit["pos"]
+	var ink := InteractionInk.new()
+	ink.consume_support(event)
+	sim.player.pos += Vector2(40, 0)
+	actor.pos += Vector2(50, 0)
+	unit["pos"] += Vector2(60, 0)
+	var rng := sim.rng.state
+	var p := ink.profiles(VIEW, false, sim)[0]
+	c.eq(p["targets"][0]["pos"], sim.player.pos, "HP patch stays on the moving original")
+	c.eq(p["targets"][1]["pos"], actor.pos, "condition patch follows the exact Echo UID")
+	c.eq(p["targets"][2]["pos"], unit["pos"], "same integer namespace cannot confuse support with Echo")
+	c.eq(sim.rng.state, rng, "live target lookup never consumes gameplay RNG")
+	sim.echoes.clear()
+	sim.support_units.clear()
+	p = ink.profiles(VIEW, true, sim)[0]
+	c.eq(p["targets"][1]["pos"], old_echo_pos, "removed Echo leaves only its captured result position")
+	c.eq(p["targets"][2]["pos"], old_support_pos, "removed helper does not retain a model object")
+	c.eq(ink.profiles(VIEW)[0]["targets"][1]["pos"], old_echo_pos,
+		"live lookups never overwrite the stored value receipt")
+
+
+func test_secondary_repair_target_keeps_event_visible_when_source_and_first_target_are_offscreen(c: Check) -> void:
+	var ink := InteractionInk.new()
+	var event := _support(27, &"repair")
+	event["pos"] = Vector2(1000, 800)
+	event["target_pos"] = Vector2(1100, 800)
+	event["targets"] = [
+		{"uid": 8, "target_type": &"echo", "pos": Vector2(1100, 800), "amount": 2.0},
+		{"uid": 9, "target_type": &"echo", "pos": Vector2(150, 150), "amount": 2.0},
+	]
+	ink.consume_support(event)
+	var shown := ink.profiles(Rect2(Vector2(100, 100), Vector2(100, 100)))
+	c.eq(shown.size(), 1, "a visible secondary repaired body retains the event")
+	c.ok(not bool(shown[0]["targets"][0]["visible"]), "offscreen repaired body is not drawn")
+	c.ok(bool(shown[0]["targets"][1]["visible"]), "the secondary in-camera patch reaches drawing")

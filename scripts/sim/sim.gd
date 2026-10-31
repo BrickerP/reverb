@@ -760,7 +760,6 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 		direction: Vector2, grant_iframes: bool = true, source_uid: int = -1) -> void:
 	if not is_finite(amount) or amount <= 0.0 or Expedition.is_negotiating(self):
 		return
-	var hp_before := player.hp
 	var shield_before := player.shield
 	var had_shield := player.shield > 0.0
 	var absorbed := minf(player.shield, amount)
@@ -768,6 +767,9 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	if had_shield and player.shield <= 0.0 \
 			and bool(player.set_bonus_applied.get(&"field", false)):
 		_shield_break_burst()
+	# A shield burst may synchronously kill a bomber and produce a separate
+	# damage event. Report only this hit's own HP change, not that nested hit.
+	var hp_before := player.hp
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt

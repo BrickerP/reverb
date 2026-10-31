@@ -7,6 +7,10 @@ on:
 env:
   REVERB_RUN_SOURCE: fixture
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   test:
     strategy:
@@ -67,6 +71,87 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+  paper-feedback:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native capture tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgl1-mesa-dri ffmpeg
+
+      - name: Download Godot
+        shell: bash
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+
+      - name: Import capture project
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+        run: ./tools/checked.sh --headless --path . --import
+
+      - name: Capture native paper actions at normal speed
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_BUILD_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          for variant in normal compact reduced; do
+            output="$GITHUB_WORKSPACE/shots/paper-actions/$variant"
+            mkdir -p "$output"
+            xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+              --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+              --write-movie "$output/paper_action.avi" \
+              --script res://tools/paper_action_probe.gd -- \
+              --output="$output" --variant="$variant"
+            ffmpeg -hide_banner -loglevel error -i "$output/paper_action.avi" \
+              -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
+              -movflags +faststart "$output/paper_action.mp4"
+            rm "$output/paper_action.avi"
+          done
+
+      - name: Capture legal eight-Echo pressure
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-current
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --script res://tools/presentation_stress_probe.gd -- legal-only
+
+      - name: Measure the public baseline on the same runner
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_STRESS_OUTPUT: ${{ github.workspace }}/shots/paper-actions/pressure-baseline
+        shell: bash
+        run: |
+          git fetch --depth=1 origin tag v0.17.0
+          baseline="$RUNNER_TEMP/paper-feedback-baseline"
+          mkdir -p "$baseline"
+          git archive v0.17.0 | tar -x -C "$baseline"
+          cd "$baseline"
+          ./tools/checked.sh --headless --path . --import
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --script res://tools/presentation_stress_probe.gd -- legal-only
+
+      - name: Upload native action and pressure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-action-evidence-${{ github.sha }}
+          path: shots/paper-actions/
+          if-no-files-found: warn
+          retention-days: 14
 
   export-linux:
     needs: test
