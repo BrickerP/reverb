@@ -661,6 +661,17 @@ func _capture(name: String) -> bool:
 	if not _require(int(captured_mesh.get("projectiles", -1)) == source_valid_heads,
 			"%s frozen mesh submits every valid projectile head from the captured simulation epoch" % name):
 		return false
+	# The paired harness also runs 0.18, whose telemetry predates material accents.
+	# Keep this diagnostic guard here, outside the measured frame loop.
+	if captured_mesh.has("accent_limit"):
+		var accents := int(captured_mesh.get("accents", -1))
+		var limit := int(captured_mesh["accent_limit"])
+		var accent_draws := int(captured_mesh.get("accent_draw_calls", -1))
+		if not _require(limit >= 0 and limit <= 64 and accents >= 0
+				and accents <= mini(limit, source_valid_heads)
+				and accent_draws == (2 if accents > 0 else 0),
+				"%s material accents respect their fixed budget and two-submission bound" % name):
+			return false
 	if not _require(image != null and not image.is_empty(), "%s frame readback exists" % name):
 		return false
 	var content_samples: int = _content_sample_count(image)

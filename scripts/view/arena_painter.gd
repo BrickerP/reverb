@@ -8,8 +8,6 @@ const BORDER := INK
 const PLAYER := PAPER
 const DANGER := Color("be5749")
 const MAX_PATH_POINTS := 18
-# Above this many bullets, trails are dropped; the heads still carry direction and readability.
-const TRAIL_LIMIT := WeaponInk.TRAIL_LIMIT
 const PLAYER_ART_SIZE := Vector2(50.0, 58.0)
 const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
 const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
@@ -345,7 +343,7 @@ static func enemy_rule_profile(enemy: EnemyState, target: Vector2, wave_time: fl
 
 static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
 		recoils: Array[Dictionary] = [], reduced: bool = false, visual_time: float = -1.0,
-		director: BattleDirector = null, motions: Dictionary = {}) -> void:
+		director: BattleDirector = null, motions: Dictionary = {}, feedback: InteractionInk = null) -> void:
 	var r := PlayerState.RADIUS
 	var clock := sim.wave_time if visual_time < 0.0 else visual_time
 	var view := render_view(sim)
@@ -371,11 +369,17 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		var art_size := _character_bounds(character_id) * paper_scale * (gait["scale"] as Vector2)
 		if director != null:
 			art_size *= director.repair_pose(token, reduced)
+		var action := feedback.actor_pose(token, reduced) if feedback != null else {}
+		var lean := 0.0
+		if bool(action.get("active", false)):
+			art_size *= action["scale"] as Vector2
+			lean = float(action["lean"])
+			frame = mini(int(action["frame"]), PresentationAssets.frame_count(key) - 1)
 		var print_offset: Vector2 = profile["print_offset"]
-		_draw_art_foot(ci, key, foot + print_offset, art_size, 0.0,
+		_draw_art_foot(ci, key, foot + print_offset, art_size, lean,
 				Color(c, float(profile["offset_alpha"])), _horizontal_flip(facing), frame)
 		var body_tint: Color = profile["body_tint"]
-		_draw_art_foot(ci, key, foot, art_size, 0.0,
+		_draw_art_foot(ci, key, foot, art_size, lean,
 				Color(body_tint, alpha), _horizontal_flip(facing), frame)
 		var weapons: Array[WeaponDef] = sim.player.weapons if sim.live_echo else actor.take.weapons
 		_draw_weapon_loadout(ci, sim, actor.pos, weapons, facing, bob, alpha,
@@ -391,10 +395,6 @@ static func projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void
 
 static func projectile_color(projectile: Projectile) -> Color:
 	return WeaponInk.projectile_color(projectile)
-
-
-static func projectile_trails_enabled(reduced: bool, count: int) -> bool:
-	return WeaponInk.trails_enabled(reduced, count)
 
 
 static func actor_frame(key: StringName, gait_phase: float, moving: bool,
@@ -441,7 +441,7 @@ static func expedition_boss_art(enemy: EnemyState, phase: int, shard_index: int,
 
 static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper",
 		motion: Dictionary = {}, recoils: Array[Dictionary] = [],
-		director: BattleDirector = null) -> void:
+		director: BattleDirector = null, feedback: InteractionInk = null) -> void:
 	var pl := sim.player
 	var alpha := 1.0
 	if pl.hp > 0.0 and pl.iframes > 0.0 and int(pl.iframes * 24.0) % 2 == 0:
@@ -468,6 +468,12 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	var frame := actor_frame(key, phase, moving, pl.iframes > 0.22, reduced)
 	if director != null:
 		frame = director.player_pose(key, phase, moving, reduced)
+	if feedback != null and pl.hp > 0.0 and frame != 3:
+		var action := feedback.actor_pose(-1, reduced)
+		if bool(action["active"]):
+			art_size *= action["scale"] as Vector2
+			sway += float(action["lean"])
+			frame = mini(int(action["frame"]), PresentationAssets.frame_count(key) - 1)
 	if pl.hp <= 0.0:
 		bob = 0.0
 		sway = 0.0

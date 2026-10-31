@@ -121,31 +121,31 @@ func test_presentation_is_read_only_culled_reduced_and_bounded(c: Check) -> void
 	c.ok(capped["supports"].size() <= SupportSystem.MAX_UNITS, "hostile input cannot exceed support draw budget")
 	c.ok(capped["targets"].size() <= ExpeditionInk.MAX_TARGETS, "hostile input cannot exceed marker draw budget")
 	ExpeditionInk.draw(null, sim)
-	c.eq(ExpeditionInk.draw_stats(), {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}, "unbound renderer clears stale stats")
+	c.eq(ExpeditionInk.draw_stats(), {"supports": 0, "targets": 0, "warnings": 0}, "unbound renderer clears stale stats")
 
 
-func test_skill_activation_emblems_are_distinct_bounded_and_read_only(c: Check) -> void:
-	var sim := Sim.new(891)
-	sim.start_run()
-	sim.player.pos = Vector2(640, 380)
-	var shapes: Array[PackedVector2Array] = []
+func test_skill_body_sequences_are_distinct_finite_and_settle(c: Check) -> void:
+	var shapes: Array[Dictionary] = []
 	for role: StringName in Content.characters():
-		sim.role_effects = {"ability_kind": role, "ability_flash": 0.65}
-		var before := sim.role_effects.duplicate(true)
-		var rng := sim.rng.state
-		var p := ExpeditionInk.skill_profile(sim)
-		c.ok(bool(p["visible"]), "%s activation has a visible cue" % role)
-		var shape := ExpeditionInk.skill_segments(role)
-		c.ok(not shapes.has(shape), "%s has distinct monochrome paper marks" % role)
-		shapes.append(shape)
-		c.ok(shape.size() <= 64 and shape.size() % 2 == 0, "activation line budget is finite")
-		c.eq(sim.role_effects, before, "skill rendering cannot alter ability state")
-		c.eq(sim.rng.state, rng, "skill rendering consumes no gameplay RNG")
-		var reduced := ExpeditionInk.skill_profile(sim, true)
-		c.eq(p["kind"], reduced["kind"], "reduced effects retain skill identity")
-		sim.role_effects["ability_flash"] = 0.0
-		c.ok(not bool(ExpeditionInk.skill_profile(sim)["visible"]), "finished activation leaves no permanent pulse")
-	c.eq(shapes.size(), 6, "all six character abilities have distinct visual feedback")
+		var p := InteractionInk.skill_pose(role, 0.44)
+		c.ok(bool(p["active"]), "%s has a finite paper body action" % role)
+		c.ok(not shapes.has({"scale": p["scale"], "lean": p["lean"]}), "%s folds its own body rather than repeating a head card" % role)
+		shapes.append({"scale": p["scale"], "lean": p["lean"]})
+		for progress: float in [0.0, 0.2, 0.5, 0.9, 1.0]:
+			var pose := InteractionInk.skill_pose(role, progress)
+			c.ok((pose["scale"] as Vector2).is_finite() and float(pose["lean"]) == float(pose["lean"]), "body geometry stays finite")
+			c.eq(pose["offset"], Vector2.ZERO, "paper articulation leaves the planted collision foot unchanged")
+		var reduced := InteractionInk.skill_pose(role, 0.44, true)
+		c.eq(reduced["action"], role, "Reduced retains the committed ability identity")
+		c.eq(reduced["stage"], &"contact", "Reduced retains essential contact")
+		c.eq(reduced["scale"], Vector2.ONE, "Reduced keeps a steady readable body")
+		var settled := InteractionInk.skill_pose(role, 1.0)
+		c.ok(not bool(settled["active"]), "finished activation leaves no permanent pose")
+		c.eq(settled["scale"], Vector2.ONE, "finite sequence restores the body")
+		c.eq(settled["lean"], 0.0, "finite sequence restores the lean")
+	c.eq(shapes.size(), 6, "all six real character skills have body feedback")
+	for progress: float in [NAN, INF, -1.0]:
+		c.ok(not bool(InteractionInk.skill_pose(&"solo", progress)["active"]), "invalid clocks cannot start a pose")
 
 
 func test_foreman_visible_slices_stay_inside_authored_idle_frame(c: Check) -> void:

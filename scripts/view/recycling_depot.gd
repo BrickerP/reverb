@@ -28,19 +28,25 @@ var _machine_profiles: Array[Dictionary] = []
 var _safe_workers: Array[Dictionary] = []
 var _retired_count := 0
 var _worker_pad: InkStyleBox
+var _feedback: InteractionInk
+var _arrival_active := false
 var _act_id := 1
 static var _atlas: Texture2D
 
 
-func set_presentation(time: float, reduced: bool, paused: bool) -> void:
-	var changed := _reduced_effects != reduced or _language != Loc.lang
+func set_presentation(time: float, reduced: bool, paused: bool, feedback: InteractionInk = null) -> void:
+	_feedback = feedback
+	var arrival_active := feedback != null and feedback.has_rescues()
+	var changed := _arrival_active != arrival_active
+	_arrival_active = arrival_active
+	changed = changed or _reduced_effects != reduced or _language != Loc.lang
 	_reduced_effects = reduced
 	_paused = paused
 	_language = Loc.lang
 	if not paused:
 		_visual_time = maxf(0.0, time)
 	var tick := 0 if reduced else int(floor(_visual_time * DRAW_HZ))
-	if changed or tick != _draw_tick:
+	if changed or tick != _draw_tick or (_arrival_active and not paused):
 		_draw_tick = tick
 		queue_redraw()
 
@@ -213,13 +219,16 @@ func _draw_safe_workers() -> void:
 	_draw_label(Loc.t("world.safe_registry"), Rect2(first + Vector2(-36, -72), Vector2(300, 24)), 17, INK)
 	for worker in _safe_workers:
 		var pos: Vector2 = worker["pos"]
+		var pose := _feedback.worker_pose(StringName(worker["id"]), _reduced_effects) if _arrival_active and _feedback != null else {"safe_visible": true, "safe_scale": Vector2.ONE}
+		if not bool(pose["safe_visible"]):
+			continue
 		if _worker_pad == null:
 			_worker_pad = UiTheme.paper_panel(PAPER)
 			_worker_pad.shape = InkStyleBox.Shape.TAG
 			_worker_pad.variant = 2
 			_worker_pad.shadow_size = 0.0
 		_worker_pad.draw(get_canvas_item(), Rect2(pos + Vector2(-23, -48), Vector2(46, 72)))
-		draw_set_transform(pos, 0.0, Vector2(1.12, 1.12))
+		draw_set_transform(pos, 0.0, Vector2(1.12, 1.12) * (pose["safe_scale"] as Vector2))
 		ExpeditionInk.draw_worker(self, Vector2.ZERO, true)
 		draw_set_transform(Vector2.ZERO)
 		_draw_label(str(worker["stage"]), Rect2(pos + Vector2(-10, 21), Vector2(20, 14)), 11, INK)

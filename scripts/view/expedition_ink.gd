@@ -11,19 +11,18 @@ const MAX_TARGETS := 24
 const MAX_BOSS_WARNINGS := 4
 const TARGET_KINDS: Array[StringName] = [&"press", &"conveyor", &"recycler", &"part", &"terminal", &"repair", &"rescue", &"negotiate", &"bureau_pickup", &"bureau_switch", &"bureau_inbox", &"bureau_inspection"]
 
-static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
+static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0}
 
 
 static func snapshot(sim: Sim, clock: float = 0.0, reduced: bool = false,
 		display_rect: Rect2 = WorldArena.VIEWPORT, world: Dictionary = {}, feedback: InteractionInk = null) -> Dictionary:
-	var result := {"supports": [], "targets": [], "warnings": [], "skill": {"visible": false}}
+	var result := {"supports": [], "targets": [], "warnings": []}
 	if sim == null:
 		return result
 	var safe := WorldArena.camera_rect(sim.player.pos, display_rect)
 	var view := safe.grow(ArenaPainter.CULL_SHAKE_MARGIN)
 	var choice := Expedition.interaction(sim)
 	var world_state := world if not world.is_empty() else Expedition.world_profile(sim)
-	result["skill"] = skill_profile(sim, reduced)
 	for index in mini(SupportSystem.MAX_UNITS, sim.support_units.size()):
 		var profile := support_profile(sim.support_units[index], clock, reduced)
 		profile["pose"] = feedback.support_pose(int(profile["uid"]), reduced) if feedback != null else {"scale": Vector2.ONE, "offset": Vector2.ZERO}
@@ -151,7 +150,7 @@ static func boss_warning_profile(enemy: EnemyState) -> Dictionary:
 
 
 static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false, world: Dictionary = {}, feedback: InteractionInk = null) -> void:
-	_last_stats = {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
+	_last_stats = {"supports": 0, "targets": 0, "warnings": 0}
 	if ci == null or sim == null:
 		return
 	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size), world, feedback)
@@ -164,9 +163,6 @@ static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = f
 	for support: Dictionary in data["supports"]:
 		_draw_support(ci, support)
 		_last_stats["supports"] += 1
-	if bool(data["skill"]["visible"]):
-		_draw_skill(ci, data["skill"])
-		_last_stats["skills"] = 1
 
 
 static func draw_stats() -> Dictionary:
@@ -375,82 +371,3 @@ static func _glyph(ci: CanvasItem, kind: StringName, pos: Vector2, color: Color,
 		points[index] = points[index].rotated(direction.angle()) + pos
 	if not points.is_empty():
 		ci.draw_multiline(points, color, 2.4, true)
-
-
-# These are small activation emblems above the original, never damage zones.
-# Links mark the two real bodies involved in swap/relay; their rules remain in Sim.
-static func skill_profile(sim: Sim, reduced: bool = false) -> Dictionary:
-	if sim == null:
-		return {"visible": false}
-	var kind := StringName(sim.role_effects.get("ability_kind", &""))
-	var flash := float(sim.role_effects.get("ability_flash", 0.0))
-	var anchor_left := float(sim.role_effects.get("anchor_left", 0.0))
-	var relay := kind == &"conductor" and is_finite(anchor_left) and anchor_left > 0.0 and int(sim.role_effects.get("relay_pulses", 0)) > 0
-	if not Content.characters().has(kind) or not is_finite(flash) or (flash <= 0.0 and not relay) or not sim.player.pos.is_finite():
-		return {"visible": false}
-	var pos := sim.player.pos + Vector2(0, -62)
-	var facing := sim.player.facing.normalized() if sim.player.facing.is_finite() else Vector2.RIGHT
-	if facing == Vector2.ZERO:
-		facing = Vector2.RIGHT
-	var alpha := clampf(flash / 0.65, 0.0, 1.0)
-	var glyphs := skill_segments(kind)
-	var scale := 1.0 if reduced else 1.0 + (1.0 - alpha) * 0.12
-	for index in glyphs.size():
-		glyphs[index] = glyphs[index] * scale + pos
-	var anchor := Vector2.ZERO
-	var has_anchor := false
-	if kind in [&"mirror", &"conductor"]:
-		var uid := int(sim.role_effects.get("anchor_uid", 0))
-		for index in mini(Sim.MAX_ECHO_CAPACITY, sim.echoes.size()):
-			var actor: EchoActor = sim.echoes[index]
-			if actor.take.uid == uid and actor.pos.is_finite():
-				anchor = actor.pos
-				has_anchor = true
-				break
-	if flash <= 0.0 and not has_anchor:
-		return {"visible": false}
-	var view := ArenaPainter.render_view(sim)
-	return {"visible": view.grow(32.0).has_point(pos), "kind": kind, "pos": pos,
-		"body": sim.player.pos, "segments": glyphs, "alpha": maxf(0.35 if relay else 0.0, alpha),
-		"color": DANGER if kind == &"overloader" else FRIEND,
-		"has_anchor": has_anchor, "anchor": anchor, "facing": facing, "reduced": reduced}
-
-
-static func skill_segments(kind: StringName) -> PackedVector2Array:
-	match kind:
-		&"looper":
-			return PackedVector2Array([Vector2(-14, 0), Vector2(-3, -9), Vector2(-14, 0), Vector2(-3, 9),
-				Vector2(-3, 0), Vector2(8, -9), Vector2(-3, 0), Vector2(8, 9), Vector2(9, -13), Vector2(14, -13), Vector2(14, -13), Vector2(14, 13)])
-		&"solo":
-			return PackedVector2Array([Vector2(-15, -7), Vector2(13, 0), Vector2(13, 0), Vector2(-15, 7),
-				Vector2(-15, 7), Vector2(-7, 0), Vector2(-7, 0), Vector2(-15, -7), Vector2(-19, -3), Vector2(-13, -3), Vector2(-19, 3), Vector2(-13, 3)])
-		&"mirror":
-			return PackedVector2Array([Vector2(-14, -10), Vector2(3, -10), Vector2(3, -10), Vector2(3, 6),
-				Vector2(-14, -10), Vector2(-14, 6), Vector2(-14, 6), Vector2(3, 6), Vector2(-3, -6), Vector2(14, -6), Vector2(14, -6), Vector2(14, 10), Vector2(-3, 10), Vector2(14, 10)])
-		&"conductor":
-			return PackedVector2Array([Vector2(-14, -8), Vector2(-14, 8), Vector2(-14, 0), Vector2(14, 0),
-				Vector2(14, -8), Vector2(14, 8), Vector2(-6, -12), Vector2(0, -6), Vector2(0, -6), Vector2(6, -12), Vector2(-6, 12), Vector2(0, 6), Vector2(0, 6), Vector2(6, 12)])
-		&"mender":
-			return PackedVector2Array([Vector2(-13, -5), Vector2(-5, -5), Vector2(-5, -5), Vector2(-5, -13),
-				Vector2(-5, -13), Vector2(5, -13), Vector2(5, -13), Vector2(5, -5), Vector2(5, -5), Vector2(13, -5), Vector2(13, -5), Vector2(13, 5), Vector2(13, 5), Vector2(5, 5), Vector2(5, 5), Vector2(5, 13), Vector2(5, 13), Vector2(-5, 13), Vector2(-5, 13), Vector2(-5, 5), Vector2(-5, 5), Vector2(-13, 5), Vector2(-13, 5), Vector2(-13, -5)])
-		&"overloader":
-			return PackedVector2Array([Vector2(-15, -8), Vector2(-6, -4), Vector2(-6, -4), Vector2(-9, 4),
-				Vector2(-9, 4), Vector2(0, 13), Vector2(0, 13), Vector2(5, 5), Vector2(5, 5), Vector2(15, 8), Vector2(15, 8), Vector2(9, 0), Vector2(9, 0), Vector2(15, -8), Vector2(15, -8), Vector2(4, -5), Vector2(4, -5), Vector2(0, -14), Vector2(0, -14), Vector2(-5, -5), Vector2(-5, -5), Vector2(-15, -8)])
-	return PackedVector2Array()
-
-
-static func _draw_skill(ci: CanvasItem, p: Dictionary) -> void:
-	var pos: Vector2 = p["pos"]
-	var segments: PackedVector2Array = p["segments"]
-	var alpha := float(p["alpha"])
-	ci.draw_rect(Rect2(pos - Vector2(23, 18), Vector2(46, 36)), Color(PAPER, alpha * 0.9))
-	ci.draw_multiline(segments, Color(p["color"], alpha), 2.3, true)
-	if bool(p["has_anchor"]):
-		var anchor: Vector2 = p["anchor"]
-		# Sparse registration stitches communicate the real link without drawing
-		# a solid projectile, attack corridor or imaginary damage radius.
-		for index in (2 if bool(p["reduced"]) else 4):
-			var fraction := 0.2 + float(index) * 0.18
-			var center := (p["body"] as Vector2).lerp(anchor, fraction)
-			ci.draw_line(center - Vector2(3, 3), center + Vector2(3, 3), Color(FRIEND, alpha * 0.55), 1.5, true)
-		ci.draw_polyline(PackedVector2Array([anchor + Vector2(-6, -20), anchor + Vector2(0, -26), anchor + Vector2(6, -20)]), Color(FRIEND, alpha), 2, true)

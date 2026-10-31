@@ -257,7 +257,8 @@ func test_paused_and_reduced_feedback_is_bounded_and_keeps_the_model_unchanged(c
 	c.eq(view._hits[0]["life"], hit_life, "pause freezes contact residues")
 	view.set_reduced_effects(true)
 	c.eq(view._muzzles.size(), 0, "midbattle reduction clears optional muzzle motion")
-	c.ok(not WeaponInk.trails_enabled(false, 161) and not WeaponInk.trails_enabled(true, 1), "dense and reduced scenes keep heads while dropping optional tails")
+	c.ok(WeaponInk.flight_accent_budget(false, 161) > 0 and WeaponInk.flight_accent_budget(true, 1) > 0,
+		"dense and Reduced scenes keep a bounded material sample beside every actual head")
 	c.eq(RunSnapshot.capture(sim), before, "visual events leave positions, damage, both RNGs and economy untouched")
 	view.set_paused(false)
 	view._process(1.0)
@@ -273,14 +274,15 @@ func test_return_hook_follows_real_return_state_without_changing_projectile_geom
 	shot.vel = Vector2.LEFT * 200.0
 	shot.radius = 4.0
 	shot.return_time = 0.6
-	c.ok(WeaponInk.return_tail(shot).is_empty(), "outgoing flight does not claim to have returned")
+	var outgoing := WeaponInk.flight_accent(WeaponInk.action_kind(shot.weapon_id), shot.returning)
 	shot.returning = true
 	var before := [shot.pos, shot.origin, shot.vel, shot.radius, shot.age, shot.life, shot.returning]
-	var trail := WeaponInk.return_tail(shot)
-	c.eq(trail.size(), 3, "return has one compact curved tail")
-	c.eq(trail[2], shot.pos, "the tail ends at the actual simulated head")
+	var trail := WeaponInk.flight_accent(WeaponInk.action_kind(shot.weapon_id), shot.returning)
+	c.ok(outgoing != trail, "the authoritative returning state switches to a recovery hook")
+	c.eq(trail.size(), 4, "return has two compact line segments")
+	c.eq(trail[3], Vector2.ZERO, "the local return tail ends at the actual simulated head")
 	for point in trail:
-		c.ok(point.distance_to(shot.pos) < 24.0, "a return mark cannot pretend to be a full damaging tether")
+		c.ok(point.length() < 24.0, "a return mark cannot pretend to be a full damaging tether")
 	var transform := WeaponInk.flight_transform(shot.pos, shot.vel, shot.radius)
 	c.near(transform.x.length(), shot.radius, 0.0001, "contrast and tails never enlarge the contact disc")
 	c.eq([shot.pos, shot.origin, shot.vel, shot.radius, shot.age, shot.life, shot.returning], before,

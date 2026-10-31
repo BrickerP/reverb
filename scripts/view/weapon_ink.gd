@@ -6,7 +6,11 @@ extends RefCounted
 const INK := Color("292720")
 const PAPER := Color("e5d8b8")
 const GOLD := Color("edc66d")
-const TRAIL_LIMIT := 160
+const DENSE_FLIGHT_THRESHOLD := 160
+const MAX_FLIGHT_ACCENTS := 64
+const DENSE_FLIGHT_ACCENTS := 32
+const REDUCED_FLIGHT_ACCENTS := 16
+const FLIGHT_ACTIONS: Array[StringName] = [&"pin", &"stamp", &"cut", &"ink", &"return", &"arc"]
 const MAX_MUZZLE_MARKS := 32
 const MAX_HIT_MARKS := 48
 const MAX_BLAST_MARKS := 12
@@ -17,7 +21,9 @@ const IDS: Array[StringName] = [&"pistol", &"smg", &"shotgun", &"rifle", &"orb",
 	&"binding_writ", &"saw_swarm", &"surveyor_lance", &"ink_tempest", &"folding_guillotine", &"binding_atlas", &"paper_hound", &"debt_sentry", &"repair_kit", &"paper_seed", &"guard_decoy"]
 
 static var _batches: Dictionary = {}
-static var _last_render: Dictionary = {"projectiles": 0, "groups": 0, "draw_calls": 0, "trails": 0}
+static var _flight_segments: Dictionary = {}
+static var _last_render: Dictionary = {"projectiles": 0, "groups": 0, "draw_calls": 0,
+	"accents": 0, "accent_draw_calls": 0, "accent_limit": 0}
 static var _last_feedback: Dictionary = {"muzzles": 0, "hits": 0, "blasts": 0}
 
 
@@ -348,8 +354,84 @@ static func projectile_color(projectile: Projectile) -> Color:
 	return tint.lerp(PAPER, 0.52).lerp(INK, 0.08)
 
 
-static func trails_enabled(reduced: bool, count: int) -> bool:
-	return not reduced and count <= TRAIL_LIMIT
+# Material marks remain at native pixel size in Reduced. Only their number is
+# reduced: no blinking, growing particles, projectile history or guessed paths.
+static func flight_accent_budget(reduced: bool, count: int) -> int:
+	if count <= 0:
+		return 0
+	var limit := REDUCED_FLIGHT_ACCENTS if reduced else (DENSE_FLIGHT_ACCENTS if count > DENSE_FLIGHT_THRESHOLD else MAX_FLIGHT_ACCENTS)
+	return mini(count, limit)
+
+
+# Allocate within six known materials, not projectile order. Otherwise a regular
+# stride through repeating weapon IDs could erase five whole material families.
+static func flight_accent_quotas(counts: Dictionary, budget: int) -> Dictionary:
+	var quotas: Dictionary = {}
+	var left := clampi(budget, 0, MAX_FLIGHT_ACCENTS)
+	for action: StringName in FLIGHT_ACTIONS:
+		if int(counts.get(action, 0)) > 0:
+			quotas[action] = 0
+	while left > 0:
+		var allocated := false
+		for action: StringName in quotas:
+			if int(quotas[action]) < int(counts[action]):
+				quotas[action] = int(quotas[action]) + 1
+				left -= 1
+				allocated = true
+				if left == 0:
+					break
+		if not allocated:
+			break
+	return quotas
+
+
+static func accent_sample(index: int, count: int, budget: int) -> bool:
+	if index < 0 or index >= count or count <= 0 or budget <= 0:
+		return false
+	var bounded := mini(count, budget)
+	# Integer bucket boundaries select exactly the quota, spread across the whole
+	# family instead of decorating only its oldest projectiles.
+	return floori(float(index * bounded) / float(count)) != floori(float((index + 1) * bounded) / float(count))
+
+
+# Cached local segment pairs, shared by all heads in a material batch. Every
+# accent fits within 24px behind its head and survives a 960px-wide viewport.
+# Callers read this geometry; world-space segments are collected separately.
+static func flight_accent(action: StringName, returning: bool = false) -> PackedVector2Array:
+	var key := &"returning" if action == &"return" and returning else action
+	if _flight_segments.has(key):
+		return _flight_segments[key]
+	var path := PackedVector2Array()
+	var detail := PackedVector2Array()
+	match key:
+		&"pin":
+			path = PackedVector2Array([Vector2(-7, -3), Vector2(-18, -3), Vector2(-18, 3), Vector2(-7, 3)])
+		&"stamp":
+			path = PackedVector2Array([Vector2(-7, -4), Vector2(-18, -4), Vector2(-18, 4), Vector2(-7, 4), Vector2(-7, -4)])
+			detail = PackedVector2Array([Vector2(-15, -1), Vector2(-10, -1), Vector2(-15, 1), Vector2(-10, 1)])
+		&"cut":
+			path = PackedVector2Array([Vector2(-6, -2), Vector2(-16, -7), Vector2(-13, -2), Vector2(-6, -2)])
+			detail = PackedVector2Array([Vector2(-9, 3), Vector2(-20, 6), Vector2(-20, 6), Vector2(-15, 1), Vector2(-15, 1), Vector2(-9, 3)])
+		&"ink":
+			path = PackedVector2Array([Vector2(-7, 0), Vector2(-12, -4), Vector2(-17, -2), Vector2(-20, 1), Vector2(-15, 4), Vector2(-11, 2), Vector2(-7, 0)])
+			detail = PackedVector2Array([Vector2(-23, -2), Vector2(-22, -1)])
+		&"return":
+			path = PackedVector2Array([Vector2(-7, 0), Vector2(-10, -5), Vector2(-17, -6), Vector2(-21, -2), Vector2(-19, 4), Vector2(-14, 5)])
+		&"returning":
+			# This hook is used only while the simulation says the head is returning.
+			path = PackedVector2Array([Vector2(-22, 3), Vector2(-12, -2), Vector2.ZERO])
+		&"arc":
+			path = PackedVector2Array([Vector2(-6, 0), Vector2(-11, -2), Vector2(-15, 2), Vector2(-20, 0)])
+			detail = PackedVector2Array([Vector2(-12, -4), Vector2(-10, 3), Vector2(-18, -3), Vector2(-16, 4)])
+		_:
+			return PackedVector2Array()
+	var segments := PackedVector2Array()
+	for index in range(1, path.size()):
+		segments.append(path[index - 1])
+		segments.append(path[index])
+	segments.append_array(detail)
+	_flight_segments[key] = segments
+	return segments
 
 
 static func valid_projectile(projectile: Projectile) -> bool:
@@ -362,18 +444,6 @@ static func flight_transform(position: Vector2, velocity: Vector2, radius: float
 		return Transform2D(Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	var direction := velocity.normalized() if velocity.length_squared() > 0.000001 else Vector2.RIGHT
 	return Transform2D(direction * radius, Vector2(-direction.y, direction.x) * radius, position)
-
-
-static func return_tail(projectile: Projectile) -> PackedVector2Array:
-	if not valid_projectile(projectile) or not projectile.returning or projectile.return_time <= 0.0:
-		return PackedVector2Array()
-	var direction := projectile.vel.normalized() if projectile.vel != Vector2.ZERO else Vector2.RIGHT
-	var normal := Vector2(-direction.y, direction.x)
-	var length := minf(22.0, projectile.radius * 2.0 + 7.0)
-	# A short hook shows the authoritative returning state at the real head. It
-	# is decorative trail ink, never a predicted path back to the owner or a beam.
-	return PackedVector2Array([projectile.pos - direction * length + normal * 3.0,
-		projectile.pos - direction * length * 0.55 - normal * 2.0, projectile.pos])
 
 
 static func _batch_key(id: StringName) -> StringName:
@@ -393,7 +463,8 @@ static func _batch(id: StringName, count: int) -> Dictionary:
 		mesh.transform_format = MultiMesh.TRANSFORM_2D
 		mesh.use_colors = true
 		mesh.mesh = quad
-		_batches[id] = {"mesh": mesh, "texture": ImageTexture.create_from_image(image), "capacity": 0}
+		_batches[id] = {"mesh": mesh, "texture": ImageTexture.create_from_image(image), "capacity": 0,
+			"action": action_kind(id) if id != &"" else &""}
 	var batch: Dictionary = _batches[id]
 	if count > int(batch["capacity"]):
 		var capacity := ceili(float(count) / 64.0) * 64
@@ -405,46 +476,65 @@ static func _batch(id: StringName, count: int) -> Dictionary:
 static func draw_projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) -> void:
 	for stored: Dictionary in _batches.values():
 		(stored["mesh"] as MultiMesh).visible_instance_count = 0
-	_last_render = {"projectiles": 0, "groups": 0, "draw_calls": 0, "trails": 0}
+	_last_render = {"projectiles": 0, "groups": 0, "draw_calls": 0,
+		"accents": 0, "accent_draw_calls": 0, "accent_limit": 0}
 	if ci == null or sim == null:
 		return
 	var counts: Dictionary = {}
+	var moving_counts: Dictionary = {}
 	for projectile in sim.projectiles:
 		if valid_projectile(projectile):
 			var key := _batch_key(projectile.weapon_id)
 			counts[key] = int(counts.get(key, 0)) + 1
+			if key != &"" and projectile.vel.length_squared() > 0.000001:
+				moving_counts[key] = int(moving_counts.get(key, 0)) + 1
 	var active: Dictionary = {}
+	var material_counts: Dictionary = {}
 	for key: StringName in counts:
 		var batch := _batch(key, int(counts[key]))
 		if not batch.is_empty():
 			(batch["mesh"] as MultiMesh).visible_instance_count = int(counts[key])
 			active[key] = batch
+			var action := StringName(batch["action"])
+			material_counts[action] = int(material_counts.get(action, 0)) + int(moving_counts.get(key, 0))
+	var budget := flight_accent_budget(reduced, sim.projectiles.size())
+	var quotas := flight_accent_quotas(material_counts, budget)
+	_last_render["accent_limit"] = budget
 	var used: Dictionary = {}
-	var trails := trails_enabled(reduced, sim.projectiles.size())
+	var material_used: Dictionary = {}
+	var segments := PackedVector2Array()
 	for projectile in sim.projectiles:
 		if not valid_projectile(projectile):
 			continue
 		var key := _batch_key(projectile.weapon_id)
 		if not active.has(key):
 			continue
-		var mesh := (active[key] as Dictionary)["mesh"] as MultiMesh
+		var batch: Dictionary = active[key]
+		var mesh := batch["mesh"] as MultiMesh
 		var index := int(used.get(key, 0))
 		mesh.set_instance_transform_2d(index, flight_transform(projectile.pos, projectile.vel, projectile.radius))
-		var color := projectile_color(projectile)
-		mesh.set_instance_color(index, color)
+		mesh.set_instance_color(index, projectile_color(projectile))
 		used[key] = index + 1
 		_last_render["projectiles"] = int(_last_render["projectiles"]) + 1
-		if trails:
-			var direction := projectile.vel.normalized()
-			if direction != Vector2.ZERO:
-				var hook := return_tail(projectile)
-				if not hook.is_empty():
-					ci.draw_polyline(hook, Color(PAPER, 0.6), 3.0, true)
-					ci.draw_polyline(hook, Color(INK, 0.65), 1.3, true)
-				else:
-					ci.draw_line(projectile.pos - direction * (projectile.radius * 2.0 + 5.0), projectile.pos,
-							Color(color, 0.34), maxf(1.0, projectile.radius * 0.55), true)
-				_last_render["trails"] = int(_last_render["trails"]) + 1
+		var action := StringName(batch["action"])
+		if not quotas.has(action) or projectile.vel.length_squared() <= 0.000001:
+			continue
+		var material_index := int(material_used.get(action, 0))
+		material_used[action] = material_index + 1
+		if not accent_sample(material_index, int(material_counts[action]), int(quotas[action])):
+			continue
+		var direction := projectile.vel.normalized()
+		var normal := Vector2(-direction.y, direction.x)
+		var returning := projectile.returning and projectile.return_time > 0.0
+		for point in flight_accent(action, returning):
+			segments.append(projectile.pos + direction * point.x + normal * point.y)
+		_last_render["accents"] = int(_last_render["accents"]) + 1
+	# Two submissions for the entire sampled population, independent of its size
+	# and weapon count. Heads draw last at their unchanged real collision radius.
+	if not segments.is_empty():
+		ci.draw_multiline(segments, Color(PAPER, 0.86), 3.8, true)
+		ci.draw_multiline(segments, Color(INK, 0.92), 1.7, true)
+		_last_render["accent_draw_calls"] = 2
 	for key: StringName in active:
 		var batch: Dictionary = active[key]
 		ci.draw_multimesh(batch["mesh"] as MultiMesh, batch["texture"] as Texture2D)

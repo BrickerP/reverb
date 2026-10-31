@@ -326,6 +326,7 @@ static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 				var worker := _worker(sim, item["id"])
 				if worker.is_empty() or worker["state"] != &"danger":
 					return false
+				var source: Vector2 = worker["pos"]
 				worker["state"] = &"safe"
 				worker["pos"] = WorldArena.safe_worker_position(int(worker["stage"]))
 				sim.expedition["world"]["witnesses"].append(worker["id"])
@@ -333,7 +334,8 @@ static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 				sim.expedition["rescued"] += 1
 				sim.expedition["solidarity"] += 2
 				_progress(sim, &"rescue")
-				_event(sim, &"worker_saved", worker["id"], worker["pos"])
+				_event(sim, &"worker_saved", worker["id"], worker["pos"],
+					{"from_pos": source, "target_pos": worker["pos"], "ok": true})
 			&"part", &"terminal":
 				if mission.is_empty() or mission.get("state") != &"active":
 					return false

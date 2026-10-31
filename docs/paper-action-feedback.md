@@ -1,6 +1,6 @@
 # Paper action feedback
 
-This pass starts from public `v0.17.0` gameplay and retains the current main
+The 0.18.1 closeout builds on public `v0.18.0` and retains the current main
 front page. It completes presentation along existing authoritative events;
 weapons, damage, enemy density, routes, prices and saved-run schema stay under
 their existing owners.
@@ -23,6 +23,11 @@ Six material actions organize the existing weapon identities:
 | Ink | A rounded deposit | An irregular blot with a readable edge |
 | Return | A bent launch/retrieval arc | Curled paper and a visible return accent |
 | Arc | A branching stitch | A bounded seam joining actual contacts |
+
+Flight uses a bounded, fairly sampled set of six material accents even in dense
+and Reduced Effects scenes. Every actual collision head remains in its batch;
+accents never replace heads. Cached segment motifs share two bounded multiline
+submissions rather than allocating a profile for every projectile.
 
 These are visual accents of the current attack, not additional hitboxes. A
 fast shot must not play a delayed safe-looking wind-up after it has dealt
@@ -63,8 +68,15 @@ they never advance a machine's working animation or invent a repair.
 - Machines connect the hand, lever and spring-back. The stopped-state bar and
   successful repair patch are separate overlays, so stopping a repaired press
   cannot hide the repair.
-- Swap/rewind connect actual old and new positions. Recruitment changes the
-  real signed companion's badge after commit; rescue reacts to the real worker.
+- All six role abilities use finite live-body poses and committed origin/target
+  values. Rewind and swap connect actual endpoints; no decorative path changes
+  collision, immunity or damage.
+- Echo work consumes its stable-UID result directly into the shared machine grip.
+  It never guesses a reordered copy, emits a second operation or invents success.
+- Rescue carries immutable source and safe positions. A short source-position
+  shackle/departure sequence hands off to the real safe worker; presentation
+  never creates an additional worker. Recruitment changes the real companion's
+  badge after commit.
 
 ## Validation contract
 

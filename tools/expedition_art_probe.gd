@@ -9,7 +9,7 @@ var _out := ""
 var _failures: Array[String] = []
 var _summary := {"screenshots": [], "pixels": [], "state_checks": [],
 	"fixture": "Frozen 0.16 Main/Sim art gallery. Physical machine sites and natural worker/repair identities retain their canonical positions; extra part/terminal targets are disclosed mixed-order gallery staging, not a campaign result. Five equipment supports use the real allocator; companion deployment has a reciprocal persistent roster. Bosses use the real spawn allocator. One real weapon has a long cooldown. Actual ability activation and rule delta are executed.",
-	"negative_control": "HUD draw processing is frozen to isolate arena clipping; only support/target visibility, active-to-bench roster status and boss brain states are temporarily changed. Original arrays, roster and enemy states are restored by UID. Skill controls restore the original role_effects dictionary. Complete RunSnapshot equality, strict JSON restore and both RNGs are checked."}
+	"negative_control": "HUD draw processing is frozen to isolate arena clipping; only support/target visibility, active-to-bench roster status and boss brain states are temporarily changed. Original arrays, roster and enemy states are restored by UID. Skill controls hide and restore only committed skill presentation receipts; authoritative role_effects remain unchanged. Complete RunSnapshot equality, strict JSON restore and both RNGs are checked."}
 var _started := Time.get_ticks_msec()
 
 
@@ -177,7 +177,8 @@ func _capture(name: String, sim: Sim) -> void:
 	_summary["screenshots"].append({"name": name, "size": [pixels.get_width(), pixels.get_height()],
 		"reduced_effects": _main._view.reduced_effects,
 		"supports": ExpeditionInk.draw_stats()["supports"], "targets": ExpeditionInk.draw_stats()["targets"],
-		"warnings": ExpeditionInk.draw_stats()["warnings"], "skills": ExpeditionInk.draw_stats()["skills"], "wave_time": sim.wave_time,
+		"warnings": ExpeditionInk.draw_stats()["warnings"],
+		"skill_body_active": bool(_main._view._interaction_ink.actor_pose(-1)["active"]), "wave_time": sim.wave_time,
 		"camera_world_xywh": _rect(actual["world_rect"]), "expected_camera_xywh": _rect(expected),
 		"camera_and_clip_match": matches, "selected_labels_inside_camera": labels_inside, "full_snapshot_nonempty": not before.is_empty()})
 
@@ -219,20 +220,23 @@ func _skill_captures() -> void:
 			_failures.append("actual skill activation failed: " + String(role))
 		# Advance the real rule clock slightly so authored invulnerability blink
 		# permits a readable still; no effect geometry or result is fabricated.
-		sim.step(0.02 if role == &"looper" else 0.06, Vector2.ZERO)
+		sim.step(0.28, Vector2.ZERO)
+		_main._view._interaction_ink.step(0.28)
 		_main._view._update_camera()
 		await _capture("skill_" + String(role), sim)
-		if int(ExpeditionInk.draw_stats()["skills"]) != 1:
-			_failures.append("missing activation pixels: " + String(role))
+		var action: Dictionary = _main._view._interaction_ink.actor_pose(-1)
+		if not bool(action["active"]) or action["action"] != role or action["stage"] != &"contact":
+			_failures.append("missing committed skill body action: " + String(role))
 		_summary["skill_activations"].append({"role": role, "activated": activated,
-			"energy": sim.character_energy, "flash": sim.role_effects.get("ability_flash", 0.0)})
-		var effects := sim.role_effects
+			"energy": sim.character_energy, "body_action": action["action"], "stage": action["stage"]})
+		var receipts: Array[Dictionary] = []
+		receipts.assign(_main._view._interaction_ink._marks.duplicate(true))
 		var baseline := _checked_snapshot(sim, String(role) + " control baseline")
 		var rng := [sim.rng.state, sim.hazard_rng.state]
 		var shown := root.get_texture().get_image()
-		sim.role_effects = effects.duplicate(true)
-		sim.role_effects["ability_flash"] = 0.0
-		sim.role_effects["anchor_left"] = 0.0
+		for index in range(_main._view._interaction_ink._marks.size() - 1, -1, -1):
+			if _main._view._interaction_ink._marks[index]["family"] == &"skill":
+				_main._view._interaction_ink._marks.remove_at(index)
 		var control := _checked_snapshot(sim, String(role) + " hidden baseline")
 		_main._view.queue_redraw()
 		await process_frame
@@ -244,7 +248,7 @@ func _skill_captures() -> void:
 			_failures.append("skill pixels or HUD clipping failed: " + String(role))
 		changed["role"] = role
 		_summary["pixels"].append(changed)
-		sim.role_effects = effects
+		_main._view._interaction_ink._marks.assign(receipts)
 		_assert_same(sim, baseline, rng, String(role) + " control restored")
 
 

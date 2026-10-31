@@ -7,6 +7,9 @@ const MAX_MARKS := 32
 const MAX_DRAW := 12
 const MAX_RETIRED := 4
 const MAX_TARGETS := 12
+const SKILL_TIME := 0.84
+const RESCUE_TIME := 0.9
+const SKILL_IDS: Array[StringName] = [&"looper", &"solo", &"mirror", &"conductor", &"mender", &"overloader"]
 const PAPER := Color("e5d8b8")
 const INK := Color("292720")
 const FRIEND := Color("4d6045")
@@ -20,8 +23,22 @@ func reset() -> void:
 	_marks.clear()
 
 
+func has_actor_actions() -> bool:
+	for mark: Dictionary in _marks:
+		if mark["family"] in [&"interaction", &"skill"]:
+			return true
+	return false
+
+
+func has_rescues() -> bool:
+	for mark: Dictionary in _marks:
+		if mark["family"] == &"rescue":
+			return true
+	return false
+
+
 func counts() -> Dictionary:
-	var result := {"active": _marks.size(), "support": 0, "world": 0, "retirements": 0}
+	var result := {"active": _marks.size(), "support": 0, "world": 0, "retirements": 0, "rescues": 0}
 	for mark: Dictionary in _marks:
 		if mark["family"] == &"support":
 			result["support"] += 1
@@ -29,6 +46,8 @@ func counts() -> Dictionary:
 			result["retirements"] += 1
 		else:
 			result["world"] += 1
+			if mark["family"] == &"rescue":
+				result["rescues"] += 1
 	return result
 
 
@@ -62,31 +81,54 @@ func consume_world(info: Dictionary) -> void:
 		"target_pos": _position(info.get("target_pos", pos), pos),
 		"from_pos": _position(info.get("from_pos", pos), pos),
 		"subject": StringName(info.get("subject", &"")),
+		"target_id": StringName(info.get("target_id", info.get("subject", &""))),
 		"target_kind": StringName(info.get("target_kind", &"")),
 		"target_uid": int(info.get("target_uid", 0)),
 		"target_type": StringName(info.get("target_type", &"")),
 		"ok": bool(info.get("ok", false)), "reason": StringName(info.get("reason", &"")),
+		"contact_allowed": bool(info.get("contact_allowed", true)),
 		"actor_token": int(info.get("actor_token", -1)),
 		"ability": StringName(info.get("ability", &"")),
+		"selected_uid": int(info.get("selected_uid", 0)),
 		"anchors": _anchors(info.get("anchors", []))}
 	match kind:
 		&"interaction_result":
 			mark["family"] = &"interaction"
 			_replace(&"interaction", int(mark["actor_token"]))
-		&"character_skill":
-			if not bool(mark["ok"]):
+		&"character_skill", &"character_relay":
+			if not bool(mark["ok"]) or mark["ability"] not in SKILL_IDS:
 				return
 			mark["family"] = &"skill"
+			_replace(&"skill", int(mark["actor_token"]))
 		&"companion_signed":
 			# This event is emitted only after the roster/support transaction commits.
 			if not bool(mark["ok"]) or int(info.get("target_uid", 0)) <= 0:
 				return
 			mark["family"] = &"recruit"
 		&"worker_saved":
+			if mark["subject"] == &"" or not bool(info.get("ok", true)) \
+					or not info.get("from_pos") is Vector2 or not info.get("target_pos") is Vector2 \
+					or not (info["from_pos"] as Vector2).is_finite() or not (info["target_pos"] as Vector2).is_finite():
+				return
 			mark["family"] = &"rescue"
 		_:
 			return
-	_push(mark, 0.72)
+	_push(mark, RESCUE_TIME if mark["family"] == &"rescue" else (SKILL_TIME if mark["family"] == &"skill" else 0.72))
+
+
+# EchoWork already reports the committed operation once. Do not consume the
+# machine_operated world event too, or replay input would grow two hands.
+func consume_echo_work(info: Dictionary) -> void:
+	var kind := StringName(info.get("kind", &""))
+	var uid := int(info.get("uid", 0))
+	if uid <= 0 or kind not in [&"press", &"conveyor"]:
+		return
+	consume_world({"kind": &"interaction_result", "actor_token": uid,
+		"pos": info.get("pos", Vector2.INF), "target_pos": info.get("target_pos", Vector2.INF),
+		"target_kind": &"bureau_switch" if info.get("target_id", &"") == BureauEvents.SWITCH_ID else kind,
+		"subject": info.get("target_id", &""), "target_id": info.get("target_id", &""), "ok": bool(info.get("success", false)),
+		"reason": info.get("reason", &"unavailable"),
+		"contact_allowed": info.get("reason", &"unavailable") not in [&"distant", &"muted", &"sealed", &"condition", &"unavailable"]})
 
 
 func consume_retirement(info: EchoRetirementInfo, body_key: StringName) -> void:
@@ -116,13 +158,21 @@ func profiles(view: Rect2, reduced: bool = false, sim: Sim = null) -> Array[Dict
 	for index in range(_marks.size() - 1, -1, -1):
 		var mark: Dictionary = _marks[index]
 		var p := mark.duplicate(true)
+		if sim != null and sim.player.hp <= 0.0 and (p["family"] == &"skill" or (p["family"] == &"interaction" and int(p["actor_token"]) == -1)):
+			continue
 		if p["family"] == &"interaction":
 			var token := int(p.get("actor_token", -1))
+			if sim != null and token > 0 and not _has_echo(sim, token):
+				continue
 			p["pos"] = _target_position({"uid": token, "pos": p["pos"],
 				"target_type": &"player" if token == -1 else &"echo"}, sim)
 		var pos: Vector2 = p["pos"]
 		var target: Vector2 = p.get("target_pos", pos)
 		var visible := visible_area.has_point(pos) or visible_area.has_point(target)
+		if p["family"] == &"rescue":
+			visible = visible or visible_area.has_point(p["from_pos"])
+		for anchor: Dictionary in p.get("anchors", []):
+			visible = visible or visible_area.has_point(anchor["from_pos"]) or visible_area.has_point(anchor["to_pos"])
 		for affected: Dictionary in p.get("targets", []):
 			affected["pos"] = _target_position(affected, sim)
 			affected["visible"] = visible_area.has_point(affected["pos"])
@@ -163,6 +213,120 @@ func support_pose(uid: int, reduced: bool = false) -> Dictionary:
 	return result
 
 
+# This changes only the authored sheet at the real collision position. No body
+# is interpolated between simulation endpoints and no pose can grant protection.
+func actor_pose(token: int, reduced: bool = false) -> Dictionary:
+	for index in range(_marks.size() - 1, -1, -1):
+		var mark: Dictionary = _marks[index]
+		var progress := clampf(float(mark["age"]) / float(mark["duration"]), 0.0, 1.0)
+		if mark["family"] == &"interaction" and int(mark["actor_token"]) == token:
+			if not _can_reach(mark):
+				continue
+			var pose := skill_pose(&"mender", progress, reduced)
+			pose["action"] = &"interaction"
+			if not bool(mark["ok"]):
+				pose["frame"] = 4
+			pose["lean"] = 0.0 if reduced else signf(((mark["target_pos"] as Vector2) - (mark["pos"] as Vector2)).x) * sin(progress * PI) * 0.08
+			pose["scale"] = Vector2.ONE if reduced else Vector2(1.0 + sin(progress * PI) * 0.04, 1.0 - sin(progress * PI) * 0.07)
+			pose["offset"] = Vector2.ZERO
+			return pose
+		if mark["family"] != &"skill":
+			continue
+		var affected := token == -1
+		if token > 0:
+			if mark["ability"] in [&"mirror", &"conductor"]:
+				affected = int(mark["selected_uid"]) == token
+			elif mark["ability"] == &"looper":
+				for anchor: Dictionary in mark["anchors"]:
+					affected = affected or int(anchor["uid"]) == token
+		if affected:
+			var pose := skill_pose(mark["ability"], progress, reduced)
+			var delta := (mark["target_pos"] as Vector2) - (mark["pos"] as Vector2)
+			if token > 0:
+				for anchor: Dictionary in mark["anchors"]:
+					if int(anchor["uid"]) == token:
+						delta = (anchor["to_pos"] as Vector2) - (anchor["from_pos"] as Vector2)
+			if delta.x < 0.0:
+				pose["lean"] = -float(pose["lean"])
+			return pose
+	return {"active": false, "action": &"", "scale": Vector2.ONE,
+		"offset": Vector2.ZERO, "lean": 0.0, "frame": -1, "progress": 1.0, "stage": &"settled"}
+
+
+static func skill_pose(ability: StringName, progress: float, reduced: bool = false) -> Dictionary:
+	var valid := ability in SKILL_IDS and is_finite(progress) and progress >= 0.0 and progress < 1.0
+	var pose := {"active": valid, "action": ability, "scale": Vector2.ONE,
+		"offset": Vector2.ZERO, "lean": 0.0, "frame": -1, "progress": 1.0, "stage": &"settled"}
+	if not valid:
+		return pose
+	var t := clampf(progress, 0.0, 1.0)
+	pose["progress"] = t
+	pose["stage"] = &"prepare" if t < 0.22 else (&"contact" if t < 0.62 else &"release")
+	pose["frame"] = 4 if t < 0.22 else (5 if t < 0.72 else 0)
+	if reduced:
+		pose["stage"] = &"contact"
+		pose["frame"] = 5
+		return pose
+	# A single preparation/contact/release envelope, never a looping shake.
+	var load_weight := smoothstep(0.0, 0.22, t) * (1.0 - smoothstep(0.22, 0.48, t))
+	var stroke := smoothstep(0.18, 0.42, t) * (1.0 - smoothstep(0.6, 1.0, t))
+	match ability:
+		&"looper":
+			pose["scale"] = Vector2(1.0 - stroke * 0.42, 1.0 + load_weight * 0.11)
+			pose["lean"] = -load_weight * 0.14
+		&"solo":
+			pose["scale"] = Vector2(1.0 + stroke * 0.22, 1.0 - stroke * 0.38)
+			pose["lean"] = stroke * 0.21
+		&"mirror":
+			pose["scale"] = Vector2(1.0 - stroke * 0.62, 1.0 + stroke * 0.04)
+			pose["lean"] = load_weight * 0.12 - stroke * 0.12
+		&"conductor":
+			pose["scale"] = Vector2(1.0 + stroke * 0.08, 1.0 + load_weight * 0.12 - stroke * 0.06)
+			pose["lean"] = -load_weight * 0.13 + stroke * 0.09
+		&"mender":
+			pose["scale"] = Vector2(1.0 + load_weight * 0.13, 1.0 - load_weight * 0.24 - stroke * 0.08)
+		&"overloader":
+			pose["scale"] = Vector2(1.0 + stroke * 0.2, 1.0 + load_weight * 0.16 - stroke * 0.28)
+			pose["lean"] = load_weight * 0.1
+	return pose
+
+
+func worker_pose(id: StringName, reduced: bool = false) -> Dictionary:
+	for index in range(_marks.size() - 1, -1, -1):
+		var mark: Dictionary = _marks[index]
+		if mark["family"] == &"rescue" and mark["subject"] == id:
+			return rescue_pose(mark, float(mark["age"]) / float(mark["duration"]), reduced)
+	return {"safe_visible": true, "safe_scale": Vector2.ONE, "departure_alpha": 0.0}
+
+
+static func rescue_pose(info: Dictionary, progress: float, reduced: bool = false) -> Dictionary:
+	var source := _position(info.get("from_pos", Vector2.INF), Vector2.ZERO)
+	var target := _position(info.get("target_pos", Vector2.INF), source)
+	var t := clampf(progress, 0.0, 1.0) if is_finite(progress) else 1.0
+	var departure := minf(1.0, t / 0.62)
+	# The contour travels only its first short step. It is empty charcoal, not
+	# another living worker drawn through walls or across the whole depot.
+	var step := (target - source).limit_length(42.0)
+	var settle := smoothstep(0.58, 1.0, t)
+	return {"source": source, "target": target, "progress": t,
+		"departure_pos": source + step * departure,
+		"departure_alpha": 0.0 if reduced else (1.0 - smoothstep(0.2, 0.62, t)) * 0.45,
+		"safe_visible": reduced or t >= 0.62,
+		"safe_scale": Vector2.ONE if reduced else Vector2(1.0 + (1.0 - settle) * 0.08, 0.78 + settle * 0.22)}
+
+
+static func _has_echo(sim: Sim, uid: int) -> bool:
+	for actor: EchoActor in sim.echoes:
+		if actor != null and actor.take != null and actor.take.uid == uid:
+			return true
+	return false
+
+
+static func _can_reach(info: Dictionary) -> bool:
+	return bool(info.get("contact_allowed", true)) and info.get("target_kind", &"") != &"" and info.get("reason", &"") not in [
+		&"distant", &"no_target", &"muted", &"sealed", &"condition", &"phase"]
+
+
 func draw(ci: CanvasItem, view: Rect2, reduced: bool = false, sim: Sim = null) -> void:
 	if ci == null:
 		return
@@ -171,7 +335,7 @@ func draw(ci: CanvasItem, view: Rect2, reduced: bool = false, sim: Sim = null) -
 			&"support": _draw_support(ci, p)
 			&"retirement": _draw_retirement(ci, p)
 			&"interaction": _draw_interaction(ci, p)
-			&"skill": _draw_link(ci, p)
+			&"skill": _draw_skill(ci, p, sim)
 			&"recruit": _draw_recruit(ci, p)
 			&"rescue": _draw_rescue(ci, p)
 
@@ -349,7 +513,7 @@ static func _draw_interaction(ci: CanvasItem, p: Dictionary) -> void:
 static func interaction_pose(info: Dictionary, progress: float, reduced: bool = false) -> Dictionary:
 	var source: Vector2 = info.get("pos", Vector2.INF)
 	var target: Vector2 = info.get("target_pos", Vector2.INF)
-	if not source.is_finite() or not target.is_finite() or not is_finite(progress):
+	if not _can_reach(info) or not source.is_finite() or not target.is_finite() or not is_finite(progress):
 		return {"visible": false}
 	var t := clampf(progress, 0.0, 1.0)
 	var direction := (target - source).normalized()
@@ -429,24 +593,61 @@ static func _draw_paper(ci: CanvasItem, key: StringName, foot: Vector2, extent: 
 		ci.draw_texture_rect_region(texture, destination, region, Color(tint, alpha))
 
 
-static func _draw_link(ci: CanvasItem, p: Dictionary) -> void:
-	if p["ability"] not in [&"looper", &"mirror"]:
-		return
-	var alpha := float(p["alpha"]) * 0.65
-	var pairs: Array[Dictionary] = [{"from_pos": p["pos"], "to_pos": p["target_pos"]}]
-	pairs.append_array(p["anchors"])
-	for index in mini(4, pairs.size()):
-		var pair: Dictionary = pairs[index]
-		var origin: Vector2 = pair["from_pos"]
-		var target: Vector2 = pair["to_pos"]
-		if origin.distance_squared_to(target) < 1.0:
-			continue
-		for at: Vector2 in [origin, target]:
-			var outline := PackedVector2Array([at + Vector2(-9, -33), at + Vector2(8, -33), at + Vector2(12, 8), at + Vector2(-11, 8), at + Vector2(-9, -33)])
-			ci.draw_polyline(outline, Color(INK, alpha), 1.3, true)
-		for stitch in 3:
-			var at := origin.lerp(target, 0.25 + float(stitch) * 0.25)
-			ci.draw_line(at + Vector2(-2, -2), at + Vector2(2, 2), Color(FRIEND, alpha * 0.7), 1.4, true)
+static func _draw_skill(ci: CanvasItem, p: Dictionary, sim: Sim) -> void:
+	var ability: StringName = p["ability"]
+	var progress := float(p["progress"])
+	var alpha := float(p["alpha"])
+	var reduced := bool(p["reduced"])
+	var body: Vector2 = sim.player.pos if sim != null else p["target_pos"]
+	if ability in [&"looper", &"solo", &"mirror"]:
+		var pairs: Array[Dictionary] = [{"from_pos": p["pos"], "to_pos": p["target_pos"]}]
+		pairs.append_array(p["anchors"])
+		for index in mini(Sim.MAX_ECHO_CAPACITY + 1, pairs.size()):
+			var pair: Dictionary = pairs[index]
+			var origin: Vector2 = pair["from_pos"]
+			var target: Vector2 = pair["to_pos"]
+			if origin.distance_squared_to(target) < 1.0:
+				continue
+			if not reduced and progress < 0.62:
+				var at := origin.lerp(target, smoothstep(0.0, 0.62, progress) * 0.35)
+				var scale := skill_pose(ability, minf(progress, 0.99))["scale"] as Vector2
+				_draw_departure(ci, at, scale, Color(INK, alpha * (1.0 - progress / 0.62) * 0.38))
+			for stitch in (2 if reduced else 3):
+				var at := origin.lerp(target, 0.25 + float(stitch) * 0.25)
+				ci.draw_line(at + Vector2(-2, -2), at + Vector2(2, 2), Color(FRIEND, alpha * 0.5), 1.4, true)
+	elif ability == &"conductor":
+		var stroke := 1.0 if reduced else smoothstep(0.18, 0.55, progress)
+		var shoulder := body + Vector2(10, -8)
+		var hand := shoulder + Vector2(15, -19 + stroke * 28)
+		ci.draw_line(shoulder, hand, Color(PAPER, alpha), 6.0, true)
+		ci.draw_line(shoulder, hand, Color(INK, alpha), 1.8, true)
+		ci.draw_line(hand, hand + Vector2(12, -11), Color(INK, alpha), 2.3, true)
+		for anchor: Dictionary in p["anchors"]:
+			if int(anchor["uid"]) != int(p["selected_uid"]) or (sim != null and not _has_echo(sim, int(anchor["uid"]))):
+				continue
+			var target := _target_position({"uid": anchor["uid"], "target_type": &"echo", "pos": anchor["to_pos"]}, sim)
+			for stitch in 3:
+				var at := body.lerp(target, 0.25 + float(stitch) * 0.25)
+				ci.draw_line(at - Vector2(2, 3), at + Vector2(2, 3), Color(FRIEND, alpha * 0.55), 1.4, true)
+	elif ability == &"mender":
+		var hand := body + Vector2(17, 8)
+		ci.draw_line(body + Vector2(9, -7), hand, Color(INK, alpha), 2.4, true)
+		_patch(ci, hand + Vector2(3, 3), progress, alpha, true)
+	elif ability == &"overloader":
+		var close := 1.0 if reduced else smoothstep(0.15, 0.48, progress)
+		for side: float in [-1.0, 1.0]:
+			var hand := body + Vector2(side * (22 - close * 13), 5)
+			ci.draw_line(body + Vector2(side * 9, -7), hand, Color(INK, alpha), 2.5, true)
+			ci.draw_line(hand + Vector2(-3, 0), hand + Vector2(3, 0), Color(WARN, alpha), 3.0, true)
+
+
+static func _draw_departure(ci: CanvasItem, at: Vector2, scale: Vector2, ink: Color) -> void:
+	var outline := PackedVector2Array([Vector2(-9, -31), Vector2(7, -31), Vector2(11, 7), Vector2(-10, 7), Vector2(-9, -31)])
+	for index in outline.size():
+		outline[index] = outline[index] * scale + at
+	ci.draw_polyline(outline, ink, 1.3, true)
+	ci.draw_line(at + Vector2(-5, 8), at + Vector2(-7, 17), ink, 1.2, true)
+	ci.draw_line(at + Vector2(5, 8), at + Vector2(7, 14), ink, 1.2, true)
 
 
 static func _draw_recruit(ci: CanvasItem, p: Dictionary) -> void:
@@ -472,11 +673,20 @@ static func _draw_recruit(ci: CanvasItem, p: Dictionary) -> void:
 
 
 static func _draw_rescue(ci: CanvasItem, p: Dictionary) -> void:
-	var at: Vector2 = p["pos"]
-	var alpha := float(p["alpha"])
-	# Open shackles and lowered sleeves mark a real saved person. The persistent
-	# living worker remains owned by RecyclingDepot's authoritative world profile.
+	var pose := rescue_pose(p, float(p["progress"]), bool(p["reduced"]))
+	var at: Vector2 = pose["source"]
+	var progress := float(p["progress"])
+	var alpha := float(p["alpha"]) * (1.0 if bool(p["reduced"]) else 1.0 - smoothstep(0.5, 1.0, progress))
+	# Shackles break where the worker was held; the safe registry owns the only
+	# filled living body. This departing empty contour cannot receive damage.
 	for side: float in [-1.0, 1.0]:
 		var wrist := at + Vector2(side * 15, -12)
-		ci.draw_arc(wrist, 4, 0.4, TAU - 0.6, 10, Color(INK, alpha), 1.8, true)
-		ci.draw_line(wrist, wrist + Vector2(side * (4 + float(p["progress"]) * 7), 9), Color(FRIEND, alpha), 2, true)
+		var spread := 3.0 if bool(p["reduced"]) else smoothstep(0.0, 0.3, progress) * 8.0
+		ci.draw_arc(wrist + Vector2(side * spread, spread), 4, 0.4, TAU - 0.6, 10, Color(INK, alpha), 1.8, true)
+		ci.draw_line(wrist + Vector2(side * spread, spread), wrist + Vector2(side * (spread + 5), spread + 6), Color(FRIEND, alpha), 1.6, true)
+	if float(pose["departure_alpha"]) > 0.0:
+		_draw_departure(ci, pose["departure_pos"], Vector2.ONE, Color(INK, float(pose["departure_alpha"])))
+	var target: Vector2 = pose["target"]
+	for stitch in (2 if bool(p["reduced"]) else 4):
+		var point := at.lerp(target, float(stitch + 1) / 5.0)
+		ci.draw_line(point - Vector2(2, 1), point + Vector2(2, 1), Color(FRIEND, alpha * 0.5), 1.4, true)

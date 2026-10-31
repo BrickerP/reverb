@@ -45,7 +45,7 @@ static func step(sim: Sim, delta: float) -> void:
 static func activate(sim: Sim) -> bool:
 	var origin := sim.player.pos
 	var before := {"pos": origin, "energy": sim.character_energy,
-		"cooldown": sim.character_cooldown}
+		"cooldown": sim.character_cooldown, "selected_uid": sim.selected_echo_uid}
 	var anchors: Array[Dictionary] = []
 	for actor in sim.echoes:
 		anchors.append({"uid": actor.take.uid, "from_pos": actor.pos, "to_pos": actor.pos})
@@ -78,11 +78,15 @@ static func _activation_event(sim: Sim, before: Dictionary, anchors: Array[Dicti
 		for actor in sim.echoes:
 			if actor.take.uid == int(row["uid"]):
 				row["to_pos"] = actor.pos
+	var selected_uid := int(before["selected_uid"])
+	if accepted and sim.character_id in [&"mirror", &"conductor"]:
+		selected_uid = int(sim.role_effects.get("anchor_uid", selected_uid))
 	sim.world_event.emit({"kind": &"character_skill", "subject": sim.character_id,
-		"ability": sim.character_id, "stage": sim.wave, "source": -1, "actor_token": -1,
+		"ability": sim.character_id, "selected_uid": selected_uid,
+		"stage": sim.wave, "source": -1, "actor_token": -1,
 		"pos": before["pos"], "target_pos": sim.player.pos, "ok": accepted, "reason": reason,
 		"before": before, "after": {"pos": sim.player.pos, "energy": sim.character_energy,
-			"cooldown": sim.character_cooldown}, "anchors": anchors})
+			"cooldown": sim.character_cooldown, "selected_uid": sim.selected_echo_uid}, "anchors": anchors})
 
 
 static func _rewind(sim: Sim) -> bool:
@@ -167,7 +171,11 @@ static func _relay(sim: Sim) -> void:
 		profile["damage"] = float(profile["damage"]) * 0.3
 		profile["radius"] = 150.0
 		profile["reach"] = 420.0
-		Combat.retirement_skill(sim, actor, profile)
+		if Combat.retirement_skill(sim, actor, profile):
+			sim.world_event.emit({"kind": &"character_relay", "ability": &"conductor",
+				"subject": &"conductor", "selected_uid": actor.take.uid, "actor_token": -1,
+				"pos": sim.player.pos, "target_pos": sim.player.pos, "ok": true,
+				"anchors": [{"uid": actor.take.uid, "from_pos": actor.pos, "to_pos": actor.pos}]})
 		return
 
 
