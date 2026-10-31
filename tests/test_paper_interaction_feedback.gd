@@ -249,3 +249,75 @@ func test_secondary_repair_target_keeps_event_visible_when_source_and_first_targ
 	c.eq(shown.size(), 1, "a visible secondary repaired body retains the event")
 	c.ok(not bool(shown[0]["targets"][0]["visible"]), "offscreen repaired body is not drawn")
 	c.ok(bool(shown[0]["targets"][1]["visible"]), "the secondary in-camera patch reaches drawing")
+
+
+func test_machine_hand_and_service_grip_share_real_contact_at_all_legal_reaches(c: Check) -> void:
+	var source := Vector2(1000, 700)
+	var directions: Array[Vector2] = [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN,
+		Vector2(1, 1).normalized(), Vector2(-1, 1).normalized(), Vector2(1, -1).normalized(), Vector2(-1, -1).normalized()]
+	for distance: float in [80.0, 112.0]:
+		for direction: Vector2 in directions:
+			var target := source + direction * distance
+			var event := {"pos": source, "target_pos": target, "target_kind": &"press", "ok": true}
+			for reduced: bool in [false, true]:
+				var pose := InteractionInk.interaction_pose(event, 0.5, reduced)
+				c.eq(pose["pivot"], target, "control pivot remains on the real service point")
+				c.ok((pose["hand"] as Vector2).distance_to(pose["grip"]) <= 1.0,
+					"paper hand actually grasps the same handle at every80/112px direction")
+				c.ok(bool(pose["contact"]), "the working stroke is inside the actual grasp interval")
+				c.near(float(pose["working_travel"]), 12.0, 0.001, "successful operation completes its short downward stroke")
+				c.ok((pose["hand"] as Vector2).distance_to(source) < 52.0,
+					"the long control linkage reaches the body without stretching an arm across the full interaction range")
+				for point: StringName in [&"shoulder", &"elbow", &"hand", &"pivot", &"grip"]:
+					c.ok((pose[point] as Vector2).is_finite(), "folded interaction geometry is finite")
+
+
+func test_failed_control_jams_without_a_working_stroke_and_repair_avoids_the_face(c: Check) -> void:
+	var source := Vector2(600, 400)
+	var event := {"pos": source, "target_pos": source + Vector2(112, 0), "target_kind": &"press", "ok": false}
+	for reduced: bool in [false, true]:
+		var failed := InteractionInk.interaction_pose(event, 0.5, reduced)
+		c.ok(not bool(failed["ok"]), "failed operation keeps the rejection branch")
+		c.near(float(failed["working_travel"]), -2.0, 0.001, "failed control only makes a short reverse jam")
+		c.ok((failed["hand"] as Vector2).distance_to(failed["grip"]) <= 1.0,
+			"blocked hand still contacts its real grip instead of stopping in empty air")
+		c.ok((failed["grip"] as Vector2).y <= (failed["resting_grip"] as Vector2).y,
+			"failure cannot enter a positive working stroke")
+		var repair := InteractionInk.interaction_pose({"pos": source, "target_pos": source,
+			"target_kind": &"repair", "ok": true}, 0.5, reduced)
+		c.eq(repair["pivot"], source, "coincident service point remains authoritative")
+		c.ok((repair["shoulder"] as Vector2).y >= source.y - 6.0, "repair sleeve starts on the coat rather than the face")
+		c.ok((repair["grip"] as Vector2).y > source.y, "held repair paper stays beside the low hand")
+		c.ok((repair["hand"] as Vector2).distance_to(repair["grip"]) <= 1.0, "repair hand and tool share contact")
+	var settled := InteractionInk.interaction_pose(event, 1.0)
+	c.eq(settled["working_travel"], 0.0, "normal control returns from its brief jam")
+	c.ok(not bool(settled["contact"]), "normal hand releases the handle before receipt expiry")
+
+
+func test_interaction_arm_follows_the_live_body_while_the_pivot_stays_on_the_machine(c: Check) -> void:
+	var sim := Sim.new(507)
+	sim.player.pos = Vector2(600, 400)
+	var captured := sim.player.pos
+	var machine := captured + Vector2(112, 0)
+	var ink := InteractionInk.new()
+	ink.consume_world({"kind": &"interaction_result", "actor_token": -1, "pos": captured,
+		"target_pos": machine, "target_kind": &"press", "ok": true})
+	sim.player.pos += Vector2(28, 12)
+	var rng := sim.rng.state
+	var shown := ink.profiles(VIEW, false, sim)[0]
+	c.eq(shown["pos"], sim.player.pos, "the reaching body does not remain at its old click position")
+	var pose := InteractionInk.interaction_pose(shown, 0.5)
+	c.ok((pose["shoulder"] as Vector2).distance_to(sim.player.pos) < 14.0, "shoulder follows the current collision body")
+	c.eq(pose["pivot"], machine, "moving during interaction cannot drag the machine with the player")
+	c.ok((pose["hand"] as Vector2).distance_to(pose["grip"]) <= 1.0, "moving grip and paper hand still share exact contact")
+	c.eq(ink.profiles(VIEW)[0]["pos"], captured, "pure fixture retains its detached original source value")
+	c.eq(sim.rng.state, rng, "following a live body cannot consume gameplay RNG")
+	var take := EchoTake.new()
+	take.samples = PackedVector2Array([captured])
+	sim.bank.add(take)
+	var actor := EchoActor.new(take, 0)
+	sim.echoes.append(actor)
+	ink.consume_world({"kind": &"interaction_result", "actor_token": take.uid, "pos": captured,
+		"target_pos": machine, "target_kind": &"press", "ok": true})
+	actor.pos = captured + Vector2(-20, 30)
+	c.eq(ink.profiles(VIEW, false, sim).back()["pos"], actor.pos, "a copy arm follows its UID rather than the original body")

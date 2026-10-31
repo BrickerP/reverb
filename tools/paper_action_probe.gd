@@ -154,7 +154,8 @@ func _run() -> void:
 			break
 	var machine: Dictionary = await _run_case("machine", "machine", 120)
 	if machine.is_empty() or not _require(int(_case_events.get("world.interaction_result", 0)) > 0
-			and bool(_proofs.get("world_view", false)) and int(_case_events.get("damage", 0)) > 0,
+			and bool(_proofs.get("world_view", false)) and bool(_proofs.get("machine_grip", false))
+			and int(_case_events.get("damage", 0)) > 0,
 			"real machine switch, warning and impact reached view and model"):
 		return
 	(_summary["cases"] as Array).append(machine)
@@ -178,7 +179,10 @@ func _run() -> void:
 	(_summary["cases"] as Array).append(shield)
 	_begin_case(&"pistol")
 	_main.sim.player.add_weapon(Content.weapon(&"pistol"))
-	_main.sim.player.cooldowns = [0.0, 0.35]
+	# Keep the typed Array[float] created by PlayerState.add_weapon(). A literal
+	# assigned through dynamic _main.sim has no typed assignment context.
+	_main.sim.player.cooldowns[0] = 0.0
+	_main.sim.player.cooldowns[1] = 0.35
 	_add_target(_main.sim.player.pos + Vector2(100.0, 0.0))
 	var duplicates: Dictionary = await _run_case("duplicate_slots", "duplicates", CASE_FRAMES)
 	if duplicates.is_empty() or not _require(bool(_proofs.get("first_slot_only", false))
@@ -202,7 +206,6 @@ func _run() -> void:
 		{"first_frame": 60, "last_frame": 119, "direction": [-0.35, 0.0]},
 		{"first_frame": 120, "last_frame": 164, "direction": [0.0, 0.0]}]
 	(_summary["cases"] as Array).append(gait)
-	_summary["success"] = true
 	var commit := OS.get_environment("REVERB_BUILD_COMMIT").strip_edges()
 	if commit.is_empty():
 		commit = str(ProjectSettings.get_setting("application/config/build_commit", "")).strip_edges()
@@ -221,11 +224,19 @@ func _run() -> void:
 		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture; repair station separated at player+(100,-50), real spawn@8/damage@18/useful repair/lethal damage@36/remains@44/machine repair@48",
 		"scope": "presentation evidence; not human playtesting, balance or a normal campaign completion",
 		"movie": "continuous CLI --write-movie recording; no skipped or slowed simulation steps"}
-	if not _write_summary():
-		return
 	_main.audio.stop_all()
+	_main._detach_presentation_session()
+	if not _require(_main.sim == null and _main._view.sim == null and _main.hud.sim == null,
+			"successful native probe detaches simulation and presentation before cleanup"):
+		return
 	_main.queue_free()
 	_main = null
+	await process_frame
+	await process_frame
+	_summary["teardown"] = {"simulation_detached": true, "main_freed": true, "native_frames_waited": 2}
+	_summary["success"] = true
+	if not _write_summary():
+		return
 	print("paper action probe: OK (%s, %d cases)" % [_variant, (_summary["cases"] as Array).size()])
 	quit()
 
@@ -533,6 +544,19 @@ func _trigger(mode: String, frame: int) -> bool:
 
 func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool:
 	var labels: Array[String] = []
+	if mode == "machine" and frame == 24:
+		var sim: Sim = _main.sim
+		var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+		for mark: Dictionary in _main._view._interaction_ink.profiles(camera, _variant == "reduced", sim):
+			if mark["family"] != &"interaction" or not bool(mark["ok"]):
+				continue
+			var pose := InteractionInk.interaction_pose(mark, float(mark["progress"]), _variant == "reduced")
+			_proofs["machine_grip"] = bool(pose["contact"]) \
+				and (pose["hand"] as Vector2).distance_to(pose["grip"]) <= 1.0 \
+				and float(pose["working_travel"]) > 0.0
+		if not _require(bool(_proofs.get("machine_grip", false)), "real machine grip joins hand to control during the native contact beat"):
+			return false
+		labels.append("grip")
 	if mode == "shield":
 		var shield_frames := {10: "full_block", 14: "block_followthrough", 48: "partial_hp", 56: "hurt_followthrough"}
 		if shield_frames.has(frame):

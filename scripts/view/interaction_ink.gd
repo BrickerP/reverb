@@ -116,6 +116,10 @@ func profiles(view: Rect2, reduced: bool = false, sim: Sim = null) -> Array[Dict
 	for index in range(_marks.size() - 1, -1, -1):
 		var mark: Dictionary = _marks[index]
 		var p := mark.duplicate(true)
+		if p["family"] == &"interaction":
+			var token := int(p.get("actor_token", -1))
+			p["pos"] = _target_position({"uid": token, "pos": p["pos"],
+				"target_type": &"player" if token == -1 else &"echo"}, sim)
 		var pos: Vector2 = p["pos"]
 		var target: Vector2 = p.get("target_pos", pos)
 		var visible := visible_area.has_point(pos) or visible_area.has_point(target)
@@ -294,33 +298,84 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 
 
 static func _draw_interaction(ci: CanvasItem, p: Dictionary) -> void:
-	var source: Vector2 = p["pos"]
-	var target: Vector2 = p["target_pos"]
 	var progress := float(p["progress"])
 	var alpha := float(p["alpha"])
-	var success := bool(p["ok"])
+	var pose := interaction_pose(p, progress, bool(p["reduced"]))
+	if not bool(pose["visible"]):
+		return
+	var origin: Vector2 = pose["source"]
+	var shoulder: Vector2 = (pose["shoulder"] as Vector2) - origin
+	var elbow: Vector2 = (pose["elbow"] as Vector2) - origin
+	var hand: Vector2 = (pose["hand"] as Vector2) - origin
+	var grip: Vector2 = (pose["grip"] as Vector2) - origin
+	var pivot: Vector2 = (pose["pivot"] as Vector2) - origin
+	ci.draw_set_transform(origin)
+	if p["target_kind"] in [&"press", &"conveyor", &"recycler", &"bureau_switch"]:
+		# A narrow folded control rod belongs to the real service pad. Its end is
+		# the same grip held by the paper hand, even at the legal112px reach.
+		var rod_direction := (grip - pivot).normalized()
+		var rod_normal := Vector2(-rod_direction.y, rod_direction.x)
+		var hinge := pivot.lerp(grip, 0.52) + rod_normal * 3.0
+		var rod := PackedVector2Array([pivot, hinge, grip])
+		ci.draw_polyline(rod, Color(PAPER, alpha), 7.0, true)
+		ci.draw_polyline(rod, Color(INK, alpha), 2.4, true)
+		ci.draw_line(hinge - rod_normal * 4, hinge + rod_normal * 4, Color(INK, alpha), 1.2, true)
+		ci.draw_circle(pivot, 4.0, Color(PAPER, alpha), true, -1, true)
+		ci.draw_arc(pivot, 4.0, 0, TAU, 12, Color(INK, alpha), 1.8, true)
+		ci.draw_line(grip - rod_normal * 5, grip + rod_normal * 5, Color(INK, alpha), 3.2, true)
+	# A small coat-paper strip gives the arm a silhouette, rather than a long
+	# explanatory arrow. Local vertices keep tiny folds safe at world offsets.
+	var reach := (hand - shoulder).normalized()
+	var normal := Vector2(-reach.y, reach.x) * 2.5
+	var sleeve := PackedVector2Array([shoulder + normal, elbow + normal, hand + normal * 0.65,
+		hand - normal * 0.65, elbow - normal, shoulder - normal])
+	ci.draw_colored_polygon(sleeve, Color(PAPER, alpha))
+	sleeve.append(sleeve[0])
+	ci.draw_polyline(sleeve, Color(INK, alpha), 1.6, true)
+	ci.draw_line(elbow - normal, elbow + normal, Color(INK, alpha), 1.0, true)
+	ci.draw_circle(hand, 3.6, Color(PAPER, alpha), true, -1, true)
+	ci.draw_arc(hand, 3.6, 0, TAU, 12, Color(INK, alpha), 1.5, true)
+	ci.draw_line(hand + Vector2(0, -2), hand + Vector2(3, 0), Color(INK, alpha), 1.2, true)
+	if not bool(pose["ok"]):
+		var at := grip + Vector2(6, -5)
+		ci.draw_multiline(PackedVector2Array([at + Vector2(-3, -3), at + Vector2(3, 3), at + Vector2(-3, 3), at + Vector2(3, -3)]), Color(WARN, alpha), 1.5, true)
+	ci.draw_set_transform(Vector2.ZERO)
+	if p["target_kind"] == &"repair" and bool(pose["ok"]):
+		# Coincident repair pads hold the patch beside the reaching hand. The
+		# persistent repaired-machine patch is drawn by RecyclingDepot itself.
+		_patch(ci, pose["grip"] + Vector2(5, 5), progress, alpha, true)
+
+
+static func interaction_pose(info: Dictionary, progress: float, reduced: bool = false) -> Dictionary:
+	var source: Vector2 = info.get("pos", Vector2.INF)
+	var target: Vector2 = info.get("target_pos", Vector2.INF)
+	if not source.is_finite() or not target.is_finite() or not is_finite(progress):
+		return {"visible": false}
+	var t := clampf(progress, 0.0, 1.0)
 	var direction := (target - source).normalized()
 	if direction == Vector2.ZERO:
 		direction = Vector2.RIGHT
-	var contact := 1.0 if bool(p["reduced"]) else sin(minf(1.0, progress * 1.4) * PI)
-	var shoulder := source + Vector2(direction.x * 8, -14)
-	var hand := shoulder + direction * (10.0 + contact * (22.0 if success else 12.0))
-	var elbow := shoulder.lerp(hand, 0.5) + Vector2(0, 6)
-	ci.draw_polyline(PackedVector2Array([shoulder, elbow, hand]), Color(INK, alpha), 2.5, true)
-	ci.draw_circle(hand, 3, Color(PAPER, alpha))
-	ci.draw_arc(hand, 3, 0, TAU, 10, Color(INK, alpha), 1.2, true)
-	if p["target_kind"] == &"repair" and success:
-		_patch(ci, target + Vector2(0, -17), progress, alpha)
-	elif p["target_kind"] in [&"press", &"conveyor", &"recycler", &"bureau_switch"]:
-		var pivot := target + Vector2(9, -8)
-		var travel := contact * (10.0 if success else -4.0)
-		var knob := pivot + Vector2(9, -14 + travel)
-		ci.draw_line(pivot, knob, Color(PAPER, alpha), 5, true)
-		ci.draw_line(pivot, knob, Color(INK, alpha), 2, true)
-		ci.draw_circle(knob, 3, Color(INK, alpha))
-	if not success:
-		var at := hand + Vector2(5, -4)
-		ci.draw_multiline(PackedVector2Array([at + Vector2(-3, -3), at + Vector2(3, 3), at + Vector2(-3, 3), at + Vector2(3, -3)]), Color(WARN, alpha), 1.5, true)
+	var shoulder := source + Vector2(9.0 if absf(direction.x) < 0.15 else direction.x * 9.0, -6.0)
+	var resting_grip := shoulder + direction * 24.0 + Vector2(0, 5)
+	if source.distance_squared_to(target) < 28.0 * 28.0:
+		resting_grip = target + Vector2(20, 10)
+	var grasp := minf(1.0, t / 0.18)
+	if t > 0.82:
+		grasp = maxf(0.0, (1.0 - t) / 0.18)
+	var pressure := smoothstep(0.16, 0.43, t) * (1.0 - smoothstep(0.57, 0.82, t))
+	if reduced:
+		grasp = 1.0
+		pressure = 1.0
+	var accepted := bool(info.get("ok", false))
+	var travel := pressure * (12.0 if accepted else -2.0)
+	var grip := resting_grip + Vector2(0, travel)
+	var rest_hand := shoulder + direction * 8.0 + Vector2(0, 5)
+	var hand := rest_hand.lerp(grip, grasp)
+	var reach := (hand - shoulder).normalized()
+	var elbow := shoulder.lerp(hand, 0.5) + Vector2(-reach.y, reach.x) * 5.0
+	return {"visible": true, "source": source, "target": target, "shoulder": shoulder, "elbow": elbow,
+		"hand": hand, "pivot": target, "grip": grip, "resting_grip": resting_grip,
+		"contact": grasp >= 0.999, "working_travel": travel, "ok": accepted}
 
 
 static func _patch(ci: CanvasItem, pos: Vector2, progress: float, alpha: float, recipient: bool = false) -> void:
