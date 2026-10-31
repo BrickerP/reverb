@@ -85,22 +85,50 @@ func test_pause_freezes_art_clocks_and_keeps_simulation_untouched(c: Check) -> v
 	view.free()
 
 
-func test_retirement_has_bounded_identity_fragments_and_expires(c: Check) -> void:
+func test_retirement_keeps_one_detached_body_receipt_and_expires(c: Check) -> void:
 	var sim := Sim.new(42)
-	sim.start_run()
+	sim.player.pos = Vector2(300, 220)
+	var take := EchoTake.new()
+	take.samples = PackedVector2Array([sim.player.pos, sim.player.pos + Vector2(30, 0)])
+	take.weapons.append(Content.weapon(&"pistol"))
+	take.levels.append(0)
+	take.stats = sim.player.stats.copy()
+	take.condition = 37.0
+	sim.bank.add(take)
+	sim.start_wave(2)
+	sim._plan.clear()
 	var view := ArenaView.new()
 	view.bind(sim)
-	var info := EchoRetirementInfo.new()
-	info.uid = 7
-	info.actor_token = 7
-	info.kind = &"pin"
-	info.pos = sim.player.pos
-	view.react_retirement(info)
+	sim.echo_retired.connect(view.react_retirement)
+	var uid := take.uid
+	var tint := take.tint()
+	var sparks_before := view._sparks.size()
+	c.ok(sim.retire_selected_echo(), "the real selected copy pays for its active retirement")
+	c.eq(sim.echoes.size(), 0, "the deployed body is removed before its exit drawing")
+	c.eq(sim.bank.takes.size(), 0, "the recording is actually consumed")
 	c.eq(view.event_last_data()["skill"], &"pin", "retirement carries the actual weapon-derived skill")
-	c.eq(view.event_last_data()["actor_token"], 7, "retirement keeps stable take identity")
-	c.eq(view._sparks.size(), 9, "active retirement has a bounded paper fragment budget")
+	c.eq(view.event_last_data()["actor_token"], uid, "retirement keeps stable take identity")
+	var receipts := view._interaction_ink.profiles(WorldArena.BOUNDS, false, sim)
+	c.eq(receipts.size(), 1, "one real consumed copy produces one short body receipt")
+	var receipt: Dictionary = receipts[0]
+	c.eq(receipt["uid"], uid, "removed take retains its real UID")
+	c.eq(receipt["weapon_id"], &"pistol", "exit retains the actual dominant weapon")
+	c.eq(receipt["condition"], 37.0, "active retirement does not reset remaining condition")
+	c.eq(receipt["tint"], tint, "exit preserves the consumed copy's print tint")
+	c.eq(receipt["body_key"], PresentationAssets.character_key(view.character_id), "exit uses the role's real front body atlas")
+	c.ok(PresentationAssets.frame_region(receipt["body_key"], 0).has_area(), "receipt body key selects real authored pixels")
+	c.ok(not bool(receipt["exhausted"]), "active skill is distinct from quiet wear-out")
+	c.eq(view._sparks.size(), sparks_before, "retirement does not add a generic fragment explosion")
+	take.condition = 99.0
+	c.eq(view._interaction_ink.profiles(WorldArena.BOUNDS)[0]["condition"], 37.0,
+		"detached receipt cannot follow later mutation of the removed take")
+	var rng := sim.rng.state
+	var wave_time := sim.wave_time
 	view._process(1.0)
-	c.eq(view._sparks.size(), 0, "retirement fragments expire")
+	c.eq(view._interaction_ink.counts()["retirements"], 0, "consumed copy's body drawing expires")
+	c.eq(view._sparks.size(), 0, "old decorative sparks also expire")
+	c.eq(sim.rng.state, rng, "exit animation does not consume gameplay randomness")
+	c.eq(sim.wave_time, wave_time, "exit animation does not advance combat")
 	view.free()
 
 
@@ -171,22 +199,55 @@ func test_retirement_preserves_identity_tint_and_exhaustion_is_quiet(c: Check) -
 	var sim := Sim.new(91)
 	sim.start_run()
 	var source_color := Color(0.2, 0.95, 1.0)
-	for exhausted in [false, true]:
-		for reduced in [false, true]:
-			var view := ArenaView.new()
-			view.bind(sim)
-			view.set_reduced_effects(reduced)
-			var info := EchoRetirementInfo.new()
-			info.pos = sim.player.pos
-			info.tint = source_color
-			info.exhausted = exhausted
-			view.react_retirement(info)
-			c.eq(view.event_last_data()["source_tint"], source_color, "retirement retains its original copy color")
-			c.eq(info.tint, source_color, "presentation leaves the authoritative event unchanged")
-			c.eq(view._sparks.size(), 3 if exhausted or reduced else 9, "exhaustion and Reduced use quiet fragment budgets")
-			for spark in view._sparks:
-				c.ok(spark.color in [ArenaPainter.PAPER, source_color], "paper fragments preserve copy identity")
-			view.free()
+	var weapons := {&"pin": &"pistol", &"stamp": &"stamp", &"cut": &"shotgun",
+		&"ink": &"ink_bottle", &"return": &"rubber_band", &"arc": &"orb"}
+	for exhausted: bool in [false, true]:
+		for reduced: bool in [false, true]:
+			var shapes: Array[Dictionary] = []
+			var lines: Array[String] = []
+			for kind: StringName in weapons:
+				var view := ArenaView.new()
+				view.bind(sim)
+				view.set_reduced_effects(reduced)
+				var info := EchoRetirementInfo.new()
+				info.uid = 17
+				info.actor_token = 17
+				info.kind = kind
+				info.weapon_id = weapons[kind]
+				info.condition = 0.0 if exhausted else 37.0
+				info.pos = sim.player.pos
+				info.tint = source_color
+				info.exhausted = exhausted
+				info.reason = EchoRetirementInfo.EXHAUSTED if exhausted else EchoRetirementInfo.ACTIVE
+				view.react_retirement(info)
+				view._process(0.16)
+				var receipts := view._interaction_ink.profiles(WorldArena.BOUNDS, reduced, sim)
+				c.eq(receipts.size(), 1, "every valid exit retains one finite identity receipt")
+				var receipt: Dictionary = receipts[0]
+				c.eq(view.event_last_data()["source_tint"], source_color, "retirement retains its original copy color")
+				c.eq(receipt["tint"], source_color, "draw receipt preserves its source print color")
+				c.eq(receipt["uid"], 17, "draw receipt has a legal stable UID")
+				c.eq(receipt["weapon_id"], weapons[kind], "draw receipt keeps the actual style weapon")
+				c.eq(receipt["condition"], info.condition, "exhaustion and active exits preserve actual remaining wear")
+				c.eq(receipt["exhausted"], exhausted, "quiet exhaustion explicitly suppresses active skill-line drawing")
+				c.eq(info.tint, source_color, "presentation leaves the authoritative event unchanged")
+				c.eq(view._sparks.size(), 0, "active, exhausted and Reduced exits never use a universal spark blast")
+				var progress := float(receipt["progress"])
+				c.eq(progress == 1.0, reduced, "Reduced preserves the settled result instead of decorative travel")
+				var pose := EchoInk.retirement_pose(kind, progress, exhausted)
+				if exhausted:
+					c.eq(pose, EchoInk.retirement_pose(&"pin", progress, true), "wear-out remains the same quiet fold for every weapon")
+				else:
+					c.ok(not shapes.has(pose), "%s has a physically distinct active fold" % kind)
+					shapes.append(pose)
+					var mark := EchoInk.retirement_lines(kind, info.pos, progress)
+					c.ok(not mark.is_empty() and mark.size() <= 3, "%s has bounded equipment-specific contact ink" % kind)
+					c.ok(not lines.has(var_to_str(mark)), "%s leaves a distinct monochrome skill mark" % kind)
+					lines.append(var_to_str(mark))
+					c.ok(pose != EchoInk.retirement_pose(kind, progress, true), "active retirement cannot look like idle exhaustion")
+				view._process(1.0)
+				c.eq(view._interaction_ink.counts()["retirements"], 0, "all exit styles clear their detached body receipt")
+				view.free()
 
 
 func test_fading_hit_star_skips_the_exact_large_coordinate_triangulation_failure(c: Check) -> void:

@@ -33,6 +33,10 @@ var _samples: Dictionary = {}
 var _shot_rows: Array[Dictionary] = []
 var _support_uid := 0
 var _retire_uid := 0
+var _repair_pad := Vector2.INF
+var _repair_body := Vector2.INF
+var _current_mode := ""
+var _gait_rows: Array[Dictionary] = []
 var _isolated: Array[String] = []
 var _summary: Dictionary = {"source": "scripted fixture", "cases": [], "screenshots": {},
 	"read_only_checks": [], "success": false}
@@ -65,7 +69,7 @@ func _initialize() -> void:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
-	OS.set_environment("REVERB_LANG", "en")
+	OS.set_environment("REVERB_LANG", "zh" if _variant == "compact" else "en")
 	root.size = _canvas
 	root.content_scale_size = _canvas
 	DisplayServer.window_set_size(_canvas)
@@ -158,6 +162,22 @@ func _run() -> void:
 		return
 	duplicates["shot_slots"] = _shot_rows.duplicate(true)
 	(_summary["cases"] as Array).append(duplicates)
+	_begin_case(&"smg")
+	_add_target(_main.sim.player.pos + Vector2(170.0, 0.0))
+	var gait: Dictionary = await _run_case("gait", "gait", 165)
+	if gait.is_empty() or not _require(_gait_rows.size() == 4
+			and bool(_gait_rows[0]["moving"]) and bool(_gait_rows[1]["moving"])
+			and float(_gait_rows[0]["x"]) > float(_gait_rows[1]["x"])
+			and not bool(_gait_rows[2]["moving"]) and not bool(_gait_rows[3]["moving"])
+			and is_equal_approx(float(_gait_rows[2]["gait_phase"]), float(_gait_rows[3]["gait_phase"]))
+			and bool(_proofs.get("gait_shot_in_motion", false)),
+			"real displacement drives both walking directions, shots preserve gait and stopped feet settle"):
+		return
+	gait["movement_samples"] = _gait_rows.duplicate(true)
+	gait["movement_recipe"] = [{"first_frame": 0, "last_frame": 59, "direction": [0.35, 0.0]},
+		{"first_frame": 60, "last_frame": 119, "direction": [-0.35, 0.0]},
+		{"first_frame": 120, "last_frame": 164, "direction": [0.0, 0.0]}]
+	(_summary["cases"] as Array).append(gait)
 	_summary["success"] = true
 	var commit := OS.get_environment("REVERB_BUILD_COMMIT").strip_edges()
 	if commit.is_empty():
@@ -166,6 +186,7 @@ func _run() -> void:
 		return
 	_summary["commit"] = commit
 	_summary["variant"] = _variant
+	_summary["language"] = Loc.lang
 	_summary["canvas"] = [_canvas.x, _canvas.y]
 	_summary["isolated_data_paths"] = _isolated.duplicate()
 	_summary["environment"] = {"godot": Engine.get_version_info(), "display": DisplayServer.get_name(),
@@ -215,6 +236,10 @@ func _begin_case(weapon_id: StringName) -> void:
 	_second_slot = -1
 	_support_uid = 0
 	_retire_uid = 0
+	_repair_pad = Vector2.INF
+	_repair_body = Vector2.INF
+	_current_mode = ""
+	_gait_rows.clear()
 	_case_events.clear()
 	_proofs.clear()
 	_peaks.clear()
@@ -274,6 +299,7 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 	if _failed:
 		return {}
 	var sim: Sim = _main.sim
+	_current_mode = mode
 	var audio_before := _audio_total()
 	var movie_start := _native_frames
 	var first_rng := str(sim.rng.state)
@@ -284,13 +310,20 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		_case_frame = frame
 		if not _trigger(mode, frame):
 			return {}
-		sim.step(DT, Vector2.ZERO)
+		var movement := Vector2.ZERO
+		if mode == "gait":
+			movement = Vector2.RIGHT * 0.35 if frame < 60 else (Vector2.LEFT * 0.35 if frame < 120 else Vector2.ZERO)
+		sim.step(DT, movement)
 		var read_only_before: Dictionary = {}
 		var rng_before := sim.rng.state
 		var hazard_before := sim.hazard_rng.state
 		if frame == 30:
 			read_only_before = RunSnapshot.capture(sim)
 			if not _require(not read_only_before.is_empty(), "%s snapshot captures actual fixture state" % name):
+				return {}
+			var restored := RunSnapshot.restore(read_only_before)
+			if not _require(restored != null and RunSnapshot.capture(restored) == read_only_before,
+					"%s fixture is valid under the strict saved-state schema" % name):
 				return {}
 			# Zero extra presentation time: normal _process + actual draw still run
 			# below, and the continuous movie never pauses to manufacture a pose.
@@ -302,6 +335,12 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 		await RenderingServer.frame_post_draw
 		if _failed:
 			return {}
+		if mode == "repair" and frame == 48:
+			var camera: Rect2 = _main._view.camera_profile()["world_rect"]
+			_proofs["repaired_machine_visible"] = camera.has_point(_repair_pad) and camera.has_point(_repair_body)
+			if not _require(bool(_proofs["repaired_machine_visible"]),
+					"camera follows the real repair action and contains the machine body and service pad"):
+				return {}
 		if frame == 30:
 			if not _require(sim.rng.state == rng_before and sim.hazard_rng.state == hazard_before
 					and RunSnapshot.capture(sim) == read_only_before,
@@ -309,7 +348,8 @@ func _run_case(name: String, mode: String, frames: int) -> Dictionary:
 				return {}
 			(_summary["read_only_checks"] as Array).append({"case": name, "frame": frame,
 				"manual_view_delta": 0.0, "native_process_and_draw": true,
-				"full_snapshot_unchanged": true, "rng_unchanged": true, "hazard_rng_unchanged": true})
+				"strict_snapshot_roundtrip": true, "full_snapshot_unchanged": true,
+				"rng_unchanged": true, "hazard_rng_unchanged": true})
 		if not _sample_frame(name, mode, frame, frames):
 			return {}
 	if not _require(_samples.size() >= 4, "%s saved at least four real rendered phases" % name):
@@ -344,9 +384,28 @@ func _trigger(mode: String, frame: int) -> bool:
 					sim.player.pos = item["pos"]
 					if not _require(sim.interact(), "real repair interaction stops the faulty machine"):
 						return false
+					_repair_pad = item["pos"]
+					var machine_id := StringName(String(item["id"]).trim_prefix("repair_"))
+					var machines: Array = sim.expedition["world"]["machines"]
+					for index in machines.size():
+						if machines[index]["id"] == machine_id:
+							_repair_body = WorldArena.MACHINES[index].get_center()
+							if not _require(machines[index]["status"] == &"repaired" and machines[index]["stopped"],
+									"repair's canonical machine is actually repaired and stopped"):
+								return false
 					break
 	elif mode == "machine" and frame == 8:
 		if not _require(sim.interact(), "real machine interaction accepted its actual switch"):
+			return false
+		var started := false
+		for item: Dictionary in sim.interactables:
+			if item["id"] == &"machine_0":
+				started = float(item["warning"]) > 0.0
+		for machine: Dictionary in sim.expedition["world"]["machines"]:
+			if machine["id"] == &"machine_0":
+				started = started and not bool(machine["stopped"])
+		_proofs["machine_started"] = started
+		if not _require(started, "one actual E starts the press warning and leaves the machine operating"):
 			return false
 	elif mode == "retirement" and frame == 12:
 		if not _require(sim.select_echo(_retire_uid) and sim.retire_selected_echo(), "real selected copy retires once"):
@@ -371,6 +430,15 @@ func _sample_frame(name: String, mode: String, frame: int, _frames: int) -> bool
 		var shield_frames := {10: "full_block", 14: "block_followthrough", 48: "partial_hp", 56: "hurt_followthrough"}
 		if shield_frames.has(frame):
 			labels.append(shield_frames[frame])
+	elif mode == "gait":
+		var gait_frames := {50: "walk_right", 110: "walk_left", 150: "settled", 164: "settled_end"}
+		if gait_frames.has(frame):
+			labels.append(gait_frames[frame])
+			var motion: Dictionary = _main._view.motion_stats()
+			var pos: Vector2 = _main.sim.player.pos
+			_gait_rows.append({"frame": frame, "x": pos.x, "y": pos.y,
+				"moving": bool(motion["moving"]), "gait_phase": float(motion["gait_phase"]),
+				"motion_amount": float(motion["amount"]), "shots": int(_case_events.get("shot", 0))})
 	else:
 		if _first_action >= 0:
 			if frame == _first_action:
@@ -411,6 +479,8 @@ func _on_shot(info: ShotInfo) -> void:
 	if _case_frame >= 0 and _first_action < 0:
 		_first_action = _case_frame
 	var view: ArenaView = _main._view
+	if _current_mode == "gait" and bool(view.motion_stats()["moving"]):
+		_proofs["gait_shot_in_motion"] = true
 	_proofs["shot_view"] = bool(_proofs.get("shot_view", false)) or int(view.feedback_counts()["muzzles"]) > 0
 	_shot_rows.append({"frame": _case_frame, "slot": info.weapon_slot,
 		"actor_token": info.actor_token, "weapon_id": String(info.weapon_id)})

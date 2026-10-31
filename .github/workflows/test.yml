@@ -137,6 +137,8 @@ jobs:
           git fetch --depth=1 origin tag v0.17.0
           baseline="$RUNNER_TEMP/paper-feedback-baseline"
           mkdir -p "$baseline"
+          mkdir -p "$REVERB_STRESS_OUTPUT"
+          git rev-parse 'v0.17.0^{commit}' > "$REVERB_STRESS_OUTPUT/source_commit.txt"
           git archive v0.17.0 | tar -x -C "$baseline"
           cd "$baseline"
           ./tools/checked.sh --headless --path . --import
