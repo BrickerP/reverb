@@ -1,6 +1,6 @@
 # Battle direction
 
-The 0.17 battlefield connects paper-puppet acting to real expedition rules.
+The 0.18 battlefield connects paper-puppet acting to real expedition rules.
 Warnings explain where damage will occur, support bodies communicate ownership
 and mortality, and role/Echo effects preserve their causal source. Decoration
 must never move a hit, hide a mission, or imply a reward the model did not grant.

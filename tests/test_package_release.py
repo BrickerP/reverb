@@ -46,6 +46,7 @@ class PackageReleaseTest(unittest.TestCase):
             info = (out / "BUILD_INFO.txt").read_text()
             self.assertIn("version=0.10.0-rc.1", info)
             self.assertIn("commit=abc123", info)
+            self.assertIn("release_status=public-release", info)
 
     def test_refuses_missing_artifacts_and_existing_output(self):
         with tempfile.TemporaryDirectory() as directory:

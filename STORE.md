@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.17 源码**，不是尚未公布的下一次公开发布页。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.18.0**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
@@ -24,7 +24,7 @@ Record your route and fight beside your past. Take work orders, assemble weapons
 
 - **35 把武器与真实取舍**：18 把基础武器按六个家族发展为各两条终极分支，共 12 把终极武器，另有 5 把支援武器。四级火力倍率为 1×、1.8×、3.2×、5.5×；同 ID、同等级武器可以装配升级并空出槽位。高等级配对可能需要跨场存钱，现金改装不需要供体，但刻意更贵。终极分支保留满级与实际投入账本。
 - **六名角色，六种主动技**：手动拾取为能量充能；倒回、纸冲刺、位置交换、接力电弧、修补站与耐久爆发都改变实际战斗。
-- **有限而可受伤的支援**：纸猎犬、哨戒炮、修补站、纸树与诱饵会被敌人摧毁并自然过期；还可在 8 秒谈判窗口内招募一名 Boss 同伴。
+- **有限而可受伤的支援**：纸猎犬、哨戒炮、修补站、纸树与诱饵会被敌人摧毁并自然过期；击败 Boss 后可暂停协商，按各自条款招募一名同伴。
 - **过去仍是资产**：修补回响，或选择技能、维修、火力三种供体特质合并；宿主保留原路线。结算后可为每名有回响容量的角色保留一张跨局档案。
 - **债务来自明确选择**：信用单立即给 30 材料并记 40 债务；普通任务失败不会额外征税。债务、放行资格和互助记录分别保留，最终由玩家选择个人放行、共同离开或接管回收局。
 - **中断后继续同一局**：Snapshot v4 保存战斗、工作单、债务、支援、报价、撤销、主动技与 Boss 谈判。语言切换与窗口关闭使用同一条安全路径。
@@ -39,14 +39,14 @@ The expedition spans three acts and twelve encounters. Each act ends with a dist
 
 - **35 weapon profiles with real alternatives:** 18 base weapons branch into 12 final forms, plus five support weapons. Four grades scale output by 1×, 1.8×, 3.2×, and 5.5×. Assemble two matching weapons to free a slot, save across encounters for costly high-grade stock, or pay for a deliberately more expensive no-donor refit. Final forms keep maximum grade and the paid ledger.
 - **Six roles with six real abilities:** manual pickups charge rewind, paper dash, position swap, relay, repair-station, and condition-scaled overload actions.
-- **Finite, damageable support:** hounds, turrets, repair stations, paper trees, and decoys expire and can be destroyed. A recruit order can preserve one defeated boss for an eight-second negotiation.
+- **Finite, damageable support:** hounds, turrets, repair stations, paper trees, and decoys expire and can be destroyed. A recruit order preserves a defeated boss while you choose its explicit signing terms.
 - **Your past remains an asset:** merge a donor's skill, repair value, or power while keeping the host route. Save one bounded cross-run Echo for each role that can use one.
 - **Debt comes from an explicit choice:** a credit order advances 30 cash and records 40 debt. Ordinary mission failure adds no surprise finance debt. Clearance, solidarity and debt remain separate facts; the player signs for individual discharge, collective departure, or staying to run the bureau.
 - **Continue the exact run:** Snapshot v4 preserves battle, work orders, debt, support bodies, graded offers, undo, role state, and boss negotiation through save-and-return, language reload, and window close.
 
 ## 宣传重点 / Positioning
 
-1. **三幕远征不只是计时波次。** 工作单在下一场生成可失败的真实目标、敌人和机器状态。
+1. **三幕远征不只是计时波次。** 工作单改变下一场的目标、敌人和工况；自然故障与待救工友不依赖购买才存在。
 2. **同级装配、昂贵改装与分支终局构成构筑选择。** UI 先报价和预览，再提交同一条权威事务。
 3. **回响既是战友、技能成本，也是跨局档案。** 合并不拼接路线，继承不绕过容量或开局强度预算。
 4. **支援不是免费特效。** 它们有身体、来源、生命、持续时间、次数与全局上限。
@@ -100,4 +100,11 @@ macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签
 
 The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
 
-Snapshotv4 requires a new current run; permanent characters, settings and Echo archives remain. Prior version-specific downloads retain the old run format. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+0.18 retains Snapshot v4 and the existing published user-data directory, so 0.17 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+
+
+## Paper actions / 纸上见真章
+
+0.18 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
+
+The same paper cast now has six material attack gestures, directional target reactions and visible repair, retirement and machine-contact sequences. Actual slot and event identities drive feedback; simulation rules, combat geometry and Snapshot v4 remain authoritative.
