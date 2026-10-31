@@ -230,9 +230,64 @@ static func interaction(sim: Sim) -> Dictionary:
 
 
 static func interact(sim: Sim) -> bool:
+	var choice := interaction(sim) if sim.phase == Sim.Phase.WAVE else {}
+	var before := _interaction_snapshot(sim, choice)
+	var accepted := sim.phase == Sim.Phase.WAVE and not choice.is_empty() \
+		and bool(choice.get("available", false)) and _apply_interaction(sim, choice)
+	var reason: StringName = &""
+	if not accepted:
+		if sim.phase != Sim.Phase.WAVE:
+			reason = &"phase"
+		elif choice.is_empty():
+			reason = &"no_target"
+		elif sim.player.materials < int(choice.get("cost", 0)):
+			reason = &"poor"
+		elif float(choice.get("cooldown", 0.0)) > 0.0:
+			reason = &"cooldown"
+		else:
+			reason = StringName(choice.get("reason_key", "unavailable"))
+			if reason == &"":
+				reason = &"unavailable"
+	sim.world_event.emit({"kind": &"interaction_result", "stage": sim.wave,
+		"subject": choice.get("id", &""), "target_id": choice.get("id", &""),
+		"target_kind": choice.get("kind", &""), "pos": sim.player.pos,
+		"target_pos": choice.get("pos", sim.player.pos), "source": -1, "actor_token": -1,
+		"ok": accepted, "reason": reason, "before": before,
+		"after": _interaction_snapshot(sim, choice)})
+	return accepted
+
+
+static func _interaction_snapshot(sim: Sim, choice: Dictionary) -> Dictionary:
+	var values := {"hp": sim.player.hp, "materials": sim.player.materials,
+		"energy": sim.character_energy}
+	if choice.is_empty():
+		return values
+	var id := StringName(choice.get("id", &""))
+	var machine := _machine(sim, StringName(String(id).trim_prefix("repair_")))
+	if not machine.is_empty():
+		values["status"] = machine["status"]
+		values["stopped"] = machine["stopped"]
+		values["direction"] = machine["direction"]
+	var worker := _worker(sim, id)
+	if not worker.is_empty():
+		values["status"] = worker["state"]
+		values["target_pos"] = worker["pos"]
+	for item in sim.interactables:
+		if item["id"] == id:
+			values["used"] = item["used"]
+			values["cooldown"] = item["cooldown"]
+			values["warning"] = item["warning"]
+			break
+	var delivery: Dictionary = sim.expedition.get("bureau", {}).get("delivery", {})
+	if String(id).begins_with("bureau_dispatch_") and not delivery.is_empty():
+		values["status"] = delivery["state"]
+		values["safe_left"] = delivery["safe_left"]
+	return values
+
+
+static func _apply_interaction(sim: Sim, choice: Dictionary) -> bool:
 	if sim.phase != Sim.Phase.WAVE:
 		return false
-	var choice := interaction(sim)
 	if choice.is_empty() or not bool(choice["available"]):
 		return false
 	for item in sim.interactables:
@@ -560,7 +615,15 @@ static func choose_negotiation(sim: Sim, choice: StringName) -> bool:
 		sim.expedition["recruited_bosses"].append(kind)
 	sim.expedition["solidarity"] += 2
 	_progress(sim, &"recruit")
-	_event(sim, &"companion_signed", kind, negotiation["pos"])
+	var companion_pos := sim.player.pos
+	for unit in sim.support_units:
+		if int(unit["uid"]) == int(roster["uid"]):
+			companion_pos = unit["pos"]
+	_event(sim, &"companion_signed", kind, negotiation["pos"], {
+		"source": -1, "actor_token": -1, "source_pos": sim.player.pos,
+		"boss_kind": kind, "target_uid": int(roster["uid"]), "target_type": &"support",
+		"target_pos": companion_pos, "from_pos": negotiation["pos"],
+		"ok": roster["state"] == &"active", "hp": roster["hp"], "life": roster["life"]})
 	_resolve_negotiation(sim)
 	return true
 
@@ -649,7 +712,8 @@ static func _deploy(sim: Sim, kind: StringName) -> bool:
 	if keep.size() >= SupportSystem.MAX_UNITS:
 		return false
 	sim.support_units = keep
-	if not SupportSystem.spawn(sim, StringName("recruited_" + String(kind)), sim.player.pos):
+	if not SupportSystem._spawn(sim, StringName("recruited_" + String(kind)), sim.player.pos,
+			-1, -2, Color.WHITE):
 		sim.support_units.append_array(removed)
 		return false
 	for old in sim.expedition["world"]["roster"]:
@@ -661,6 +725,7 @@ static func _deploy(sim: Sim, kind: StringName) -> bool:
 	unit["life"] = target["life"]
 	target["uid"] = unit["uid"]
 	target["state"] = &"active"
+	SupportSystem._event(sim, unit, &"spawn")
 	return true
 
 
@@ -788,13 +853,16 @@ static func _unused_witness(sim: Sim) -> Dictionary:
 	return {}
 
 
-static func _event(sim: Sim, kind: StringName, subject: StringName, pos: Vector2) -> void:
+static func _event(sim: Sim, kind: StringName, subject: StringName, pos: Vector2,
+		details: Dictionary = {}) -> void:
 	var event := {"kind": kind, "subject": subject, "stage": sim.wave, "pos": pos}
 	var history: Array = sim.expedition["world"]["history"]
 	history.append(event)
 	while history.size() > MAX_HISTORY:
 		history.pop_front()
-	sim.world_event.emit(event.duplicate(true))
+	var snapshot := event.duplicate(true)
+	snapshot.merge(details.duplicate(true))
+	sim.world_event.emit(snapshot)
 	StoryLedger.on_world_event(sim, kind)
 
 

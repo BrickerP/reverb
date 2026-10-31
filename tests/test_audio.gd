@@ -88,10 +88,14 @@ func test_rich_combat_signals_replace_legacy_duplicates(c: Check) -> void:
 
 	sim.player_hurt.emit(3.0)
 	var hurt := PlayerHurtInfo.new()
+	hurt.amount = 3.0
+	hurt.hp_loss = 3.0
 	sim.player_hurt_info.emit(hurt)
 	c.eq(audio.play_count(&"hurt"), 0, "legacy hurt is not double-bound")
 	c.eq(audio.play_count(&"hurt_contact"), 1, "rich contact hurt cue")
 	hurt = PlayerHurtInfo.new()
+	hurt.amount = 3.0
+	hurt.hp_loss = 3.0
 	hurt.effect = &"bomber_explosion"
 	sim.player_hurt_info.emit(hurt)
 	c.eq(audio.play_count(&"hurt_blast"), 1, "rich explosive hurt cue")

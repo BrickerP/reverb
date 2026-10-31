@@ -335,14 +335,15 @@ func test_copy_recoil_survives_slot_reordering_without_jumping_to_another_take(c
 	shot.actor_token = second.uid
 	shot.source_tint = second.tint()
 	shot.weapon_id = &"pistol"
+	shot.weapon_slot = 0
 	view._on_shot_info(shot)
 	c.eq(view._muzzles[0]["source"], 1, "shot packet keeps its original authoritative slot")
 	c.eq(view._muzzles[0]["actor_token"], second.uid, "drawing separately keeps the take identity")
 	sim.echoes.remove_at(0)
 	sim.echoes[0].index = 0
-	c.ok(ArenaPainter._mounted_recoil(view._muzzles, second.uid, &"pistol") > 0.0,
+	c.ok(ArenaPainter._mounted_recoil(view._muzzles, second.uid, &"pistol", 0) > 0.0,
 			"the same paper copy keeps its recoil after another copy retires")
-	c.eq(ArenaPainter._mounted_recoil(view._muzzles, first.uid, &"pistol"), 0.0,
+	c.eq(ArenaPainter._mounted_recoil(view._muzzles, first.uid, &"pistol", 0), 0.0,
 			"removed/reused slots cannot steal a different copy's shot reaction")
 	view.free()
 
@@ -406,6 +407,8 @@ func test_view_consumes_real_contact_hit_and_death_identities_once(c: Check) -> 
 	var view := ArenaView.new()
 	view.bind(sim)
 	var contact := PlayerHurtInfo.new()
+	contact.amount = 1.0
+	contact.hp_loss = 1.0
 	contact.source = &"runner"
 	contact.source_uid = 21
 	contact.effect = &"contact"

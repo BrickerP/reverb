@@ -2,6 +2,7 @@ class_name LocZh
 extends RefCounted
 
 const TABLE := {
+	"feedback.temporary": "临时",
 	"bureau.delivery.next_short": "下场：送审盖章",
 	"binding.returned": "商店撤销已归还两份原件。",
 	"reason.history_full": "请先撤销一次操作或出发；需保留告解的撤销记录。",

@@ -5,6 +5,9 @@ var source: int = -1
 var actor_token: int = -1
 var source_tint := Color.WHITE
 var weapon_id: StringName
+# Only the triggering loadout slot is known. Delayed/support output uses -1
+# rather than guessing among duplicate weapon IDs or animating its owner again.
+var weapon_slot: int = -1
 var origin: Vector2 = Vector2.ZERO
 var direction: Vector2 = Vector2.RIGHT
 var target: Vector2 = Vector2.ZERO
@@ -19,6 +22,7 @@ func to_dict() -> Dictionary:
 		"actor_token": actor_token,
 		"source_tint": [source_tint.r, source_tint.g, source_tint.b, source_tint.a],
 		"weapon_id": String(weapon_id),
+		"weapon_slot": weapon_slot,
 		"origin": [origin.x, origin.y],
 		"direction": [direction.x, direction.y],
 		"target": [target.x, target.y],

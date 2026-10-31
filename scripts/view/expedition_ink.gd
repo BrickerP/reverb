@@ -15,7 +15,7 @@ static var _last_stats := {"supports": 0, "targets": 0, "warnings": 0, "skills":
 
 
 static func snapshot(sim: Sim, clock: float = 0.0, reduced: bool = false,
-		display_rect: Rect2 = WorldArena.VIEWPORT, world: Dictionary = {}) -> Dictionary:
+		display_rect: Rect2 = WorldArena.VIEWPORT, world: Dictionary = {}, feedback: InteractionInk = null) -> Dictionary:
 	var result := {"supports": [], "targets": [], "warnings": [], "skill": {"visible": false}}
 	if sim == null:
 		return result
@@ -26,6 +26,7 @@ static func snapshot(sim: Sim, clock: float = 0.0, reduced: bool = false,
 	result["skill"] = skill_profile(sim, reduced)
 	for index in mini(SupportSystem.MAX_UNITS, sim.support_units.size()):
 		var profile := support_profile(sim.support_units[index], clock, reduced)
+		profile["pose"] = feedback.support_pose(int(profile["uid"]), reduced) if feedback != null else {"scale": Vector2.ONE, "offset": Vector2.ZERO}
 		if bool(profile["visible"]) and ArenaPainter.body_in_view(profile["pos"], view):
 			result["supports"].append(profile)
 	for index in mini(MAX_TARGETS, sim.interactables.size()):
@@ -77,6 +78,9 @@ static func support_profile(unit: Dictionary, clock: float = 0.0, reduced: bool 
 		"size": size, "active": active, "companion": companion,
 		"frame": frame,
 		"hp_ratio": clampf(hp / maximum, 0.0, 1.0) if maximum > 0.0 else 0.0,
+		"life_ratio": clampf(life / float(SupportSystem.PROFILES[kind]["life"]), 0.0, 1.0) if SupportSystem.PROFILES.has(kind) else 0.0,
+		"life_seconds": maxf(0.0, life),
+		"charge_capacity": 6 if kind == &"repair_station" else (4 if kind == &"paper_tree" else 0),
 		"charges": maxi(0, int(unit.get("charges", 0))), "actor_token": int(unit.get("actor_token", -1))}
 
 
@@ -146,11 +150,11 @@ static func boss_warning_profile(enemy: EnemyState) -> Dictionary:
 		"active": bool(profile["active"]), "progress": clampf(float(profile["progress"]), 0.0, 1.0)}
 
 
-static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false, world: Dictionary = {}) -> void:
+static func draw(ci: CanvasItem, sim: Sim, clock: float = 0.0, reduced: bool = false, world: Dictionary = {}, feedback: InteractionInk = null) -> void:
 	_last_stats = {"supports": 0, "targets": 0, "warnings": 0, "skills": 0}
 	if ci == null or sim == null:
 		return
-	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size), world)
+	var data := snapshot(sim, clock, reduced, WorldArena.display_viewport(ci.get_viewport_rect().size), world, feedback)
 	for warning: Dictionary in data["warnings"]:
 		_draw_warning(ci, warning, reduced)
 		_last_stats["warnings"] += 1
@@ -180,12 +184,15 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 	var factor := ArenaPainter.art_pixel_scale(key, p["size"])
 	var pivot := PresentationAssets.frame_pivot(key, int(p["frame"]))
 	var foot: Vector2 = p["foot"]
+	var pose: Dictionary = p.get("pose", {"scale": Vector2.ONE, "offset": Vector2.ZERO})
+	var scale: Vector2 = pose["scale"]
+	var body_foot: Vector2 = foot + (pose["offset"] as Vector2)
 	var seal := 18.0 if bool(p["companion"]) else 13.0
 	ci.draw_arc(pos, seal, 0.0, TAU, 20, Color(PAPER, 0.9), 3.5, true)
 	ci.draw_arc(pos, seal, 0.0, TAU, 20, FRIEND, 1.5, true)
 	for visible: Rect2 in PresentationAssets.frame_visible_regions(key, int(p["frame"])):
-		var offset := (visible.position - source.position) * factor
-		ci.draw_texture_rect_region(tex, Rect2(foot - pivot * factor + offset, visible.size * factor), visible)
+		var offset := (visible.position - source.position) * factor * scale
+		ci.draw_texture_rect_region(tex, Rect2(body_foot - pivot * factor * scale + offset, visible.size * factor * scale), visible)
 	var badge := pos + Vector2(seal, 5)
 	ci.draw_circle(badge, 5.5, PAPER)
 	ci.draw_polyline(PackedVector2Array([badge + Vector2(-3, 0), badge + Vector2(-1, 2), badge + Vector2(3, -3)]), FRIEND, 2.0, true)
@@ -194,9 +201,17 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 	ci.draw_rect(bar.grow(1), PAPER)
 	ci.draw_rect(bar, INK)
 	ci.draw_rect(Rect2(bar.position, Vector2(width * float(p["hp_ratio"]), 4)), FRIEND)
-	if kind in [&"paper_tree", &"repair_station"]:
-		for charge in mini(6, int(p["charges"])):
-			ci.draw_circle(bar.position + Vector2(float(charge) * 5.0 + 2.0, -4.0), 1.5, FRIEND)
+	# Health is the broad green strip; life is a separate thin ink strip with
+	# an hourglass. Discrete staple pips count charges, never remaining seconds.
+	var lifetime := Rect2(bar.position + Vector2(0, 7), Vector2(width, 2))
+	ci.draw_rect(lifetime.grow(1), PAPER)
+	ci.draw_rect(lifetime, Color(INK, 0.2))
+	ci.draw_rect(Rect2(lifetime.position, Vector2(width * float(p["life_ratio"]), 2)), INK)
+	var hour := lifetime.position + Vector2(-5, 1)
+	ci.draw_multiline(PackedVector2Array([hour + Vector2(-2, -3), hour + Vector2(2, 3), hour + Vector2(2, -3), hour + Vector2(-2, 3)]), INK, 1.0, true)
+	for charge in int(p["charge_capacity"]):
+		var pip := Rect2(bar.position + Vector2(float(charge) * 5.0, -6.0), Vector2(3, 3))
+		ci.draw_rect(pip, FRIEND, charge < int(p["charges"]), 1.0)
 
 
 static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:

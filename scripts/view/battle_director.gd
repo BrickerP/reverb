@@ -113,12 +113,30 @@ func shot(info: ShotInfo) -> bool:
 	return true
 
 
-func enemy_hit(uid: int) -> void:
+func enemy_hit(uid: int, direction: Vector2 = Vector2.ZERO) -> void:
 	if uid < 0:
 		return
 	if _enemy_hurts.has(uid) and float(_enemy_hurts[uid]["cooldown"]) > 0.0:
 		return
 	_insert_reaction(_enemy_hurts, uid, HURT_TIME, HURT_INTERVAL, MAX_REACTIONS)
+	_enemy_hurts[uid]["direction"] = direction.normalized() if direction.is_finite() else Vector2.ZERO
+
+
+# A hit bends the print around its planted foot. The enemy's model position,
+# facing, attack and gait phase are never changed by this small paper reaction.
+func enemy_fold(uid: int, reduced: bool = false) -> Dictionary:
+	var result := {"scale": Vector2.ONE, "rotation": 0.0, "ink": 0.0}
+	if not _enemy_hurts.has(uid):
+		return result
+	var reaction: Dictionary = _enemy_hurts[uid]
+	var strength := clampf(float(reaction["left"]) / HURT_TIME, 0.0, 1.0)
+	var direction: Vector2 = reaction.get("direction", Vector2.ZERO)
+	var motion := strength * (0.3 if reduced else 1.0)
+	result["scale"] = Vector2(1.0 - absf(direction.x) * motion * 0.12,
+		1.0 - (0.04 + absf(direction.y) * 0.08) * motion)
+	result["rotation"] = direction.x * motion * 0.065
+	result["ink"] = strength * 0.22
+	return result
 
 
 func player_hurt(uid: int) -> void:

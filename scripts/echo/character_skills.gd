@@ -43,7 +43,15 @@ static func step(sim: Sim, delta: float) -> void:
 
 
 static func activate(sim: Sim) -> bool:
+	var origin := sim.player.pos
+	var before := {"pos": origin, "energy": sim.character_energy,
+		"cooldown": sim.character_cooldown}
+	var anchors: Array[Dictionary] = []
+	for actor in sim.echoes:
+		anchors.append({"uid": actor.take.uid, "from_pos": actor.pos, "to_pos": actor.pos})
 	if sim.phase != Sim.Phase.WAVE or sim.character_cooldown > 0.0 or sim.character_energy < ENERGY_COST:
+		_activation_event(sim, before, anchors, false,
+			&"phase" if sim.phase != Sim.Phase.WAVE else (&"cooldown" if sim.character_cooldown > 0.0 else &"energy"))
 		return false
 	var applied := false
 	match sim.character_id:
@@ -54,12 +62,27 @@ static func activate(sim: Sim) -> bool:
 		&"mender": applied = SupportSystem.spawn(sim, &"repair_station", sim.player.pos, -1)
 		&"overloader": applied = EchoSystem.overload(sim)
 	if not applied:
+		_activation_event(sim, before, anchors, false, &"unavailable")
 		return false
 	sim.character_energy -= ENERGY_COST
 	sim.character_cooldown = COOLDOWN
 	sim.role_effects["ability_kind"] = sim.character_id
 	sim.role_effects["ability_flash"] = 0.65
+	_activation_event(sim, before, anchors, true, &"")
 	return true
+
+
+static func _activation_event(sim: Sim, before: Dictionary, anchors: Array[Dictionary],
+		accepted: bool, reason: StringName) -> void:
+	for row in anchors:
+		for actor in sim.echoes:
+			if actor.take.uid == int(row["uid"]):
+				row["to_pos"] = actor.pos
+	sim.world_event.emit({"kind": &"character_skill", "subject": sim.character_id,
+		"ability": sim.character_id, "stage": sim.wave, "source": -1, "actor_token": -1,
+		"pos": before["pos"], "target_pos": sim.player.pos, "ok": accepted, "reason": reason,
+		"before": before, "after": {"pos": sim.player.pos, "energy": sim.character_energy,
+			"cooldown": sim.character_cooldown}, "anchors": anchors})
 
 
 static func _rewind(sim: Sim) -> bool:

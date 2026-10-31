@@ -416,6 +416,7 @@ func bind(sim: Sim) -> void:
 	sim.echo_retired.connect(_on_echo_retired)
 	sim.echo_work_performed.connect(_on_echo_work)
 	sim.world_event.connect(_on_world_event)
+	sim.support_event.connect(_on_support_event)
 	sim.wave_started.connect(_on_wave_start)
 	sim.wave_ended.connect(_on_wave_end)
 	sim.purchased.connect(_on_purchase)
@@ -438,6 +439,7 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
 		_disconnect_signal(_bound.echo_work_performed, _on_echo_work)
 		_disconnect_signal(_bound.world_event, _on_world_event)
+		_disconnect_signal(_bound.support_event, _on_support_event)
 		_disconnect_signal(_bound.wave_started, _on_wave_start)
 		_disconnect_signal(_bound.wave_ended, _on_wave_end)
 		_disconnect_signal(_bound.purchased, _on_purchase)
@@ -647,6 +649,11 @@ func _on_explosion_info(info: ExplosionInfo) -> void:
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
+	if info.full_block():
+		play(&"shield_block", -1.0, 0.91)
+		return
+	if info.amount <= 0.0:
+		return
 	var blast := info.effect == &"bomber_explosion"
 	play(&"hurt_blast" if blast else &"hurt_contact", 2.0 if info.lethal else 0.0,
 			0.90 if info.lethal else 1.0)
@@ -722,6 +729,36 @@ func _on_world_event(info: Dictionary) -> void:
 		&"dispatch_safe": play(&"click", -3.0, 0.92, 0.10)
 		&"dispatch_delivered": play(&"equipment_apply", -3.0, 1.05, 0.16)
 		&"dispatch_carried", &"inspection_registered": play(&"click", -3.0, 1.0, 0.12)
+		&"interaction_result":
+			if not bool(info.get("ok", false)):
+				play(&"click", -5.0, 0.62, 0.08)
+				return
+			match info.get("target_kind", &""):
+				&"repair", &"rescue", &"recycler": play(&"equipment_apply", -4.0, 1.12, 0.18)
+				&"press": play(&"weapon_rail_spike", -5.0, 0.71, 0.16)
+				&"conveyor": play(&"click", -4.0, 0.83, 0.12)
+		&"character_skill":
+			if bool(info.get("ok", false)) and info.get("ability", &"") in [&"looper", &"mirror"]:
+				play(&"echo", -3.0, 0.72 if info["ability"] == &"looper" else 1.12, 0.24)
+		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24)
+
+
+func _on_support_event(info: Dictionary) -> void:
+	# Support attacks are not ShotInfo events. They have their own finite bodies,
+	# and cannot animate or replay the deploying character's weapon.
+	match info.get("kind", &""):
+		&"spawn": play(&"echo", -8.0, 1.08, 0.14)
+		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20)
+		&"produce": play(&"click", -7.0, 1.16, 0.10)
+		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09)
+		&"damage": play(&"hit", -4.0, 0.77, 0.10)
+		&"destroy": play(&"kill", -3.0, 0.70, 0.24)
+		&"expire": play(&"echo", -9.0, 0.60, 0.18)
+		&"attack":
+			var profile := weapon_profile(StringName(info.get("weapon_id", &"")))
+			if not profile.is_empty():
+				play(profile["cue"], float(profile["volume"]) - 6.0,
+					float(profile["pitch"]), minf(0.16, float(profile.get("gate", 0.16))))
 
 
 func _on_wave_end(_wave: int) -> void:

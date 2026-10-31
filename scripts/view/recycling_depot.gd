@@ -159,32 +159,51 @@ func _draw_machines(profile: Dictionary) -> void:
 
 func _draw_machine_state(machine: Dictionary, art: Rect2) -> void:
 	var center := art.get_center()
-	if machine.get("stopped", false):
-		# A physical lock bar crosses the mechanism, rather than a colour change.
-		draw_line(center + Vector2(-22, -9), center + Vector2(22, 9), PAPER, 8, true)
-		draw_line(center + Vector2(-22, -9), center + Vector2(22, 9), INK, 3, true)
-		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), PAPER)
-		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), INK, false, 2)
-	elif machine.get("status") == &"fault":
+	var marks := machine_marks(machine, art)
+	if machine.get("status") == &"fault":
 		var crack := PackedVector2Array([center + Vector2(-9, -20), center + Vector2(2, -9), center + Vector2(-5, -1), center + Vector2(9, 14)])
 		draw_polyline(crack, PAPER, 7, true)
 		draw_polyline(crack, INK, 3, true)
 		draw_line(center + Vector2(14, -21), center + Vector2(20, -9), INK, 3, true)
 		draw_circle(center + Vector2(22, -4), 2, INK)
 	elif machine.get("status") == &"repaired":
-		var patch := Rect2(center + Vector2(-18, -14), Vector2(36, 24))
+		var patch: Rect2 = marks["patch"]
 		draw_rect(patch, PAPER)
 		draw_rect(patch, INK, false, 2)
-		for dx in [-13.0, 13.0]:
-			draw_line(center + Vector2(dx, -18), center + Vector2(dx, -10), INK, 2)
-			draw_line(center + Vector2(dx, 6), center + Vector2(dx, 14), INK, 2)
-		draw_polyline(PackedVector2Array([center + Vector2(-7, -2), center + Vector2(-2, 3), center + Vector2(8, -7)]), INK, 2.5, true)
-	else:
+		for staple: PackedVector2Array in marks["staples"]:
+			draw_polyline(staple, INK, 2, true)
+		var check_center := patch.get_center()
+		draw_polyline(PackedVector2Array([check_center + Vector2(-7, -2), check_center + Vector2(-2, 3), check_center + Vector2(8, -7)]), INK, 2.5, true)
+	elif not bool(machine.get("stopped", false)):
 		var direction: Vector2 = machine.get("direction", Vector2.RIGHT)
 		var normal := Vector2(-direction.y, direction.x)
 		for step in 2:
 			var anchor := center + direction * float(step * 11 - 5)
 			draw_polyline(PackedVector2Array([anchor - direction * 5 - normal * 5, anchor, anchor - direction * 5 + normal * 5]), Color(INK, 0.7), 2, true)
+	# Repair and stopping are independent facts. Place the patch above the lock
+	# rather than letting the lock's branch erase the completed repair.
+	var lock: PackedVector2Array = marks["lock"]
+	if not lock.is_empty():
+		draw_polyline(lock, PAPER, 8, true)
+		draw_polyline(lock, INK, 3, true)
+		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), PAPER)
+		draw_rect(Rect2(center + Vector2(-5, -7), Vector2(10, 14)), INK, false, 2)
+
+
+static func machine_marks(machine: Dictionary, art: Rect2) -> Dictionary:
+	var center := art.get_center()
+	var patch := Rect2()
+	var staples: Array[PackedVector2Array] = []
+	var lock := PackedVector2Array()
+	if machine.get("status") == &"repaired":
+		var shift := Vector2(0, -24) if bool(machine.get("stopped", false)) else Vector2.ZERO
+		patch = Rect2(center + Vector2(-18, -14) + shift, Vector2(36, 24))
+		for dx in [-13.0, 13.0]:
+			staples.append(PackedVector2Array([center + Vector2(dx, -18) + shift, center + Vector2(dx, -10) + shift]))
+			staples.append(PackedVector2Array([center + Vector2(dx, 6) + shift, center + Vector2(dx, 14) + shift]))
+	if machine.get("stopped", false):
+		lock = PackedVector2Array([center + Vector2(-22, -9), center + Vector2(22, 9)])
+	return {"patch": patch, "staples": staples, "lock": lock}
 
 
 func _draw_safe_workers() -> void:

@@ -2,6 +2,7 @@ class_name LocEn
 extends RefCounted
 
 const TABLE := {
+	"feedback.temporary": "TEMP",
 	"bureau.delivery.next_short": "Next: stamp delivery",
 	"binding.returned": "Original copies returned by the actual shop Undo.",
 	"reason.history_full": "Undo a shop action or depart; the pending signature must remain reversible.",
