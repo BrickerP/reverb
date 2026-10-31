@@ -86,7 +86,7 @@ static func _activation_event(sim: Sim, before: Dictionary, anchors: Array[Dicti
 		"stage": sim.wave, "source": -1, "actor_token": -1,
 		"pos": before["pos"], "target_pos": sim.player.pos, "ok": accepted, "reason": reason,
 		"before": before, "after": {"pos": sim.player.pos, "energy": sim.character_energy,
-			"cooldown": sim.character_cooldown}, "anchors": anchors})
+			"cooldown": sim.character_cooldown, "selected_uid": sim.selected_echo_uid}, "anchors": anchors})
 
 
 static func _rewind(sim: Sim) -> bool:
