@@ -349,21 +349,7 @@ func _detail_text(index: int) -> String:
 
 func _detail_text_for(w: WeaponDef, level: int) -> String:
 	var spend := str(Shop.upgrade_cost(w, level)) if level < WeaponDef.MAX_LEVEL else Loc.t("shop.max_level")
-	var text := Loc.t("shop.decision", [Loc.weapon_name(w.id), spend, Loc.weapon_line(w, mini(level + 1, WeaponDef.MAX_LEVEL))])
-	text += "\n" + Loc.t("shop.detail", [Loc.weapon_name(w.id), level + 1, Loc.weapon_family(w.family), Loc.weapon_line(w, level)])
-	text += "\n" + Loc.weapon_desc(w.id)
-	text += "  ·  " + Loc.rarity_name(w.rarity)
-	text += "\n" + " · ".join([Loc.t("school." + String(w.school)), Loc.t("carrier." + String(w.carrier)), Loc.t("role." + String(w.role)), Loc.t("cost." + String(w.cost)), Loc.t("target." + String(w.target_mode))])
-	if w.explosion_radius > 0.0:
-		text += "  ·  " + Loc.t("weapon.explosion", [int(w.explosion_radius)])
-	if w.homing_turn > 0.0:
-		text += "  ·  " + Loc.t("weapon.homing")
-	if not w.evolution_options.is_empty():
-		text += "  ·  " + Loc.t("shop.evolve_detail", [
-			", ".join(w.evolution_options.map(func(id: StringName) -> String: return Loc.weapon_name(id))), Shop.EVOLVE_FAMILY_COUNT, Shop.evolution_cost(w)])
-	elif not w.drops:
-		text += "  ·  " + Loc.t("shop.evolved_detail")
-	return text
+	return Loc.t("shop.decision", [Loc.weapon_name(w.id), spend, Loc.weapon_line(w, mini(level + 1, WeaponDef.MAX_LEVEL))])
 
 
 func _card_variant(id: StringName) -> int:

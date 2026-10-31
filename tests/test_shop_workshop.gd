@@ -229,7 +229,7 @@ func test_support_offer_explains_utility_before_purchase(c: Check) -> void:
 	var card := ui.offers_box.get_child(0) as OfferCard
 	var role_visible := false
 	for label: Label in card.find_children("*", "Label", true, false):
-		if label.text == Loc.t("role.production") + " · " + Loc.t("carrier.placement"):
+		if label.text == Loc.support_short(offer.weapon):
 			role_visible = true
 	c.ok(role_visible, "zero-DPS production weapon explains its actual utility")
 	c.ok(card.accessibility_description.contains(Loc.weapon_desc(offer.weapon.id)), "utility offer describes its real effect before buying")

@@ -63,7 +63,7 @@ func test_native_960_pages_all_six_roles_and_keeps_focus_on_visible_page(c: Chec
 		ui.page_next.pressed.emit()
 		c.eq(ui.page, 1, language + " actual page action reaches page two")
 		c.ok(ui._cards[3].has_focus(), language + " changing page focuses its first available role")
-		c.ok(ui._detail.text.contains(Loc.t("ability.conductor.desc")), language + " actual focused role keeps its active ability description")
+		c.ok(ui._detail.text == Loc.character_desc(&"conductor"), language + " focused role shows the opening description")
 		_bounds(c, ui, Vector2i(960, 540), language + " page two")
 		for index in range(3, 6):
 			var card: Button = ui._cards[index]

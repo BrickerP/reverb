@@ -246,7 +246,9 @@ static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
 		ci.draw_rect(label, Color(PAPER, 0.97))
 		ci.draw_rect(label, INK, false, 1.5)
 		var name := Loc.t("interaction." + String(kind))
-		var text := Loc.t("world.interact", [Controls.interact_label(), name])
+		var text := Loc.t("hud.interact", [Controls.interact_label(), name])
+		if int(p["cost"]) > 0:
+			text = Loc.t("hud.interact_cost", [Controls.interact_label(), name, int(p["cost"])])
 		ci.draw_string(UiTheme.font(), label.position + Vector2(7, 18), text, HORIZONTAL_ALIGNMENT_LEFT, label.size.x - 12, 16,
 			INK if bool(p["available"]) else Color("806d59"))
 		var detail := ""

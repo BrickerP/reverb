@@ -9,6 +9,7 @@ func _root() -> Window:
 
 func _quick_wave(s: Sim) -> void:
 	s.wave_duration = 0.05
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	for i in 5:
 		s.step(DT, Vector2.ZERO)
 
@@ -92,13 +93,15 @@ func test_shop_locks_one_offer_through_reroll(c: Check) -> void:
 	c.ok(ui.offers_box.get_child_count() == Shop.OFFER_COUNT, "four offer cards")
 	var first := ui.offers_box.get_child(0) as OfferCard
 	var second := ui.offers_box.get_child(1) as OfferCard
-	c.ok(first.lock_button != null and second.lock_button != null, "offer cards expose lock buttons")
+	c.ok(ui._offer_lock != null, "the comparison row exposes the lock")
 	var materials_before := s.player.materials
-	first.lock_button.pressed.emit()
+	ui._arm_lock(first.offer)
+	ui._offer_lock.pressed.emit()
 	c.eq(s.player.materials, materials_before, "locking does not spend materials")
 	c.ok(not s.shop.offers[0].sold, "locking does not buy the offer")
 	c.ok(s.shop.offers[0].locked, "first offer locked")
-	second.lock_button.pressed.emit()
+	ui._arm_lock(second.offer)
+	ui._offer_lock.pressed.emit()
 	c.ok(not s.shop.offers[0].locked, "locking another moves the hold")
 	c.ok(s.shop.offers[1].locked, "second offer locked")
 	var held := s.shop.offers[1]
@@ -913,6 +916,7 @@ func test_main_runs_the_whole_loop(c: Check) -> void:
 	s.player.stats.add(Stats.MAX_HP, 100000.0)
 	s.player.hp = s.player.max_hp()
 	s.wave_duration = 0.05
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	main._physics_process(DT)
 	main._physics_process(DT)
 	c.eq(s.phase, Sim.Phase.SHOP, "wave ended")

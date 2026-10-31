@@ -35,6 +35,7 @@ func _immortal(s: Sim) -> void:
 
 func _finish_wave(s: Sim) -> void:
 	s.wave_duration = 0.05
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	_run(s, 5)
 
 
@@ -298,6 +299,7 @@ func test_wave_end_pays_interest(c: Check) -> void:
 	s.player.materials = 100
 	s.wave_start_materials = s.player.materials
 	s.wave_duration = 0.01
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	s.step(1.0 / 60.0, Vector2.ZERO)
 	c.eq(s.phase, Sim.Phase.SHOP, "wave ends into shop")
 	c.eq(s.last_wave_earned, 0, "no pickups this wave")
@@ -325,10 +327,23 @@ func test_wave_end_splits_earned_and_interest(c: Check) -> void:
 	pk.value = 7
 	s.pickups.append(pk)
 	s.wave_duration = 0.01
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
 	s.step(1.0 / 60.0, Vector2.ZERO)
 	c.eq(s.last_wave_earned, 7, "uncollected pickup counts as earnings")
 	c.eq(s.last_interest, 2, "interest is based on total materials")
 	c.eq(s.player.materials, 109, "earnings plus interest")
+
+
+func test_first_wave_does_not_end_until_the_player_moves(c: Check) -> void:
+	var s := _sim()
+	_immortal(s)
+	s.enemies.clear()
+	s.wave_duration = 0.01
+	s.step(0.05, Vector2.ZERO)
+	c.eq(s.phase, Sim.Phase.WAVE, "standing still does not finish the first fight")
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
+	s.step(0.05, Vector2.ZERO)
+	c.eq(s.phase, Sim.Phase.SHOP, "moving the required distance lets the timer finish the fight")
 
 
 func test_projectile_explosion_hits_neighbors(c: Check) -> void:
