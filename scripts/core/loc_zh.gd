@@ -534,7 +534,6 @@ const TABLE := {
 	"shop.sell_last_reason": "必须至少保留一把已装备武器。",
 	"shop.max_level": "满级",
 	"shop.evolve_need": "需 %d 同族",
-	"shop.economy": "本波 +%d · 利息 +%d · 每 %d 材料 +1（上限 %d）· 下次 +%d",
 	"shop.life": "生命 %s/%s · 第%d波十字 %s · %s",
 	"shop.hp_now": "生命 %s/%s",
 	"shop.cross_enrage": "狂暴后 %s",

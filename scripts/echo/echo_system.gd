@@ -131,6 +131,12 @@ static func _retire(sim: Sim, overloaded: bool) -> bool:
 	return true
 
 
+static func absorb(sim: Sim, actor: EchoActor) -> void:
+	if sim == null or actor == null or not sim.echoes.has(actor):
+		return
+	_remove(sim, actor, true, {})
+
+
 static func _remove(sim: Sim, actor: EchoActor, exhausted: bool, profile: Dictionary) -> void:
 	var info := EchoRetirementInfo.new()
 	info.reason = EchoRetirementInfo.EXHAUSTED if exhausted else EchoRetirementInfo.ACTIVE

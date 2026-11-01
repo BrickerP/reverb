@@ -20,6 +20,27 @@ static func impact_damage(enemy: EnemyState) -> float:
 	return enemy.damage * IMPACT_MULT
 
 
+static func in_cross(body: Vector2, point: Vector2, radius: float) -> bool:
+	var offset := body - point
+	return (absf(offset.x) <= 34.0 + radius and absf(offset.y) <= 205.0 + radius) \
+		or (absf(offset.y) <= 34.0 + radius and absf(offset.x) <= 205.0 + radius)
+
+
+static func _echo_in_cross(sim: Sim, point: Vector2) -> EchoActor:
+	var chosen: EchoActor = null
+	var best := INF
+	for actor in sim.echoes:
+		if actor == null or actor.take == null:
+			continue
+		if not in_cross(actor.pos, point, PlayerState.RADIUS):
+			continue
+		var distance := actor.pos.distance_squared_to(sim.player.pos)
+		if distance < best:
+			best = distance
+			chosen = actor
+	return chosen
+
+
 static func paradox_cross_damage() -> float:
 	return paradox_cross_damage_at(1)
 
@@ -111,16 +132,19 @@ static func _boss_impact(sim: Sim, enemy: EnemyState) -> void:
 	var offset := sim.player.pos - point
 	var inside := offset.length() <= 112.0 + PlayerState.RADIUS
 	if enemy.def.id == &"paradox":
-		inside = (absf(offset.x) <= 34.0 + PlayerState.RADIUS and absf(offset.y) <= 205.0 + PlayerState.RADIUS) \
-			or (absf(offset.y) <= 34.0 + PlayerState.RADIUS and absf(offset.x) <= 205.0 + PlayerState.RADIUS)
+		inside = in_cross(sim.player.pos, point, PlayerState.RADIUS)
+		if inside:
+			var copy := _echo_in_cross(sim, point)
+			if copy != null:
+				EchoSystem.absorb(sim, copy)
+				inside = false
 	if inside:
 		_hurt(sim, enemy, impact_damage(enemy), &"foreman_press" if enemy.def.id == &"foreman" else &"paradox_cross", offset.normalized())
 	for unit in sim.support_units.duplicate():
 		var support_offset: Vector2 = unit["pos"] - point
 		var hit := support_offset.length() <= 112.0 + SupportSystem.UNIT_RADIUS
 		if enemy.def.id == &"paradox":
-			hit = (absf(support_offset.x) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.y) <= 205.0 + SupportSystem.UNIT_RADIUS) \
-				or (absf(support_offset.y) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.x) <= 205.0 + SupportSystem.UNIT_RADIUS)
+			hit = in_cross(unit["pos"], point, SupportSystem.UNIT_RADIUS)
 		if hit:
 			SupportSystem.damage(sim, int(unit["uid"]), impact_damage(enemy))
 

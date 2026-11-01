@@ -534,7 +534,6 @@ const TABLE := {
 	"shop.sell_last_reason": "At least one weapon must remain equipped.",
 	"shop.max_level": "MAX",
 	"shop.evolve_need": "Need %d same",
-	"shop.economy": "Earned +%d · Interest +%d · +1 per %d materials (cap %d) · next +%d",
 	"shop.life": "HP %s/%s · wave %d cross %s · %s",
 	"shop.hp_now": "HP %s/%s",
 	"shop.cross_enrage": "enraged %s",

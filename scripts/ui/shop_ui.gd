@@ -206,8 +206,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_interest.text = Loc.t("shop.hp_now", [Loc.number(sim.player.hp), Loc.number(sim.player.max_hp())])
 	_interest.tooltip_text = ""
 	_interest.accessibility_description = _interest.text
-	_materials.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
-			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
+	_materials.tooltip_text = ""
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
 	if int(expedition.debt) > 0:
