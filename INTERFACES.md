@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.18.2 contract. Simulation owns rules and mutation. UI,
+This is the current 0.18.3 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.

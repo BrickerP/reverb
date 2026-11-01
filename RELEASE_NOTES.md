@@ -1,14 +1,14 @@
-# Take Stack 0.18.2 · Read the terms before you sign.
+# Take Stack 0.18.3 · The shop shows your life.
 
-Before you confirm, the shop says what you keep, what you spend, and what you get. Those words use the same per-shot numbers as the rules.
+The shop headline is your life. The wave-12 cross is quoted at the size the fight deals, and the enraged follow-up is named beside it. Systems that already resolve no longer narrate themselves.
 
-- **One sentence per offer.** A new gun states damage per shot, the gap between shots, and whether it fills an empty slot or replaces one you already carry. An upgrade shows the current shot and the next shot. Interest states what you earned, what you were paid, and the next threshold.
-- **The first fight requires a walk.** Wave 1 does not end on the timer until you have moved. One line says so. The ability is not advertised until the second fight.
-- **The floor prompt is the action.** Rescue, repair, and the recycler use one `[E]` sentence. Negotiation is the choice sheet; there is no second prompt on the floor. A rescue or repair result stays up long enough to read.
-- **Comparison stays in one place.** Lock sits with the decision, not on the card. Echo merge is one screen: host, donor, trait. The ending report is opaque paper over the press.
-- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, and 0.18.1 wave/shop saves continue.
+- **Life, not a lecture.** The standing line is current and maximum HP. Interest still pays, and the formula sits on the materials tag. A heart states the final cross after you buy it.
+- **One staple.** An evolved weapon stops the first lethal cross each wave at 1 HP. The notice appears when it happens. A spent staple is saved with the run and clears on the next wave.
+- **The door stays open.** A full echo bank no longer disables departure. Starting the wave still drops the weakest extra copies. Shelf refresh no longer rewrites combat randomness.
+- **Less talk.** Support ticks and a new gun's first shot no longer print a caption. The select screen keeps one line for the role you are looking at. The overloader starts with the pistol; the stamp falls only on overload.
+- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, and 0.18.2 wave/shop saves continue.
 
-确认前，商店写出留下什么、花掉什么、得到什么，数字和规则是同一套。第 1 场要先走路才结束。救援、维修、回收是同一句 `[E]`。谈判不再在地上多放一个提示。存档格式不变。
+商店主句只报生命。第 12 波十字按真实伤害报价，狂暴后的一击写在旁边。进化武器把本波第一次致命十字钉在 1 点。回响满了不拦出发。用过的钉会存进这局。
 
 ## Downloads / 下载
 
@@ -22,9 +22,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.2 continues 0.17, 0.18, and 0.18.1 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.3 continues 0.17, 0.18, 0.18.1, and 0.18.2 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18、0.18.1 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1、0.18.2 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 
