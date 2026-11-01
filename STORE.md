@@ -1,16 +1,16 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.18.6**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.18.7**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
 **ZH**
 
-录下路线，与过去并肩作战。在三幕废件远征中接工作单、装配武器、部署纸偶支援，或报废一张回响换取最后一击。
+昨天的你，会被复印、装订，再送回战场。
 
 **EN**
 
-Record your route and fight beside your past. Take work orders, assemble weapons, deploy paper support, or retire a worn copy for one final skill across a three-act office-waste expedition.
+Yesterday's you gets copied, stapled, and sent back.
 
 ## 长描述 / About the game
 
@@ -67,14 +67,13 @@ HUD 的手柄标签从当前 InputMap 生成；菜单支持鼠标、键盘和手
 
 ## 30 秒预告片分镜 / Trailer outline
 
-1. **0–5 秒**：玩家绕机器掩体，按 `E / X` 反转传送带；字幕“走进三幕废件远征 / Enter a three-act salvage run”。
-2. **5–11 秒**：六件商店货中购买工作单，下一场出现可交互任务；字幕“接单，然后承担后果 / Take the order. Face the consequence”。
-3. **11–17 秒**：同等级武器装配、两条终极分支与支援部署；展示真实 UI 确认。
-4. **17–23 秒**：手动拾取充能，连续展示两到三个角色主动技；穿插支援受伤与过期。
-5. **23–27 秒**：回响三种合并预览、结算归档、标题页继承开关。
-6. **27–30 秒**：监工压印、收集者冲锋、悖论体十字裁切与三种终局收据，最后出现标题。
+1. **0–8 秒**：`docs/site-assets/cross-tear-zh.mp4` / `cross-tear-en.mp4`。两个身体错开站在十字里，副本被撕掉，玩家还在。无旁白。字幕最多烧副标题「昨天的你是耗材 / Yesterday's you is ammunition.」。
+2. **8–14 秒**：试玩开局，场上已经有一个昨天。一镜。
+3. **14–20 秒**：商店。印章是生命。一镜。
+4. **20–26 秒**：告解的两个选项，或一次报废。一镜。
+5. **26–30 秒**：标题 `回响 / Take Stack`，副标题同上。
 
-分镜是制作方案。正式素材应取自实际运行，不把摆场、脚本输入或自动化 fixture 表述为真人通关。
+成片用第 1 镜的实机 fixture，不要从传送带或商店确认框开头。fixture 不是真人通关。上传 Steam 前须有人听过撕开的那一下。
 
 ## Press kit
 
@@ -100,11 +99,11 @@ macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签
 
 The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
 
-0.18.6 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4 and 0.18.5 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+0.18.7 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5 and 0.18.6 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
 
 
 ## Paper actions / 纸上见真章
 
-0.18.6 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
+0.18.7 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
 
 The same paper cast now has six material attack gestures, directional target reactions and visible repair, retirement and machine-contact sequences. Actual slot and event identities drive feedback; simulation rules, combat geometry and Snapshot v4 remain authoritative.

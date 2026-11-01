@@ -5,6 +5,7 @@ signal character_chosen(id: StringName)
 signal settings_requested
 signal history_requested
 signal daily_requested
+signal demo_requested
 signal codex_requested
 signal continue_requested
 signal archive_requested(id: StringName)
@@ -216,6 +217,12 @@ func _ready() -> void:
 	UiTheme.stamp_button(_daily_button)
 	_footer.add_child(_daily_button)
 	_secondary_actions.append(_daily_button)
+	var demo_button := Button.new()
+	demo_button.text = Loc.t("select.demo")
+	demo_button.custom_minimum_size = Vector2(120.0, 38.0)
+	demo_button.pressed.connect(func() -> void: demo_requested.emit())
+	UiTheme.stamp_button(demo_button)
+	_footer.add_child(demo_button)
 	_box.add_child(_footer)
 	_summary = UiTheme.label("", 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	_box.add_child(_summary)

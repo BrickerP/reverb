@@ -656,6 +656,8 @@ const TABLE := {
 	"codex.evolve_only": "Evolution only",
 	"codex.evolves": "→ %s (max level + %d family)",
 	"select.daily": "Daily",
+	"select.demo": "Demo",
+	"demo.done": "End of the demo",
 	"select.daily_best": "Daily · best %d",
 	"select.daily_streak": "streak %d",
 	"select.daily_anomaly": "Daily anomaly: %s",
