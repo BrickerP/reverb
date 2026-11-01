@@ -163,9 +163,6 @@ func _process(delta: float) -> void:
 		if cd > _prev_cd[i] + 0.001:
 			_flash[i] = 1.0
 			if i == sim.cue_slot:
-				sim.action_notice_key = &"hud.slot_fired"
-				sim.action_notice_text = Loc.t("hud.slot_fired", [i + 1, Loc.weapon_name(sim.player.weapons[i].id)])
-				sim.action_notice_until = sim.wave_time + 1.4
 				sim.cue_slot = -1
 		_prev_cd[i] = cd
 		_flash[i] = maxf(0.0, _flash[i] - delta * 8.0)

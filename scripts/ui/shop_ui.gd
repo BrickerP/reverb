@@ -191,7 +191,7 @@ func close_session() -> void:
 	if _overlay != null:
 		UiTheme.clear(_overlay)
 	if _footer != null:
-		_footer.text = Loc.t("shop.keys")
+		_footer.text = ""
 	if receipt_button != null:
 		receipt_button.visible = false
 
@@ -203,10 +203,11 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
-	_interest.text = Loc.cross_life(sim.player.hp, sim.player.max_hp(), sim.has_evolved_weapon())
-	_interest.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
+	_interest.text = Loc.t("shop.hp_now", [Loc.number(sim.player.hp), Loc.number(sim.player.max_hp())])
+	_interest.tooltip_text = ""
+	_interest.accessibility_description = _interest.text
+	_materials.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
-	_interest.accessibility_description = _interest.tooltip_text
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
 	var world := Expedition.world_profile(sim)
@@ -265,13 +266,6 @@ func refresh(animate_echo: bool = false) -> void:
 	echo_panel.size_flags_stretch_ratio = 1.0
 	build_panel.size_flags_stretch_ratio = 1.0
 	var notices: Array[String] = []
-	var leaving := sim.departing_discards()
-	if not leaving.is_empty():
-		var names: PackedStringArray = PackedStringArray()
-		for take in leaving:
-			names.append(Loc.t("echo.identity", [take.uid, take.wave]))
-		var sep := "、" if Loc.lang == "zh" else ", "
-		notices.append(Loc.t("shop.over", [sep.join(names)]))
 	if sim.last_contract_done:
 		notices.append(Loc.t("contract.result_success", [sim.last_contract_reward])
 				if sim.last_contract_success else Loc.t("contract.result_fail"))
@@ -283,7 +277,7 @@ func refresh(animate_echo: bool = false) -> void:
 	if _replacing != null:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
-	_footer.text = Loc.t("shop.keys")
+	_footer.text = ""
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	_rebuild_focus()
@@ -333,7 +327,7 @@ func _build_footer() -> Control:
 	_offer_lock.pressed.connect(_lock_focused)
 	WorkshopUi.fit_button(_offer_lock, 14, 34.0)
 	actions.add_child(_offer_lock)
-	_footer = UiTheme.label(Loc.t("shop.keys"), 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
+	_footer = UiTheme.label("", 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.clip_text = true
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_footer.custom_minimum_size = Vector2(0.0, 18.0)
@@ -361,7 +355,7 @@ func _on_weapon_detail(text: String) -> void:
 	if _footer == null:
 		return
 	_weapon_detail = text.replace("\n", " · ")
-	_footer.text = _weapon_detail if text != "" else Loc.t("shop.keys")
+	_footer.text = _weapon_detail if text != "" else ""
 
 
 func _build_header() -> Control:
@@ -604,9 +598,9 @@ func _on_evolve_weapon(index: int) -> void:
 		levels[index] = WeaponDef.MAX_LEVEL
 		var dps := int(round(OfferCard.list_dps(weapons, levels, sim.player.stats)))
 		choices.append({"text": "%s · %s · %d · %s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), quote.cost, Loc.t("shop.take_dps", [dps])], "value": target,
-			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + _drop_reason_text(quote.reason) if not quote.ok else Loc.weapon_desc(target)})
+			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + Loc.t("workshop.evolve_staple") + ((" · " + _drop_reason_text(quote.reason)) if not quote.ok else "")})
 	var weapon := sim.player.weapons[index]
-	var body := Loc.t("workshop.evolve_hint") + "\n" + Loc.t("workshop.evolve_tradeoff") + "\n" + Loc.t("workshop.evolve_staple") + "\n" + Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
+	var body := Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
 	if blocked != &"":
 		body += "\n" + _drop_reason_text(blocked)
 	workshop.show_choices(Loc.t("workshop.evolve"), body, choices, func(value: Variant) -> void:
@@ -1049,7 +1043,7 @@ func clear_drop_hint() -> void:
 	if _focused_offer != null and sim != null:
 		_footer.text = OfferCard.decision(_focused_offer, sim)
 	else:
-		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else Loc.t("shop.keys")
+		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else ""
 
 
 func _show_drop_quote(result: ShopResult) -> void:

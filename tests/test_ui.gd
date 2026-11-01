@@ -204,12 +204,14 @@ func test_start_departs_while_echoes_overflow(c: Check) -> void:
 	var named: EchoTake = s.departing_discards()[0]
 	c.ok(not ui.start_button.disabled, "overflow does not block departure")
 	c.eq(ui.start_button.text, Loc.t("shop.start", [s.next_wave_number()]), "the button only names the next wave")
-	c.ok(ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])), "the warning names the copy departure will drop")
-	c.eq(ui._interest.text, Loc.cross_life(s.player.hp, s.player.max_hp()),
-			"the shop headline uses the scaled final cross")
-	c.eq(ui._interest.tooltip_text, Loc.t("shop.economy", [s.last_wave_earned, s.last_interest,
+	c.eq(ui._interest.text, Loc.t("shop.hp_now", [Loc.number(s.player.hp), Loc.number(s.player.max_hp())]),
+			"the shop headline is only the current life")
+	c.eq(ui._interest.tooltip_text, "", "the life line does not explain another system")
+	c.eq(ui._materials.tooltip_text, Loc.t("shop.economy", [s.last_wave_earned, s.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(s.player.materials)]),
-			"interest stays on the headline tooltip")
+			"interest remains on the money, not in the headline")
+	c.ok(not ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])),
+			"departure does not announce the copy it will drop")
 	var started := [false]
 	ui.start_requested.connect(func() -> void: started[0] = true)
 	ui.start_button.pressed.emit()

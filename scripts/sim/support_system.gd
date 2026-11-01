@@ -272,15 +272,6 @@ static func _turret_shot(sim: Sim, unit: Dictionary, enemy: EnemyState) -> void:
 	unit["cooldown"] = float(unit["interval"])
 	_event(sim, unit, &"attack", projectile.damage, [{"uid": enemy.uid, "target_type": &"enemy",
 		"pos": enemy.pos, "amount": projectile.damage, "before": enemy.hp, "after": enemy.hp}])
-	_notice(sim, &"hud.support_turret")
-
-
-static func _notice(sim: Sim, key: StringName) -> void:
-	if sim.wave_time < sim.action_notice_until:
-		return
-	sim.action_notice_key = key
-	sim.action_notice_text = ""
-	sim.action_notice_until = sim.wave_time + 1.2
 
 
 static func _hit(sim: Sim, unit: Dictionary, enemy: EnemyState, effect: StringName,
@@ -332,7 +323,6 @@ static func _repair(sim: Sim, unit: Dictionary) -> void:
 		unit["charges"] = int(unit["charges"]) - 1
 		unit["cooldown"] = float(unit["interval"])
 		_event(sim, unit, &"repair", repaired, targets)
-		_notice(sim, &"hud.support_repair")
 
 
 static func _produce(sim: Sim, unit: Dictionary) -> void:
@@ -352,7 +342,6 @@ static func _produce(sim: Sim, unit: Dictionary) -> void:
 			"pos": sim.player.pos, "amount": produced,
 			"before": {"shield": shield_before, "energy": energy_before},
 			"after": {"shield": sim.player.shield, "energy": sim.character_energy}}])
-		_notice(sim, &"hud.support_tree")
 
 
 static func _contact_damage(sim: Sim, unit: Dictionary) -> void:
