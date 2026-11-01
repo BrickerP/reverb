@@ -294,3 +294,28 @@ func test_replace_weapon_requires_the_net_cost(c: Check) -> void:
 	c.ok(not s.shop.replace_weapon(s, o, 0), "cannot afford the net cost")
 	c.eq(s.player.materials, before, "materials untouched")
 	c.ok(not o.sold, "offer stays")
+
+
+func test_shelf_refresh_does_not_draw_combat_rng(c: Check) -> void:
+	var sim := _shop_sim(100)
+	sim.shop.roll(sim)
+	var first: Array[String] = []
+	for offer in sim.shop.offers:
+		first.append(String(offer.id()))
+	var combat := sim.rng.state
+	var hazard := sim.hazard_rng.state
+	c.ok(sim.shop.reroll(sim), "refresh spends materials")
+	c.eq(sim.rng.state, combat, "refresh leaves the combat RNG")
+	c.eq(sim.hazard_rng.state, hazard, "refresh leaves hazard placement")
+	var second: Array[String] = []
+	for offer in sim.shop.offers:
+		second.append(String(offer.id()))
+	c.ok(second != first, "a refresh is a different shelf")
+	var again := Sim.new(3)
+	again.start_run()
+	again.phase = Sim.Phase.SHOP
+	again.shop.roll(again)
+	var replay: Array[String] = []
+	for offer in again.shop.offers:
+		replay.append(String(offer.id()))
+	c.eq(replay, first, "the same seed and wave rebuild the same shelf")

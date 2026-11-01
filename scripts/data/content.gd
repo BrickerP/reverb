@@ -475,7 +475,7 @@ static func _build_characters() -> void:
 	})
 	_character(&"overloader", {
 		"color": Color(0.95, 0.45, 0.35),
-		"starting_weapon": &"stamp",
+		"starting_weapon": &"pistol",
 		"mods": {Stats.MAX_HP: 5.0},
 		"wear_rate_mult": 1.35,
 		"retirement_mult": 1.5,

@@ -159,9 +159,6 @@ func open(s: Sim) -> void:
 	_replacing_index = -1
 	refresh(true)
 	_fly_take_token()
-	# If the bank is over capacity, the discard is the only legal action: put focus there.
-	if sim.bank.overflow(sim.echo_capacity()) > 0 and echo_panel.focus_first_discard():
-		return
 	_focus_card(0)
 
 
@@ -206,8 +203,11 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
-	_interest.text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
+	_interest.text = Loc.t("shop.life", [Loc.number(sim.player.hp), Loc.number(sim.player.max_hp()),
+			Loc.number(EnemyBrain.paradox_cross_damage())])
+	_interest.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
+	_interest.accessibility_description = _interest.tooltip_text
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
 	var world := Expedition.world_profile(sim)
@@ -260,17 +260,19 @@ func refresh(animate_echo: bool = false) -> void:
 	confession_button.accessibility_name = confession_button.text
 	confession_button.accessibility_description = confession_button.tooltip_text
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
-	if not sim.can_start_wave():
-		start_button.text += " · " + Loc.t("shop.need_discard")
 	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
 	start_button.accessibility_description = start_button.tooltip_text if start_button.tooltip_text != "" else start_button.text
 	start_button.disabled = not sim.can_start_wave()
-	var over := sim.bank.overflow(sim.echo_capacity())
 	echo_panel.size_flags_stretch_ratio = 1.0
 	build_panel.size_flags_stretch_ratio = 1.0
 	var notices: Array[String] = []
-	if over > 0:
-		notices.append(Loc.t("shop.over", [over]))
+	var leaving := sim.departing_discards()
+	if not leaving.is_empty():
+		var names: PackedStringArray = PackedStringArray()
+		for take in leaving:
+			names.append(Loc.t("echo.identity", [take.uid, take.wave]))
+		var sep := "、" if Loc.lang == "zh" else ", "
+		notices.append(Loc.t("shop.over", [sep.join(names)]))
 	if sim.last_contract_done:
 		notices.append(Loc.t("contract.result_success", [sim.last_contract_reward])
 				if sim.last_contract_success else Loc.t("contract.result_fail"))
@@ -1231,10 +1233,7 @@ func focus_default() -> void:
 	if workshop != null and workshop.visible:
 		workshop.focus_default()
 		return
-	if sim != null and sim.bank.overflow(sim.echo_capacity()) > 0 \
-			and echo_panel.focus_first_discard():
-		return
-	if is_instance_valid(_last_focus) and _last_focus.is_visible_in_tree():
+	if sim != null and is_instance_valid(_last_focus) and _last_focus.is_visible_in_tree():
 		if not (_last_focus is BaseButton) or not (_last_focus as BaseButton).disabled:
 			_last_focus.grab_focus()
 			return

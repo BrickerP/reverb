@@ -303,7 +303,18 @@ func echo_dps(take: EchoTake) -> float:
 
 
 func can_start_wave() -> bool:
-	return phase == Phase.SHOP and bank.overflow(echo_capacity()) == 0
+	return phase == Phase.SHOP
+
+
+# Same set start_wave drops: staff is held out, then the weakest copies past capacity go.
+func departing_discards() -> Array[EchoTake]:
+	var staff_uid := int(expedition.get("world", {}).get("staff_uid", 0))
+	var staff := bank.find_uid(staff_uid)
+	var pool: Array[EchoTake] = []
+	for take in bank.takes:
+		if staff == null or take != staff:
+			pool.append(take)
+	return EchoBank.preview_trim(pool, maxi(0, echo_capacity() - (1 if staff != null else 0)))
 
 
 # Every fourth encounter concludes an act with a mandatory boss.

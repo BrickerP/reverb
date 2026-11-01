@@ -150,20 +150,24 @@ func test_shop_lists_offers_and_buying_rebuilds_the_cards(c: Check) -> void:
 func test_poor_cards_stay_pressable_and_flash_materials(c: Check) -> void:
 	var s := _shop_sim(0)
 	var ui := _open_shop(s)
-	var first: OfferCard = null
+	var poor: OfferCard = null
 	for node in ui.offers_box.get_children():
 		var card := node as OfferCard
-		c.eq(card.blocked_reason, &"poor", "the reason is poor")
 		c.ok(not card.disabled, "the card is still pressable so it can explain")
-		if first == null:
-			first = card
+		if card.offer.price > s.player.materials:
+			c.eq(card.blocked_reason, &"poor", "the reason is poor")
+			if poor == null:
+				poor = card
+		else:
+			c.ok(card.blocked_reason != &"poor", "a quote the wallet can pay is not called poor")
+	c.ok(poor != null, "an empty wallet still faces a quote it cannot pay")
 	c.ok(ui.reroll_button.disabled, "reroll disabled")
 	c.ok(not ui.start_button.disabled, "start still available")
 	var before := s.player.materials
-	first.pressed.emit()
+	poor.pressed.emit()
 	c.eq(s.player.materials, before, "a blocked card buys nothing")
-	c.ok(first.price_tag.modulate.g < 0.9, "the loose price tag flashes red")
-	c.eq(first.scale, Vector2.ONE, "the failed purchase keeps its interaction rectangle fixed")
+	c.ok(poor.price_tag.modulate.g < 0.9, "the loose price tag flashes red")
+	c.eq(poor.scale, Vector2.ONE, "the failed purchase keeps its interaction rectangle fixed")
 	c.ok(ui._materials.modulate != Color.WHITE, "the materials counter flashes")
 	ui.free()
 
@@ -192,22 +196,24 @@ func test_reroll_button_restocks_and_charges(c: Check) -> void:
 	ui.free()
 
 
-func test_start_waits_for_discards_when_echoes_overflow(c: Check) -> void:
+func test_start_departs_while_echoes_overflow(c: Check) -> void:
 	var s := _shop_sim(50, 3)
 	c.eq(s.bank.takes.size(), 3, "three takes recorded")
 	c.eq(s.echo_capacity(), 2, "two slots")
 	var ui := _open_shop(s)
-	c.ok(ui.start_button.disabled, "start blocked while over capacity")
-	c.eq(ui.echo_panel.discard_buttons.size(), ui.echo_panel.page_size, "a discard button per visible copy")
+	var named: EchoTake = s.departing_discards()[0]
+	c.ok(not ui.start_button.disabled, "overflow does not block departure")
+	c.eq(ui.start_button.text, Loc.t("shop.start", [s.next_wave_number()]), "the button only names the next wave")
+	c.ok(ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])), "the warning names the copy departure will drop")
+	c.eq(ui._interest.text, Loc.t("shop.life", [Loc.number(s.player.hp), Loc.number(s.player.max_hp()),
+			Loc.number(EnemyBrain.paradox_cross_damage())]), "the shop headline is hit points and the cross")
+	c.eq(ui._interest.tooltip_text, Loc.t("shop.economy", [s.last_wave_earned, s.last_interest,
+			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(s.player.materials)]),
+			"interest stays on the headline tooltip")
 	var started := [false]
 	ui.start_requested.connect(func() -> void: started[0] = true)
 	ui.start_button.pressed.emit()
-	c.ok(not started[0], "a blocked start does nothing")
-	ui.echo_panel.discard_buttons[0].pressed.emit()
-	c.eq(s.bank.takes.size(), 2, "one take discarded")
-	c.ok(not ui.start_button.disabled, "start unlocked")
-	ui.start_button.pressed.emit()
-	c.ok(started[0], "start fires")
+	c.ok(started[0], "start fires while over capacity")
 	c.ok(not ui.visible, "shop hides itself")
 	ui.free()
 

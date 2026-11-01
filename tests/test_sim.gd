@@ -229,7 +229,7 @@ func test_echo_capacity_is_capped_at_eight(c: Check) -> void:
 	c.eq(s.echo_capacity(), Sim.MAX_ECHO_CAPACITY, "capacity never exceeds the HUD-safe cap")
 
 
-func test_echo_overflow_blocks_next_wave_until_discarded(c: Check) -> void:
+func test_echo_overflow_departs_and_the_wave_drops_the_weakest(c: Check) -> void:
 	var s := _sim()
 	_immortal(s)
 	_finish_wave(s)
@@ -238,13 +238,15 @@ func test_echo_overflow_blocks_next_wave_until_discarded(c: Check) -> void:
 		extra.weapons.append(Content.weapon(&"smg"))
 		s.bank.add(extra)
 	c.eq(s.bank.takes.size(), 3, "three takes after the wave")
-	c.ok(not s.can_start_wave(), "cannot start while over capacity")
-	s.discard_take(s.bank.weakest())
-	c.ok(s.can_start_wave(), "can start once a take is discarded")
+	c.ok(s.can_start_wave(), "overflow does not trap the shop")
+	var doomed := s.departing_discards()
+	c.eq(doomed.size(), 1, "one copy is named for departure")
+	c.ok(doomed[0] == s.bank.weakest(), "departure names the take the wave will drop")
 	s.start_next_wave()
 	c.eq(s.phase, Sim.Phase.WAVE, "wave 2 running")
 	c.eq(s.wave, 2, "wave counter advanced")
 	c.eq(s.echoes.size(), 2, "two echoes replay")
+	c.ok(not s.bank.takes.has(doomed[0]), "the named copy is gone")
 
 
 func test_final_wave_wins_the_run(c: Check) -> void:
