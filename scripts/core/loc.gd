@@ -207,6 +207,24 @@ static func item_shift(stat: StringName, amount: float, sim: Sim) -> String:
 	return t("item.now_next", [number(before), number(after)])
 
 
+# The shelf shows one change. The full rule, including the final cross, stays on the tooltip.
+static func item_face(it: ItemDef, sim: Sim = null) -> String:
+	if it == null:
+		return ""
+	if it.id == &"long_play" or it.id == &"loud_speaker":
+		return item_desc(it, sim)
+	var parts := PackedStringArray()
+	for stat: StringName in it.mods:
+		var amount := float(it.mods[stat])
+		if stat == Stats.MAX_HP:
+			parts.append("%s %s · %s" % [item_scope(stat), stat_value(stat, amount), t("item.max_hp_now")])
+		elif sim != null:
+			parts.append("%s %s" % [item_scope(stat), item_shift(stat, amount, sim)])
+		else:
+			parts.append("%s %s" % [item_scope(stat), stat_value(stat, amount)])
+	return "  ".join(parts)
+
+
 static func item_desc(it: ItemDef, sim: Sim = null) -> String:
 	if it != null and it.id == &"long_play":
 		var before := Stats.DEFAULTS[Stats.ECHO_DURATION] if sim == null else sim.echo_duration()

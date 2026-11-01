@@ -125,7 +125,7 @@ func _render() -> void:
 	var heading := Loc.t("shop.echoes", [sim.bank.takes.size(), capacity])
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
-	var title := UiTheme.section_label(heading, 21, UiTheme.WARN if over > 0 else UiTheme.ECHO)
+	var title := UiTheme.section_label(heading, 16, UiTheme.WARN if over > 0 else UiTheme.ECHO)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	if capacity > 0 and not sim.bank.takes.is_empty():

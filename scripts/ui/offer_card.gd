@@ -113,7 +113,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
 	else:
-		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 14, UiTheme.DIM)
+		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 15, UiTheme.INK)
 		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		desc.clip_text = true
 		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -124,7 +124,9 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 		why.clip_text = true
 		why.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		box.add_child(why)
-	box.add_child(_actions_row(o, reason, can_swap))
+	var actions := _actions_row(o, reason, can_swap)
+	if actions != null:
+		box.add_child(actions)
 	_sim = null
 
 
@@ -237,22 +239,13 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	identity.add_theme_constant_override("separation", 0)
 	var title := _offer_name(o)
-	var name_label := UiTheme.label(title, 15)
+	var name_label := UiTheme.label(title, 18)
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(name_label)
-	row.add_child(identity)
-	if o.is_weapon():
-		var tags := UiTheme.label(Loc.t("shop.level", [o.weapon_level + 1]) + " · " + Loc.weapon_family(o.weapon.family) + " · " + Loc.rarity_name(o.weapon.rarity), 11, UiTheme.DIM)
-		tags.clip_text = true
-		tags.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		identity.add_child(tags)
-	elif o.is_contract():
-		var order_tag := UiTheme.label(Loc.t("workshop.order"), 11, UiTheme.ECHO)
-		order_tag.clip_text = true
-		identity.add_child(order_tag)
-	elif o.item.echo_item:
+	if not o.is_weapon() and not o.is_contract() and o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
+	row.add_child(identity)
 	price_tag = PanelContainer.new()
 	price_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	price_tag.custom_minimum_size = Vector2(42.0, 32.0)
@@ -271,21 +264,20 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 
 
 func _actions_row(o: Offer, reason: StringName, can_swap: bool) -> Control:
+	var swap := o.is_weapon() and reason != &"sold" and can_swap
+	var replacing := not o.is_weapon() and reason == &"order_active"
+	if not swap and not replacing:
+		return null
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 6)
-	if o.is_weapon():
-		var meta := UiTheme.label(Loc.t("workshop.buy", [o.price]), 13, UiTheme.COIN)
-		meta.add_theme_font_size_override("font_size", 12)
-		meta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(meta)
-	else:
-		var spacer := Control.new()
-		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(spacer)
-		row.add_child(UiTheme.label(Loc.t("shop.replace_action") if reason == &"order_active" else Loc.t("workshop.buy", [o.price]), 13, UiTheme.COIN))
-	if o.is_weapon() and reason != &"sold" and can_swap:
+	var spacer := Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+	if replacing:
+		row.add_child(UiTheme.label(Loc.t("shop.replace_action"), 13, UiTheme.ACCENT))
+	if swap:
 		swap_button = Button.new()
 		swap_button.text = Loc.t("shop.replace_action")
 		swap_button.tooltip_text = Loc.t("shop.replace", [Loc.weapon_name(o.id())])
@@ -418,7 +410,9 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 func _visible_blurb(o: Offer) -> String:
 	if o.is_contract():
 		return Loc.t("order.%s.objective" % o.contract.kind)
-	return _description(o)
+	if o.is_weapon():
+		return _description(o)
+	return Loc.item_face(o.item, _sim)
 
 
 func _next_encounter(o: Offer) -> String:

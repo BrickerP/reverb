@@ -152,7 +152,8 @@ func open(s: Sim) -> void:
 	material_feedback_runs = 0
 	vendor_feedback_runs = 0
 	last_vendor_reaction = &"idle"
-	_vendor_line.text = Loc.t("shop.vendor_idle")
+	_vendor_line.text = ""
+	_vendor_line.visible = false
 	_vendor_line.add_theme_color_override("font_color", ON_DARK)
 	last_feedback.clear()
 	visible = true
@@ -193,7 +194,7 @@ func close_session() -> void:
 	if _overlay != null:
 		UiTheme.clear(_overlay)
 	if _footer != null:
-		_footer.text = ""
+		_say("")
 	if receipt_button != null:
 		receipt_button.visible = false
 
@@ -210,16 +211,21 @@ func refresh(animate_echo: bool = false) -> void:
 	_interest.accessibility_description = _interest.text
 	_materials.tooltip_text = ""
 	var expedition := Expedition.status(sim)
-	_prep_status.text = Loc.t(str(expedition.objective))
-	if int(expedition.debt) > 0:
-		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
 	var next_delivery := BureauEvents.forecast(sim.next_wave_number(), sim.endless)
+	var objective_key := str(expedition.objective)
+	var headline := PackedStringArray()
 	if next_delivery:
-		_prep_status.text = Loc.t("bureau.delivery.next_short") + " · " + _prep_status.text
-	_prep_status.tooltip_text = _prep_status.text + " · " + Loc.t(str(expedition.route))
+		headline.append(Loc.t("bureau.delivery.next_short"))
+	if objective_key != "order.survive.objective":
+		headline.append(Loc.t(objective_key))
+	_prep_status.text = " · ".join(headline)
+	_prep_status.visible = not _prep_status.text.is_empty()
+	_prep_status.tooltip_text = _prep_status.text
+	if not _prep_status.text.is_empty():
+		_prep_status.tooltip_text += " · " + Loc.t(str(expedition.route))
 	if next_delivery:
 		_prep_status.tooltip_text += " · " + Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
-	_prep_status.accessibility_description = _prep_status.tooltip_text
+	_prep_status.accessibility_description = _prep_status.tooltip_text if _prep_status.tooltip_text != "" else _prep_status.text
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -243,9 +249,7 @@ func refresh(animate_echo: bool = false) -> void:
 	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
-	undo_button.tooltip_text = Loc.t("shop.undo_hint")
-	if undo_button.disabled:
-		undo_button.text += " · " + Loc.t("shop.undo_blocked")
+	undo_button.tooltip_text = Loc.t("shop.undo_blocked") if undo_button.disabled else Loc.t("shop.undo_hint")
 	undo_button.accessibility_description = undo_button.tooltip_text
 	crew_button.text = Loc.t("crew.open")
 	crew_button.accessibility_name = crew_button.text
@@ -280,7 +284,7 @@ func refresh(animate_echo: bool = false) -> void:
 	if _replacing != null:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
-	_footer.text = ""
+	_say("")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	_sync_lock()
@@ -333,21 +337,35 @@ func _build_footer() -> Control:
 	actions.add_child(_offer_lock)
 	_footer = UiTheme.label("", 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.clip_text = true
+	_footer.visible = false
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_footer.custom_minimum_size = Vector2(0.0, 18.0)
 	box.add_child(_footer)
 	return tray
 
 
+func _say(text: String) -> void:
+	if _footer == null:
+		return
+	_footer.text = text
+	_footer.tooltip_text = text
+	_footer.visible = text != ""
+
+
 func _arm_lock(o: Offer) -> void:
 	_focused_offer = o
-	if _footer != null and sim != null:
-		_footer.text = OfferCard.decision(o, sim)
-		_footer.tooltip_text = _footer.text
 	if _offer_lock == null or o == null:
 		return
 	_offer_lock.visible = not o.sold
-	_offer_lock.text = Loc.t("shop.unlock_fact") if o.locked else Loc.t("shop.lock_fact")
+	_set_lock_label(o.locked)
+
+
+func _set_lock_label(locked: bool) -> void:
+	if _offer_lock == null:
+		return
+	_offer_lock.text = Loc.t("shop.locked") if locked else Loc.t("shop.lock_idle")
+	_offer_lock.tooltip_text = Loc.t("shop.unlock_fact") if locked else Loc.t("shop.lock_fact")
+	_offer_lock.accessibility_description = _offer_lock.tooltip_text
 
 
 func _sync_lock() -> void:
@@ -356,20 +374,16 @@ func _sync_lock() -> void:
 	_offer_lock.visible = true
 	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
 		_focused_offer = null
-		_offer_lock.text = Loc.t("shop.lock_idle")
+		_set_lock_label(false)
 		_offer_lock.tooltip_text = Loc.t("shop.pick_offer")
 		_offer_lock.accessibility_description = _offer_lock.tooltip_text
 		return
-	_offer_lock.text = Loc.t("shop.unlock_fact") if _focused_offer.locked else Loc.t("shop.lock_fact")
-	_offer_lock.tooltip_text = _offer_lock.text
-	_offer_lock.accessibility_description = _offer_lock.text
+	_set_lock_label(_focused_offer.locked)
 
 
 func _lock_focused() -> void:
 	if _focused_offer == null:
-		if _footer != null:
-			_footer.text = Loc.t("shop.pick_offer")
-			_footer.tooltip_text = _footer.text
+		_say(Loc.t("shop.pick_offer"))
 		return
 	_on_lock_offer(_focused_offer)
 
@@ -380,18 +394,13 @@ func _install_focused(kind: StringName, index: int) -> void:
 	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
 		_focused_offer = null
 		_sync_lock()
-		if _footer != null:
-			_footer.text = Loc.t("shop.pick_offer")
-			_footer.tooltip_text = _footer.text
+		_say(Loc.t("shop.pick_offer"))
 		return
 	apply_drop(drag_payload_for(_focused_offer), kind, index)
 
 
 func _on_weapon_detail(text: String) -> void:
-	if _footer == null:
-		return
 	_weapon_detail = text.replace("\n", " · ")
-	_footer.text = _weapon_detail if text != "" else ""
 
 
 func _build_header() -> Control:
@@ -412,7 +421,7 @@ func _build_header() -> Control:
 	var heading := HBoxContainer.new()
 	heading.add_theme_constant_override("separation", 12)
 	identity.add_child(heading)
-	_title = UiTheme.section_label("", 28, UiTheme.PAPER)
+	_title = UiTheme.section_label("", 16, ON_DARK)
 	heading.add_child(_title)
 	debt_button = Button.new()
 	WorkshopUi.fit_button(debt_button, 14, 28.0)
@@ -667,19 +676,19 @@ func _flash_block(reason: StringName) -> void:
 	match reason:
 		&"poor":
 			_react_vendor(&"poor")
-			_footer.text = Loc.t("shop.drop_poor")
+			_say(Loc.t("shop.drop_poor"))
 			_reject_materials()
 		&"full":
-			_footer.text = Loc.t("shop.full_reason")
+			_say(Loc.t("shop.full_reason"))
 			build_panel.flash_slots(reduced_effects)
 		&"maxed":
-			_footer.text = Loc.t("shop.maxed")
+			_say(Loc.t("shop.maxed"))
 			build_panel.flash_items(reduced_effects)
 		&"last":
-			_footer.text = Loc.t("shop.sell_last_reason")
+			_say(Loc.t("shop.sell_last_reason"))
 			build_panel.flash_slots(reduced_effects)
 		_:
-			_footer.text = _drop_reason_text(reason)
+			_say(_drop_reason_text(reason))
 
 
 func _on_reroll() -> void:
@@ -819,6 +828,7 @@ func _react_vendor(kind: StringName, result: ShopResult = null) -> void:
 	last_vendor_reaction = kind
 	vendor_feedback_runs += 1
 	_vendor_line.text = _vendor_text(kind)
+	_vendor_line.visible = true
 	_vendor_line.add_theme_color_override("font_color", ERROR_ON_DARK if kind == &"poor" else ON_DARK)
 	if reduced_effects:
 		return
@@ -1074,29 +1084,24 @@ func quote_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 
 
 func clear_drop_hint() -> void:
-	if _footer == null:
-		return
-	if _focused_offer != null and sim != null:
-		_footer.text = OfferCard.decision(_focused_offer, sim)
-	else:
-		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else ""
+	_say("")
 
 
 func _show_drop_quote(result: ShopResult) -> void:
 	if _footer == null or result == null:
 		return
 	if not result.ok:
-		_footer.text = _drop_reason_text(result.reason)
+		_say(_drop_reason_text(result.reason))
 		return
 	if result.action == ShopResult.REPLACE:
 		if result.cost < 0:
-			_footer.text = Loc.t("shop.quote_refund", [absi(result.cost)])
+			_say(Loc.t("shop.quote_refund", [absi(result.cost)]))
 		elif result.cost == 0:
-			_footer.text = Loc.t("shop.quote_replace_free")
+			_say(Loc.t("shop.quote_replace_free"))
 		else:
-			_footer.text = Loc.t("shop.quote_replace", [result.cost])
+			_say(Loc.t("shop.quote_replace", [result.cost]))
 	else:
-		_footer.text = Loc.t("shop.quote_buy", [result.cost])
+		_say(Loc.t("shop.quote_buy", [result.cost]))
 
 
 func _drop_reason_text(reason: StringName) -> String:

@@ -241,6 +241,10 @@ func test_formatters(c: Check) -> void:
 	c.ok(edged.contains("100%") and edged.contains("110%"), "damage item states the resulting multiplier")
 	var shoes := Loc.item_desc(Content.item(&"sneakers"), sim)
 	c.ok(shoes.contains("260") and shoes.contains("288"), "sneakers state the resulting move speed")
+	c.eq(Loc.item_face(Content.item(&"sharp_edge"), sim), "all-weapon damage 100% → 110%",
+			"the shelf states one change")
+	c.ok(not Loc.item_face(Content.item(&"iron_heart"), sim).contains("cross"),
+			"the heart card does not repeat the final-cross rule")
 	c.ok(not Loc.weapon_desc(&"shotgun").is_empty(), "actual cone behavior is described")
 	c.ok(Loc.weapon_line(Content.weapon(&"rifle")).contains("Pierce 2"), "pierce count is shown")
 	c.ok(Loc.weapon_desc(&"orb").contains("orbits"), "orbit behavior is worded")

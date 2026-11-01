@@ -366,7 +366,7 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 			stated = true
 	c.ok(stated, "hovering the job shows the full order rule")
 	ui._arm_lock(offer)
-	c.ok(ui._footer.text.contains(job), "pointing at the order repeats the job in the footer")
+	c.eq(ui._footer.text, "", "pointing at the order does not open a second copy of the job")
 	ui.free()
 
 
