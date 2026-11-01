@@ -212,12 +212,12 @@ func test_open_shop_captions_and_errors_stay_readable_on_the_dark_ground(c: Chec
 	var backdrop := Color(ground.r * ground.a + canvas.r * (1.0 - ground.a),
 			ground.g * ground.a + canvas.g * (1.0 - ground.a),
 			ground.b * ground.a + canvas.b * (1.0 - ground.a))
-	for label: Label in [ui._title, ui._footer, ui._warning, ui._interest, ui._vendor_line]:
+	for label: Label in [ui._title, ui._footer, ui._warning, ui._materials, ui._vendor_line]:
 		c.ok(_contrast(label.get_theme_color("font_color"), backdrop) >= 4.5,
 				"open-ground shop text meets the 4.5:1 contrast threshold")
 	ui._react_vendor(&"poor")
 	c.ok(_contrast(ui._vendor_line.get_theme_color("font_color"), backdrop) >= 4.5,
 			"the merchant's error reaction stays readable without a full-width paper bar")
-	c.ok(_contrast(ui._materials.get_theme_color("font_color"), UiTheme.PAPER) >= 4.5,
-			"the short material tag preserves dark-on-paper contrast")
+	c.ok(_contrast(ui._interest.get_theme_color("font_color"), UiTheme.PAPER) >= 4.5,
+			"the life stamp stays dark on paper")
 	ui.free()

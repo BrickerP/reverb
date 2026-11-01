@@ -44,6 +44,7 @@ func test_confession_real_entry_discloses_actual_repair_and_uses_shop_undo(c: Ch
 	var ui := _open(sim)
 	ui.confession_button.pressed.emit()
 	c.ok(ui.confession.visible, "real fixed shop entry opens the copy desk")
+	c.eq(ui.confession._body.text, "", "the copy desk does not repeat the contract above the choices")
 	c.eq(ui.confession.choice_buttons.size(), 2, "both signed alternatives are readable")
 	c.ok(ui.confession.choice_buttons[0].accessibility_description.contains(Loc.t("confession.ui.truth_echo", [0.5, uid])), "live partial repair discloses0.5 rather than promise12")
 	c.eq(RunSnapshot.capture(sim), before, "reading the copy desk cannot sign or consume a benefit")

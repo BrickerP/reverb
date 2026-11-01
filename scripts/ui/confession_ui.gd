@@ -86,8 +86,8 @@ func open_confession(sim: Sim) -> void:
 	_apply_layout()
 	_title.text = Loc.t("confession.ui.title")
 	_title.add_theme_font_override("font", UiTheme.title_font(_title.text))
-	_body.text = Loc.t("confession.ui.rule")
-	_body.tooltip_text = _body.text
+	_body.text = ""
+	_body.tooltip_text = ""
 	return_button.text = Loc.t("confession.ui.return")
 	error_label.visible = false
 	error_label.text = ""
@@ -217,9 +217,9 @@ func _apply_layout() -> void:
 	_title.position = Vector2.ZERO
 	_title.size = Vector2(width, 32 if compact else 38)
 	_title.add_theme_font_size_override("font_size", 25 if compact else 29)
-	_body.position = Vector2(0, 34 if compact else 42)
-	_body.size = Vector2(width, 42 if compact else 48)
-	_body.add_theme_font_size_override("font_size", 14 if compact else 15)
+	_body.visible = false
+	_body.position = Vector2.ZERO
+	_body.size = Vector2.ZERO
 	var return_height := 32.0 if compact else 36.0
 	WorkshopUi.fit_button(return_button, 15 if compact else 16, return_height)
 	return_button.position = Vector2(0, maxf(0.0, height - return_height))
@@ -233,7 +233,7 @@ func _apply_layout() -> void:
 	_receipt.position = Vector2(0, _history.position.y - 44.0)
 	_receipt.size = Vector2(width, 40.0)
 	_receipt.add_theme_font_size_override("font_size", 14 if compact else 15)
-	var top := 82.0 if compact else 96.0
+	var top := 40.0 if compact else 46.0
 	var available := maxf(0.0, _receipt.position.y - top - 6.0)
 	var art_width := 126.0 if compact else 220.0
 	_art.position = Vector2(0, top + maxf(0.0, (available - 230.0) * 0.5))
