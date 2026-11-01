@@ -504,7 +504,7 @@ func _draw_controls() -> void:
 		var stock: Rect2 = retirement_hint_profile().rect
 		_stock(&"retirement_hint", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), stock)
 		var status := Loc.t("echo.route", [profile.seconds])
-		var action := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition)), profile.seconds])
+		var action := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition))])
 		if float(profile.condition) < 40.0 and sim.can_retire_echo():
 			action = Loc.t("echo.compact_input", [Controls.retire_label()])
 		elif not sim.can_retire_echo():

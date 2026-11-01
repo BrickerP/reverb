@@ -232,6 +232,7 @@ static func _silencer(sim: Sim, enemy: EnemyState, delta: float) -> void:
 		zone.pos = enemy.attack_target
 		zone.damage = enemy.damage * 0.65
 		sim.enemy_zones.append(zone)
+		sim.world_event.emit({"kind": &"seal_stamp", "pos": zone.pos})
 		return
 	if distance > 350.0:
 		_walk(enemy, offset.normalized(), enemy.speed, delta)

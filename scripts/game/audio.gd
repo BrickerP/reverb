@@ -112,7 +112,7 @@ const COOLDOWNS := {
 	&"kill": 0.04,
 	&"pickup": 0.045,
 	&"echo": 0.14,
-	&"weapon_pistol": 0.045,
+	&"weapon_pistol": 0.18,
 	&"weapon_smg": 0.035,
 	&"weapon_shotgun": 0.09,
 	&"weapon_rifle": 0.08,
@@ -750,6 +750,7 @@ func _on_world_event(info: Dictionary) -> void:
 				# Mender's real support spawn and Overloader's real retirement own
 				# their sounds; a successful key press cannot play those twice.
 		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24)
+		&"seal_stamp": play(&"click", -1.0, 0.58, 0.12)
 
 
 func _on_support_event(info: Dictionary) -> void:

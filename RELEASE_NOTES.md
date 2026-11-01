@@ -1,13 +1,13 @@
-# Take Stack 0.18.4 · The copy takes the cross.
+# Take Stack 0.18.5 · An empty field opens the shop.
 
-The seal is a stamp you can see before it bites. Interest still pays and no longer explains itself. A copy standing in the cross is the body that gets spent.
+A finished first-wave clock with nobody left opens the shop. The echo bar states its seconds once. The seal stamps once, and a second staple inside that moment stays quiet.
 
-- **The seal reads.** The silencer's circle is a paper stamp while it warns and a solid ring while it hurts. There is no new caption.
-- **Interest stays quiet.** The payout is unchanged. The materials tag no longer teaches the formula.
-- **Yesterday blocks today.** An echo inside the paradox cross is consumed, and you do not take that hit. An echo outside the cross does not save you. When no copy is there, an evolved weapon still staples one lethal cross at 1 HP.
-- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, 0.18.2, and 0.18.3 wave/shop saves continue.
+- **The door opens.** Wave 1 still waits while an enemy or a pending spawn remains. An empty field does not.
+- **One number.** The combat bar keeps how long the copy lasts on the route line. The selection line is the id and condition.
+- **The stamp speaks.** Placing a seal plays one short click. It is not the boss silence cue, and it adds no caption. A second stapler shot within 0.18s does not add another voice.
+- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, and 0.18.4 wave/shop saves continue.
 
-封口先盖成一枚能看见的章，再开始伤人。利息照发，不再讲解。站在十字里的回响替你吃下这一击，副本就此用掉。十字外的回响不挡。没有回响时，进化武器仍只钉住一次致命十字。
+第 1 波计时走完、场上没人，就进商店。还有敌人或待生成时，门仍然扣着。回响的秒数只说一次。封口落地是一声短点击，不是 Boss 的 silence。0.18 秒内的第二钉不再另响。
 
 ## Downloads / 下载
 
@@ -21,9 +21,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.4 continues 0.17, 0.18, 0.18.1, 0.18.2, and 0.18.3 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.5 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, and 0.18.4 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18、0.18.1、0.18.2、0.18.3 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 

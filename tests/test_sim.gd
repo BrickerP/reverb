@@ -336,16 +336,22 @@ func test_wave_end_splits_earned_and_interest(c: Check) -> void:
 	c.eq(s.player.materials, 109, "earnings plus interest")
 
 
-func test_first_wave_does_not_end_until_the_player_moves(c: Check) -> void:
+func test_first_wave_holds_only_while_someone_is_still_there(c: Check) -> void:
 	var s := _sim()
 	_immortal(s)
+	s.player.weapons.clear()
+	s.player.cooldowns.clear()
+	s._plan.clear()
+	s.pending.clear()
 	s.enemies.clear()
+	_spawn(s, s.player.pos + Vector2(80.0, 0.0))
 	s.wave_duration = 0.01
 	s.step(0.05, Vector2.ZERO)
-	c.eq(s.phase, Sim.Phase.WAVE, "standing still does not finish the first fight")
-	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
+	c.eq(s.phase, Sim.Phase.WAVE, "a living enemy keeps the finished clock open")
+	s.enemies.clear()
+	s.pending.clear()
 	s.step(0.05, Vector2.ZERO)
-	c.eq(s.phase, Sim.Phase.SHOP, "moving the required distance lets the timer finish the fight")
+	c.eq(s.phase, Sim.Phase.SHOP, "an empty field lets the finished clock close")
 
 
 func test_projectile_explosion_hits_neighbors(c: Check) -> void:

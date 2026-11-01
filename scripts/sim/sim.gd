@@ -529,9 +529,15 @@ func step(delta: float, move_dir: Vector2) -> void:
 func _encounter_finished() -> bool:
 	if wave_time < wave_duration:
 		return false
-	if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL:
+	# The first fight still asks you to walk while someone is left. An empty
+	# field with a finished clock is the shop, not a closed door.
+	if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL and _threats_remain():
 		return false
 	return true
+
+
+func _threats_remain() -> bool:
+	return not enemies.is_empty() or not pending.is_empty()
 
 
 func _fit_echo_cooldowns(actor: EchoActor) -> void:
