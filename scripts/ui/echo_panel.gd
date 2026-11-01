@@ -115,6 +115,8 @@ func _render() -> void:
 	_identity_buttons.clear()
 	_repair_by_uid.clear()
 	merge_button = null
+	page_previous = null
+	page_next = null
 	if _sim == null:
 		return
 	var sim := _sim
@@ -128,11 +130,13 @@ func _render() -> void:
 	head.add_child(title)
 	if capacity > 0 and not sim.bank.takes.is_empty():
 		merge_button = Button.new()
-		merge_button.text = Loc.t("shop.cancel") if _merge_mode else Loc.t("shop.merge")
+		merge_button.disabled = not _merge_mode and sim.bank.takes.size() < 2
+		merge_button.text = Loc.t("shop.cancel") if _merge_mode else (Loc.t("shop.merge_need") if merge_button.disabled else Loc.t("shop.merge"))
+		merge_button.tooltip_text = merge_button.text
+		merge_button.accessibility_description = merge_button.text
 		merge_button.custom_minimum_size = Vector2(80.0, 34.0)
 		merge_button.add_theme_font_size_override("font_size", 14)
 		UiTheme.stamp_button(merge_button, UiTheme.ECHO)
-		merge_button.disabled = not _merge_mode and sim.bank.takes.size() < 2
 		merge_button.pressed.connect(_on_merge_button)
 		head.add_child(merge_button)
 	_box.add_child(head)
@@ -165,6 +169,10 @@ func _render() -> void:
 			last_new_tint = take.tint()
 	if new_row != null and _animate_new:
 		_animate_new_row(new_row)
+	if sim.bank.takes.size() <= page_size:
+		for button: Button in find_children("*", "Button", true, false):
+			WorkshopUi.fit_button(button, 14, 27.0)
+		return
 	var pages := HBoxContainer.new()
 	pages.add_theme_constant_override("separation", 5)
 	page_previous = Button.new()
@@ -299,6 +307,8 @@ func _on_row(take: EchoTake) -> void:
 
 
 func _on_merge_button() -> void:
+	if merge_button != null and merge_button.disabled:
+		return
 	if _merge_mode:
 		cancel_merge()
 		return

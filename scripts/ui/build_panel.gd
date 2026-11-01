@@ -6,6 +6,7 @@ signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
 signal detail_changed(text: String)
 signal workshop_requested(index: int)
+signal install_requested(kind: StringName, index: int)
 
 var weapons_label: Label
 var items_label: Label
@@ -255,6 +256,8 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	var target := ShopDropTarget.new()
 	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
 	target.accessibility_name = text
+	target.tooltip_text = Loc.t("shop.pick_offer")
+	target.clicked.connect(func() -> void: install_requested.emit(kind, -1))
 	target.custom_minimum_size = Vector2(0.0, 36.0)
 	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.35), 1, 18)
 	style.shape = InkStyleBox.Shape.TAG

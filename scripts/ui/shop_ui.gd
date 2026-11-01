@@ -96,6 +96,7 @@ func _ready() -> void:
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
 	build_panel.detail_changed.connect(_on_weapon_detail)
 	build_panel.workshop_requested.connect(_open_weapon_workshop)
+	build_panel.install_requested.connect(_install_focused)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -282,6 +283,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_footer.text = ""
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
+	_sync_lock()
 	_rebuild_focus()
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
 
@@ -348,9 +350,41 @@ func _arm_lock(o: Offer) -> void:
 	_offer_lock.text = Loc.t("shop.unlock_fact") if o.locked else Loc.t("shop.lock_fact")
 
 
+func _sync_lock() -> void:
+	if _offer_lock == null or sim == null:
+		return
+	_offer_lock.visible = true
+	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
+		_focused_offer = null
+		_offer_lock.text = Loc.t("shop.lock_idle")
+		_offer_lock.tooltip_text = Loc.t("shop.pick_offer")
+		_offer_lock.accessibility_description = _offer_lock.tooltip_text
+		return
+	_offer_lock.text = Loc.t("shop.unlock_fact") if _focused_offer.locked else Loc.t("shop.lock_fact")
+	_offer_lock.tooltip_text = _offer_lock.text
+	_offer_lock.accessibility_description = _offer_lock.text
+
+
 func _lock_focused() -> void:
-	if _focused_offer != null:
-		_on_lock_offer(_focused_offer)
+	if _focused_offer == null:
+		if _footer != null:
+			_footer.text = Loc.t("shop.pick_offer")
+			_footer.tooltip_text = _footer.text
+		return
+	_on_lock_offer(_focused_offer)
+
+
+func _install_focused(kind: StringName, index: int) -> void:
+	if sim == null or not visible or sim.phase != Sim.Phase.SHOP:
+		return
+	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
+		_focused_offer = null
+		_sync_lock()
+		if _footer != null:
+			_footer.text = Loc.t("shop.pick_offer")
+			_footer.tooltip_text = _footer.text
+		return
+	apply_drop(drag_payload_for(_focused_offer), kind, index)
 
 
 func _on_weapon_detail(text: String) -> void:

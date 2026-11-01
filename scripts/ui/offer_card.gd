@@ -117,7 +117,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		desc.clip_text = true
 		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		desc.tooltip_text = _visible_blurb(o)
+		desc.tooltip_text = _description(o)
 		box.add_child(desc)
 	if reason != &"" and reason != &"sold":
 		var why := UiTheme.label(_blocked_text(reason), 13, UiTheme.WARN)
@@ -417,12 +417,7 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 
 func _visible_blurb(o: Offer) -> String:
 	if o.is_contract():
-		var line := Loc.t("order.credit_fact") if o.contract.kind == AnomalyContract.CREDIT \
-				else Loc.t("order.payoff", [o.contract.deposit, o.contract.reward])
-		if o.contract.kind == AnomalyContract.REPAIR:
-			line += " · " + Loc.t("order.repair.stay")
-		line += "\n" + _next_encounter(o)
-		return line
+		return Loc.t("order.%s.objective" % o.contract.kind)
 	return _description(o)
 
 
@@ -459,7 +454,7 @@ static func decision(o: Offer, sim: Sim) -> String:
 	if o == null or sim == null:
 		return ""
 	if o.is_contract():
-		var got := Loc.t("order.%s.name" % o.contract.kind)
+		var got := Loc.t("order.%s.name" % o.contract.kind) + " · " + Loc.t("order.%s.objective" % o.contract.kind)
 		if o.contract.kind == AnomalyContract.CREDIT:
 			return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.credit_fact"), got])
 		return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.payoff", [o.contract.deposit, o.contract.reward]), got])
@@ -476,6 +471,9 @@ func _description(o: Offer) -> String:
 		if o.contract.kind == AnomalyContract.REPAIR:
 			payoff += " · " + Loc.t("order.repair.stay")
 		var body := Loc.t("order.%s.desc" % o.contract.kind)
+		var next := _next_encounter(o)
+		if next != "":
+			body += "\n" + next
 		if not _order_context.is_empty():
 			body += "\n" + _order_context
 		return payoff + "\n" + body
