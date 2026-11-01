@@ -1,11 +1,11 @@
 extends SceneTree
 # Copy this same probe into each immutable public archive for write, then run
-# read in 0.18.5. Wrap commands with tools/checked.sh; never relax decoder checks.
+# read in 0.18.6. Wrap commands with tools/checked.sh; never relax decoder checks.
 # -- --mode=write|read --output=<absolute directory>
 
 const DT := 1.0 / 60.0
 const SOURCE_VERSIONS := ["0.17.0", "0.18.0"]
-const READER_VERSION := "0.18.5"
+const READER_VERSION := "0.18.6"
 const PAYLOAD_FILE := "compat-payload.json"
 const DEADLINE_MSEC := 30000
 
@@ -138,7 +138,7 @@ func _describe(sim: Sim) -> Dictionary:
 func _read_payload() -> bool:
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
 	var commit := OS.get_environment("REVERB_STRESS_COMMIT").strip_edges()
-	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.5") \
+	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.6") \
 			or not _require(_commit_valid(commit), "reader needs its full REVERB_STRESS_COMMIT"):
 		return false
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(_output.path_join(PAYLOAD_FILE)))
