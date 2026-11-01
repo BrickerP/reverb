@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.18.3**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.18.4**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
@@ -100,11 +100,11 @@ macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签
 
 The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
 
-0.18.3 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1 and 0.18.2 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+0.18.4 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2 and 0.18.3 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
 
 
 ## Paper actions / 纸上见真章
 
-0.18.3 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
+0.18.4 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
 
 The same paper cast now has six material attack gestures, directional target reactions and visible repair, retirement and machine-contact sequences. Actual slot and event identities drive feedback; simulation rules, combat geometry and Snapshot v4 remain authoritative.

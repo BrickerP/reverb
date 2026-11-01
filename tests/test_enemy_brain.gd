@@ -103,6 +103,66 @@ func test_silencer_seal_warns_fixed_area_and_expires(c: Check) -> void:
 	c.eq(sim.enemy_zones.size(), 0, "spent seals leave no permanent hazard")
 
 
+func _copy(sim: Sim, position: Vector2) -> EchoActor:
+	var take := EchoTake.new()
+	take.samples.append(position)
+	take.weapons.append(Content.weapon(&"pistol"))
+	take.levels.append(0)
+	sim.bank.add(take)
+	var actor := EchoActor.new(take, sim.echoes.size())
+	actor.pos = position
+	sim.echoes.append(actor)
+	return actor
+
+
+func test_echo_inside_the_cross_is_spent_and_the_player_is_not(c: Check) -> void:
+	var sim := Sim.new(8)
+	sim.start_run()
+	_copy(sim, sim.player.pos)
+	var boss := _enemy(&"paradox", sim.player.pos + Vector2(500.0, 0.0))
+	boss.attack_target = sim.player.pos
+	var hp := sim.player.hp
+	EnemyBrain._boss_impact(sim, boss)
+	c.eq(sim.player.hp, hp, "a copy inside the cross takes the hit")
+	c.eq(sim.echoes.size(), 0, "that copy leaves the field")
+	c.eq(sim.bank.takes.size(), 0, "the recording is consumed")
+	c.ok(not sim.is_cross_stapled(), "a body in the cross is not the staple")
+	EnemyBrain._boss_impact(sim, boss)
+	c.ok(sim.player.hp < hp, "the next cross hits the player")
+
+
+func test_echo_outside_the_cross_does_not_block_it(c: Check) -> void:
+	var sim := Sim.new(9)
+	sim.start_run()
+	var away := sim.player.pos + Vector2(0.0, 400.0)
+	var copy := _copy(sim, away)
+	var boss := _enemy(&"paradox", sim.player.pos + Vector2(500.0, 0.0))
+	boss.attack_target = sim.player.pos
+	var hp := sim.player.hp
+	c.ok(not EnemyBrain.in_cross(away, boss.attack_target, PlayerState.RADIUS), "the copy is outside the cross")
+	EnemyBrain._boss_impact(sim, boss)
+	c.ok(sim.player.hp < hp, "the player is hit")
+	c.eq(sim.echoes.size(), 1, "an outside copy stays")
+	c.eq(sim.bank.takes[0], copy.take, "its recording stays")
+
+
+func test_echo_in_the_cross_is_kept_when_the_player_is_clear(c: Check) -> void:
+	var sim := Sim.new(10)
+	sim.start_run()
+	var point := sim.player.pos + Vector2(500.0, 0.0)
+	sim.player.pos = point + Vector2(400.0, 400.0)
+	_copy(sim, point)
+	var boss := _enemy(&"paradox", point + Vector2(80.0, 0.0))
+	boss.attack_target = point
+	var hp := sim.player.hp
+	c.ok(EnemyBrain.in_cross(point, point, PlayerState.RADIUS), "the copy stands in the cross")
+	c.ok(not EnemyBrain.in_cross(sim.player.pos, point, PlayerState.RADIUS), "the player is clear")
+	EnemyBrain._boss_impact(sim, boss)
+	c.eq(sim.player.hp, hp, "a miss does not hurt")
+	c.eq(sim.echoes.size(), 1, "a copy is not spent for a miss")
+	c.eq(sim.bank.takes.size(), 1, "the recording stays when it does not block")
+
+
 func test_warden_turns_with_inertia_and_status_timers_are_authoritative(c: Check) -> void:
 	var sim := Sim.new(5)
 	sim.start_run()

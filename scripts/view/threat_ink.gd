@@ -270,18 +270,21 @@ static func draw_enemy_zones(ci: CanvasItem, sim: Sim) -> void:
 		var active := zone.is_active()
 		if not active and not zone.is_warning():
 			continue
-		ci.draw_circle(zone.pos, zone.radius, Color(DANGER, 0.14 if active else 0.04), true, -1.0, true)
+		ci.draw_circle(zone.pos, zone.radius, Color(DANGER, 0.14 if active else 0.16), true, -1.0, true)
 		if active:
-			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 40, Color(PAPER, 0.6), 4.0, true)
-			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 40, DANGER, 2.0, true)
+			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 48, Color(PAPER, 0.9), 7.0, true)
+			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 48, DANGER, 3.5, true)
 		else:
+			ci.draw_arc(zone.pos, zone.radius, 0.0, TAU, 48, Color(PAPER, 0.92), 8.0, true)
 			ci.draw_set_transform(zone.pos)
-			ci.draw_multiline(dashed_boundary_points(zone.radius), Color(DANGER, 0.65), 1.8, true)
+			ci.draw_multiline(dashed_boundary_points(zone.radius), DANGER, 4.0, true)
 			ci.draw_set_transform(Vector2.ZERO)
-		var stamp := Rect2(zone.pos - Vector2(16.0, 11.0), Vector2(32.0, 22.0))
-		ci.draw_rect(stamp, Color(PAPER, 0.28 if active else 0.14), true)
-		ci.draw_rect(stamp, Color(INK, 0.55), false, 1.6)
-		ci.draw_line(stamp.position + Vector2(4.0, 5.0), stamp.end - Vector2(4.0, 5.0), DANGER, 3.0, true)
+		var stamp := Rect2(zone.pos - Vector2(22.0, 16.0), Vector2(44.0, 32.0))
+		ci.draw_rect(stamp, Color(PAPER, 0.94), true)
+		ci.draw_rect(stamp, INK, false, 2.4)
+		ci.draw_line(stamp.position + Vector2(6.0, 6.0), stamp.end - Vector2(6.0, 6.0), DANGER, 5.0, true)
+		ci.draw_line(stamp.position + Vector2(6.0, stamp.size.y - 6.0),
+			stamp.position + Vector2(stamp.size.x - 6.0, 6.0), DANGER, 5.0, true)
 
 
 static func rift_profile(rift: TemporalRift, clock: float = 0.0,

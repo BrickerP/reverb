@@ -1,14 +1,13 @@
-# Take Stack 0.18.3 · The shop shows your life.
+# Take Stack 0.18.4 · The copy takes the cross.
 
-The shop headline is your life. The wave-12 cross is quoted at the size the fight deals, and the enraged follow-up is named beside it. Systems that already resolve no longer narrate themselves.
+The seal is a stamp you can see before it bites. Interest still pays and no longer explains itself. A copy standing in the cross is the body that gets spent.
 
-- **Life, not a lecture.** The standing line is current and maximum HP. Interest still pays, and the formula sits on the materials tag. A heart states the final cross after you buy it.
-- **One staple.** An evolved weapon stops the first lethal cross each wave at 1 HP. The notice appears when it happens. A spent staple is saved with the run and clears on the next wave.
-- **The door stays open.** A full echo bank no longer disables departure. Starting the wave still drops the weakest extra copies. Shelf refresh no longer rewrites combat randomness.
-- **Less talk.** Support ticks and a new gun's first shot no longer print a caption. The select screen keeps one line for the role you are looking at. The overloader starts with the pistol; the stamp falls only on overload.
-- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, and 0.18.2 wave/shop saves continue.
+- **The seal reads.** The silencer's circle is a paper stamp while it warns and a solid ring while it hurts. There is no new caption.
+- **Interest stays quiet.** The payout is unchanged. The materials tag no longer teaches the formula.
+- **Yesterday blocks today.** An echo inside the paradox cross is consumed, and you do not take that hit. An echo outside the cross does not save you. When no copy is there, an evolved weapon still staples one lethal cross at 1 HP.
+- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, 0.18.2, and 0.18.3 wave/shop saves continue.
 
-商店主句只报生命。第 12 波十字按真实伤害报价，狂暴后的一击写在旁边。进化武器把本波第一次致命十字钉在 1 点。回响满了不拦出发。用过的钉会存进这局。
+封口先盖成一枚能看见的章，再开始伤人。利息照发，不再讲解。站在十字里的回响替你吃下这一击，副本就此用掉。十字外的回响不挡。没有回响时，进化武器仍只钉住一次致命十字。
 
 ## Downloads / 下载
 
@@ -22,9 +21,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.3 continues 0.17, 0.18, 0.18.1, and 0.18.2 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.4 continues 0.17, 0.18, 0.18.1, 0.18.2, and 0.18.3 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18、0.18.1、0.18.2 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1、0.18.2、0.18.3 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 

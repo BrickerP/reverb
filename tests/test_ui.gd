@@ -207,9 +207,7 @@ func test_start_departs_while_echoes_overflow(c: Check) -> void:
 	c.eq(ui._interest.text, Loc.t("shop.hp_now", [Loc.number(s.player.hp), Loc.number(s.player.max_hp())]),
 			"the shop headline is only the current life")
 	c.eq(ui._interest.tooltip_text, "", "the life line does not explain another system")
-	c.eq(ui._materials.tooltip_text, Loc.t("shop.economy", [s.last_wave_earned, s.last_interest,
-			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(s.player.materials)]),
-			"interest remains on the money, not in the headline")
+	c.eq(ui._materials.tooltip_text, "", "interest is paid without a lecture")
 	c.ok(not ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])),
 			"departure does not announce the copy it will drop")
 	var started := [false]
