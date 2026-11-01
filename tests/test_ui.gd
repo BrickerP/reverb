@@ -206,6 +206,8 @@ func test_start_departs_while_echoes_overflow(c: Check) -> void:
 	c.eq(ui.start_button.text, Loc.t("shop.start", [s.next_wave_number()]), "the button only names the next wave")
 	c.eq(ui._interest.text, Loc.t("shop.hp_now", [Loc.number(s.player.hp), Loc.number(s.player.max_hp())]),
 			"the shop headline is only the current life")
+	c.ok(ui._interest.get_theme_font_size("font_size") > ui._materials.get_theme_font_size("font_size"),
+			"life is the larger line")
 	c.eq(ui._interest.tooltip_text, "", "the life line does not explain another system")
 	c.eq(ui._materials.tooltip_text, "", "interest is paid without a lecture")
 	c.ok(not ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])),

@@ -401,11 +401,11 @@ func _build_header() -> Control:
 	paper.content_margin_top = 8.0
 	paper.content_margin_bottom = 8.0
 	tag.add_theme_stylebox_override("panel", paper)
-	_materials = UiTheme.label("", 21, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
-	tag.add_child(_materials)
-	_interest = UiTheme.label("", 13, ON_DARK, HORIZONTAL_ALIGNMENT_RIGHT)
+	_interest = UiTheme.label("", 21, UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	tag.add_child(_interest)
+	_materials = UiTheme.label("", 13, ON_DARK, HORIZONTAL_ALIGNMENT_RIGHT)
 	right.add_child(tag)
-	right.add_child(_interest)
+	right.add_child(_materials)
 	row.add_child(right)
 	return panel
 
