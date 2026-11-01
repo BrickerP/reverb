@@ -338,3 +338,45 @@ func test_final_cross_is_the_scaled_wave_twelve_hit(c: Check) -> void:
 	var next_hp := minf(next_max, sim.player.hp + added)
 	c.ok(Loc.item_desc(Content.item(&"iron_heart"), sim).contains(Loc.cross_life(next_hp, next_max)),
 			"a heart states the final cross after the purchase")
+
+
+func test_evolved_weapon_staples_one_lethal_cross(c: Check) -> void:
+	var cross := EnemyBrain.paradox_cross_damage_at(WaveDirector.FINAL_WAVE)
+	var bare := _shop_sim()
+	bare.player.stats.values[Stats.MAX_HP] = 35.0
+	bare.player.hp = 35.0
+	bare._hurt_player(cross, &"paradox", &"paradox_cross", bare.player.pos, Vector2.RIGHT)
+	bare.player.iframes = 0.0
+	bare._hurt_player(cross, &"paradox", &"paradox_cross", bare.player.pos, Vector2.RIGHT)
+	c.ok(bare.player.hp <= 0.0, "35 HP dies to the second final cross")
+	var armed := _shop_sim()
+	armed.player.stats.values[Stats.MAX_HP] = 35.0
+	armed.player.hp = 35.0
+	armed.player.add_weapon(Content.weapon(&"twin_fangs"))
+	armed._hurt_player(cross, &"paradox", &"paradox_cross", armed.player.pos, Vector2.RIGHT)
+	c.near(armed.player.hp, 35.0 - cross, 0.001, "the first cross is not stapled")
+	c.ok(not armed.cross_stapled, "a survivable cross does not spend the staple")
+	armed.player.iframes = 0.0
+	armed._hurt_player(cross, &"paradox", &"paradox_cross", armed.player.pos, Vector2.RIGHT)
+	c.near(armed.player.hp, 1.0, 0.001, "the lethal cross stops at 1 HP")
+	c.ok(armed.cross_stapled, "the staple is spent")
+	var marked := RunSnapshot.capture(armed)
+	armed.cross_stapled = false
+	c.eq(RunSnapshot.capture(armed), marked, "the staple is not a saved field")
+	armed.cross_stapled = true
+	armed.player.iframes = 0.0
+	armed._hurt_player(cross, &"paradox", &"paradox_cross", armed.player.pos, Vector2.RIGHT)
+	c.ok(armed.player.hp <= 0.0, "a later cross is not stapled again")
+	var other := _shop_sim()
+	other.player.add_weapon(Content.weapon(&"twin_fangs"))
+	other.player.hp = 5.0
+	other._hurt_player(30.0, &"grunt", &"contact", other.player.pos, Vector2.RIGHT)
+	c.ok(other.player.hp <= 0.0, "the staple ignores hits that are not the cross")
+	c.ok(not other.cross_stapled, "a non-cross death does not spend the staple")
+	var line := Loc.cross_life(35.0, 35.0, true)
+	c.eq(line, Loc.t("shop.life", [Loc.number(35.0), Loc.number(35.0), WaveDirector.FINAL_WAVE, Loc.number(cross),
+			Loc.t("shop.cross_stapled", [Loc.number(35.0 - cross)])]), "owning an evolution changes the shop sentence")
+	armed.phase = Sim.Phase.SHOP
+	armed.cross_stapled = true
+	armed.start_next_wave()
+	c.ok(not armed.cross_stapled, "the next wave has its own staple")

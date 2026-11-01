@@ -203,7 +203,7 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
-	_interest.text = Loc.cross_life(sim.player.hp, sim.player.max_hp())
+	_interest.text = Loc.cross_life(sim.player.hp, sim.player.max_hp(), sim.has_evolved_weapon())
 	_interest.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
 	_interest.accessibility_description = _interest.tooltip_text
@@ -606,7 +606,7 @@ func _on_evolve_weapon(index: int) -> void:
 		choices.append({"text": "%s · %s · %d · %s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), quote.cost, Loc.t("shop.take_dps", [dps])], "value": target,
 			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + _drop_reason_text(quote.reason) if not quote.ok else Loc.weapon_desc(target)})
 	var weapon := sim.player.weapons[index]
-	var body := Loc.t("workshop.evolve_hint") + "\n" + Loc.t("workshop.evolve_tradeoff") + "\n" + Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
+	var body := Loc.t("workshop.evolve_hint") + "\n" + Loc.t("workshop.evolve_tradeoff") + "\n" + Loc.t("workshop.evolve_staple") + "\n" + Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
 	if blocked != &"":
 		body += "\n" + _drop_reason_text(blocked)
 	workshop.show_choices(Loc.t("workshop.evolve"), body, choices, func(value: Variant) -> void:

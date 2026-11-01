@@ -358,7 +358,7 @@ func _schema_fields(type_name: String) -> Array[Dictionary]:
 		# keeping them out of the row leaves Snapshot v4 the same shape 0.17,
 		# 0.18 and 0.18.1 already wrote.
 		if type_name == "Sim" and info.name in ["grid", "wave_travel", "cue_slot",
-				"action_notice_key", "action_notice_text", "action_notice_until"]:
+				"action_notice_key", "action_notice_text", "action_notice_until", "cross_stapled"]:
 			continue
 		fields.append(info)
 	return fields
