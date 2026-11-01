@@ -302,8 +302,30 @@ func echo_dps(take: EchoTake) -> float:
 	return take.power() * echo_power() * damage / cooldown
 
 
+func is_cross_stapled() -> bool:
+	return bool(role_effects.get("cross_stapled", false))
+
+
+func has_evolved_weapon() -> bool:
+	for weapon in player.weapons:
+		if weapon.rarity == &"evolved":
+			return true
+	return false
+
+
 func can_start_wave() -> bool:
-	return phase == Phase.SHOP and bank.overflow(echo_capacity()) == 0
+	return phase == Phase.SHOP
+
+
+# Same set start_wave drops: staff is held out, then the weakest copies past capacity go.
+func departing_discards() -> Array[EchoTake]:
+	var staff_uid := int(expedition.get("world", {}).get("staff_uid", 0))
+	var staff := bank.find_uid(staff_uid)
+	var pool: Array[EchoTake] = []
+	for take in bank.takes:
+		if staff == null or take != staff:
+			pool.append(take)
+	return EchoBank.preview_trim(pool, maxi(0, echo_capacity() - (1 if staff != null else 0)))
 
 
 # Every fourth encounter concludes an act with a mandatory boss.
@@ -378,6 +400,7 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_travel = 0.0
+	role_effects.erase("cross_stapled")
 	action_notice_key = &""
 	action_notice_text = ""
 	action_notice_until = 0.0
@@ -792,7 +815,13 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt
-		if player.hp <= 0.0 and second_wind_charges > 0:
+		if player.hp <= 0.0 and effect == &"paradox_cross" and not is_cross_stapled() and has_evolved_weapon():
+			role_effects["cross_stapled"] = true
+			player.hp = 1.0
+			action_notice_key = &"hud.cross_stapled"
+			action_notice_text = Loc.t("hud.cross_stapled")
+			action_notice_until = wave_time + 1.6
+		elif player.hp <= 0.0 and second_wind_charges > 0:
 			second_wind_charges -= 1
 			player.hp = 1.0
 	if grant_iframes:

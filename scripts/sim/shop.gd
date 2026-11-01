@@ -596,6 +596,15 @@ func roll(sim: Sim) -> void:
 	_fill(sim, locked_offer())
 
 
+# Stock is a function of the run seed, the wave, and how many times this shelf
+# was refreshed. It must not draw sim.rng, or a reroll rewrites the next fight.
+func _stock_rng(sim: Sim) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	var mixed := int(sim.rng.seed) ^ (sim.wave * 374761393) ^ (rerolls * 668265263)
+	rng.seed = mixed if mixed != 0 else 1
+	return rng
+
+
 func can_buy(sim: Sim, offer: Offer) -> bool:
 	return quote(ShopResult.BUY, sim, offer).ok
 
@@ -650,6 +659,7 @@ func reroll(sim: Sim) -> bool:
 
 
 func _fill(sim: Sim, keep: Offer = null) -> void:
+	var rng := _stock_rng(sim)
 	var keep_index := offers.find(keep) if keep != null else -1
 	offers.clear()
 	if keep != null:
@@ -660,13 +670,13 @@ func _fill(sim: Sim, keep: Offer = null) -> void:
 	var orders := 1 if keep != null and keep.is_contract() else 0
 	var passives := 1 if keep != null and not keep.is_weapon() and not keep.is_contract() else 0
 	while weapons < CATEGORY_COUNT:
-		var offer := _weapon_offer(sim, weapons == 0)
+		var offer := _weapon_offer(sim, weapons == 0, rng)
 		if offer == null:
 			break
 		offers.append(offer)
 		weapons += 1
 	while passives < CATEGORY_COUNT:
-		var offer := _item_offer(sim)
+		var offer := _item_offer(sim, rng)
 		if offer == null:
 			break
 		offers.append(offer)
@@ -680,7 +690,7 @@ func _fill(sim: Sim, keep: Offer = null) -> void:
 		if choices.is_empty():
 			break
 		var offer := Offer.new()
-		offer.contract = AnomalyContract.create(choices[sim.rng.randi_range(0, choices.size() - 1)], sim.wave + 1)
+		offer.contract = AnomalyContract.create(choices[rng.randi_range(0, choices.size() - 1)], sim.wave + 1)
 		offer.price = offer.contract.deposit
 		offers.append(offer)
 		orders += 1
@@ -700,7 +710,7 @@ func _maxed(sim: Sim, item: ItemDef) -> bool:
 	return item != null and item.max_stack > 0 and sim.player.item_count(item.id) >= item.max_stack
 
 
-func _weapon_offer(sim: Sim, paired: bool = false) -> Offer:
+func _weapon_offer(sim: Sim, paired: bool, rng: RandomNumberGenerator) -> Offer:
 	var pool: Array[Dictionary] = []
 	if paired:
 		for index in sim.player.weapons.size():
@@ -716,7 +726,7 @@ func _weapon_offer(sim: Sim, paired: bool = false) -> Offer:
 	var total := 0.0
 	for entry in pool:
 		total += (entry["weapon"] as WeaponDef).drop_weight
-	var roll_value := sim.rng.randf() * total
+	var roll_value := rng.randf() * total
 	var picked: Dictionary = pool.back()
 	for entry in pool:
 		roll_value -= (entry["weapon"] as WeaponDef).drop_weight
@@ -730,7 +740,7 @@ func _weapon_offer(sim: Sim, paired: bool = false) -> Offer:
 	return offer
 
 
-func _item_offer(sim: Sim) -> Offer:
+func _item_offer(sim: Sim, rng: RandomNumberGenerator) -> Offer:
 	var pool: Array[ItemDef] = []
 	for item: ItemDef in Content.items().values():
 		if not _has(item.id) and not _maxed(sim, item) and (not item.echo_item or sim.echo_capacity() > 0):
@@ -738,6 +748,6 @@ func _item_offer(sim: Sim) -> Offer:
 	if pool.is_empty():
 		return null
 	var offer := Offer.new()
-	offer.item = pool[sim.rng.randi_range(0, pool.size() - 1)]
+	offer.item = pool[rng.randi_range(0, pool.size() - 1)]
 	offer.price = price_for(offer.item.price, sim.wave)
 	return offer

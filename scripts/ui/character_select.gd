@@ -401,13 +401,13 @@ func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 	card.trait_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.trait_label)
-	var status := Loc.t("select.awaiting_release", [Loc.character_name(def.id)]) if locked else Loc.t("select.ready")
-	card.status_label = UiTheme.label(status, 13, UiTheme.WARN if locked else UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
+	var status := "" if locked else Loc.t("select.ready")
+	card.status_label = UiTheme.label(status, 13, UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
 	card.status_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.status_label)
-	card.tooltip_text = Loc.character_desc(def.id)
-	card.accessibility_description = "%s · %s" % [Loc.character_desc(def.id), status]
+	card.tooltip_text = _opening_line(def)
+	card.accessibility_description = _opening_line(def) if status == "" else "%s · %s" % [_opening_line(def), status]
 	return card
 
 

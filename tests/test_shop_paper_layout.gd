@@ -46,7 +46,7 @@ func test_eight_copies_page_without_blocking_nonoverflow(c: Check) -> void:
 	c.eq(ui.echo_panel.discard_buttons.size(), ui.echo_panel.page_size, "copy actions are bounded by page size")
 	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "no nested copy scrolling")
 	c.ok(ui.echo_panel.page_next != null and not ui.echo_panel.page_next.disabled, "remaining copies have an explicit page action")
-	c.ok(ui.start_button.disabled, "actual overflow blocks departure")
+	c.ok(not ui.start_button.disabled, "overflow does not block departure")
 	ui.echo_panel.page_next.pressed.emit()
 	c.eq(ui.echo_panel.page, 1, "paging changes only the visible bank page")
 	c.eq(ShopState.capture(sim).to_dict(), before, "paging never mutates the bank")

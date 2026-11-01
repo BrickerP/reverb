@@ -106,17 +106,29 @@ func discard(take: EchoTake) -> bool:
 
 
 func weakest() -> EchoTake:
+	return weakest_in(takes)
+
+
+static func weakest_in(pool: Array[EchoTake]) -> EchoTake:
 	var best: EchoTake = null
-	for t in takes:
+	for t in pool:
 		if best == null or t.power() < best.power():
 			best = t
 	return best
 
 
-func trim_to(capacity: int) -> Array[EchoTake]:
+static func preview_trim(pool: Array[EchoTake], capacity: int) -> Array[EchoTake]:
+	var left: Array[EchoTake] = pool.duplicate()
 	var removed: Array[EchoTake] = []
-	while takes.size() > capacity and not takes.is_empty():
-		var w := weakest()
-		takes.erase(w)
+	while left.size() > capacity and not left.is_empty():
+		var w := weakest_in(left)
+		left.erase(w)
 		removed.append(w)
+	return removed
+
+
+func trim_to(capacity: int) -> Array[EchoTake]:
+	var removed := preview_trim(takes, capacity)
+	for w in removed:
+		takes.erase(w)
 	return removed

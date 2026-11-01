@@ -159,6 +159,14 @@ static func stat_value(id: StringName, amount: float, signed: bool = true) -> St
 	return text + "%" if Stats.PERCENT.has(id) else text
 
 
+static func cross_life(hp: float, max_hp: float, stapled: bool = false) -> String:
+	var wave := WaveDirector.FINAL_WAVE
+	var cross := EnemyBrain.paradox_cross_damage_at(wave)
+	var enraged := cross * Sim.BOSS_ENRAGE_DAMAGE
+	var tail := t("shop.cross_staple_rule") if stapled else t("shop.cross_enrage", [number(enraged)])
+	return t("shop.life", [number(hp), number(max_hp), wave, number(cross), tail])
+
+
 static func item_desc(it: ItemDef, sim: Sim = null) -> String:
 	if it != null and it.id == &"long_play":
 		var before := Stats.DEFAULTS[Stats.ECHO_DURATION] if sim == null else sim.echo_duration()
@@ -173,6 +181,11 @@ static func item_desc(it: ItemDef, sim: Sim = null) -> String:
 		parts.append("%s %s" % [stat_value(stat, float(it.mods[stat])), stat_name(stat)])
 	if it.mods.has(Stats.MAX_HP):
 		parts.append(t("item.max_hp_now"))
+		if sim != null:
+			var added := float(it.mods[Stats.MAX_HP])
+			var next_max := sim.player.max_hp() + added
+			var next_hp := minf(next_max, sim.player.hp + added)
+			parts.append(cross_life(next_hp, next_max, sim.has_evolved_weapon()))
 	return "  ".join(parts)
 
 

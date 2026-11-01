@@ -632,6 +632,9 @@ func _role_valid(effects: Dictionary, energy: float, cooldown: float) -> bool:
 		elif key == "ability_kind":
 			if typeof(effects[key]) != TYPE_STRING_NAME or Content.character(effects[key]) == null:
 				return false
+		elif String(key) == "cross_stapled":
+			if typeof(effects[key]) != TYPE_BOOL:
+				return false
 		elif key == "rewind_history":
 			if typeof(effects[key]) != TYPE_ARRAY or effects[key].size() > CharacterSkills.HISTORY_SAMPLES:
 				return false

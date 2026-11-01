@@ -13,6 +13,19 @@ const BRUTE_REACH := 132.0
 const BRUTE_HALF_ANGLE := PI * 0.28
 const WARDEN_TURN_SPEED := 1.8
 const MAX_ZONES := 12
+const IMPACT_MULT := 1.6
+
+
+static func impact_damage(enemy: EnemyState) -> float:
+	return enemy.damage * IMPACT_MULT
+
+
+static func paradox_cross_damage() -> float:
+	return paradox_cross_damage_at(1)
+
+
+static func paradox_cross_damage_at(wave: int) -> float:
+	return Content.enemy(&"paradox").damage * WaveDirector.damage_scale(wave) * IMPACT_MULT
 
 
 static func step(sim: Sim, enemy: EnemyState, delta: float) -> void:
@@ -101,7 +114,7 @@ static func _boss_impact(sim: Sim, enemy: EnemyState) -> void:
 		inside = (absf(offset.x) <= 34.0 + PlayerState.RADIUS and absf(offset.y) <= 205.0 + PlayerState.RADIUS) \
 			or (absf(offset.y) <= 34.0 + PlayerState.RADIUS and absf(offset.x) <= 205.0 + PlayerState.RADIUS)
 	if inside:
-		_hurt(sim, enemy, enemy.damage * 1.6, &"foreman_press" if enemy.def.id == &"foreman" else &"paradox_cross", offset.normalized())
+		_hurt(sim, enemy, impact_damage(enemy), &"foreman_press" if enemy.def.id == &"foreman" else &"paradox_cross", offset.normalized())
 	for unit in sim.support_units.duplicate():
 		var support_offset: Vector2 = unit["pos"] - point
 		var hit := support_offset.length() <= 112.0 + SupportSystem.UNIT_RADIUS
@@ -109,7 +122,7 @@ static func _boss_impact(sim: Sim, enemy: EnemyState) -> void:
 			hit = (absf(support_offset.x) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.y) <= 205.0 + SupportSystem.UNIT_RADIUS) \
 				or (absf(support_offset.y) <= 34.0 + SupportSystem.UNIT_RADIUS and absf(support_offset.x) <= 205.0 + SupportSystem.UNIT_RADIUS)
 		if hit:
-			SupportSystem.damage(sim, int(unit["uid"]), enemy.damage * 1.6)
+			SupportSystem.damage(sim, int(unit["uid"]), impact_damage(enemy))
 
 
 static func _runner(sim: Sim, enemy: EnemyState, delta: float) -> void:

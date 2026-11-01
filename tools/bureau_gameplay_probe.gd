@@ -403,8 +403,11 @@ func _truth(solo: bool) -> void:
 	var reroll_quote := sim.shop.quote(ShopResult.REROLL, sim)
 	var funds_before_refresh := sim.player.materials
 	var rng_before_refresh := sim.rng.state
+	var hazard_before := sim.hazard_rng.state
 	await _activate(_main.shop_ui.reroll_button, true)
-	_check(sim.player.materials == funds_before_refresh - reroll_quote.cost and sim.shop.rerolls == 1 and sim.rng.state != rng_before_refresh, "real_refresh_after_Undo_spends_one_quoted_price_and_advances_stock_rng_" + String(role))
+	_check(sim.player.materials == funds_before_refresh - reroll_quote.cost and sim.shop.rerolls == 1
+			and sim.rng.state == rng_before_refresh and sim.hazard_rng.state == hazard_before,
+			"real_refresh_after_Undo_spends_one_quoted_price_without_touching_combat_rng_" + String(role))
 	await _shot("withdrawn_signature_stock_refresh_" + String(role))
 	await _activate(_main.shop_ui.confession_button)
 	await _activate(_main.shop_ui.confession.choice_buttons[0])

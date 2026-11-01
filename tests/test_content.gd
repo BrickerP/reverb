@@ -111,7 +111,7 @@ func test_characters_start_with_their_direction(c: Check) -> void:
 		&"mirror": &"longbow",
 		&"conductor": &"pistol",
 		&"mender": &"tape_spool",
-		&"overloader": &"stamp",
+		&"overloader": &"pistol",
 	}
 	for id: StringName in expected:
 		var s := Sim.new(1)
