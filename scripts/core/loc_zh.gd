@@ -656,6 +656,8 @@ const TABLE := {
 	"codex.evolve_only": "仅进化获取",
 	"codex.evolves": "→ %s（满级 + 同族 %d 件）",
 	"select.daily": "每日挑战",
+	"select.demo": "试玩",
+	"demo.done": "试玩到这里",
 	"select.daily_best": "每日 · 最佳 %d 波",
 	"select.daily_streak": "连续 %d 天",
 	"select.daily_anomaly": "每日异象：%s",

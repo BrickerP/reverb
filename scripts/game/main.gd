@@ -5,6 +5,7 @@ const VICTORY_BEAT := 0.9
 const PLAYER_DEATH_BEAT := BattleDirector.PLAYER_DEATH_TIME
 
 var sim: Sim
+var demo_run := false
 var hud: Hud
 var shop_ui: ShopUi
 var end_ui: EndUi
@@ -150,6 +151,7 @@ func _ready() -> void:
 	character_select.settings_requested.connect(open_settings)
 	character_select.history_requested.connect(open_history)
 	character_select.daily_requested.connect(start_daily)
+	character_select.demo_requested.connect(start_demo)
 	character_select.codex_requested.connect(open_codex)
 	pause_ui.resume_requested.connect(_on_resume_requested)
 	pause_ui.settings_requested.connect(open_settings)
@@ -208,9 +210,13 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	var def := Content.character(character_id)
 	if def != null:
 		def.apply(sim)
-	var inherited := EchoArchive.load(meta, character_id, sim)
-	if inherited != null:
-		sim.bank.add(inherited)
+	var inherited: EchoTake = null
+	if demo_run:
+		sim.bank.add(EchoArchive.demo_take(Sim.ARENA.get_center()))
+	else:
+		inherited = EchoArchive.load(meta, character_id, sim)
+		if inherited != null:
+			sim.bank.add(inherited)
 	_view.bind(sim, character_id)
 	_view.visible = true
 	hud.bind(sim)
@@ -235,7 +241,13 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 		vending_ui.show_take(inherited, sim)
 
 
+func start_demo() -> void:
+	demo_run = true
+	new_run(-1, &"looper")
+
+
 func choose_character(id: StringName, seed_value: int = -1) -> void:
+	demo_run = false
 	if meta != null and not meta.is_unlocked(id):
 		return
 	character_id = id
@@ -691,6 +703,7 @@ func _open_shop() -> void:
 		return
 	_shop_delay = 0.0
 	hud.visible = false
+	shop_ui.demo_closed = demo_run
 	shop_ui.open(sim)
 	_persist_story()
 

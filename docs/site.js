@@ -9,8 +9,8 @@
     "eyebrow": "原件缺席 · 副本请就位",
     "title": "回响",
     "subtitle": "TAKE STACK",
-    "tagline": "人没了，班还得上。",
-    "intro": "一款黑色幽默的纸偶自动射击游戏。<br>录下路线，与过去的自己并肩作战。",
+    "tagline": "昨天的你，会被复印、装订，再送回战场。",
+    "intro": "一款黑色幽默的纸偶自动射击游戏。",
     "fileLabel": "领用须知",
     "fileNote": "替补人员：还是你。",
     "idLabel": "又是你。欢迎回来。",
@@ -54,7 +54,7 @@
     "macTitle": "macOS 首次打开",
     "macCopy": "安装包带本地完整性签名，尚未公证。首次打开请按包内 MAC_START_HERE.txt 操作。",
     "otherTitle": "Windows、Linux 与存档",
-    "otherCopy": "Windows 包未签名，可能出现 SmartScreen 提示。Linux 请赋予程序执行权限。0.18.6 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5 的中途存档；更早格式需新开对局，永久解锁、设置与回响档案保留。",
+    "otherCopy": "Windows 包未签名，可能出现 SmartScreen 提示。Linux 请赋予程序执行权限。0.18.7 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6 的中途存档；更早格式需新开对局，永久解锁、设置与回响档案保留。",
     "controlsTitle": "操作很少，决定不少。",
     "controlsCopy": "WASD / 方向键移动；Shift 使用角色技能；E 操作机器；轻点 Space 报废回响，按住选择。菜单支持键鼠和手柄导航。",
     "allDownloads": "打开下载与更新页 ↗",
@@ -64,7 +64,7 @@
     "footerNote": "持续开发中。页面实机素材包含自动操作与脚本化场景；长期平衡和目标设备体验仍在验证。",
     "nav": "主导航",
     "heroAlt": "疲惫的纸偶和过去的副本，站在旧复印设备前",
-    "videoAlt": "真实游戏无声战斗片段，使用自动操作",
+    "videoAlt": "摆出来的一击：十字撕掉昨天的副本，人还在",
     "shopAlt": "商店展示武器、工作单、回响和明确价格",
     "archiveAlt": "副本家谱室展示真实归档角色与下一局数值"
 };
@@ -86,8 +86,8 @@
     const video = document.querySelector('.field-film video');
     if (video) {
       const source = video.querySelector('source');
-      const nextSrc = `site-assets/${zh ? 'combat-loop.mp4' : 'combat-loop-en.mp4'}?v=motion`;
-      const nextPoster = `site-assets/${zh ? 'combat-cover.png' : 'combat-cover-en.png'}?v=motion`;
+      const nextSrc = `site-assets/${zh ? 'cross-tear-zh.mp4' : 'cross-tear-en.mp4'}?v=tear`;
+      const nextPoster = `site-assets/${zh ? 'cross-tear-zh.png' : 'cross-tear-en.png'}?v=tear`;
       if (source.getAttribute('src') !== nextSrc) {
         source.setAttribute('src', nextSrc);
         video.poster = nextPoster;

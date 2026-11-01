@@ -690,7 +690,7 @@ func _on_echo(actor: EchoActor) -> void:
 
 func _on_echo_retired(info: EchoRetirementInfo) -> void:
 	if info.exhausted or info.reason == EchoRetirementInfo.EXHAUSTED:
-		play(&"echo", -5.0, 0.58, 0.18)
+		play(&"echo", 4.0, 0.58, 0.22)
 		return
 	# The recorded skill determines its material accent. There is no universal
 	# explosion sound, and exhaustion cannot borrow the active skill's weight.

@@ -1,12 +1,15 @@
-# Take Stack 0.18.6 · Life is the headline.
+# Take Stack 0.18.7 · Yesterday is already there.
 
-The shop stamp is your life. Materials sit under it. The copy desk opens on the two choices, without repeating the contract above them.
+The demo opens with one copy beside you. The first public clip is the cross tearing that copy. The store line is that sentence.
 
-- **Life first.** The paper stamp is current and maximum HP. The materials count is the smaller line beneath it.
-- **Sign the choice.** The copy desk no longer opens with the rule paragraph. Each option still states its own amount, and the shop button keeps the rule on hover.
-- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, and 0.18.5 wave/shop saves continue.
+- **Demo.** A demo start puts one pistol echo about 48 units beside the player. The campaign's first wave is unchanged. The demo shop does not open wave 2.
+- **The clip.** `tools/spread_clip.gd` stages both bodies inside the paradox cross. The existing absorb spends the copy. The file has audio. A person still has to listen before it is called the Steam trailer.
+- **The line.** The short description is "Yesterday's you gets copied, stapled, and sent back." Capsules are cropped from that frame.
+- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17 through 0.18.6 wave/shop saves continue.
 
-商店印章是生命。材料在它下面。告解直接是两个选项，开场不再复述同一份合同。
+试玩开局场上就有一个昨天。公开的第一段片子是十字把这份副本撕掉。短描述只留这一句。
+
+
 
 
 
@@ -22,9 +25,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.6 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, and 0.18.5 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.7 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, and 0.18.6 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 

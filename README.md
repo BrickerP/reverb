@@ -10,14 +10,14 @@
 
 Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your previous routes. Move, build your loadout, and leave an Echo of each encounter's path and equipment. Copies wear down as they replay. Repair one, bind two together, or spend a copy on its final skill—you decide what survives into the next fight.
 
-![Actual combat with an automatic controller: English HUD, the player and recorded Echoes face hostile office waste.](docs/site-assets/combat-loop-en.gif?v=motion)
+![A staged clip: yesterday stands in the cross, then is torn away. The player remains.](docs/site-assets/cross-tear-en.gif?v=tear)
 
 - **Put your past to work.** Old routes add firepower and replay recorded machine operations. Hold to choose an Echo; tap to scrap it for a final skill shaped by its equipment.
 - **Make use of the machinery.** Pull a lever, carry a document, dodge a stamp, or lure enemies into a press. Six roles have distinct abilities; pets, turrets and repair stations can be damaged and expire.
 - **Read the terms before signing.** Build from 35 weapons, matching-weapon assembly, family evolution branches and work orders. Repaired machines and rescued workers carry forward through the expedition.
 - **Sign your own last page.** Three acts, twelve encounters and three distinct bosses. Leave alone, leave with your colleagues, or take over the bureau. Debt does not choose the ending for you.
 
-0.18.6 puts your life on the shop stamp. The copy desk opens on the two choices.
+0.18.7 starts the demo with yesterday already beside you. The public clip is the cross tearing that copy.
 
 [Explore the game](https://brickerp.github.io/reverb/) · [Release notes and in-game footage](https://github.com/BrickerP/reverb/releases/latest)
 
@@ -31,25 +31,25 @@ Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your 
 
 Download the ZIP for your platform, extract it, and run the game. The macOS build is ad-hoc signed and is not notarized; follow the included `MAC_START_HERE.txt` on first launch. Windows builds are unsigned and may show a system prompt.
 
-Version 0.18.6 can continue 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4 and 0.18.5 suspended runs. Earlier suspended-run formats require a new run; permanent role unlocks, settings and saved Echo archives remain.
+Version 0.18.7 can continue 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5 and 0.18.6 suspended runs. Earlier suspended-run formats require a new run; permanent role unlocks, settings and saved Echo archives remain.
 
 </details>
 
 <details>
 <summary>Run from source</summary>
 
-Use **Godot 4.7.2**. These commands check out the source corresponding to the public 0.18.6 release:
+Use **Godot 4.7.2**. These commands check out the source corresponding to the public 0.18.7 release:
 
 ```bash
-git clone --branch v0.18.6 https://github.com/BrickerP/reverb.git
+git clone --branch v0.18.7 https://github.com/BrickerP/reverb.git
 cd reverb
 make run
 ```
 
 You can also open `project.godot` in Godot and press F5. Use `make run-zh` for Chinese.
 
-[Gameplay interfaces](https://github.com/BrickerP/reverb/blob/v0.18.6/INTERFACES.md) · [Art direction](https://github.com/BrickerP/reverb/blob/v0.18.6/docs/art-direction.md) · [Validation scope](https://github.com/BrickerP/reverb/blob/v0.18.6/docs/closeout-acceptance.md)
+[Gameplay interfaces](https://github.com/BrickerP/reverb/blob/v0.18.7/INTERFACES.md) · [Art direction](https://github.com/BrickerP/reverb/blob/v0.18.7/docs/art-direction.md) · [Validation scope](https://github.com/BrickerP/reverb/blob/v0.18.7/docs/closeout-acceptance.md)
 
 </details>
 
-Code and docs are [MIT licensed](LICENSE). See the [art direction](https://github.com/BrickerP/reverb/blob/v0.18.6/docs/art-direction.md) and [third-party notices](THIRD_PARTY.md) for artwork provenance, audio sources and bundled font licenses.
+Code and docs are [MIT licensed](LICENSE). See the [art direction](https://github.com/BrickerP/reverb/blob/v0.18.7/docs/art-direction.md) and [third-party notices](THIRD_PARTY.md) for artwork provenance, audio sources and bundled font licenses.

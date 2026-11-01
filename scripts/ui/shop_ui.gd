@@ -10,6 +10,7 @@ const ON_DARK := Color("dbceab")
 const ERROR_ON_DARK := Color("efb08f")
 
 var sim: Sim
+var demo_closed := false
 var offers_box: GridContainer
 var reroll_button: Button
 var undo_button: Button
@@ -258,8 +259,12 @@ func refresh(animate_echo: bool = false) -> void:
 	confession_button.accessibility_description = confession_button.tooltip_text
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
-	start_button.accessibility_description = start_button.tooltip_text if start_button.tooltip_text != "" else start_button.text
 	start_button.disabled = not sim.can_start_wave()
+	if demo_closed and sim.wave >= 1:
+		start_button.disabled = true
+		start_button.text = Loc.t("demo.done")
+		start_button.tooltip_text = start_button.text
+	start_button.accessibility_description = start_button.tooltip_text if start_button.tooltip_text != "" else start_button.text
 	echo_panel.size_flags_stretch_ratio = 1.0
 	build_panel.size_flags_stretch_ratio = 1.0
 	var notices: Array[String] = []
