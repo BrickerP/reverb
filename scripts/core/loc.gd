@@ -162,12 +162,8 @@ static func stat_value(id: StringName, amount: float, signed: bool = true) -> St
 static func cross_life(hp: float, max_hp: float, stapled: bool = false) -> String:
 	var wave := WaveDirector.FINAL_WAVE
 	var cross := EnemyBrain.paradox_cross_damage_at(wave)
-	var after := hp - cross
-	var tail := t("shop.cross_two", [number(after - cross)])
-	if after <= 0.0:
-		tail = t("shop.cross_staple_now") if stapled else t("shop.cross_dead")
-	elif after <= cross:
-		tail = t("shop.cross_stapled", [number(after)]) if stapled else t("shop.cross_one", [number(after)])
+	var enraged := cross * Sim.BOSS_ENRAGE_DAMAGE
+	var tail := t("shop.cross_staple_rule") if stapled else t("shop.cross_enrage", [number(enraged)])
 	return t("shop.life", [number(hp), number(max_hp), wave, number(cross), tail])
 
 

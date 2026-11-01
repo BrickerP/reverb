@@ -210,8 +210,6 @@ func refresh(animate_echo: bool = false) -> void:
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
 	var expedition := Expedition.status(sim)
 	_prep_status.text = Loc.t(str(expedition.objective))
-	var world := Expedition.world_profile(sim)
-	_prep_status.text = Loc.t(str(world.production_state_key)) + " · " + _prep_status.text
 	if int(expedition.debt) > 0:
 		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
 	var next_delivery := BureauEvents.forecast(sim.next_wave_number(), sim.endless)

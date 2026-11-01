@@ -358,7 +358,7 @@ func _schema_fields(type_name: String) -> Array[Dictionary]:
 		# keeping them out of the row leaves Snapshot v4 the same shape 0.17,
 		# 0.18 and 0.18.1 already wrote.
 		if type_name == "Sim" and info.name in ["grid", "wave_travel", "cue_slot",
-				"action_notice_key", "action_notice_text", "action_notice_until", "cross_stapled"]:
+				"action_notice_key", "action_notice_text", "action_notice_until"]:
 			continue
 		fields.append(info)
 	return fields
@@ -631,6 +631,9 @@ func _role_valid(effects: Dictionary, energy: float, cooldown: float) -> bool:
 				return false
 		elif key == "ability_kind":
 			if typeof(effects[key]) != TYPE_STRING_NAME or Content.character(effects[key]) == null:
+				return false
+		elif String(key) == "cross_stapled":
+			if typeof(effects[key]) != TYPE_BOOL:
 				return false
 		elif key == "rewind_history":
 			if typeof(effects[key]) != TYPE_ARRAY or effects[key].size() > CharacterSkills.HISTORY_SAMPLES:

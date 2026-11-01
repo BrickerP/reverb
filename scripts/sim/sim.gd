@@ -154,7 +154,6 @@ var live_echo := false
 var synergy_damage_per_echo := 0.0
 var synergy_haste_per_echo := 0.0
 var second_wind_charges := 0
-var cross_stapled := false
 var last_interest := 0
 var last_wave_earned := 0
 var wave_start_materials := 0
@@ -303,6 +302,10 @@ func echo_dps(take: EchoTake) -> float:
 	return take.power() * echo_power() * damage / cooldown
 
 
+func is_cross_stapled() -> bool:
+	return bool(role_effects.get("cross_stapled", false))
+
+
 func has_evolved_weapon() -> bool:
 	for weapon in player.weapons:
 		if weapon.rarity == &"evolved":
@@ -397,7 +400,7 @@ func start_wave(n: int) -> void:
 	wave = n
 	wave_time = 0.0
 	wave_travel = 0.0
-	cross_stapled = false
+	role_effects.erase("cross_stapled")
 	action_notice_key = &""
 	action_notice_text = ""
 	action_notice_until = 0.0
@@ -812,8 +815,8 @@ func _hurt_player(amount: float, source: StringName, effect: StringName, pos: Ve
 	var dealt := amount - absorbed
 	if dealt > 0.0:
 		player.hp -= dealt
-		if player.hp <= 0.0 and effect == &"paradox_cross" and not cross_stapled and has_evolved_weapon():
-			cross_stapled = true
+		if player.hp <= 0.0 and effect == &"paradox_cross" and not is_cross_stapled() and has_evolved_weapon():
+			role_effects["cross_stapled"] = true
 			player.hp = 1.0
 			action_notice_key = &"hud.cross_stapled"
 			action_notice_text = Loc.t("hud.cross_stapled")
