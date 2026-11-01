@@ -823,7 +823,7 @@ const TABLE := {
 	"shop.family_mastery_salvage": "Recovery: +20% range/return time; fields last 35% longer",
 	"echo.condition": "The route you just walked · %d%% condition · %ds left",
 	"echo.identity": "Copy #%d · wave %d",
-	"echo.selected": "Selected #%d · %d%% · ~%ds",
+	"echo.selected": "Selected #%d · %d%%",
 	"echo.cooldown": "Retirement ready in %.1fs",
 	"echo.profile": "%s · %d damage",
 	"echo.wheel_title": "Copies on hold",

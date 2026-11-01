@@ -425,3 +425,35 @@ func test_actual_echo_safety_switch_has_only_its_canonical_lever_cue(c: Check) -
 	sim.echo_work_performed.emit({"success": true, "kind": &"press", "target_id": &"machine_0"})
 	c.eq(audio.play_count(&"weapon_rail_spike"), count + 1, "ordinary machine press retains its existing accent")
 	audio.free()
+
+
+func test_stacked_stapler_shots_share_one_voice(c: Check) -> void:
+	var audio := _audio()
+	c.ok(audio.play(&"weapon_pistol"), "the first staple speaks")
+	c.ok(not audio.play(&"weapon_pistol"), "a staple inside the voice window stays quiet")
+	c.eq(audio.play_count(&"weapon_pistol"), 1, "the second staple is not a second voice")
+	audio.free()
+
+
+func test_seal_stamp_is_a_click_and_not_the_boss_silence(c: Check) -> void:
+	var audio := _audio()
+	var sim := Sim.new(4)
+	sim.start_run()
+	audio.bind(sim)
+	sim.player.pos = Vector2(1300.0, 700.0)
+	var enemy := EnemyState.new()
+	for definition in Content.enemies():
+		if definition.id == &"silencer":
+			enemy.def = definition
+			break
+	enemy.uid = 41
+	enemy.pos = Vector2(1000.0, 700.0)
+	enemy.radius = enemy.def.radius
+	enemy.speed = enemy.def.speed
+	enemy.damage = 10.0
+	EnemyBrain.step(sim, enemy, 0.01)
+	c.eq(sim.enemy_zones.size(), 1, "the seal is placed")
+	c.eq(audio.play_count(&"silence"), 0, "the stamp is not the boss silence")
+	c.eq(audio.play_count(&"boss"), 0, "the stamp is not a phase tear")
+	c.eq(audio.play_count(&"click"), 1, "the stamp is one short click")
+	audio.free()

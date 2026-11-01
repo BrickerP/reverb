@@ -823,7 +823,7 @@ const TABLE := {
 	"shop.family_mastery_salvage": "回收：射程与回程时间 +20%，区域时长 +35%",
 	"echo.condition": "这是你刚才的路线 · 完好度 %d%% · 还能撑 %d 秒",
 	"echo.identity": "副本 #%d · 第 %d 波",
-	"echo.selected": "已选 #%d · %d%% · 约 %d 秒",
+	"echo.selected": "已选 #%d · %d%%",
 	"echo.cooldown": "注销冷却 %.1f 秒",
 	"echo.profile": "%s · %d 伤害",
 	"echo.wheel_title": "副本待命",
