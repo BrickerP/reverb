@@ -207,7 +207,11 @@ static func _draw_support(ci: CanvasItem, p: Dictionary) -> void:
 	ci.draw_multiline(PackedVector2Array([hour + Vector2(-2, -3), hour + Vector2(2, 3), hour + Vector2(2, -3), hour + Vector2(-2, 3)]), INK, 1.0, true)
 	for charge in int(p["charge_capacity"]):
 		var pip := Rect2(bar.position + Vector2(float(charge) * 5.0, -6.0), Vector2(3, 3))
-		ci.draw_rect(pip, FRIEND, charge < int(p["charges"]), 1.0)
+		var filled := charge < int(p["charges"])
+		if filled:
+			ci.draw_rect(pip, FRIEND)
+		else:
+			ci.draw_rect(pip, FRIEND, false, 1.0)
 
 
 static func _draw_target(ci: CanvasItem, p: Dictionary, reduced: bool) -> void:
