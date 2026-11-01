@@ -21,7 +21,11 @@ static func impact_damage(enemy: EnemyState) -> float:
 
 
 static func paradox_cross_damage() -> float:
-	return Content.enemy(&"paradox").damage * IMPACT_MULT
+	return paradox_cross_damage_at(1)
+
+
+static func paradox_cross_damage_at(wave: int) -> float:
+	return Content.enemy(&"paradox").damage * WaveDirector.damage_scale(wave) * IMPACT_MULT
 
 
 static func step(sim: Sim, enemy: EnemyState, delta: float) -> void:

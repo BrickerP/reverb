@@ -205,8 +205,8 @@ func test_start_departs_while_echoes_overflow(c: Check) -> void:
 	c.ok(not ui.start_button.disabled, "overflow does not block departure")
 	c.eq(ui.start_button.text, Loc.t("shop.start", [s.next_wave_number()]), "the button only names the next wave")
 	c.ok(ui._warning.text.contains(Loc.t("echo.identity", [named.uid, named.wave])), "the warning names the copy departure will drop")
-	c.eq(ui._interest.text, Loc.t("shop.life", [Loc.number(s.player.hp), Loc.number(s.player.max_hp()),
-			Loc.number(EnemyBrain.paradox_cross_damage())]), "the shop headline is hit points and the cross")
+	c.eq(ui._interest.text, Loc.cross_life(s.player.hp, s.player.max_hp()),
+			"the shop headline uses the scaled final cross")
 	c.eq(ui._interest.tooltip_text, Loc.t("shop.economy", [s.last_wave_earned, s.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(s.player.materials)]),
 			"interest stays on the headline tooltip")

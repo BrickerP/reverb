@@ -203,8 +203,7 @@ func refresh(animate_echo: bool = false) -> void:
 		_replacing_index = -1
 	_title.text = Loc.t("shop.title", [sim.wave])
 	_materials.text = "%s  %d" % [Loc.t("hud.materials"), sim.player.materials]
-	_interest.text = Loc.t("shop.life", [Loc.number(sim.player.hp), Loc.number(sim.player.max_hp()),
-			Loc.number(EnemyBrain.paradox_cross_damage())])
+	_interest.text = Loc.cross_life(sim.player.hp, sim.player.max_hp())
 	_interest.tooltip_text = Loc.t("shop.economy", [sim.last_wave_earned, sim.last_interest,
 			int(ceil(1.0 / Sim.INTEREST_RATE)), Sim.INTEREST_CAP, Sim.interest_for(sim.player.materials)])
 	_interest.accessibility_description = _interest.tooltip_text

@@ -319,3 +319,22 @@ func test_shelf_refresh_does_not_draw_combat_rng(c: Check) -> void:
 	for offer in again.shop.offers:
 		replay.append(String(offer.id()))
 	c.eq(replay, first, "the same seed and wave rebuild the same shelf")
+
+
+func test_final_cross_is_the_scaled_wave_twelve_hit(c: Check) -> void:
+	var cross := EnemyBrain.paradox_cross_damage_at(WaveDirector.FINAL_WAVE)
+	c.near(cross, Content.enemy(&"paradox").damage * WaveDirector.damage_scale(WaveDirector.FINAL_WAVE) * EnemyBrain.IMPACT_MULT,
+			0.001, "wave 12 cross includes the damage scale")
+	c.ok(cross > EnemyBrain.paradox_cross_damage(), "the final cross is harder than the unscaled hit")
+	var hp := 35.0
+	c.ok(hp - cross > 0.0 and hp - cross * 2.0 <= 0.0, "35 HP survives one final cross and dies to the second")
+	var line := Loc.cross_life(hp, hp)
+	c.eq(line, Loc.t("shop.life", [Loc.number(hp), Loc.number(hp), WaveDirector.FINAL_WAVE, Loc.number(cross),
+			Loc.t("shop.cross_one", [Loc.number(hp - cross)])]), "35 HP is told the second cross kills")
+	var sim := _shop_sim()
+	sim.player.hp = sim.player.max_hp()
+	var added := float(Content.item(&"iron_heart").mods[Stats.MAX_HP])
+	var next_max := sim.player.max_hp() + added
+	var next_hp := minf(next_max, sim.player.hp + added)
+	c.ok(Loc.item_desc(Content.item(&"iron_heart"), sim).contains(Loc.cross_life(next_hp, next_max)),
+			"a heart states the final cross after the purchase")
