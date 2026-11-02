@@ -291,7 +291,7 @@ func test_upgraded_trade_in_quote_commit_and_undo_use_one_mechanics_value(c: Che
 	c.ok(card.swap_button == null, "an open affordable slot does not put replace on the card")
 	ui._begin_replace(offer)
 	c.ok(ui.is_replacing(), "an upgraded slot can still be traded in")
-	c.ok(ui.build_panel._slot_buttons[0].text.contains("+%d" % resale),
+	c.ok(_label_texts(ui.build_panel._slot_buttons[0]).has(Loc.t("shop.refund_materials", [resale])),
 			"slot displays Shop.resale_total for upgraded weapon")
 	ui._cancel_replace()
 	var materials_before := s.player.materials

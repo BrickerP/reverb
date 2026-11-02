@@ -20,6 +20,9 @@ var _box: VBoxContainer
 var _weapons_row: Control
 var _slot_buttons: Array[Button] = []
 var upgrade_button: Button
+var stats_button: Button
+var passives_button: Button
+var _generation := 0
 var detail_title: Label
 var detail_behavior: Label
 var detail_stats: Label
@@ -59,6 +62,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 		quote_drop: Callable = Callable(), apply_drop: Callable = Callable(),
 		clear_drop: Callable = Callable()) -> void:
 	reset_feedback()
+	_generation += 1
 	_sim = sim
 	_on_choose = on_choose
 	_quote_drop = quote_drop
@@ -69,6 +73,8 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	upgrade_button = null
+	stats_button = null
+	passives_button = null
 	detail_title = null
 	detail_behavior = null
 	detail_stats = null
@@ -86,11 +92,11 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	weapons_label = UiTheme.label(Loc.t("shop.auto_fire"), 17)
 	weapons_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(weapons_label)
-	var details := Button.new()
-	details.text = Loc.t("shop.build_details")
-	details.add_theme_font_size_override("font_size", 14)
-	details.pressed.connect(func() -> void: stats_requested.emit(_selected))
-	head.add_child(details)
+	stats_button = Button.new()
+	stats_button.text = Loc.t("shop.build_details")
+	stats_button.add_theme_font_size_override("font_size", 14)
+	stats_button.pressed.connect(func() -> void: stats_requested.emit(_selected))
+	head.add_child(stats_button)
 	_box.add_child(head)
 	_weapons_row = _weapon_chips(sim.player, sim)
 	_box.add_child(_weapons_row)
@@ -100,10 +106,10 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	items_label = UiTheme.label(Loc.t("workshop.passives", [sim.player.items.size()]), 13, UiTheme.DIM)
 	items_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(items_label)
-	var passives := Button.new()
-	passives.text = Loc.t("shop.inspect")
-	passives.pressed.connect(func() -> void: passives_requested.emit(_selected))
-	actions.add_child(passives)
+	passives_button = Button.new()
+	passives_button.text = Loc.t("shop.inspect")
+	passives_button.pressed.connect(func() -> void: passives_requested.emit(_selected))
+	actions.add_child(passives_button)
 	items_drop_target = _empty_target(&"items", Loc.t("shop.passive_drop"))
 	items_drop_target.custom_minimum_size.y = 26.0
 	actions.add_child(items_drop_target)
@@ -123,6 +129,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 
 
 func close_session() -> void:
+	_generation += 1
 	reset_feedback()
 	_sim = null
 	_on_choose = Callable()
@@ -133,6 +140,8 @@ func close_session() -> void:
 	_weapons_row = null
 	_slot_buttons.clear()
 	upgrade_button = null
+	stats_button = null
+	passives_button = null
 	detail_title = null
 	detail_behavior = null
 	detail_stats = null
@@ -272,10 +281,11 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 
 
 func _build_inspector() -> void:
+	var generation := _generation
 	var sheet := VBoxContainer.new()
 	sheet.add_theme_constant_override("separation", 5)
 	_box.add_child(sheet)
-	detail_title = UiTheme.label("", 19)
+	detail_title = UiTheme.label(Loc.t("shop.inspector_empty") if _cards.is_empty() else "", 19)
 	detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sheet.add_child(detail_title)
 	detail_behavior = UiTheme.label("", 15)
@@ -291,9 +301,10 @@ func _build_inspector() -> void:
 	actions.add_theme_constant_override("separation", 6)
 	sheet.add_child(actions)
 	upgrade_button = Button.new()
+	upgrade_button.disabled = true
 	upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upgrade_button.pressed.connect(func() -> void:
-		if _sim == null or upgrade_button.disabled:
+		if _sim == null or generation != _generation or upgrade_button.disabled:
 			return
 		if _card_levels[_selected] >= WeaponDef.MAX_LEVEL:
 			evolve_requested.emit(_selected)

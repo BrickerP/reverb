@@ -63,6 +63,7 @@ func _run() -> void:
 			for weapon: WeaponDef in Content.weapons().values():
 				sim.player.weapons[0] = weapon
 				ui.refresh()
+				_check.begin("layout_%s_%d_%s" % [language, extent.x, weapon.id])
 				await _settle()
 				_bounds(ui, extent)
 			sim.player.weapons[0] = Content.weapon(&"repair_kit")
