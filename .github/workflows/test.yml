@@ -444,6 +444,12 @@ jobs:
           name: paper-action-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/release-evidence
 
+      - name: Download this run's weapon UI evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: weapon-ui-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/release-evidence/weapon-ui
+
       - name: Package audited binaries and write exact-run receipts
         env:
           RELEASE_GATES: ${{ toJSON(needs) }}
@@ -469,7 +475,7 @@ jobs:
 
   publish-release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [package-release, test, paper-feedback, export-preview, export-linux, export-windows]
+    needs: [package-release, test, weapon-ui, paper-feedback, export-preview, export-linux, export-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
