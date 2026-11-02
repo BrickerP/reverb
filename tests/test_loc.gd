@@ -234,7 +234,17 @@ func test_formatters(c: Check) -> void:
 	c.eq(Loc.stat_value(Stats.HP_REGEN, 0.5), "+0.5", "fractional stat")
 	c.eq(Loc.stat_value(Stats.CRIT_CHANCE, 0.05, false), "5%", "unsigned percent")
 	c.eq(Loc.stat_value(Stats.MOVE_SPEED, -10.0), "-10", "negative stat")
-	c.eq(Loc.item_desc(Content.item(&"sharp_edge")), "+10% Damage", "item description")
+	c.eq(Loc.item_desc(Content.item(&"sharp_edge")), "all-weapon damage +10%", "item description")
+	var sim := Sim.new(11)
+	sim.start_run()
+	var edged := Loc.item_desc(Content.item(&"sharp_edge"), sim)
+	c.ok(edged.contains("100%") and edged.contains("110%"), "damage item states the resulting multiplier")
+	var shoes := Loc.item_desc(Content.item(&"sneakers"), sim)
+	c.ok(shoes.contains("260") and shoes.contains("288"), "sneakers state the resulting move speed")
+	c.eq(Loc.item_face(Content.item(&"sharp_edge"), sim), "all-weapon damage 100% → 110%",
+			"the shelf states one change")
+	c.ok(not Loc.item_face(Content.item(&"iron_heart"), sim).contains("cross"),
+			"the heart card does not repeat the final-cross rule")
 	c.ok(not Loc.weapon_desc(&"shotgun").is_empty(), "actual cone behavior is described")
 	c.ok(Loc.weapon_line(Content.weapon(&"rifle")).contains("Pierce 2"), "pierce count is shown")
 	c.ok(Loc.weapon_desc(&"orb").contains("orbits"), "orbit behavior is worded")

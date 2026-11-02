@@ -89,13 +89,15 @@ func test_only_one_visible_hold_moves_then_unlocks(c: Check) -> void:
 	var materials := sim.player.materials
 	var weapons := sim.player.weapons.size()
 	_press_lock(ui, 0)
-	c.ok(first.locked and ui._offer_lock.text == Loc.t("shop.unlock_fact"), "first offer is the only visible hold")
+	c.ok(first.locked and ui._offer_lock.text == Loc.t("shop.locked"), "first offer is the only visible hold")
+	c.eq(ui._offer_lock.tooltip_text, Loc.t("shop.unlock_fact"), "the hold rule stays on the lock, not in a second sentence")
 	_press_lock(ui, 1)
-	c.ok(not first.locked and second.locked and ui._offer_lock.text == Loc.t("shop.unlock_fact"),
+	c.ok(not first.locked and second.locked and ui._offer_lock.text == Loc.t("shop.locked"),
 			"holding another offer moves the one visible hold")
 	c.ok(ui._offer_lock.has_focus(), "moved hold keeps focus on the comparison lock")
 	_press_lock(ui, 1)
-	c.ok(not second.locked and ui._offer_lock.text == Loc.t("shop.lock_fact"), "Unlock removes the visible hold")
+	c.ok(not second.locked and ui._offer_lock.text == Loc.t("shop.lock_idle"), "Unlock removes the visible hold")
+	c.eq(ui._offer_lock.tooltip_text, Loc.t("shop.lock_fact"), "unlock keeps the hold rule on the button")
 	c.eq(sim.player.materials, materials, "moving and unlocking the hold remains free")
 	c.eq(sim.player.weapons.size(), weapons, "moving and unlocking the hold buys nothing")
 	ui.free()
@@ -107,7 +109,8 @@ func test_offer_states_keep_lock_boundary_and_full_explanation(c: Check) -> void
 	var open_ui := _open(empty)
 	c.ok(open_ui._offer_lock != null, "affordable empty-slot offer can be held from the comparison row")
 	open_ui._arm_lock(_card(open_ui, 0).offer)
-	c.eq(open_ui._offer_lock.text, Loc.t("shop.lock_fact"), "empty hold state exposes Lock")
+	c.eq(open_ui._offer_lock.text, Loc.t("shop.lock_idle"), "empty hold state exposes Lock")
+	c.eq(open_ui._offer_lock.tooltip_text, Loc.t("shop.lock_fact"), "the hold rule is the tooltip")
 	open_ui.free()
 
 	var poor := _shop_sim(0)

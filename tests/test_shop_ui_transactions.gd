@@ -38,6 +38,14 @@ func _open(s: Sim) -> ShopUi:
 	return ui
 
 
+func _card_for(ui: ShopUi, offer: Offer) -> OfferCard:
+	for child in ui.offers_box.get_children():
+		var card := child as OfferCard
+		if card != null and card.offer == offer:
+			return card
+	return null
+
+
 func test_drag_weapon_into_next_empty_slot_buys_once(c: Check) -> void:
 	var s := _shop_sim()
 	var offer := _weapon_offer(s, &"smg")
@@ -297,4 +305,96 @@ func test_upgraded_trade_in_quote_commit_and_undo_use_one_mechanics_value(c: Che
 			"undo restores upgraded slot, materials and offer snapshot")
 	c.eq(s.shop._undo_stack.size(), history_before,
 			"replacement undo leaves earlier upgrade history intact")
+	ui.free()
+
+
+func _label_texts(node: Node) -> PackedStringArray:
+	var out := PackedStringArray()
+	if node is Label:
+		out.append((node as Label).text)
+	for child: Node in node.get_children():
+		out.append_array(_label_texts(child))
+	return out
+
+
+func test_clicking_an_empty_slot_does_not_buy_the_focused_weapon(c: Check) -> void:
+	var s := _shop_sim()
+	var offer := _weapon_offer(s, &"smg", 20)
+	var ui := _open(s)
+	ui._arm_lock(offer)
+	ui.build_panel.empty_drop_target.clicked.emit()
+	c.eq(s.player.weapons.size(), 1, "a socket click does not buy the focused offer")
+	c.eq(s.player.materials, 300, "a socket click spends nothing")
+	var card := _card_for(ui, offer)
+	c.eq((card.find_child("GradeMark", true, false) as Label).text, WeaponDef.grade_mark(offer.weapon_level),
+			"the offer shows the level a same-tier combine needs")
+	card.pressed.emit()
+	c.eq(s.player.weapons.size(), 2, "the offer card is the purchase")
+	c.eq(s.player.weapons[1].id, &"smg", "the clicked card is the weapon that lands")
+	c.eq(s.player.materials, 280, "the card charges the offer price once")
+	ui.free()
+
+
+func test_clicking_the_item_socket_does_not_buy_the_focused_item(c: Check) -> void:
+	var s := _shop_sim()
+	var offer := _item_offer(s, &"sharp_edge", 16)
+	var ui := _open(s)
+	ui._arm_lock(offer)
+	ui.build_panel.items_drop_target.clicked.emit()
+	c.eq(s.player.item_count(&"sharp_edge"), 0, "an item socket click does not install the focused item")
+	c.eq(s.player.materials, 300, "an item socket click spends nothing")
+	_card_for(ui, offer).pressed.emit()
+	c.eq(s.player.item_count(&"sharp_edge"), 1, "the item card is the purchase")
+	c.eq(s.player.materials, 284, "the card charges the item price once")
+	ui.free()
+
+
+func test_socket_click_without_an_offer_explains_itself(c: Check) -> void:
+	var s := _shop_sim()
+	_weapon_offer(s, &"smg", 20)
+	var ui := _open(s)
+	ui._focused_offer = null
+	ui._sync_lock()
+	ui.build_panel.empty_drop_target.clicked.emit()
+	c.eq(s.player.weapons.size(), 1, "a socket click with nothing selected buys nothing")
+	c.eq(s.player.materials, 300, "a socket click with nothing selected spends nothing")
+	c.eq(ui._footer.text, "", "a socket click does not invent a second purchase step")
+	c.eq(ui._offer_lock.text, Loc.t("shop.lock_idle"), "lock stays available before an offer is selected")
+	ui._offer_lock.pressed.emit()
+	c.eq(ui._footer.text, Loc.t("shop.pick_offer"), "lock with nothing selected explains the missing offer")
+	c.eq(s.player.weapons.size(), 1, "an unfocused lock buys nothing")
+	ui.free()
+
+
+func test_work_order_card_states_the_job(c: Check) -> void:
+	var s := _shop_sim()
+	var offer := Offer.new()
+	offer.contract = AnomalyContract.create(AnomalyContract.RECRUIT, s.next_wave_number())
+	offer.price = offer.contract.deposit
+	s.shop.offers.append(offer)
+	var ui := _open(s)
+	var card := ui.offers_box.get_child(0) as OfferCard
+	var plate := card.find_child("OrderPlate", true, false) as Control
+	c.ok(plate != null and plate.get("kind") == AnomalyContract.RECRUIT, "the order card shows the recruit marks")
+	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.objective")), "hovering the marks states the job")
+	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.desc")), "hovering the marks states the rule")
+	ui._arm_lock(offer)
+	c.eq(ui._footer.text, "", "pointing at the order does not open a second copy of the job")
+	ui.free()
+
+
+func test_one_copy_merge_says_why(c: Check) -> void:
+	var s := _shop_sim()
+	var take := EchoTake.new()
+	take.wave = 1
+	take.weapons.append(Content.weapon(&"pistol"))
+	take.samples = PackedVector2Array([Vector2(200.0, 200.0), Vector2(400.0, 300.0)])
+	s.bank.add(take)
+	var ui := _open(s)
+	c.ok(ui.echo_panel.merge_button.disabled, "one copy cannot merge")
+	c.eq(ui.echo_panel.merge_button.text, Loc.t("shop.merge_need"), "the button says two copies are required")
+	c.eq(ui.echo_panel.page_next, null, "a single page does not show a dead pager")
+	ui.echo_panel.merge_button.pressed.emit()
+	c.eq(s.bank.takes.size(), 1, "the disabled merge spends no copy")
+	c.ok(not ui.workshop.visible, "the disabled merge does not open a workbench")
 	ui.free()

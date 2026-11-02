@@ -13,6 +13,7 @@ var crit: bool = false
 var reduced: bool = false
 var hit_dir: Vector2 = Vector2.ZERO
 var effect: StringName = &"hit"
+var grade: int = 0
 
 
 func to_dict() -> Dictionary:

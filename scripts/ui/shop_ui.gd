@@ -101,8 +101,7 @@ func _ready() -> void:
 	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
-	echo_panel.merge_workbench_requested.connect(_open_merge_hosts)
-	echo_panel.detail_requested.connect(_open_echo_detail)
+	echo_panel.staple_requested.connect(_on_merge)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	root.add_child(_build_footer())
@@ -151,7 +150,8 @@ func open(s: Sim) -> void:
 	material_feedback_runs = 0
 	vendor_feedback_runs = 0
 	last_vendor_reaction = &"idle"
-	_vendor_line.text = Loc.t("shop.vendor_idle")
+	_vendor_line.text = ""
+	_vendor_line.visible = false
 	_vendor_line.add_theme_color_override("font_color", ON_DARK)
 	last_feedback.clear()
 	visible = true
@@ -192,7 +192,7 @@ func close_session() -> void:
 	if _overlay != null:
 		UiTheme.clear(_overlay)
 	if _footer != null:
-		_footer.text = ""
+		_say("")
 	if receipt_button != null:
 		receipt_button.visible = false
 
@@ -209,16 +209,21 @@ func refresh(animate_echo: bool = false) -> void:
 	_interest.accessibility_description = _interest.text
 	_materials.tooltip_text = ""
 	var expedition := Expedition.status(sim)
-	_prep_status.text = Loc.t(str(expedition.objective))
-	if int(expedition.debt) > 0:
-		_prep_status.text += " · " + Loc.t("hud.debt", [expedition.debt])
 	var next_delivery := BureauEvents.forecast(sim.next_wave_number(), sim.endless)
+	var objective_key := str(expedition.objective)
+	var headline := PackedStringArray()
 	if next_delivery:
-		_prep_status.text = Loc.t("bureau.delivery.next_short") + " · " + _prep_status.text
-	_prep_status.tooltip_text = _prep_status.text + " · " + Loc.t(str(expedition.route))
+		headline.append(Loc.t("bureau.delivery.next_short"))
+	if objective_key != "order.survive.objective":
+		headline.append(Loc.t(objective_key))
+	_prep_status.text = " · ".join(headline)
+	_prep_status.visible = not _prep_status.text.is_empty()
+	_prep_status.tooltip_text = _prep_status.text
+	if not _prep_status.text.is_empty():
+		_prep_status.tooltip_text += " · " + Loc.t(str(expedition.route))
 	if next_delivery:
 		_prep_status.tooltip_text += " · " + Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
-	_prep_status.accessibility_description = _prep_status.tooltip_text
+	_prep_status.accessibility_description = _prep_status.tooltip_text if _prep_status.tooltip_text != "" else _prep_status.text
 	UiTheme.clear(offers_box)
 	for o in sim.shop.offers:
 		var card := OfferCard.new()
@@ -242,9 +247,7 @@ func refresh(animate_echo: bool = false) -> void:
 	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
 	undo_button.disabled = not sim.shop.can_undo()
-	undo_button.tooltip_text = Loc.t("shop.undo_hint")
-	if undo_button.disabled:
-		undo_button.text += " · " + Loc.t("shop.undo_blocked")
+	undo_button.tooltip_text = Loc.t("shop.undo_blocked") if undo_button.disabled else Loc.t("shop.undo_hint")
 	undo_button.accessibility_description = undo_button.tooltip_text
 	crew_button.text = Loc.t("crew.open")
 	crew_button.accessibility_name = crew_button.text
@@ -260,7 +263,7 @@ func refresh(animate_echo: bool = false) -> void:
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
 	start_button.disabled = not sim.can_start_wave()
-	if demo_closed and sim.wave >= 1:
+	if demo_closed and sim.wave >= 2:
 		start_button.disabled = true
 		start_button.text = Loc.t("demo.done")
 		start_button.tooltip_text = start_button.text
@@ -279,9 +282,10 @@ func refresh(animate_echo: bool = false) -> void:
 	if _replacing != null:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
-	_footer.text = ""
+	_say("")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
+	_sync_lock()
 	_rebuild_focus()
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
 
@@ -331,33 +335,59 @@ func _build_footer() -> Control:
 	actions.add_child(_offer_lock)
 	_footer = UiTheme.label("", 14, ON_DARK, HORIZONTAL_ALIGNMENT_CENTER)
 	_footer.clip_text = true
+	_footer.visible = false
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_footer.custom_minimum_size = Vector2(0.0, 18.0)
 	box.add_child(_footer)
 	return tray
 
 
+func _say(text: String) -> void:
+	if _footer == null:
+		return
+	_footer.text = text
+	_footer.tooltip_text = text
+	_footer.visible = text != ""
+
+
 func _arm_lock(o: Offer) -> void:
 	_focused_offer = o
-	if _footer != null and sim != null:
-		_footer.text = OfferCard.decision(o, sim)
-		_footer.tooltip_text = _footer.text
 	if _offer_lock == null or o == null:
 		return
 	_offer_lock.visible = not o.sold
-	_offer_lock.text = Loc.t("shop.unlock_fact") if o.locked else Loc.t("shop.lock_fact")
+	_set_lock_label(o.locked)
+
+
+func _set_lock_label(locked: bool) -> void:
+	if _offer_lock == null:
+		return
+	_offer_lock.text = Loc.t("shop.locked") if locked else Loc.t("shop.lock_idle")
+	_offer_lock.tooltip_text = Loc.t("shop.unlock_fact") if locked else Loc.t("shop.lock_fact")
+	_offer_lock.accessibility_description = _offer_lock.tooltip_text
+
+
+func _sync_lock() -> void:
+	if _offer_lock == null or sim == null:
+		return
+	_offer_lock.visible = true
+	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
+		_focused_offer = null
+		_set_lock_label(false)
+		_offer_lock.tooltip_text = Loc.t("shop.pick_offer")
+		_offer_lock.accessibility_description = _offer_lock.tooltip_text
+		return
+	_set_lock_label(_focused_offer.locked)
 
 
 func _lock_focused() -> void:
-	if _focused_offer != null:
-		_on_lock_offer(_focused_offer)
+	if _focused_offer == null:
+		_say(Loc.t("shop.pick_offer"))
+		return
+	_on_lock_offer(_focused_offer)
 
 
 func _on_weapon_detail(text: String) -> void:
-	if _footer == null:
-		return
 	_weapon_detail = text.replace("\n", " · ")
-	_footer.text = _weapon_detail if text != "" else ""
 
 
 func _build_header() -> Control:
@@ -378,7 +408,7 @@ func _build_header() -> Control:
 	var heading := HBoxContainer.new()
 	heading.add_theme_constant_override("separation", 12)
 	identity.add_child(heading)
-	_title = UiTheme.section_label("", 28, UiTheme.PAPER)
+	_title = UiTheme.section_label("", 16, ON_DARK)
 	heading.add_child(_title)
 	debt_button = Button.new()
 	WorkshopUi.fit_button(debt_button, 14, 28.0)
@@ -633,19 +663,19 @@ func _flash_block(reason: StringName) -> void:
 	match reason:
 		&"poor":
 			_react_vendor(&"poor")
-			_footer.text = Loc.t("shop.drop_poor")
+			_say(Loc.t("shop.drop_poor"))
 			_reject_materials()
 		&"full":
-			_footer.text = Loc.t("shop.full_reason")
+			_say(Loc.t("shop.full_reason"))
 			build_panel.flash_slots(reduced_effects)
 		&"maxed":
-			_footer.text = Loc.t("shop.maxed")
+			_say(Loc.t("shop.maxed"))
 			build_panel.flash_items(reduced_effects)
 		&"last":
-			_footer.text = Loc.t("shop.sell_last_reason")
+			_say(Loc.t("shop.sell_last_reason"))
 			build_panel.flash_slots(reduced_effects)
 		_:
-			_footer.text = _drop_reason_text(reason)
+			_say(_drop_reason_text(reason))
 
 
 func _on_reroll() -> void:
@@ -785,6 +815,7 @@ func _react_vendor(kind: StringName, result: ShopResult = null) -> void:
 	last_vendor_reaction = kind
 	vendor_feedback_runs += 1
 	_vendor_line.text = _vendor_text(kind)
+	_vendor_line.visible = true
 	_vendor_line.add_theme_color_override("font_color", ERROR_ON_DARK if kind == &"poor" else ON_DARK)
 	if reduced_effects:
 		return
@@ -1040,29 +1071,24 @@ func quote_drop(data: Variant, target_kind: StringName, index: int = -1) -> Shop
 
 
 func clear_drop_hint() -> void:
-	if _footer == null:
-		return
-	if _focused_offer != null and sim != null:
-		_footer.text = OfferCard.decision(_focused_offer, sim)
-	else:
-		_footer.text = _weapon_detail if not _weapon_detail.is_empty() else ""
+	_say("")
 
 
 func _show_drop_quote(result: ShopResult) -> void:
 	if _footer == null or result == null:
 		return
 	if not result.ok:
-		_footer.text = _drop_reason_text(result.reason)
+		_say(_drop_reason_text(result.reason))
 		return
 	if result.action == ShopResult.REPLACE:
 		if result.cost < 0:
-			_footer.text = Loc.t("shop.quote_refund", [absi(result.cost)])
+			_say(Loc.t("shop.quote_refund", [absi(result.cost)]))
 		elif result.cost == 0:
-			_footer.text = Loc.t("shop.quote_replace_free")
+			_say(Loc.t("shop.quote_replace_free"))
 		else:
-			_footer.text = Loc.t("shop.quote_replace", [result.cost])
+			_say(Loc.t("shop.quote_replace", [result.cost]))
 	else:
-		_footer.text = Loc.t("shop.quote_buy", [result.cost])
+		_say(Loc.t("shop.quote_buy", [result.cost]))
 
 
 func _drop_reason_text(reason: StringName) -> String:
@@ -1162,6 +1188,7 @@ func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> 
 	var result := sim.shop.merge_echoes(sim, a, b, merge_trait)
 	if not result.ok:
 		return
+	echo_panel.end_staple()
 	refresh()
 	echo_panel.confirm_merge()
 	if sim.can_start_wave():
@@ -1574,91 +1601,6 @@ func _on_crew_undo() -> void:
 func _on_crew_closed() -> void:
 	_rebuild_focus()
 	crew_button.grab_focus()
-
-
-func _open_merge_hosts() -> void:
-	_workshop_origin = &"echo"
-	var choices: Array[Dictionary] = []
-	for host: EchoTake in sim.bank.takes:
-		for donor: EchoTake in sim.bank.takes:
-			if donor == host:
-				continue
-			for merge_trait: StringName in [&"skill", &"repair", &"power"]:
-				var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-				var result := sim.bank.preview_merge(host, donor, merge_trait)
-				if result == null:
-					continue
-				var text := Loc.t("shop.decision", [
-					Loc.t("echo.identity", [host.uid, host.wave]),
-					Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
-					Loc.t("workshop.trait_" + String(merge_trait))])
-				choices.append({"text": text, "value": {"host": host, "donor": donor, "trait": merge_trait},
-					"disabled": not quote.ok, "hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
-	workshop.show_choices(Loc.t("workshop.merge_host"), Loc.t("workshop.merge_one_screen") + "\n" + Loc.t("workshop.merge_host_hint"), choices,
-		func(value: Variant) -> void:
-			var row: Dictionary = value
-			_on_merge(row["host"], row["donor"], row["trait"])
-			workshop.close())
-
-
-func _open_merge_donors(host: EchoTake) -> void:
-	var choices: Array[Dictionary] = []
-	for take: EchoTake in sim.bank.takes:
-		if take != host:
-			choices.append({"text": Loc.t("workshop.echo_choice", [take.uid, take.wave, int(ceil(take.condition))]), "value": take})
-	workshop.show_choices(Loc.t("workshop.merge_donor"), Loc.t("workshop.merge_donor_hint", [host.uid]), choices, func(value: Variant) -> void: _open_merge_traits(host, value as EchoTake))
-
-
-func _open_merge_traits(host: EchoTake, donor: EchoTake) -> void:
-	var choices: Array[Dictionary] = []
-	for merge_trait: StringName in [&"skill", &"repair", &"power"]:
-		var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-		choices.append({"text": Loc.t("workshop.trait_" + String(merge_trait)) + " · %d" % quote.cost, "value": merge_trait, "disabled": not quote.ok,
-			"hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
-	workshop.show_choices(Loc.t("workshop.merge_trait"), Loc.t("workshop.merge_body_loss", [host.uid, donor.uid]), choices, func(value: Variant) -> void: _open_merge_preview(host, donor, StringName(value)))
-
-
-func _open_merge_preview(host: EchoTake, donor: EchoTake, merge_trait: StringName) -> void:
-	var result := sim.bank.preview_merge(host, donor, merge_trait)
-	var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-	if result == null:
-		return
-	var text := Loc.t("shop.decision", [
-		Loc.t("echo.identity", [host.uid, host.wave]),
-		Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
-		Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])])
-	text += "\n" + Loc.t("workshop.trait_" + String(merge_trait) + "_desc")
-	text += "\n" + Loc.echo_profile(EchoSystem.skill_profile(result, sim))
-	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_merge", [quote.cost]), "value": merge_trait, "disabled": not quote.ok}]
-	workshop.show_choices(Loc.t("workshop.merge_result"), text, choices, func(value: Variant) -> void:
-		_on_merge(host, donor, StringName(value))
-		workshop.close())
-	workshop.add_result_visual(_merge_route_visual(host, donor, result))
-
-
-func _open_echo_detail(take: EchoTake) -> void:
-	_workshop_origin = &"echo"
-	var text := echo_panel._loadout(take) + "\n" + Loc.echo_profile(EchoSystem.skill_profile(take, sim), true)
-	text += "\n" + Loc.t("echo.condition", [int(ceil(take.condition)), ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))])
-	var choices: Array[Dictionary] = [{"text": Loc.t("shop.merge"), "value": &"merge", "disabled": sim.bank.takes.size() < 2}]
-	workshop.show_choices(Loc.t("echo.identity", [take.uid, take.wave]), text, choices, func(_value: Variant) -> void: _open_merge_donors(take))
-
-
-func _merge_route_visual(host: EchoTake, donor: EchoTake, result: EchoTake) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	for take: EchoTake in [host, donor, result]:
-		var column := VBoxContainer.new()
-		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var label := UiTheme.label(Loc.t("workshop.merge_result") if take == result else Loc.t("echo.identity", [take.uid, take.wave]), 13, UiTheme.DIM)
-		label.clip_text = true
-		column.add_child(label)
-		var preview := PathPreview.new()
-		preview.setup(take, false, Vector2(120.0, 60.0))
-		preview.consumed = take == donor
-		column.add_child(preview)
-		row.add_child(column)
-	return row
 
 
 func _remember_focus(control: Control) -> void:

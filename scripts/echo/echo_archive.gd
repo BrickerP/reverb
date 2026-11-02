@@ -74,20 +74,6 @@ static func normalize(take: EchoTake, sim: Sim) -> EchoTake:
 	return entry
 
 
-# A short route beside the opening spot. The body stays off the player.
-static func demo_take(origin: Vector2) -> EchoTake:
-	var take := EchoTake.new()
-	take.wave = 0
-	take.condition = INHERITED_CONDITION
-	take.weapons.append(Content.weapon(&"pistol"))
-	take.levels.append(0)
-	var beside := origin + Vector2(48.0, 0.0)
-	for i in 31:
-		var sway := sin(float(i) / 30.0 * TAU) * 8.0
-		take.samples.append(beside + Vector2(0.0, sway))
-	return take
-
-
 # Both bodies sit inside one paradox arm, far enough apart to read as two.
 static func clip_layout(center: Vector2) -> Dictionary:
 	return {

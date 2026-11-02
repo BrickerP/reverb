@@ -90,9 +90,13 @@ static func target_profile(sim: Sim, item: Dictionary, view: Rect2, choice: Dict
 	var cooldown := maxf(0.0, float(item.get("cooldown", 0.0)))
 	var warning := maxf(0.0, float(item.get("warning", 0.0)))
 	var active := maxf(0.0, float(item.get("active", 0.0)))
-	var near := valid and sim.player.pos.distance_to(pos) <= float(item.get("range", Expedition.INTERACTION_RANGE))
+	var near := valid and Expedition.interact_gap(sim, item) <= float(item.get("range", Expedition.INTERACTION_RANGE))
 	var selected: bool = near and choice.get("id", &"") == item.get("id", &"")
-	var danger_radius := 100.0 if kind == &"press" and (warning > 0.0 or active > 0.0) else (105.0 if kind == &"conveyor" and active > 0.0 else 0.0)
+	var danger_radius := 0.0
+	if kind == &"press":
+		danger_radius = 100.0 if warning > 0.0 or active > 0.0 else 34.0
+	elif kind == &"conveyor" and active > 0.0:
+		danger_radius = 105.0
 	var bounds := Rect2(pos - Vector2.ONE * maxf(38.0, danger_radius), Vector2.ONE * maxf(76.0, danger_radius * 2.0))
 	var label := Rect2(pos + Vector2(-98, -92), Vector2(196, 42))
 	label.position = label.position.clamp(view.position + Vector2(8, 8), view.end - label.size - Vector2(8, 8))

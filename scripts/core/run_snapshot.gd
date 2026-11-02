@@ -357,7 +357,7 @@ func _schema_fields(type_name: String) -> Array[Dictionary]:
 		# grid is rebuilt after load. The other names are live presentation cues;
 		# keeping them out of the row leaves Snapshot v4 the same shape 0.17,
 		# 0.18 and 0.18.1 already wrote.
-		if type_name == "Sim" and info.name in ["grid", "wave_travel", "cue_slot",
+		if type_name == "Sim" and info.name in ["grid", "cue_slot",
 				"action_notice_key", "action_notice_text", "action_notice_until"]:
 			continue
 		fields.append(info)
@@ -842,6 +842,17 @@ func _story_valid(progress: Dictionary) -> bool:
 	return true
 
 
+func _fill_legacy_sim(row: Dictionary) -> void:
+	# Saves written before travel was part of v4 omit the key. Missing means the
+	# gate had not been recorded, which is the old resume behavior. A present
+	# value is the distance already walked.
+	if str(row.get("type", "")) != "Sim":
+		return
+	var fields: Dictionary = row.fields
+	if not fields.has("wave_travel"):
+		fields["wave_travel"] = _encode(0.0, 0)
+
+
 # Check the complete row schema and graph before any constructor runs. This
 # rejects disconnected payloads and many-Sim allocation bombs at menu load.
 func _prevalidate(root: Variant) -> bool:
@@ -861,6 +872,7 @@ func _prevalidate(root: Variant) -> bool:
 			if sim_count > 1:
 				_fail("snapshot.invalid_run")
 				return false
+		_fill_legacy_sim(row)
 		var schema := _schema_fields(row.type)
 		if schema.size() != row.fields.size():
 			_fail("snapshot.schema")
