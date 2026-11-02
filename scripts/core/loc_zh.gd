@@ -1,6 +1,9 @@
 class_name LocZh
 extends RefCounted
 
+	"shop.inspect": "查看",
+	"weapon.support_amount_tree": "每次补充 %s 护盾、%s 能量 · 纸树生命 %s",
+	"weapon.support_amount_repair": "每次回复 %s 生命、修复 %s 完好度 · 修补站生命 %s",
 const TABLE := {
 	"shop.buy_materials": "购买 · %d 材料",
 	"shop.review_materials": "查看工单 · %d 材料",
@@ -15,7 +18,7 @@ const TABLE := {
 	"shop.build_details": "装备属性",
 	"shop.passive_details": "被动 %d 件 · 查看",
 	"shop.need_materials": "还差 %d 材料",
-	"shop.full_upgrade": "已满级 · 在“管理武器”选择进化",
+	"shop.full_upgrade": "已满级 · 可选择进化分支",
 	"weapon.tick_line": "每跳 %s · 跳伤间隔 %.2f 秒 · 释放间隔 %.2f 秒",
 	"weapon.upgrade_hit": "单次伤害 %s → %s",
 	"weapon.upgrade_tick": "每跳伤害 %s → %s",
@@ -743,7 +746,7 @@ const TABLE := {
 	"pause.unmute": "取消静音",
 	"shop.echo_none_slots": "这个角色没有回响槽。",
 	"weapon.line": "每发 %s · 间隔 %.2f 秒 · 射程 %d",
-	"weapon.burst_line": "每发 %s · 每轮 %d 发 · 间隔 %.2f 秒 · 射程 %d",
+	"weapon.burst_line": "每发 %s × %d · 间隔 %.2f 秒 · 射程 %d",
 	"weapon.support_repair_short": "不攻击 · 每 %.1f 秒 · %d 次 · %.0f 秒",
 	"weapon.support_tree_short": "不攻击 · 每 %.1f 秒 · %d 次 · %.0f 秒",
 	"weapon.support_decoy_short": "不造成伤害 · 生命 %.0f · %.0f 秒",

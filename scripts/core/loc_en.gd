@@ -1,6 +1,9 @@
 class_name LocEn
 extends RefCounted
 
+	"shop.inspect": "Inspect",
+	"weapon.support_amount_tree": "Each pulse gives %s shield and %s energy · tree HP %s",
+	"weapon.support_amount_repair": "Heals %s HP and repairs %s condition per pulse · station HP %s",
 const TABLE := {
 	"shop.buy_materials": "Buy · %d materials",
 	"shop.review_materials": "Review order · %d materials",
@@ -15,7 +18,7 @@ const TABLE := {
 	"shop.build_details": "Build stats",
 	"shop.passive_details": "Passives %d · inspect",
 	"shop.need_materials": "Need %d more materials",
-	"shop.full_upgrade": "Maximum level · choose an evolution in Manage weapon",
+	"shop.full_upgrade": "Maximum level · evolution available",
 	"weapon.tick_line": "%s / tick · tick %.2fs · recast %.2fs",
 	"weapon.upgrade_hit": "Damage / hit %s → %s",
 	"weapon.upgrade_tick": "Damage / tick %s → %s",
@@ -743,7 +746,7 @@ const TABLE := {
 	"pause.unmute": "Unmute",
 	"shop.echo_none_slots": "This character has no echo slots.",
 	"weapon.line": "Per shot %s · every %.2fs · range %d",
-	"weapon.burst_line": "Per shot %s · %d shots a cycle · every %.2fs · range %d",
+	"weapon.burst_line": "Each %s × %d · interval %.2fs · range %d",
 	"weapon.support_repair_short": "No attack · every %.1fs · %d charges · %.0fs",
 	"weapon.support_tree_short": "No attack · every %.1fs · %d charges · %.0fs",
 	"weapon.support_decoy_short": "No damage · %.0f life · %.0fs",

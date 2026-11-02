@@ -119,6 +119,15 @@ jobs:
             --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
             --script res://tools/weapon_ui_probe.gd
 
+      - name: Upload weapon readability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weapon-ui-evidence-${{ github.sha }}
+          path: shots/paper-actions/weapon-ui/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Archive public versions and write actual 0.17 and 0.18 saves
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64

@@ -467,3 +467,9 @@ func _description(o: Offer) -> String:
 			body += "\n" + _order_context
 		return payoff + "\n" + body
 	return Loc.weapon_desc(o.weapon.id) + "\n" + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item, _sim)
+
+
+func _offer_name(o: Offer) -> String:
+	if o.is_contract():
+		return Loc.t("order.%s.name" % o.contract.kind)
+	return Loc.weapon_name(o.id()) if o.is_weapon() else Loc.item_name(o.id())

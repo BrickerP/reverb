@@ -97,11 +97,11 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_build_inspector()
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 6)
-	items_label = UiTheme.label("", 14, UiTheme.DIM)
+	items_label = UiTheme.label(Loc.t("workshop.passives", [sim.player.items.size()]), 13, UiTheme.DIM)
 	items_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	actions.add_child(items_label)
 	var passives := Button.new()
-	passives.text = Loc.t("shop.passive_details", [sim.player.items.size()])
+	passives.text = Loc.t("shop.inspect")
 	passives.pressed.connect(func() -> void: passives_requested.emit(_selected))
 	actions.add_child(passives)
 	items_drop_target = _empty_target(&"items", Loc.t("shop.passive_drop"))
