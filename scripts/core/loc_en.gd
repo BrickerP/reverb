@@ -1,10 +1,10 @@
 class_name LocEn
 extends RefCounted
 
+const TABLE := {
 	"shop.inspect": "Inspect",
 	"weapon.support_amount_tree": "Each pulse gives %s shield and %s energy · tree HP %s",
 	"weapon.support_amount_repair": "Heals %s HP and repairs %s condition per pulse · station HP %s",
-const TABLE := {
 	"shop.buy_materials": "Buy · %d materials",
 	"shop.review_materials": "Review order · %d materials",
 	"shop.upgrade_materials": "Upgrade to level %d · %d materials",

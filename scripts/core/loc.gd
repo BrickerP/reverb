@@ -304,7 +304,12 @@ static func support_line(w: WeaponDef, level: int = 0) -> String:
 	var profile := SupportSystem.weapon_profile(w, level, w.damage * w.level_mult(level))
 	if profile.is_empty():
 		return weapon_desc(w.id)
-	return _support_text(w, profile, false)
+	var text := _support_text(w, profile, false)
+	if w.support_kind == &"repair_station":
+		text += "\n" + t("weapon.support_amount_repair", [number(profile["heal_hp"]), number(profile["repair_condition"]), number(profile["hp"])])
+	elif w.support_kind == &"paper_tree":
+		text += "\n" + t("weapon.support_amount_tree", [number(profile["shield"]), number(profile["energy"]), number(profile["hp"])])
+	return text
 
 
 static func support_short(w: WeaponDef, level: int = 0) -> String:

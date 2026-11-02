@@ -1,10 +1,10 @@
 class_name LocZh
 extends RefCounted
 
+const TABLE := {
 	"shop.inspect": "查看",
 	"weapon.support_amount_tree": "每次补充 %s 护盾、%s 能量 · 纸树生命 %s",
 	"weapon.support_amount_repair": "每次回复 %s 生命、修复 %s 完好度 · 修补站生命 %s",
-const TABLE := {
 	"shop.buy_materials": "购买 · %d 材料",
 	"shop.review_materials": "查看工单 · %d 材料",
 	"shop.upgrade_materials": "升至 %d 级 · %d 材料",
