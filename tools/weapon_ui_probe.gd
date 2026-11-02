@@ -230,6 +230,11 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 		if control.is_visible_in_tree():
 			_check.ok(viewport.encloses(control.get_global_rect()), "%s %s at %s stays in %s" % [control.name, control.get("text") if control is Button else "panel", control.get_global_rect(), extent])
 	for card: OfferCard in ui.offers_box.get_children():
+		for name: String in ["AttackBehavior", "ItemEffect", "WeaponOutput"]:
+			var text := card.find_child(name, true, false) as Label
+			if text != null:
+				_check.eq(text.get_visible_line_count(), text.get_line_count(), "stock explains the complete effect without ellipses")
+				_check.ok(card.get_global_rect().grow(1).encloses(text.get_global_rect()), "stock effect stays inside its card")
 		var purchase := card.find_child("PurchaseAction", true, false) as Label
 		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
 		if card.swap_button != null:

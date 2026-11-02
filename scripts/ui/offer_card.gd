@@ -103,7 +103,7 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.alignment = BoxContainer.ALIGNMENT_BEGIN
 	box.add_theme_constant_override("separation", 2)
 	margin.add_child(box)
 	var slots_full := sim.player.weapons.size() >= Content.MAX_WEAPON_SLOTS
@@ -114,8 +114,6 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 		var behavior := UiTheme.label(Loc.weapon_desc(o.weapon.id), 13)
 		behavior.name = "AttackBehavior"
 		behavior.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		behavior.max_lines_visible = 2
-		behavior.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		behavior.tooltip_text = Loc.weapon_desc(o.weapon.id)
 		box.add_child(behavior)
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
@@ -132,13 +130,16 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	else:
 		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 15, UiTheme.INK)
 		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		desc.clip_text = true
-		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		desc.name = "ItemEffect"
+		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc.tooltip_text = _description(o)
 		box.add_child(desc)
 	if reason != &"" and reason != &"sold":
 		custom_minimum_size.y = HEIGHT + 18.0
-		var why := UiTheme.label(_blocked_text(reason), 13, UiTheme.WARN)
+		var reason_text := Loc.t("shop.full") if reason == &"full" else _blocked_text(reason)
+		if reason == &"poor":
+			reason_text = Loc.t("shop.need_materials", [maxi(0, o.price - sim.player.materials)])
+		var why := UiTheme.label(reason_text, 13, UiTheme.WARN)
 		why.clip_text = true
 		why.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		box.add_child(why)
@@ -399,14 +400,14 @@ func _dps_row(w: WeaponDef, sim: Sim, level: int = 0) -> Control:
 	if w.support_kind != &"":
 		var support := UiTheme.label(Loc.support_short(w, level), 13, UiTheme.ECHO)
 		support.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		support.clip_text = true
-		support.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		support.name = "WeaponOutput"
+		support.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(support)
 		return row
 	var line := UiTheme.label(Loc.t("shop.base_output", [Loc.weapon_line(w, level)]), 12, UiTheme.DIM)
 	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.clip_text = true
-	line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	line.name = "WeaponOutput"
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	line.tooltip_text = line.text
 	row.add_child(line)
 	return row

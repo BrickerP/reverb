@@ -117,6 +117,7 @@ func test_offers_show_attack_and_purchase_while_orders_use_words(c: Check) -> vo
 		var behavior := card.find_child("AttackBehavior", true, false) as Label
 		var action := card.find_child("PurchaseAction", true, false) as Label
 		c.eq(behavior.text, Loc.weapon_desc(w.id), "every weapon has visible attack behavior")
+		c.eq(behavior.max_lines_visible, -1, "the shop never hides the end of an attack explanation")
 		c.eq(action.text, Loc.t("shop.buy_materials", [20]), "purchase says action and currency")
 		c.eq((card.find_child("GradeMark", true, false) as Label).text, Loc.t("shop.level", [1]), "offered grade is labeled")
 		card.free()
@@ -158,3 +159,17 @@ func test_rebuilt_or_closed_upgrade_controls_cannot_spend_again(c: Check) -> voi
 	closing_button.pressed.emit()
 	c.eq(RunSnapshot.capture(ui.sim), before, "a previous run's action cannot spend the new run's materials")
 	ui.free()
+
+
+func test_passive_effect_numbers_wrap_instead_of_truncating(c: Check) -> void:
+	var sim := _sim()
+	var offer := Offer.new()
+	offer.item = Content.item(&"quick_trigger")
+	offer.price = 24
+	var card := OfferCard.new()
+	card.setup(offer, sim)
+	var effect := card.find_child("ItemEffect", true, false) as Label
+	c.eq(effect.text, Loc.item_face(offer.item, sim), "the full actual before/after value is on the card")
+	c.eq(effect.autowrap_mode, TextServer.AUTOWRAP_WORD_SMART, "narrow cards wrap the numbers")
+	c.ok(not effect.clip_text, "critical item values are never clipped")
+	card.free()
