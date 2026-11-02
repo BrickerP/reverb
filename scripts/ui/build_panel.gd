@@ -16,13 +16,10 @@ var slot_drop_targets: Array[ShopDropTarget] = []
 var empty_drop_target: ShopDropTarget
 var items_drop_target: ShopDropTarget
 
-var _box: VBoxContainer
-var _weapons_row: Control
-var _slot_buttons: Array[Button] = []
 var upgrade_button: Button
+var manage_button: Button
 var stats_button: Button
 var passives_button: Button
-var _generation := 0
 var detail_art: TextureRect
 var detail_title: Label
 var detail_behavior: Label
@@ -30,6 +27,11 @@ var detail_stats: Label
 var detail_upgrade: Label
 var detail_combo: Label
 var detail_reason: Label
+
+var _box: VBoxContainer
+var _weapons_row: Control
+var _slot_buttons: Array[Button] = []
+var _generation := 0
 var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
 var _card_levels: Array[int] = []
@@ -74,6 +76,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	upgrade_button = null
+	manage_button = null
 	stats_button = null
 	passives_button = null
 	detail_art = null
@@ -138,6 +141,7 @@ func close_session() -> void:
 	_weapons_row = null
 	_slot_buttons.clear()
 	upgrade_button = null
+	manage_button = null
 	stats_button = null
 	passives_button = null
 	detail_art = null
@@ -323,11 +327,11 @@ func _build_inspector() -> void:
 		else:
 			upgrade_requested.emit(_selected))
 	actions.add_child(upgrade_button)
-	var manage := Button.new()
-	manage.text = Loc.t("shop.manage")
-	manage.disabled = _cards.is_empty()
-	manage.pressed.connect(func() -> void: workshop_requested.emit(_selected))
-	actions.add_child(manage)
+	manage_button = Button.new()
+	manage_button.text = Loc.t("shop.manage")
+	manage_button.disabled = _cards.is_empty()
+	manage_button.pressed.connect(func() -> void: workshop_requested.emit(_selected))
+	actions.add_child(manage_button)
 
 
 func _empty_target(kind: StringName, text: String) -> ShopDropTarget:

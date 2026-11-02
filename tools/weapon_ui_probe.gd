@@ -58,6 +58,8 @@ func _run() -> void:
 			ui.undo_button.pressed.emit()
 			await _settle()
 			_check.eq(RunSnapshot.capture(sim), before, "native purchase Undo restores complete snapshot and both RNGs")
+			await _exercise_workshop(ui, sim, extent)
+
 			# Every tool must fit the selected sheet, including long translations,
 			# field ticks, both ready combos and grade-dependent support effects.
 			for weapon: WeaponDef in Content.weapons().values():
@@ -101,6 +103,72 @@ func _run() -> void:
 	file.close()
 	print("Weapon UI: %d passed, %d failed" % [_check.passed, _check.failed])
 	quit(1 if _check.failed > 0 else 0)
+
+
+func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
+	var before := RunSnapshot.capture(sim)
+	var item_card := ui.offers_box.get_child(3) as OfferCard
+	ui._offers_scroll.ensure_control_visible(item_card)
+	await _settle()
+	var point := item_card.get_global_rect().get_center()
+	for pressed: bool in [true, false]:
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = pressed
+		click.position = point
+		click.global_position = point
+		root.push_input(click, false)
+		await _settle()
+	_check.eq(sim.player.item_count(&"quick_trigger"), 1, "pointer input buys the named item exactly once")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), before, "pointer purchase Undo restores the exact run")
+	ui.build_panel.manage_button.pressed.emit()
+	await _settle()
+	await _capture(ui, extent, "manage-weapon")
+	ui.workshop.choice_buttons[3].pressed.emit()
+	await _settle()
+	_check.eq(sim.player.weapons.size(), 5, "named sell action removes the selected weapon")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), before, "sale Undo restores equipment, investments and money")
+	# The same-level donor and evolution family are deliberate fixture choices.
+	sim.player.weapons[1] = Content.weapon(&"pistol")
+	ui.refresh()
+	await _settle()
+	before = RunSnapshot.capture(sim)
+	ui.build_panel.manage_button.pressed.emit()
+	ui.workshop.choice_buttons[1].pressed.emit()
+	await _settle()
+	ui.workshop.choice_buttons[0].pressed.emit()
+	await _settle()
+	await _capture(ui, extent, "combine-confirmation")
+	ui.workshop.choice_buttons[0].pressed.emit()
+	await _settle()
+	_check.eq(sim.player.weapons.size(), 5, "combine consumes exactly the displayed donor")
+	_check.eq(sim.player.level_at(0), 1, "combine raises the displayed host grade")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), before, "combine Undo restores the exact host and donor")
+	sim.player.weapons[2] = Content.weapon(&"pistol")
+	sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	ui.refresh()
+	await _settle()
+	before = RunSnapshot.capture(sim)
+	ui.build_panel.upgrade_button.pressed.emit()
+	await _settle()
+	await _capture(ui, extent, "evolution-choice")
+	ui.workshop.choice_buttons[0].pressed.emit()
+	await _settle()
+	_check.eq(sim.player.weapons[0].id, &"twin_fangs", "evolution uses the explicitly chosen branch")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), before, "evolution Undo restores the original tool and investment")
+	sim.player.weapons[1] = Content.weapon(&"stapler")
+	sim.player.weapons[2] = Content.weapon(&"ink_bottle")
+	sim.player.weapon_levels[0] = 0
+	ui.refresh()
+	await _settle()
 
 
 func _fixture() -> Sim:
@@ -166,6 +234,14 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
 		if card.swap_button != null:
 			_check.ok(card.get_global_rect().grow(1).encloses(card.swap_button.get_global_rect()), "replace action stays inside its stock card")
+	if ui.workshop.visible:
+		for button: Button in ui.workshop.choice_buttons + [ui.workshop.cancel_button]:
+			_check.ok(viewport.encloses(button.get_global_rect()), "workshop actions fit the native canvas")
+			if not button.disabled:
+				for line: String in button.text.split("\n"):
+					var width := button.get_theme_font("font").get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT,
+						-1, button.get_theme_font_size("font_size")).x
+					_check.ok(width <= button.size.x - 12.0, "workshop action text is not clipped")
 	if ui.build_panel.visible:
 		for label: Label in [ui.build_panel.detail_title, ui.build_panel.detail_behavior,
 				ui.build_panel.detail_stats, ui.build_panel.detail_upgrade, ui.build_panel.detail_combo,
