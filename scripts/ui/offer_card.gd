@@ -122,8 +122,6 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 		var objective := UiTheme.label(job, 13)
 		objective.name = "OrderObjective"
 		objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		objective.max_lines_visible = 2
-		objective.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		objective.tooltip_text = job + "\n" + _description(o)
 		box.add_child(objective)
 		tooltip_text = objective.tooltip_text
