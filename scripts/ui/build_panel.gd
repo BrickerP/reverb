@@ -127,7 +127,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	for button: Button in find_children("*", "Button", true, false):
 		WorkshopUi.fit_button(button, 13, 28.0)
 	for button in _slot_buttons:
-		button.custom_minimum_size.y = 72.0 if replacing else 38.0
+		button.custom_minimum_size.y = 84.0 if replacing else 38.0
 
 
 
@@ -243,7 +243,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var select := Button.new()
-	select.custom_minimum_size.y = 72.0 if replacing else 38.0
+	select.custom_minimum_size.y = 84.0 if replacing else 38.0
 	select.accessibility_name = Loc.weapon_name(w.id) + " · " + Loc.t("shop.level", [level + 1])
 	select.tooltip_text = _detail_text_for(w, level)
 	var face := HBoxContainer.new()
