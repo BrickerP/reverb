@@ -44,6 +44,8 @@ var _connected_shop: Shop
 var _connected_sim: Sim
 var equipment_button: Button
 var echoes_button: Button
+var _stock_scroll_pending := -1
+var _stock_scroll_frames := 0
 var _equipment_page := 0
 var _unread_copy := false
 var _pending_feedback: Dictionary = {}
@@ -178,6 +180,8 @@ func open(s: Sim) -> void:
 	_replacing = null
 	_replacing_index = -1
 	_equipment_page = 0
+	_stock_scroll_frames = 0
+	_stock_scroll_pending = -1
 	_offers_scroll.scroll_vertical = 0
 	_unread_copy = sim.bank.takes.any(func(take: EchoTake) -> bool: return take.wave == sim.wave)
 	refresh(true)
@@ -186,6 +190,8 @@ func open(s: Sim) -> void:
 
 
 func close_session() -> void:
+	_stock_scroll_frames = 0
+	_stock_scroll_pending = -1
 	_disconnect_shop()
 	visible = false
 	if workshop != null:
@@ -219,7 +225,7 @@ func close_session() -> void:
 
 
 func refresh(animate_echo: bool = false) -> void:
-	var stock_scroll := _offers_scroll.scroll_vertical
+	var stock_scroll := _stock_scroll_pending if _stock_scroll_frames > 0 else _offers_scroll.scroll_vertical
 	_refresh_generation += 1
 	if _replacing != null and (not sim.shop.offers.has(_replacing) or _replacing.sold):
 		_replacing = null
@@ -315,18 +321,8 @@ func refresh(animate_echo: bool = false) -> void:
 	_sync_lock()
 	_rebuild_focus()
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
-	_restore_stock_scroll(stock_scroll, _refresh_generation, 2)
-
-
-# Rebuilding cards updates affordability and effects, but should not move the
-# player's place in the stock when they upgrade equipment or Undo a purchase.
-func _restore_stock_scroll(value: int, generation: int, frames: int) -> void:
-	if not is_inside_tree() or not visible or sim == null or generation != _refresh_generation:
-		return
-	if frames > 0:
-		get_tree().process_frame.connect(_restore_stock_scroll.bind(value, generation, frames - 1), CONNECT_ONE_SHOT)
-		return
-	_offers_scroll.scroll_vertical = value
+	_stock_scroll_pending = stock_scroll
+	_stock_scroll_frames = 2
 
 
 func _build_footer() -> Control:
@@ -742,6 +738,8 @@ func _on_reroll() -> void:
 	_replacing_index = -1
 	var result := sim.shop.apply(ShopResult.REROLL, sim)
 	if result.ok:
+		_stock_scroll_frames = 0
+		_stock_scroll_pending = -1
 		_offers_scroll.scroll_vertical = 0
 		refresh()
 		if reroll_button.disabled:
@@ -1705,6 +1703,11 @@ func set_paused(on: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Coalesce rapid refreshes into one restore after container layout settles.
+	if _stock_scroll_frames > 0:
+		_stock_scroll_frames -= 1
+		if _stock_scroll_frames == 0 and visible and sim != null:
+			_offers_scroll.scroll_vertical = _stock_scroll_pending
 	if binding_ceremony != null and binding_ceremony.active:
 		_update_binding_rect()
 
