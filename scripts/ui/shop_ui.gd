@@ -180,6 +180,7 @@ func open(s: Sim) -> void:
 	_replacing = null
 	_replacing_index = -1
 	_equipment_page = 0
+	build_panel.marked_slot = -1
 	_stock_scroll_frames = 0
 	_stock_scroll_pending = -1
 	_offers_scroll.scroll_vertical = 0
@@ -579,6 +580,8 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 			build_panel.marked_slot = sim.player.weapons.size() - 1
 			sim.cue_slot = sim.player.weapons.size() - 1
 		refresh()
+		if o.is_weapon():
+			build_panel._select(sim.player.weapons.size() - 1)
 		_focus_card(index)
 	else:
 		card.reject(reduced_effects)
@@ -757,6 +760,7 @@ func _on_undo() -> void:
 	if not result.ok:
 		_on_history_changed(false)
 		return
+	build_panel.marked_slot = -1
 	refresh()
 	if not undo_button.disabled:
 		undo_button.grab_focus()

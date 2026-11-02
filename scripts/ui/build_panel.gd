@@ -262,8 +262,8 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(title)
 	var grade := Loc.t("shop.level", [level + 1])
-	if index == marked_slot and not replacing:
-		grade += " · " + Loc.t("shop.just_equipped")
+	if index == marked_slot:
+		card.accessibility_description += " · " + Loc.t("shop.just_equipped")
 	identity.add_child(UiTheme.label(grade, 12, UiTheme.ACCENT if index == marked_slot else UiTheme.DIM))
 	if replacing:
 		var refund := UiTheme.label(Loc.t("shop.refund_materials", [Shop.resale_for(sim, index)]), 12, UiTheme.COIN)

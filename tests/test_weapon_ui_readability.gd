@@ -196,3 +196,19 @@ func test_trade_in_keeps_grade_refund_and_confirmation_distinct(c: Check) -> voi
 	ui.workshop.cancel_button.pressed.emit()
 	c.eq(RunSnapshot.capture(sim), before, "cancelling preserves the complete original run")
 	ui.free()
+
+
+func test_new_weapon_opens_its_own_explanation_without_widening_a_slot(c: Check) -> void:
+	var sim := _sim()
+	var offer := Offer.new()
+	offer.weapon = Content.weapon(&"smg")
+	offer.price = 24
+	sim.shop.offers[0] = offer
+	var ui := _open(sim)
+	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+	c.eq(ui.build_panel._selected, 1, "purchase immediately shows the installed weapon")
+	c.ok(ui.build_panel.detail_title.text.contains(Loc.weapon_name(&"smg")), "purchase result explains the new tool")
+	c.ok(ui.build_panel.detail_behavior.text.contains(Loc.weapon_desc(&"smg")), "new attack behavior is visible immediately")
+	ui.undo_button.pressed.emit()
+	c.eq(ui.build_panel.marked_slot, -1, "Undo clears the new-equipment cue")
+	ui.free()
