@@ -112,6 +112,17 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	box.add_child(_title_row(o, reason, selected, slots_full))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
+	elif o.is_contract():
+		var plate := OrderPlate.new()
+		plate.name = "OrderPlate"
+		plate.kind = o.contract.kind
+		plate.custom_minimum_size = Vector2(0.0, 28.0)
+		plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var job := Loc.t("order.%s.objective" % o.contract.kind) + "\n" + _description(o)
+		plate.tooltip_text = job
+		tooltip_text = job
+		box.add_child(plate)
 	else:
 		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 15, UiTheme.INK)
 		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -472,6 +483,42 @@ func _description(o: Offer) -> String:
 			body += "\n" + _order_context
 		return payoff + "\n" + body
 	return Loc.weapon_desc(o.weapon.id) + "\n" + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item, _sim)
+
+
+class OrderPlate extends Control:
+	var kind: StringName = &""
+
+	func _draw() -> void:
+		var ink := UiTheme.INK
+		var y := size.y * 0.5
+		match kind:
+			&"salvage":
+				for index in 3:
+					var at := Vector2(18.0 + float(index) * 22.0, y)
+					draw_rect(Rect2(at - Vector2(6, 6), Vector2(12, 12)), ink, false, 1.6)
+			&"audit":
+				for index in 2:
+					var at := Vector2(22.0 + float(index) * 28.0, y)
+					draw_circle(at, 7.0, ink, false, 1.6)
+					draw_line(at + Vector2(-3, 0), at + Vector2(3, 0), ink, 1.4)
+			&"repair":
+				draw_circle(Vector2(18, y), 8.0, ink, false, 1.6)
+				draw_circle(Vector2(18, y), 3.0, ink, true)
+			&"rescue":
+				draw_circle(Vector2(14, y - 6), 4.0, ink, false, 1.4)
+				draw_line(Vector2(14, y - 2), Vector2(14, y + 8), ink, 1.6)
+				draw_line(Vector2(36, y), Vector2(48, y - 6), ink, 1.6)
+				draw_line(Vector2(48, y - 6), Vector2(60, y), ink, 1.6)
+				draw_line(Vector2(48, y - 6), Vector2(48, y + 6), ink, 1.6)
+			&"recruit":
+				for index in 3:
+					var at := Vector2(16.0 + float(index) * 20.0, y)
+					draw_rect(Rect2(at - Vector2(7, 8), Vector2(14, 16)), ink, false, 1.4)
+			&"credit":
+				draw_string(UiTheme.font(), Vector2(8, y + 5), "+30", HORIZONTAL_ALIGNMENT_LEFT, 40, 14, ink)
+				draw_string(UiTheme.font(), Vector2(52, y + 5), "8", HORIZONTAL_ALIGNMENT_LEFT, 24, 14, ink)
+			_:
+				draw_circle(Vector2(16, y), 5.0, ink, false, 1.4)
 
 
 func _offer_name(o: Offer) -> String:

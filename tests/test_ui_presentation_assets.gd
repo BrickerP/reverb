@@ -174,11 +174,11 @@ func test_character_cards_and_codex_show_all_content_art(c: Check) -> void:
 	select.refresh(meta)
 	c.eq(select._cards.size(), Content.characters().size(), "one selection card per character")
 	for card: Button in select._cards:
-		var portraits := card.find_children("*", "TextureRect", true, false)
-		c.eq(portraits.size(), 1, "each character card has one portrait")
-		if not portraits.is_empty():
-			c.ok(PresentationAssets.texture(_key(portraits[0])) != null,
-					"character portrait resolves through the catalog")
+		var actor := card as CharacterSelectUi.CastButton
+		c.ok(actor.portrait != null, "each character card has one portrait")
+		c.ok(PresentationAssets.texture(_key(actor.portrait)) != null,
+				"character portrait resolves through the catalog")
+		c.ok(actor.kit != null and actor.kit.get_child_count() > 0, "the card shows the starting kit")
 	select.free()
 	var codex := CodexUi.new()
 	codex.theme = UiTheme.build()

@@ -102,8 +102,7 @@ func _ready() -> void:
 	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
-	echo_panel.merge_workbench_requested.connect(_open_merge_hosts)
-	echo_panel.detail_requested.connect(_open_echo_detail)
+	echo_panel.staple_requested.connect(_on_merge)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	root.add_child(_build_footer())
@@ -1201,6 +1200,7 @@ func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> 
 	var result := sim.shop.merge_echoes(sim, a, b, merge_trait)
 	if not result.ok:
 		return
+	echo_panel.end_staple()
 	refresh()
 	echo_panel.confirm_merge()
 	if sim.can_start_wave():
@@ -1613,91 +1613,6 @@ func _on_crew_undo() -> void:
 func _on_crew_closed() -> void:
 	_rebuild_focus()
 	crew_button.grab_focus()
-
-
-func _open_merge_hosts() -> void:
-	_workshop_origin = &"echo"
-	var choices: Array[Dictionary] = []
-	for host: EchoTake in sim.bank.takes:
-		for donor: EchoTake in sim.bank.takes:
-			if donor == host:
-				continue
-			for merge_trait: StringName in [&"skill", &"repair", &"power"]:
-				var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-				var result := sim.bank.preview_merge(host, donor, merge_trait)
-				if result == null:
-					continue
-				var text := Loc.t("shop.decision", [
-					Loc.t("echo.identity", [host.uid, host.wave]),
-					Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
-					Loc.t("workshop.trait_" + String(merge_trait))])
-				choices.append({"text": text, "value": {"host": host, "donor": donor, "trait": merge_trait},
-					"disabled": not quote.ok, "hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
-	workshop.show_choices(Loc.t("workshop.merge_host"), Loc.t("workshop.merge_one_screen") + "\n" + Loc.t("workshop.merge_host_hint"), choices,
-		func(value: Variant) -> void:
-			var row: Dictionary = value
-			_on_merge(row["host"], row["donor"], row["trait"])
-			workshop.close())
-
-
-func _open_merge_donors(host: EchoTake) -> void:
-	var choices: Array[Dictionary] = []
-	for take: EchoTake in sim.bank.takes:
-		if take != host:
-			choices.append({"text": Loc.t("workshop.echo_choice", [take.uid, take.wave, int(ceil(take.condition))]), "value": take})
-	workshop.show_choices(Loc.t("workshop.merge_donor"), Loc.t("workshop.merge_donor_hint", [host.uid]), choices, func(value: Variant) -> void: _open_merge_traits(host, value as EchoTake))
-
-
-func _open_merge_traits(host: EchoTake, donor: EchoTake) -> void:
-	var choices: Array[Dictionary] = []
-	for merge_trait: StringName in [&"skill", &"repair", &"power"]:
-		var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-		choices.append({"text": Loc.t("workshop.trait_" + String(merge_trait)) + " · %d" % quote.cost, "value": merge_trait, "disabled": not quote.ok,
-			"hint": Loc.t("workshop.trait_" + String(merge_trait) + "_desc")})
-	workshop.show_choices(Loc.t("workshop.merge_trait"), Loc.t("workshop.merge_body_loss", [host.uid, donor.uid]), choices, func(value: Variant) -> void: _open_merge_preview(host, donor, StringName(value)))
-
-
-func _open_merge_preview(host: EchoTake, donor: EchoTake, merge_trait: StringName) -> void:
-	var result := sim.bank.preview_merge(host, donor, merge_trait)
-	var quote := sim.shop.echo_merge_quote(sim, host, donor, merge_trait)
-	if result == null:
-		return
-	var text := Loc.t("shop.decision", [
-		Loc.t("echo.identity", [host.uid, host.wave]),
-		Loc.t("echo.identity", [donor.uid, donor.wave]) + " · " + str(quote.cost),
-		Loc.t("workshop.merge_preview", [host.uid, donor.uid, host.duration(), int(ceil(result.condition)), int(round(sim.echo_dps(host))), int(round(sim.echo_dps(result))), quote.cost])])
-	text += "\n" + Loc.t("workshop.trait_" + String(merge_trait) + "_desc")
-	text += "\n" + Loc.echo_profile(EchoSystem.skill_profile(result, sim))
-	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_merge", [quote.cost]), "value": merge_trait, "disabled": not quote.ok}]
-	workshop.show_choices(Loc.t("workshop.merge_result"), text, choices, func(value: Variant) -> void:
-		_on_merge(host, donor, StringName(value))
-		workshop.close())
-	workshop.add_result_visual(_merge_route_visual(host, donor, result))
-
-
-func _open_echo_detail(take: EchoTake) -> void:
-	_workshop_origin = &"echo"
-	var text := echo_panel._loadout(take) + "\n" + Loc.echo_profile(EchoSystem.skill_profile(take, sim), true)
-	text += "\n" + Loc.t("echo.condition", [int(ceil(take.condition)), ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))])
-	var choices: Array[Dictionary] = [{"text": Loc.t("shop.merge"), "value": &"merge", "disabled": sim.bank.takes.size() < 2}]
-	workshop.show_choices(Loc.t("echo.identity", [take.uid, take.wave]), text, choices, func(_value: Variant) -> void: _open_merge_donors(take))
-
-
-func _merge_route_visual(host: EchoTake, donor: EchoTake, result: EchoTake) -> Control:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
-	for take: EchoTake in [host, donor, result]:
-		var column := VBoxContainer.new()
-		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var label := UiTheme.label(Loc.t("workshop.merge_result") if take == result else Loc.t("echo.identity", [take.uid, take.wave]), 13, UiTheme.DIM)
-		label.clip_text = true
-		column.add_child(label)
-		var preview := PathPreview.new()
-		preview.setup(take, false, Vector2(120.0, 60.0))
-		preview.consumed = take == donor
-		column.add_child(preview)
-		row.add_child(column)
-	return row
 
 
 func _remember_focus(control: Control) -> void:

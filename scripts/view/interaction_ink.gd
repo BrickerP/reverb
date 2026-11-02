@@ -111,6 +111,8 @@ func consume_world(info: Dictionary) -> void:
 					or not (info["from_pos"] as Vector2).is_finite() or not (info["target_pos"] as Vector2).is_finite():
 				return
 			mark["family"] = &"rescue"
+		&"missed_recruit":
+			mark["family"] = &"missed"
 		_:
 			return
 	_push(mark, RESCUE_TIME if mark["family"] == &"rescue" else (SKILL_TIME if mark["family"] == &"skill" else 0.72))
@@ -338,6 +340,7 @@ func draw(ci: CanvasItem, view: Rect2, reduced: bool = false, sim: Sim = null) -
 			&"skill": _draw_skill(ci, p, sim)
 			&"recruit": _draw_recruit(ci, p)
 			&"rescue": _draw_rescue(ci, p)
+			&"missed": _draw_missed_recruit(ci, p)
 
 
 func _push(mark: Dictionary, duration: float) -> void:
@@ -648,6 +651,15 @@ static func _draw_departure(ci: CanvasItem, at: Vector2, scale: Vector2, ink: Co
 	ci.draw_polyline(outline, ink, 1.3, true)
 	ci.draw_line(at + Vector2(-5, 8), at + Vector2(-7, 17), ink, 1.2, true)
 	ci.draw_line(at + Vector2(5, 8), at + Vector2(7, 14), ink, 1.2, true)
+
+
+static func _draw_missed_recruit(ci: CanvasItem, p: Dictionary) -> void:
+	var pos: Vector2 = p["pos"]
+	var alpha := float(p["alpha"])
+	var ink := Color(Color("806d59"), alpha)
+	ci.draw_arc(pos, 16.0, 0.0, TAU, 16, ink, 2.0, true)
+	ci.draw_line(pos + Vector2(-6, -6), pos + Vector2(6, 6), ink, 2.0, true)
+	ci.draw_line(pos + Vector2(6, -6), pos + Vector2(-6, 6), ink, 2.0, true)
 
 
 static func _draw_recruit(ci: CanvasItem, p: Dictionary) -> void:

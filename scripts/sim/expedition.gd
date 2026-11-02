@@ -208,15 +208,36 @@ static func status(sim: Sim) -> Dictionary:
 		"outcome_values": state.get("ending_outcome", {}).duplicate(true)}
 
 
+# The solid machine blocks the body, so reach is the nearer of the service pad and the machine itself.
+static func interact_gap(sim: Sim, item: Dictionary) -> float:
+	var point: Vector2 = item.get("pos", Vector2.INF)
+	if not point.is_finite() or sim == null:
+		return INF
+	var gap := sim.player.pos.distance_to(point)
+	var id := String(item.get("id", ""))
+	if id.begins_with("repair_"):
+		id = id.trim_prefix("repair_")
+	if id.begins_with("machine_"):
+		var index := id.trim_prefix("machine_").to_int()
+		if index >= 0 and index < WorldArena.MACHINES.size():
+			gap = minf(gap, _gap_to_rect(sim.player.pos, WorldArena.MACHINES[index]))
+	return gap
+
+
+static func _gap_to_rect(point: Vector2, rect: Rect2) -> float:
+	var closest := Vector2(clampf(point.x, rect.position.x, rect.end.x), clampf(point.y, rect.position.y, rect.end.y))
+	return point.distance_to(closest)
+
+
 static func interaction(sim: Sim) -> Dictionary:
 	var closest: Dictionary = {}
 	var distance := INF
 	for item in sim.interactables:
 		if bool(item.get("used", false)):
 			continue
-		var d := sim.player.pos.distance_to(item["pos"])
 		if item.get("kind", &"") == &"negotiate":
 			continue
+		var d := interact_gap(sim, item)
 		if d <= float(item.get("range", INTERACTION_RANGE)) and d < distance:
 			closest = item.duplicate(true)
 			distance = d

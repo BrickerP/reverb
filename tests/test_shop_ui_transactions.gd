@@ -357,14 +357,10 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 	s.shop.offers.append(offer)
 	var ui := _open(s)
 	var card := ui.offers_box.get_child(0) as OfferCard
-	var job := Loc.t("order.recruit.objective")
-	c.ok(_label_texts(card).has(job), "the card shows what the order makes you do")
-	var stated := false
-	for node: Node in card.find_children("*", "Label", true, false):
-		var label := node as Label
-		if label.text == job and label.tooltip_text.contains(Loc.t("order.recruit.desc")):
-			stated = true
-	c.ok(stated, "hovering the job shows the full order rule")
+	var plate := card.find_child("OrderPlate", true, false) as Control
+	c.ok(plate != null and plate.get("kind") == AnomalyContract.RECRUIT, "the order card shows the recruit marks")
+	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.objective")), "hovering the marks states the job")
+	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.desc")), "hovering the marks states the rule")
 	ui._arm_lock(offer)
 	c.eq(ui._footer.text, "", "pointing at the order does not open a second copy of the job")
 	ui.free()

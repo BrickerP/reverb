@@ -138,7 +138,7 @@ static func fire(sim: Sim, origin: Vector2, target_pos: Vector2, w: WeaponDef, l
 		f.damage *= 2.0
 	f.knockback = w.knockback * (1.5 if mastery and w.family == &"scatter" else 1.0)
 	f.reach = w.reach * stats.range_mult() * (1.2 if mastery and w.family == &"salvage" else 1.0)
-	f.radius = w.field_radius
+	f.radius = w.mark_radius(level)
 	f.width = w.line_width
 	f.spread = deg_to_rad(w.spread_deg)
 	f.source = source
@@ -243,6 +243,7 @@ static func _projectile_volley(sim: Sim, f: AttackField, w: WeaponDef, bonus_pie
 		p.actor_token = f.actor_token
 		p.source_tint = f.source_tint
 		p.weapon_id = w.id
+		p.grade = f.level
 		sim.projectiles.append(p)
 		released += 1
 	return released
@@ -475,7 +476,7 @@ static func _advance_projectile(sim: Sim, p: Projectile, delta: float) -> void:
 		p.pos = previous.lerp(destination,contact)
 		_hit(sim,e,p.damage,p.vel.normalized(),p.knockback,p.crit,
 			p.source,p.actor_token,p.source_tint,p.weapon_id,p.effect,
-			p.pin_duration,p.ink_duration,p.mastery)
+			p.pin_duration,p.ink_duration,p.mastery,p.grade)
 		if p.explosion_radius>0.0 and p.explosion_damage>0.0:
 			_explode(sim,p,e)
 		p.hit_uids.append(e.uid)
@@ -493,7 +494,7 @@ static func _advance_projectile(sim: Sim, p: Projectile, delta: float) -> void:
 
 static func _hit(sim: Sim, e: EnemyState, damage: float, direction: Vector2, knockback: float,
 		crit: bool, source: int, token: int, tint: Color, weapon_id: StringName,
-		effect: StringName, pin: float, ink: float, mastery: bool) -> void:
+		effect: StringName, pin: float, ink: float, mastery: bool, grade: int = 0) -> void:
 	if e.dead:
 		return
 	var w := Content.weapon(weapon_id)
@@ -513,7 +514,7 @@ static func _hit(sim: Sim, e: EnemyState, damage: float, direction: Vector2, kno
 		e.ink_left = 0.0
 	var amount := damage * (1.0 + PIN_PRESS_DAMAGE if press_combo else (1.2 if arc_combo else 1.0))
 	sim.damage_enemy(e, amount, direction * knockback, crit, source, direction,
-		weapon_id, effect, token, tint)
+		weapon_id, effect, token, tint, grade)
 	if press_combo:
 		_emit_combo(sim, &"pin_press", e, source, token, tint, weapon_id, 1, damage * PIN_PRESS_DAMAGE)
 	if arc_combo:

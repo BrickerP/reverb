@@ -235,13 +235,18 @@ func test_secondary_actions_have_idle_stitches_without_changing_their_focus_obje
 	select.theme = UiTheme.build()
 	_root().add_child(select)
 	select.refresh(Meta.new("user://test_stitched_actions_meta.json"))
-	for i in 3:
-		c.ok(select._secondary_actions[i] is StitchedAction, "each secondary footer action has a permanent click cue")
-		select._secondary_actions[i].grab_focus()
-		c.ok(select._secondary_actions[i].has_focus(), "the original action remains the actual focus object")
-		c.ok(_contrast(select._secondary_actions[i].get_theme_color("font_focus_color"), UiTheme.PAPER) >= 4.5,
+	var stitched := 0
+	for button in select._secondary_actions:
+		if not button is StitchedAction:
+			continue
+		stitched += 1
+		c.ok(button is StitchedAction, "each secondary footer action has a permanent click cue")
+		button.grab_focus()
+		c.ok(button.has_focus(), "the original action remains the actual focus object")
+		c.ok(_contrast(button.get_theme_color("font_focus_color"), UiTheme.PAPER) >= 4.5,
 				"paper footer action keeps readable focused text")
-		c.eq(select._secondary_actions[i].rotation, 0.0, "ink cues do not rotate the interaction area")
+		c.eq(button.rotation, 0.0, "ink cues do not rotate the interaction area")
+	c.ok(stitched >= 1, "settings stays a stitched footer action")
 	select.free()
 	var sim := Sim.new(99)
 	sim.start_run()

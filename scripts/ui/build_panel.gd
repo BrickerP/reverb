@@ -206,12 +206,24 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	box.add_theme_constant_override("separation", 0)
 	card.add_child(box)
 	var select := Button.new()
-	select.text = "%d · %s · %s" % [index + 1, Loc.t("shop.level", [level + 1]), Loc.weapon_name(w.id)]
-	if replacing:
-		select.text = "%d · +%d · %s" % [index + 1, Shop.resale_for(sim, index), Loc.weapon_name(w.id)]
+	var face := HBoxContainer.new()
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.add_theme_constant_override("separation", 4)
+	face.add_child(UiTheme.weapon_icon(w, Vector2(36.0, 24.0)))
+	var grade := UiTheme.label("●".repeat(level + 1), 12, UiTheme.INK)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	grade.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	face.add_child(grade)
+	select.add_child(face)
+	face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face.offset_left = 4.0
+	face.offset_right = -22.0
+	select.text = "+%d" % Shop.resale_for(sim, index) if replacing else ""
+	select.alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	select.accessibility_name = Loc.weapon_name(w.id)
 	select.tooltip_text = _detail_text_for(w, level)
 	select.clip_text = true
-	select.custom_minimum_size = Vector2(0.0, 27.0)
+	select.custom_minimum_size = Vector2(0.0, 28.0)
 	select.add_theme_font_size_override("font_size", 13)
 	select.pressed.connect(func() -> void:
 		_select(index)
@@ -234,11 +246,13 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	else:
 		var now := w.damage * w.level_mult(level)
 		var nxt := w.damage * w.level_mult(level + 1)
-		upgrade.text = Loc.t("shop.upgrade_result", [Shop.upgrade_cost(w, level), Loc.number(now), Loc.number(nxt)])
+		var cost := Shop.upgrade_cost(w, level)
+		upgrade.text = str(cost)
+		upgrade.tooltip_text = Loc.t("shop.upgrade_result", [cost, Loc.number(now), Loc.number(nxt)])
 		upgrade.disabled = not sim.shop.quote(ShopResult.UPGRADE, sim, null, index).ok
 		if upgrade.disabled:
-			upgrade.text += " · " + Loc.t("shop.drop_poor")
 			upgrade.tooltip_text = Loc.t("shop.drop_poor")
+		upgrade.accessibility_name = upgrade.tooltip_text
 		upgrade.pressed.connect(func() -> void: upgrade_requested.emit(index))
 	box.add_child(upgrade)
 	_upgrade_buttons.append(upgrade)
@@ -262,7 +276,7 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.35), 1, 18)
 	style.shape = InkStyleBox.Shape.TAG
 	target.add_theme_stylebox_override("panel", style)
-	var label := UiTheme.label(text, 13, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	var label := UiTheme.label("＋", 18, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

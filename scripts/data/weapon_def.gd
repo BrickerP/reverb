@@ -45,6 +45,7 @@ extends Resource
 
 const MAX_LEVEL := 3
 const GRADE_MULTIPLIERS := [1.0, 1.8, 3.2, 5.5]
+const STAMP_RADII := [70.0, 84.0, 98.0, 112.0]
 
 
 func dps() -> float:
@@ -69,6 +70,14 @@ func dps() -> float:
 
 func level_mult(level: int) -> float:
 	return GRADE_MULTIPLIERS[clampi(level, 0, MAX_LEVEL)]
+
+
+# Grade enlarges the stamp. Evolution replaces the tool, so only the base seal
+# grows through these four radii.
+func mark_radius(level: int) -> float:
+	if id == &"stamp":
+		return STAMP_RADII[clampi(level, 0, MAX_LEVEL)]
+	return field_radius
 
 
 func level_dps(level: int) -> float:

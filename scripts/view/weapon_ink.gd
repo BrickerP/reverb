@@ -209,6 +209,41 @@ static func mount_pose(id: StringName, strength: float, reduced: bool = false) -
 
 # This exact local geometry is consumed by the hit drawing and its regression
 # tests. Marks describe confirmed contact; none is a telegraph or damage area.
+static func sidearm_contact(glyph: StringName, grade: int) -> Dictionary:
+	var lines: Array[PackedVector2Array] = []
+	var holes: Array[Vector2] = []
+	var extra := mini(2, maxi(0, grade))
+	match glyph:
+		&"staple":
+			var teeth := 2 + extra
+			var span := 1.2
+			for index in teeth:
+				var x := lerpf(-span * 0.5, span * 0.5, float(index) / float(teeth - 1))
+				holes.append(Vector2(x, 0.35))
+			var bar := PackedVector2Array()
+			for hole in holes:
+				bar.append(hole + Vector2(0, -0.35))
+			lines.append(bar)
+			for hole in holes:
+				lines.append(PackedVector2Array([hole + Vector2(0, -0.35), hole]))
+		&"chad":
+			var count := 3 + mini(1, extra)
+			for index in count:
+				holes.append(Vector2(lerpf(-0.8, 0.8, float(index) / float(count - 1)), 0.05))
+		&"clamp":
+			lines.append(PackedVector2Array([Vector2(-0.55, -0.45), Vector2(-0.55, 0.5), Vector2(0.55, 0.5), Vector2(0.55, -0.45)]))
+		&"twin":
+			for shift in [-0.38, 0.38]:
+				holes.append(Vector2(-0.28 + shift, 0.35))
+				holes.append(Vector2(0.28 + shift, 0.35))
+				lines.append(PackedVector2Array([Vector2(-0.28 + shift, 0.0), Vector2(-0.28 + shift, 0.35), Vector2(0.28 + shift, 0.35), Vector2(0.28 + shift, 0.0)]))
+		&"binding_writ":
+			lines.append(PackedVector2Array([Vector2(-0.7, -0.35), Vector2(0.7, -0.35), Vector2(0.7, 0.35), Vector2(-0.7, 0.35), Vector2(-0.7, -0.35)]))
+			lines.append(PackedVector2Array([Vector2(-0.15, -0.15), Vector2(0.15, 0.15)]))
+			lines.append(PackedVector2Array([Vector2(0.15, -0.15), Vector2(-0.15, 0.15)]))
+	return {"lines": lines, "holes": holes, "pieces": [], "blot": PackedVector2Array()}
+
+
 static func contact_geometry(action: StringName, progress: float, reduced: bool = false) -> Dictionary:
 	var p := clampf(progress, 0.0, 1.0) if is_finite(progress) else 0.0
 	var spread := 0.35 if reduced else 0.25 + p * 0.65
@@ -404,8 +439,17 @@ static func flight_accent(action: StringName, returning: bool = false) -> Packed
 	var path := PackedVector2Array()
 	var detail := PackedVector2Array()
 	match key:
-		&"pin":
-			path = PackedVector2Array([Vector2(-7, -3), Vector2(-18, -3), Vector2(-18, 3), Vector2(-7, 3)])
+		&"pin", &"staple":
+			path = PackedVector2Array([Vector2(-6, -5), Vector2(-18, -5), Vector2(-18, 5), Vector2(-6, 5), Vector2(-6, -5)])
+			detail = PackedVector2Array([Vector2(-18, -5), Vector2(-18, 9), Vector2(-6, 5), Vector2(-6, 9)])
+		&"chad":
+			path = PackedVector2Array([Vector2(-8, -2), Vector2(-8, 2), Vector2(-8, -2), Vector2(-13, -2), Vector2(-13, 2), Vector2(-13, -2), Vector2(-18, -2), Vector2(-18, 2), Vector2(-18, -2)])
+		&"clamp":
+			path = PackedVector2Array([Vector2(-6, -5), Vector2(-16, -5), Vector2(-16, 5), Vector2(-6, 5)])
+		&"twin":
+			path = PackedVector2Array([Vector2(-6, -6), Vector2(-14, -6), Vector2(-14, -2), Vector2(-6, -2), Vector2(-6, 2), Vector2(-14, 2), Vector2(-14, 6), Vector2(-6, 6)])
+		&"binding_writ":
+			path = PackedVector2Array([Vector2(-6, -3), Vector2(-18, -3), Vector2(-18, 3), Vector2(-6, 3), Vector2(-6, -3)])
 		&"stamp":
 			path = PackedVector2Array([Vector2(-7, -4), Vector2(-18, -4), Vector2(-18, 4), Vector2(-7, 4), Vector2(-7, -4)])
 			detail = PackedVector2Array([Vector2(-15, -1), Vector2(-10, -1), Vector2(-15, 1), Vector2(-10, 1)])
@@ -519,6 +563,7 @@ static func draw_projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) ->
 		var action := StringName(batch["action"])
 		if not quotas.has(action) or projectile.vel.length_squared() <= 0.000001:
 			continue
+		var glyph := StringName(profile(projectile.weapon_id).get("glyph", action))
 		var material_index := int(material_used.get(action, 0))
 		material_used[action] = material_index + 1
 		if not accent_sample(material_index, int(material_counts[action]), int(quotas[action])):
@@ -526,7 +571,8 @@ static func draw_projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) ->
 		var direction := projectile.vel.normalized()
 		var normal := Vector2(-direction.y, direction.x)
 		var returning := projectile.returning and projectile.return_time > 0.0
-		for point in flight_accent(action, returning):
+		var accent := glyph if glyph in [&"staple", &"chad", &"clamp", &"twin", &"binding_writ"] else action
+		for point in flight_accent(accent, returning):
 			segments.append(projectile.pos + direction * point.x + normal * point.y)
 		_last_render["accents"] = int(_last_render["accents"]) + 1
 	# Two submissions for the entire sampled population, independent of its size
@@ -604,6 +650,7 @@ static func draw_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Arra
 			pos = data.get("contact_pos", pos)
 		if BattleDirector.is_copy_token(int(data.get("actor_token", -1))):
 			hit_profile["color"] = (hit_profile["color"] as Color).lerp(data.get("source_tint", PAPER), 0.55)
+		hit_profile["grade"] = int(data.get("level", 0))
 		_draw_hit(ci, pos, direction.normalized(), hit_profile,
 				t, bool(data.get("crit", false)), bool(data.get("reduced", false)), reduced)
 		_last_feedback["hits"] = int(_last_feedback["hits"]) + 1
@@ -630,6 +677,21 @@ static func _draw_muzzle(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Di
 	var color := Color((p["color"] as Color).lerp(INK, 0.35), t * 0.9)
 	var size := minf(12.0, length * 0.4) * (0.6 + t * 0.4)
 	var normal := Vector2(-direction.y, direction.x)
+	var glyph := StringName(p.get("glyph", &""))
+	if glyph == &"chad":
+		for index in 3:
+			ci.draw_circle(pos + direction * float(index) * size * 0.45, 2.2, color, true, -1.0, true)
+		return
+	if glyph == &"clamp":
+		_polyline(ci, pos, direction, PackedVector2Array([Vector2(0.4, -0.7), Vector2(-0.5, -0.7), Vector2(-0.5, 0.7), Vector2(0.4, 0.7)]), size, color, 2.4)
+		return
+	if glyph == &"binding_writ":
+		_polyline(ci, pos, direction, PackedVector2Array([Vector2(-0.6, -0.4), Vector2(0.6, -0.4), Vector2(0.6, 0.4), Vector2(-0.6, 0.4), Vector2(-0.6, -0.4)]), size, color, 2.0)
+		return
+	if glyph == &"staple" or glyph == &"twin":
+		_polyline(ci, pos, direction, PackedVector2Array([Vector2(-0.55, -0.15), Vector2(0.55, -0.15)]), size, color, 2.2)
+		_polyline(ci, pos, direction, PackedVector2Array([Vector2(-0.55, -0.15), Vector2(-0.55, 0.55), Vector2(0.55, -0.15), Vector2(0.55, 0.55)]), size, color, 2.0)
+		return
 	match action:
 		&"pin":
 			_polyline(ci, pos, direction, PackedVector2Array([Vector2(-0.4, -0.6), Vector2(0.4, -0.6), Vector2(0.4, 0.6), Vector2(-0.4, 0.6)]), size, color, 2.1)
@@ -664,7 +726,9 @@ static func _draw_hit(ci: CanvasItem, pos: Vector2, direction: Vector2, p: Dicti
 	if direction == Vector2.ZERO:
 		# Directionless AOE can leave a local result, never an invented attack ray.
 		direction = Vector2.RIGHT
-	var shape := contact_geometry(action, 1.0 - t, reduced)
+	var glyph := StringName(p.get("glyph", &""))
+	var shape := sidearm_contact(glyph, int(p.get("grade", 0))) if glyph in [&"staple", &"chad", &"clamp", &"twin", &"binding_writ"] \
+			else contact_geometry(action, 1.0 - t, reduced)
 	# These two results are paper imprints below the captured body foot. Keeping
 	# them on the floor also prevents upward shots rotating a mark over the face.
 	ci.draw_set_transform(pos, 0.0 if action in [&"pin", &"stamp"] else direction.angle())

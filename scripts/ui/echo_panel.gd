@@ -5,10 +5,12 @@ signal discard_requested(take: EchoTake)
 signal merge_workbench_requested
 signal detail_requested(take: EchoTake)
 signal repair_requested(take: EchoTake)
+signal staple_requested(host: EchoTake, donor: EchoTake, choice: StringName)
 
 var discard_buttons: Array[Button] = []
 var repair_buttons: Array[Button] = []
 var merge_button: Button
+var trait_buttons: Array[Button] = []
 var last_new_row: Control
 var last_new_tint: Color = Color.WHITE
 var reduced_effects := false
@@ -18,6 +20,8 @@ var _takes_box: VBoxContainer
 var _sim: Sim
 var _animate_new := false
 var _merge_mode := false
+var _spent_uid := 0
+var _host_uid := 0
 var page := 0
 var page_size := 2
 var page_previous: Button
@@ -75,6 +79,9 @@ func close_session() -> void:
 	_sim = null
 	_animate_new = false
 	_merge_mode = false
+	_spent_uid = 0
+	_host_uid = 0
+	trait_buttons.clear()
 	discard_buttons.clear()
 	repair_buttons.clear()
 	_identity_buttons.clear()
@@ -100,11 +107,28 @@ func set_reduced_effects(on: bool) -> void:
 func cancel_merge() -> bool:
 	if not _merge_mode:
 		return false
-	_merge_mode = false
+	end_staple()
 	_render()
 	if merge_button != null:
 		merge_button.grab_focus()
 	return true
+
+
+func end_staple() -> void:
+	_merge_mode = false
+	_spent_uid = 0
+	_host_uid = 0
+
+
+func select_take(take: EchoTake) -> void:
+	_pick(take)
+
+
+func trait_button(choice: StringName) -> Button:
+	for button in trait_buttons:
+		if button.get_meta(&"trait") == choice:
+			return button
+	return null
 
 
 func _render() -> void:
@@ -115,6 +139,7 @@ func _render() -> void:
 	_identity_buttons.clear()
 	_repair_by_uid.clear()
 	merge_button = null
+	trait_buttons.clear()
 	page_previous = null
 	page_next = null
 	if _sim == null:
@@ -153,6 +178,7 @@ func _render() -> void:
 	_takes_box = VBoxContainer.new()
 	_takes_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_takes_box.add_theme_constant_override("separation", 4)
+	_takes_box.gui_input.connect(_cancel_empty)
 	_box.add_child(_takes_box)
 	var newest_first := sim.bank.takes.duplicate()
 	newest_first.reverse()
@@ -242,7 +268,9 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	style.content_margin_top = 3.0
 	style.content_margin_bottom = 3.0
 	row.add_theme_stylebox_override("panel", style)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var line := HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_theme_constant_override("separation", 5)
 	row.add_child(line)
 	var preview := PathPreview.new()
@@ -255,6 +283,7 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 		staple.position = Vector2(18.0, 0.0)
 		preview.add_child(staple)
 	var info := VBoxContainer.new()
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_theme_constant_override("separation", 0)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(info)
@@ -262,7 +291,9 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	identity.text = Loc.t("echo.identity", [take.uid, take.wave])
 	identity.add_theme_font_size_override("font_size", 14)
 	identity.clip_text = true
-	identity.pressed.connect(func() -> void: detail_requested.emit(take))
+	identity.pressed.connect(func() -> void:
+		if _merge_mode:
+			_pick(take))
 	var identity_line := HBoxContainer.new()
 	identity_line.add_theme_constant_override("separation", 3)
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -292,9 +323,22 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	discard.pressed.connect(_on_row.bind(take))
 	discard_buttons.append(discard)
 	line.add_child(discard)
+	if _merge_mode and take.uid == _host_uid and _spent_uid != 0:
+		_add_marks(line, take)
+	if _merge_mode and take.uid == _spent_uid:
+		row.modulate = Color(1.0, 0.94, 0.78)
 	row.set_meta(&"take_identity", preview)
 	row.set_meta(&"take_info", info)
 	return row
+
+
+func _cancel_empty(event: InputEvent) -> void:
+	if not _merge_mode or not (event is InputEventMouseButton):
+		return
+	var press := event as InputEventMouseButton
+	if press.pressed and press.button_index == MOUSE_BUTTON_LEFT:
+		cancel_merge()
+		_takes_box.accept_event()
 
 
 func _on_repair(take: EchoTake) -> void:
@@ -313,7 +357,88 @@ func _on_merge_button() -> void:
 		cancel_merge()
 		return
 	_merge_mode = true
-	merge_workbench_requested.emit()
+	_spent_uid = 0
+	_host_uid = 0
+	_render()
+
+
+func _pick(take: EchoTake) -> void:
+	if not _merge_mode or _sim == null or take == null:
+		return
+	if _spent_uid == 0 or take.uid == _spent_uid:
+		_spent_uid = 0 if take.uid == _spent_uid else take.uid
+		_host_uid = _sole_host()
+	else:
+		_host_uid = take.uid
+	if _host_uid != 0:
+		_show_uid(_host_uid)
+	_render()
+
+
+func _show_uid(uid: int) -> void:
+	if _sim == null:
+		return
+	var newest: Array = _sim.bank.takes.duplicate()
+	newest.reverse()
+	for index in newest.size():
+		var take: EchoTake = newest[index]
+		if take.uid == uid:
+			page = int(index / maxi(1, page_size))
+			return
+
+
+func _sole_host() -> int:
+	if _spent_uid == 0 or _sim == null:
+		return 0
+	var other := 0
+	var count := 0
+	for take: EchoTake in _sim.bank.takes:
+		if take.uid == _spent_uid:
+			continue
+		count += 1
+		other = take.uid
+	return other if count == 1 else 0
+
+
+func _take_by_uid(uid: int) -> EchoTake:
+	if _sim == null:
+		return null
+	for take: EchoTake in _sim.bank.takes:
+		if take.uid == uid:
+			return take
+	return null
+
+
+func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
+	var donor := _take_by_uid(_spent_uid)
+	if donor == null or _sim == null:
+		return
+	for choice: StringName in [&"skill", &"repair", &"power"]:
+		var quote := _sim.shop.echo_merge_quote(_sim, host, donor, choice)
+		if quote == null:
+			continue
+		var button := Button.new()
+		button.text = str(quote.cost)
+		button.disabled = not quote.ok
+		button.set_meta(&"trait", choice)
+		button.tooltip_text = Loc.t("workshop.trait_skill_desc") if choice == &"skill" \
+				else (Loc.t("workshop.trait_repair_desc") if choice == &"repair" else Loc.t("workshop.trait_power_desc"))
+		button.accessibility_name = Loc.t("workshop.trait_skill") if choice == &"skill" \
+				else (Loc.t("workshop.trait_repair") if choice == &"repair" else Loc.t("workshop.trait_power"))
+		button.accessibility_description = button.tooltip_text
+		button.add_theme_font_size_override("font_size", 12)
+		button.custom_minimum_size = Vector2(36.0, 28.0)
+		button.pressed.connect(_commit.bind(choice))
+		line.add_child(button)
+		trait_buttons.append(button)
+
+
+func _commit(choice: StringName) -> void:
+	var host := _take_by_uid(_host_uid)
+	var donor := _take_by_uid(_spent_uid)
+	if host == null or donor == null:
+		return
+	staple_requested.emit(host, donor, choice)
 
 
 func _animate_new_row(row: Control) -> void:

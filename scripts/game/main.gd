@@ -156,6 +156,7 @@ func _ready() -> void:
 	pause_ui.resume_requested.connect(_on_resume_requested)
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
+	pause_ui.codex_requested.connect(open_codex)
 	pause_ui.mute_requested.connect(_on_mute_requested)
 	pause_ui.quit_requested.connect(_abandon_run)
 	pause_ui.save_requested.connect(save_and_return)
@@ -339,7 +340,7 @@ func _on_history_replay(seed_value: int, char_id: StringName, daily_modifier: St
 func _on_settings_closed() -> void:
 	if _settings_restore_pause:
 		if pause_ui != null:
-			pause_ui.open(audio != null and audio.is_muted())
+			pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	elif sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
 		_on_resume_requested()
 	else:
@@ -349,7 +350,7 @@ func _on_settings_closed() -> void:
 
 func _on_history_closed() -> void:
 	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	else:
 		_restore_underlay_focus()
 
@@ -830,7 +831,7 @@ func _set_paused(on: bool) -> void:
 	if pause_ui == null:
 		return
 	if on:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	else:
 		pause_ui.close()
 
@@ -845,7 +846,7 @@ func _on_mute_requested() -> void:
 
 func _restore_underlay_focus() -> void:
 	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	elif end_ui != null and end_ui.visible:
 		end_ui.focus_default()
 	elif character_select != null and character_select.visible:
@@ -989,6 +990,10 @@ func _resume_language_settings() -> void:
 func _abandon_run() -> void:
 	SuspendStore.clear()
 	show_select()
+
+
+func _has_letters() -> bool:
+	return meta != null and not StoryLedger.archive(meta).is_empty()
 
 
 func open_story() -> void:

@@ -158,7 +158,7 @@ static func machine_sites() -> Array[Dictionary]:
 		var point := move_body(machine.get_center() + Vector2(0.0, machine.size.y * 0.5 + 60.0), Vector2.ZERO, 24.0)
 		sites.append({"id": StringName("machine_%d" % index), "kind": kinds[index], "pos": point,
 			"range": 112.0, "cost": 8 if kinds[index] == &"recycler" else 0, "warning": 0.0,
-			"active": 4.0 if kinds[index] == &"conveyor" else 0.0, "cooldown": 4.0 + float(index),
+			"active": 4.0 if kinds[index] == &"conveyor" else 0.0, "cooldown": 0.0,
 			"used": false, "direction": Vector2.RIGHT if index % 2 == 0 else Vector2.LEFT})
 	return sites
 
