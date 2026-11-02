@@ -418,7 +418,9 @@ func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
 		if quote == null:
 			continue
 		var button := Button.new()
-		button.text = str(quote.cost)
+		var action := Loc.t("echo.staple.skill") if choice == &"skill" \
+				else (Loc.t("echo.staple.repair") if choice == &"repair" else Loc.t("echo.staple.power"))
+		button.text = "%s · %d" % [action, quote.cost]
 		button.disabled = not quote.ok
 		button.set_meta(&"trait", choice)
 		button.tooltip_text = Loc.t("workshop.trait_skill_desc") if choice == &"skill" \
@@ -427,7 +429,7 @@ func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
 				else (Loc.t("workshop.trait_repair") if choice == &"repair" else Loc.t("workshop.trait_power"))
 		button.accessibility_description = button.tooltip_text
 		button.add_theme_font_size_override("font_size", 12)
-		button.custom_minimum_size = Vector2(36.0, 28.0)
+		button.custom_minimum_size = Vector2(108.0, 28.0)
 		button.pressed.connect(_commit.bind(choice))
 		line.add_child(button)
 		trait_buttons.append(button)

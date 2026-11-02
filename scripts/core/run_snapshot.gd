@@ -157,7 +157,12 @@ func _encode(value: Variant, depth: int) -> Variant:
 			_rows.append(row)
 			for info: Dictionary in _fields(value):
 				var name: String = info.name
-				row.fields[name] = _encode(value.get(name), depth + 1)
+				var field_value: Variant = value.get(name)
+				# A zero travel distance and an ungraded shot are the historical
+				# row. Writing them would change the bytes of every 0.17/0.18 save.
+				if _omit_legacy_default(type_name, name, field_value):
+					continue
+				row.fields[name] = _encode(field_value, depth + 1)
 			return {"ref": index}
 	return _fail("snapshot.unsupported_value")
 
@@ -177,15 +182,16 @@ func _restore(data: Dictionary) -> Sim:
 	for i in _rows.size():
 		var target: Object = _objects[i]
 		var saved: Dictionary = _rows[i].fields
+		var type_name := str(_rows[i].get("type", ""))
 		var fields := _fields(target)
-		if saved.size() != fields.size():
+		if not _saved_matches(type_name, saved, fields):
 			_fail("snapshot.schema")
 			return null
 		for info: Dictionary in fields:
 			var name: String = info.name
 			if not saved.has(name):
-				_fail("snapshot.schema")
-				return null
+				target.set(name, _legacy_default(type_name, name))
+				continue
 			var value: Variant = _decode(saved[name], 0)
 			if _error != "" or not _assign(target, info, value):
 				return null
@@ -842,15 +848,31 @@ func _story_valid(progress: Dictionary) -> bool:
 	return true
 
 
-func _fill_legacy_sim(row: Dictionary) -> void:
-	# Saves written before travel was part of v4 omit the key. Missing means the
-	# gate had not been recorded, which is the old resume behavior. A present
-	# value is the distance already walked.
-	if str(row.get("type", "")) != "Sim":
-		return
-	var fields: Dictionary = row.fields
-	if not fields.has("wave_travel"):
-		fields["wave_travel"] = _encode(0.0, 0)
+func _legacy_default(type_name: String, field_name: String) -> Variant:
+	if type_name == "Sim" and field_name == "wave_travel":
+		return 0.0
+	if type_name == "Projectile" and field_name == "grade":
+		return 0
+	return null
+
+
+func _omit_legacy_default(type_name: String, field_name: String, field_value: Variant) -> bool:
+	if type_name == "Sim" and field_name == "wave_travel":
+		return float(field_value) == 0.0
+	if type_name == "Projectile" and field_name == "grade":
+		return int(field_value) == 0
+	return false
+
+
+func _saved_matches(type_name: String, saved: Dictionary, schema: Array) -> bool:
+	var present := 0
+	for info: Dictionary in schema:
+		var name := String(info.name)
+		if saved.has(name):
+			present += 1
+		elif _legacy_default(type_name, name) == null:
+			return false
+	return saved.size() == present
 
 
 # Check the complete row schema and graph before any constructor runs. This
@@ -872,15 +894,10 @@ func _prevalidate(root: Variant) -> bool:
 			if sim_count > 1:
 				_fail("snapshot.invalid_run")
 				return false
-		_fill_legacy_sim(row)
 		var schema := _schema_fields(row.type)
-		if schema.size() != row.fields.size():
+		if not _saved_matches(str(row.type), row.fields, schema):
 			_fail("snapshot.schema")
 			return false
-		for info: Dictionary in schema:
-			if not row.fields.has(String(info.name)):
-				_fail("snapshot.schema")
-				return false
 		var refs: Array = []
 		if not _scan_refs(row.fields, refs, 0):
 			return false

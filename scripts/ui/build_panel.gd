@@ -245,7 +245,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 		var now := w.damage * w.level_mult(level)
 		var nxt := w.damage * w.level_mult(level + 1)
 		var cost := Shop.upgrade_cost(w, level)
-		upgrade.text = str(cost)
+		upgrade.text = "↑ %s · %d" % [WeaponDef.grade_mark(level + 1), cost]
 		upgrade.tooltip_text = Loc.t("shop.upgrade_result", [cost, Loc.number(now), Loc.number(nxt)])
 		upgrade.disabled = not sim.shop.quote(ShopResult.UPGRADE, sim, null, index).ok
 		if upgrade.disabled:

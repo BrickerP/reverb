@@ -90,8 +90,11 @@ func _write_payload() -> bool:
 	sim.start_next_wave()
 	for _frame in 120:
 		sim.step(DT, Vector2.RIGHT * 0.1)
-	if not _require(sim.phase == Sim.Phase.WAVE and sim.echoes.size() == 1
-			and not sim.support_units.is_empty(), "second encounter has real Echo playback and finite support"):
+	var shot := Combat.fire(sim, sim.player.pos, sim.player.pos + Vector2(240.0, 0.0),
+			sim.player.weapons[0], 0, 1.0, sim.player.stats, 1.0, -1, Color.WHITE)
+	if not _require(shot and sim.phase == Sim.Phase.WAVE and sim.projectiles.size() > 0
+			and sim.echoes.size() == 1 and not sim.support_units.is_empty(),
+			"second encounter keeps a live projectile, Echo playback and finite support"):
 		return false
 	var wave := _scenario("wave", sim)
 	if wave.is_empty():

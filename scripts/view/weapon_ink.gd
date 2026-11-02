@@ -507,8 +507,12 @@ static func _batch(id: StringName, count: int) -> Dictionary:
 		mesh.transform_format = MultiMesh.TRANSFORM_2D
 		mesh.use_colors = true
 		mesh.mesh = quad
+		var action := action_kind(id) if id != &"" else &""
+		var glyph := action
+		if id != &"":
+			glyph = StringName(profile(id).get("glyph", action))
 		_batches[id] = {"mesh": mesh, "texture": ImageTexture.create_from_image(image), "capacity": 0,
-			"action": action_kind(id) if id != &"" else &""}
+			"action": action, "glyph": glyph}
 	var batch: Dictionary = _batches[id]
 	if count > int(batch["capacity"]):
 		var capacity := ceili(float(count) / 64.0) * 64
@@ -563,7 +567,7 @@ static func draw_projectiles(ci: CanvasItem, sim: Sim, reduced: bool = false) ->
 		var action := StringName(batch["action"])
 		if not quotas.has(action) or projectile.vel.length_squared() <= 0.000001:
 			continue
-		var glyph := StringName(profile(projectile.weapon_id).get("glyph", action))
+		var glyph := StringName(batch["glyph"])
 		var material_index := int(material_used.get(action, 0))
 		material_used[action] = material_index + 1
 		if not accent_sample(material_index, int(material_counts[action]), int(quotas[action])):
