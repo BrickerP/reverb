@@ -1,6 +1,8 @@
 class_name ShopDropTarget
 extends PanelContainer
 
+signal clicked
+
 var target_kind: StringName = &""
 var target_index: int = -1
 var highlighted: bool = false
@@ -27,6 +29,14 @@ func configure(kind: StringName, index: int, quote_drop: Callable, apply_drop: C
 	_clear_drop = clear_drop
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_exited.connect(_on_mouse_exited)
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mouse := event as InputEventMouseButton
+		if mouse.button_index == MOUSE_BUTTON_LEFT and mouse.pressed:
+			clicked.emit()
+			accept_event()
 
 
 func quote(data: Variant) -> ShopResult:

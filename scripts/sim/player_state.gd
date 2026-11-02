@@ -2,6 +2,14 @@ class_name PlayerState
 extends RefCounted
 
 const RADIUS := 12.0
+# Default paper is 58px tall and planted on the foot, which sits one radius
+# below the collider. The chest is 45% of that height above the foot.
+const ART_HEIGHT := 58.0
+const CHEST_LIFT := 0.45 * ART_HEIGHT - RADIUS
+
+
+static func chest(body: Vector2) -> Vector2:
+	return body + Vector2(0.0, -CHEST_LIFT)
 
 var pos: Vector2 = Vector2.ZERO
 var hp: float = 1.0

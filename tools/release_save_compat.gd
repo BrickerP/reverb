@@ -1,11 +1,11 @@
 extends SceneTree
 # Copy this same probe into each immutable public archive for write, then run
-# read in 0.18.7. Wrap commands with tools/checked.sh; never relax decoder checks.
+# read in 0.18.8. Wrap commands with tools/checked.sh; never relax decoder checks.
 # -- --mode=write|read --output=<absolute directory>
 
 const DT := 1.0 / 60.0
 const SOURCE_VERSIONS := ["0.17.0", "0.18.0"]
-const READER_VERSION := "0.18.7"
+const READER_VERSION := "0.18.8"
 const PAYLOAD_FILE := "compat-payload.json"
 const DEADLINE_MSEC := 30000
 
@@ -90,8 +90,11 @@ func _write_payload() -> bool:
 	sim.start_next_wave()
 	for _frame in 120:
 		sim.step(DT, Vector2.RIGHT * 0.1)
-	if not _require(sim.phase == Sim.Phase.WAVE and sim.echoes.size() == 1
-			and not sim.support_units.is_empty(), "second encounter has real Echo playback and finite support"):
+	var shot := Combat.fire(sim, sim.player.pos, sim.player.pos + Vector2(240.0, 0.0),
+			sim.player.weapons[0], 0, 1.0, sim.player.stats, 1.0, -1, Color.WHITE)
+	if not _require(shot and sim.phase == Sim.Phase.WAVE and sim.projectiles.size() > 0
+			and sim.echoes.size() == 1 and not sim.support_units.is_empty(),
+			"second encounter keeps a live projectile, Echo playback and finite support"):
 		return false
 	var wave := _scenario("wave", sim)
 	if wave.is_empty():
@@ -138,7 +141,7 @@ func _describe(sim: Sim) -> Dictionary:
 func _read_payload() -> bool:
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
 	var commit := OS.get_environment("REVERB_STRESS_COMMIT").strip_edges()
-	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.7") \
+	if not _require(version == READER_VERSION, "reader must actually run project version 0.18.8") \
 			or not _require(_commit_valid(commit), "reader needs its full REVERB_STRESS_COMMIT"):
 		return false
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(_output.path_join(PAYLOAD_FILE)))

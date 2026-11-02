@@ -136,7 +136,7 @@ static func _boss_impact(sim: Sim, enemy: EnemyState) -> void:
 		if inside:
 			var copy := _echo_in_cross(sim, point)
 			if copy != null:
-				EchoSystem.absorb(sim, copy)
+				EchoSystem.absorb(sim, copy, point)
 				inside = false
 	if inside:
 		_hurt(sim, enemy, impact_damage(enemy), &"foreman_press" if enemy.def.id == &"foreman" else &"paradox_cross", offset.normalized())

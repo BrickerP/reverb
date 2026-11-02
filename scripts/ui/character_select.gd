@@ -1,6 +1,29 @@
 class_name CharacterSelectUi
 extends Control
 
+class SkillMark extends Control:
+	var kind: StringName = &""
+
+	func _draw() -> void:
+		var ink := UiTheme.INK
+		var center := size * 0.5
+		match kind:
+			&"looper":
+				draw_arc(center, 5.0, PI, TAU + 0.6, 12, ink, 1.4, true)
+			&"solo":
+				draw_line(center + Vector2(-6, 0), center + Vector2(6, 0), ink, 1.6, true)
+			&"mirror":
+				draw_rect(Rect2(center + Vector2(-6, -3), Vector2(5, 6)), ink, false, 1.2)
+				draw_rect(Rect2(center + Vector2(1, -3), Vector2(5, 6)), ink, false, 1.2)
+			&"conductor":
+				for index in 3:
+					draw_circle(center + Vector2(-5.0 + float(index) * 5.0, 0.0), 1.4, ink)
+			&"mender":
+				draw_line(center + Vector2(0, -5), center + Vector2(0, 5), ink, 1.4)
+				draw_line(center + Vector2(-5, 0), center + Vector2(5, 0), ink, 1.4)
+			_:
+				draw_circle(center, 4.0, ink, false, 1.4)
+
 signal character_chosen(id: StringName)
 signal settings_requested
 signal history_requested
@@ -21,6 +44,7 @@ class CastButton extends Button:
 	var name_label: Label
 	var trait_label: Label
 	var status_label: Label
+	var kit: Control
 	var tag_style: InkStyleBox
 	var shadow_style: InkStyleBox
 	var halo_style: InkStyleBox
@@ -54,6 +78,9 @@ class CastButton extends Button:
 		if trait_label != null:
 			trait_label.position = Vector2(12.0, offset + (151.0 if compact else 224.0))
 			trait_label.size = Vector2(width - 24.0, 22.0 if compact else 28.0)
+		if kit != null:
+			kit.position = Vector2(16.0, offset + (148.0 if compact else 220.0))
+			kit.size = Vector2(width - 32.0, 28.0)
 		if status_label != null:
 			status_label.position = Vector2(10.0, offset + (174.0 if compact else 262.0))
 			status_label.size = Vector2(width - 20.0, 22.0 if compact else 30.0)
@@ -201,7 +228,7 @@ func _ready() -> void:
 	_ascension_button.add_theme_font_size_override("font_size", 12)
 	_ascension_button.pressed.connect(_cycle_ascension)
 	_footer.add_child(_ascension_button)
-	for key in ["select.codex", "select.settings", "select.history", "select.story"]:
+	for key in ["select.settings"]:
 		var button := StitchedAction.new()
 		button.text = Loc.t(key)
 		button.flat = true
@@ -404,18 +431,43 @@ func _make_card(def: CharacterDef, meta: Meta, index: int) -> CastButton:
 	card.add_child(card.portrait)
 	card.name_label = UiTheme.label(Loc.character_name(def.id), 24, card.paper_color, HORIZONTAL_ALIGNMENT_CENTER)
 	card.add_child(card.name_label)
-	card.trait_label = UiTheme.label(_opening_line(def), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
-	card.trait_label.custom_minimum_size = Vector2(160.0, 0.0)
-	card.trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.trait_label = UiTheme.label("", 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
+	card.trait_label.visible = false
 	card.add_child(card.trait_label)
-	var status := "" if locked else Loc.t("select.ready")
+	card.kit = _kit(def)
+	card.add_child(card.kit)
+	var status := ""
 	card.status_label = UiTheme.label(status, 13, UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
 	card.status_label.custom_minimum_size = Vector2(160.0, 0.0)
 	card.status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(card.status_label)
-	card.tooltip_text = _opening_line(def)
-	card.accessibility_description = _opening_line(def) if status == "" else "%s · %s" % [_opening_line(def), status]
+	card.tooltip_text = "%s\n%s" % [_opening_line(def), Loc.character_desc(def.id)]
+	card.accessibility_description = card.tooltip_text
 	return card
+
+
+func _kit(def: CharacterDef) -> Control:
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 4)
+	var weapon := Content.weapon(def.starting_weapon)
+	if weapon != null:
+		row.add_child(UiTheme.weapon_icon(weapon, Vector2(34.0, 22.0)))
+	var slots := int(def.overrides.get(Stats.ECHO_SLOTS, Stats.DEFAULTS[Stats.ECHO_SLOTS]))
+	for _index in mini(slots, 6):
+		var mark := ColorRect.new()
+		mark.custom_minimum_size = Vector2(7.0, 7.0)
+		mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mark.color = UiTheme.character_color(def.id)
+		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(mark)
+	var skill := SkillMark.new()
+	skill.kind = def.id
+	skill.custom_minimum_size = Vector2(16.0, 16.0)
+	skill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(skill)
+	return row
 
 
 func _opening_line(def: CharacterDef) -> String:

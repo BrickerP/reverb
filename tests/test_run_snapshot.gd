@@ -803,12 +803,62 @@ func test_presentation_cues_stay_out_of_snapshot_v4(c: Check) -> void:
 	sim.action_notice_key = &"hud.rescue_done"
 	sim.action_notice_text = "rescued"
 	sim.action_notice_until = 4.0
-	var restored := RunSnapshot.restore(RunSnapshot.capture(sim))
+	var saved := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(saved)
 	c.ok(restored != null, "a run with live cues still restores: %s" % RunSnapshot.last_error)
 	if restored == null:
 		return
-	c.eq(restored.wave_travel, 0.0, "wave travel is not saved")
+	c.eq(restored.wave_travel, 90.0, "wave travel survives the save")
+	var legacy_saved := saved.duplicate(true)
+	for row: Dictionary in legacy_saved["objects"]:
+		if row["type"] == "Sim":
+			row["fields"].erase("wave_travel")
+	var untouched := legacy_saved.duplicate(true)
+	var legacy := RunSnapshot.restore(legacy_saved)
+	c.eq(legacy_saved, untouched, "loading does not rewrite the old snapshot")
+	c.ok(legacy != null, "a save from before travel was stored still loads: %s" % RunSnapshot.last_error)
+	if legacy != null:
+		c.eq(legacy.wave_travel, 0.0, "a missing travel key resumes as not yet walked")
+		c.eq(JSON.stringify(RunSnapshot.capture(legacy), "", true, true),
+				JSON.stringify(legacy_saved, "", true, true),
+				"recapture keeps the old snapshot bytes")
 	c.eq(restored.cue_slot, -1, "the slot cue is not saved")
 	c.eq(String(restored.action_notice_key), "", "the action notice is not saved")
 	c.eq(restored.action_notice_text, "", "the action sentence is not saved")
 	c.eq(restored.action_notice_until, 0.0, "the action hold is not saved")
+
+
+func test_old_projectile_row_round_trips_without_a_grade_field(c: Check) -> void:
+	var sim := Sim.new(19)
+	sim.start_run()
+	var weapon := sim.player.weapons[0]
+	c.ok(Combat.fire(sim, sim.player.pos, sim.player.pos + Vector2(220.0, 0.0), weapon, 2,
+			1.0, sim.player.stats, 1.0, -1, Color.WHITE), "a live shot creates a projectile")
+	c.ok(sim.projectiles.size() > 0, "the shot is still in the air")
+	sim.projectiles[0].grade = 0
+	var current := RunSnapshot.capture(sim)
+	var projectile_rows := 0
+	for row: Dictionary in current["objects"]:
+		if row["type"] == "Projectile":
+			projectile_rows += 1
+			c.ok(not row["fields"].has("grade"), "an ungraded shot keeps the historical projectile row")
+	c.ok(projectile_rows > 0, "the snapshot contains the flying projectile")
+	var old := current.duplicate(true)
+	var untouched := old.duplicate(true)
+	var restored := RunSnapshot.restore(old)
+	c.eq(old, untouched, "reading an old projectile does not rewrite the file")
+	c.ok(restored != null, "the old projectile row loads: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(restored.projectiles[0].grade, 0, "a missing grade is an ungraded shot")
+	c.eq(JSON.stringify(RunSnapshot.capture(restored), "", true, true),
+			JSON.stringify(old, "", true, true), "recapture keeps the old projectile bytes")
+	restored.projectiles[0].grade = 2
+	var graded := RunSnapshot.capture(restored)
+	var kept := false
+	for row: Dictionary in graded["objects"]:
+		if row["type"] == "Projectile":
+			kept = row["fields"].has("grade")
+	c.ok(kept, "a graded shot records its grade")
+	var again := RunSnapshot.restore(graded)
+	c.ok(again != null and again.projectiles[0].grade == 2, "the recorded grade loads back")

@@ -156,6 +156,7 @@ func _ready() -> void:
 	pause_ui.resume_requested.connect(_on_resume_requested)
 	pause_ui.settings_requested.connect(open_settings)
 	pause_ui.history_requested.connect(open_history)
+	pause_ui.codex_requested.connect(open_codex)
 	pause_ui.mute_requested.connect(_on_mute_requested)
 	pause_ui.quit_requested.connect(_abandon_run)
 	pause_ui.save_requested.connect(save_and_return)
@@ -192,7 +193,8 @@ func _ready() -> void:
 
 
 func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1,
-		daily_modifier: StringName = &"") -> void:
+		daily_modifier: StringName = &"", demo: bool = false) -> void:
+	demo_run = demo
 	SuspendStore.clear()
 	_detach_presentation_session()
 	feedback_ui.reset()
@@ -211,9 +213,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	if def != null:
 		def.apply(sim)
 	var inherited: EchoTake = null
-	if demo_run:
-		sim.bank.add(EchoArchive.demo_take(Sim.ARENA.get_center()))
-	else:
+	if not demo_run:
 		inherited = EchoArchive.load(meta, character_id, sim)
 		if inherited != null:
 			sim.bank.add(inherited)
@@ -242,8 +242,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 
 
 func start_demo() -> void:
-	demo_run = true
-	new_run(-1, &"looper")
+	new_run(-1, &"looper", -1, &"", true)
 
 
 func choose_character(id: StringName, seed_value: int = -1) -> void:
@@ -339,7 +338,7 @@ func _on_history_replay(seed_value: int, char_id: StringName, daily_modifier: St
 func _on_settings_closed() -> void:
 	if _settings_restore_pause:
 		if pause_ui != null:
-			pause_ui.open(audio != null and audio.is_muted())
+			pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	elif sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION]:
 		_on_resume_requested()
 	else:
@@ -349,7 +348,7 @@ func _on_settings_closed() -> void:
 
 func _on_history_closed() -> void:
 	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	else:
 		_restore_underlay_focus()
 
@@ -830,7 +829,7 @@ func _set_paused(on: bool) -> void:
 	if pause_ui == null:
 		return
 	if on:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	else:
 		pause_ui.close()
 
@@ -845,7 +844,7 @@ func _on_mute_requested() -> void:
 
 func _restore_underlay_focus() -> void:
 	if paused and sim != null and sim.phase in [Sim.Phase.WAVE, Sim.Phase.SHOP, Sim.Phase.RESOLUTION] and pause_ui != null:
-		pause_ui.open(audio != null and audio.is_muted())
+		pause_ui.open(audio != null and audio.is_muted(), _has_letters())
 	elif end_ui != null and end_ui.visible:
 		end_ui.focus_default()
 	elif character_select != null and character_select.visible:
@@ -989,6 +988,10 @@ func _resume_language_settings() -> void:
 func _abandon_run() -> void:
 	SuspendStore.clear()
 	show_select()
+
+
+func _has_letters() -> bool:
+	return meta != null and not StoryLedger.archive(meta).is_empty()
 
 
 func open_story() -> void:

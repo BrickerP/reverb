@@ -382,7 +382,7 @@ static func echoes(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 		_draw_art_foot(ci, key, foot, art_size, lean,
 				Color(body_tint, alpha), _horizontal_flip(facing), frame)
 		var weapons: Array[WeaponDef] = sim.player.weapons if sim.live_echo else actor.take.weapons
-		_draw_weapon_loadout(ci, sim, actor.pos, weapons, facing, bob, alpha,
+		_draw_weapon_loadout(ci, sim, _chest(foot, art_size), weapons, facing, 0.0, alpha,
 				c, 0.45, 0.82, token, recoils, reduced)
 		var fitted := _fitted_art_size(key, art_size)
 		var art_rect := Rect2(Vector2(foot.x - fitted.x * 0.5, foot.y - fitted.y), fitted)
@@ -485,7 +485,7 @@ static func player(ci: CanvasItem, sim: Sim, character_id: StringName = &"looper
 	# Idle mounts track a living target; an active shot keeps its captured aim and
 	# exact weapon slot, even when the actor carries two equal weapons.
 	if count > 0 and pl.hp > 0.0:
-		_draw_weapon_loadout(ci, sim, pl.pos, pl.weapons, pl.facing, bob, alpha,
+		_draw_weapon_loadout(ci, sim, _chest(foot, art_size), pl.weapons, pl.facing, 0.0, alpha,
 				Color.WHITE, 0.0, 1.0, -1, recoils, reduced)
 	if pl.hp > 0.0:
 		var fitted := _fitted_art_size(key, art_size)
@@ -901,6 +901,10 @@ static func _echo_facing(actor: EchoActor) -> Vector2:
 		var previous := actor.take.position_at(maxf(0.0, actor.t - EchoTake.SAMPLE_DT))
 		direction = actor.pos - previous
 	return direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
+
+
+static func _chest(foot: Vector2, art_size: Vector2) -> Vector2:
+	return Vector2(foot.x, foot.y - art_size.y * 0.45)
 
 
 static func _draw_weapon_loadout(ci: CanvasItem, sim: Sim, origin: Vector2,

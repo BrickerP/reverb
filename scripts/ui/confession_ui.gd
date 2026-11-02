@@ -84,7 +84,7 @@ func open_confession(sim: Sim) -> void:
 	# Assign real widths before changing wrapped text. Labels cannot resize the
 	# page or move the primary return control outside the native canvas.
 	_apply_layout()
-	_title.text = Loc.t("confession.ui.title")
+	_title.text = Loc.t("confession.ui.open")
 	_title.add_theme_font_override("font", UiTheme.title_font(_title.text))
 	_body.text = ""
 	_body.tooltip_text = ""
@@ -107,7 +107,7 @@ func open_confession(sim: Sim) -> void:
 		var state_name := _status_text(StringName(profile.get("signed_state", &"unsigned")), selected)
 		_receipt.text = Loc.t("confession.ui.signed", [int(profile.get("act", 1)), choice_name, state_name])
 	else:
-		_receipt.text = Loc.t("confession.ui.unsigned")
+		_receipt.text = ""
 	_receipt.tooltip_text = _receipt.text
 	var records := PackedStringArray()
 	for row: Dictionary in profile.get("history", []):
@@ -136,7 +136,7 @@ func _add_option(option: Dictionary, profile: Dictionary) -> void:
 	_choices.add_child(panel)
 	_option_panels.append(panel)
 	var button := Button.new()
-	button.text = Loc.t(str(option.get("name_key", "")))
+	button.text = _face(id, profile)
 	button.clip_text = true
 	button.disabled = not bool(option.get("available", false))
 	button.set_meta(&"confession_id", id)
@@ -153,12 +153,12 @@ func _add_option(option: Dictionary, profile: Dictionary) -> void:
 	else:
 		detail = Loc.t("confession.ui.polish_effect", [int(profile.get("polish_materials", 12))])
 	var description := _wrapped_label(15, UiTheme.INK)
-	description.text = detail
+	description.text = ""
 	description.tooltip_text = detail
 	panel.add_child(description)
 	_descriptions.append(description)
 	var reason_key := str(option.get("reason_key", ""))
-	var reason := Loc.t(reason_key) if reason_key != "" else Loc.t("confession.ui.ready")
+	var reason := Loc.t(reason_key) if reason_key != "" else ""
 	var reason_label := _wrapped_label(14, UiTheme.DIM)
 	reason_label.text = reason
 	reason_label.tooltip_text = reason
@@ -167,6 +167,14 @@ func _add_option(option: Dictionary, profile: Dictionary) -> void:
 	button.accessibility_name = button.text
 	button.accessibility_description = detail + " · " + Loc.t(str(option.get("description_key", ""))) + " · " + reason
 	button.tooltip_text = button.accessibility_description
+
+
+func _face(id: StringName, profile: Dictionary) -> String:
+	if id == &"polish":
+		return Loc.t("confession.face.polish", [int(profile.get("polish_materials", 12))])
+	if profile.get("truth_kind", &"") == &"echo":
+		return Loc.t("confession.face.echo", [int(round(float(profile.get("truth_amount", 0.0))))])
+	return Loc.t("confession.face.health", [Loc.number(float(profile.get("truth_amount", 0.0)))])
 
 
 func show_error(message: String) -> void:

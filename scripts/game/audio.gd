@@ -689,6 +689,9 @@ func _on_echo(actor: EchoActor) -> void:
 
 
 func _on_echo_retired(info: EchoRetirementInfo) -> void:
+	if info.reason == EchoRetirementInfo.ABSORBED:
+		play(&"echo", 2.0, 1.12, 0.2)
+		return
 	if info.exhausted or info.reason == EchoRetirementInfo.EXHAUSTED:
 		play(&"echo", 4.0, 0.58, 0.22)
 		return

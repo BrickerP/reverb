@@ -131,16 +131,22 @@ static func _retire(sim: Sim, overloaded: bool) -> bool:
 	return true
 
 
-static func absorb(sim: Sim, actor: EchoActor) -> void:
+static func absorb(sim: Sim, actor: EchoActor, threat: Vector2 = Vector2.INF) -> void:
 	if sim == null or actor == null or not sim.echoes.has(actor):
 		return
-	_remove(sim, actor, true, {})
+	var profile := {
+		"kind": &"absorb",
+		"threat": threat if threat.is_finite() else actor.pos,
+		"spared": sim.player.pos,
+	}
+	_remove(sim, actor, false, profile)
 
 
 static func _remove(sim: Sim, actor: EchoActor, exhausted: bool, profile: Dictionary) -> void:
+	var blocked := StringName(profile.get("kind", &"")) == &"absorb"
 	var info := EchoRetirementInfo.new()
-	info.reason = EchoRetirementInfo.EXHAUSTED if exhausted else EchoRetirementInfo.ACTIVE
-	info.exhausted = exhausted
+	info.reason = EchoRetirementInfo.ABSORBED if blocked else (EchoRetirementInfo.EXHAUSTED if exhausted else EchoRetirementInfo.ACTIVE)
+	info.exhausted = exhausted and not blocked
 	info.uid = actor.take.uid
 	info.actor_token = actor.take.uid
 	info.source = actor.index

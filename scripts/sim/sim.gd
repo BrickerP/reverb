@@ -490,7 +490,7 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_move_enemies(delta)
 	_boss_step(delta)
 	_step_rifts(delta)
-	Combat.step_weapons(self, player.pos, player.stats, player.weapons, player.weapon_levels,
+	Combat.step_weapons(self, PlayerState.chest(player.pos), player.stats, player.weapons, player.weapon_levels,
 			player.cooldowns, 1.0, delta, -1, Color.WHITE, synergy_damage_mult(), synergy_cooldown_mult())
 	if echo_silenced <= 0.0:
 		for actor in echoes:
@@ -498,11 +498,11 @@ func step(delta: float, move_dir: Vector2) -> void:
 				continue
 			if live_echo:
 				_fit_echo_cooldowns(actor)
-				Combat.step_weapons(self, actor.pos, player.stats, player.weapons, player.weapon_levels,
+				Combat.step_weapons(self, PlayerState.chest(actor.pos), player.stats, player.weapons, player.weapon_levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
 						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.uid)
 			else:
-				Combat.step_weapons(self, actor.pos, actor.take.stats, actor.take.weapons, actor.take.levels,
+				Combat.step_weapons(self, PlayerState.chest(actor.pos), actor.take.stats, actor.take.weapons, actor.take.levels,
 						actor.cooldowns, echo_power(), delta, actor.index, actor.take.tint(),
 						synergy_damage_mult(), synergy_cooldown_mult(), actor.take.uid)
 	Combat.step_projectiles(self, delta)
@@ -590,7 +590,7 @@ func _alive_boss() -> EnemyState:
 
 func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, source: int = -1,
 		hit_dir: Vector2 = Vector2.ZERO, weapon_id: StringName = &"", effect: StringName = &"hit",
-		actor_token: int = -1, source_tint: Color = Color.WHITE) -> void:
+		actor_token: int = -1, source_tint: Color = Color.WHITE, grade: int = 0) -> void:
 	if e == null or e.dead or e.brain_state == &"defeated" or not is_finite(amount) or amount <= 0.0:
 		return
 	var actual := amount
@@ -618,6 +618,7 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 	info.reduced = reduced
 	info.hit_dir = hit_dir
 	info.effect = effect
+	info.grade = grade
 	damage_event.emit(info)
 	if e == boss and e.def.id == &"paradox" and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * BOSS_PHASE2_HP_RATIO:
 		_begin_boss_phase2()
@@ -625,6 +626,8 @@ func damage_enemy(e: EnemyState, amount: float, knock: Vector2, crit: bool, sour
 		return
 	if Expedition.try_negotiate(self, e):
 		return
+	if e.def != null and e.def.is_boss:
+		world_event.emit({"kind": &"missed_recruit", "pos": e.pos, "subject": e.def.id})
 	_finalize_enemy_death(e, source, actor_token, source_tint, weapon_id, hit_dir, effect)
 
 
@@ -873,6 +876,8 @@ func cycle_echo(direction: int) -> bool:
 
 
 func _on_echo_retired(info: EchoRetirementInfo) -> void:
+	if info.reason == EchoRetirementInfo.ABSORBED:
+		return
 	if not info.exhausted:
 		retirements += 1
 		wave_retirements += 1

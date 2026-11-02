@@ -14,6 +14,7 @@ var source: int = -1
 var actor_token: int = -1
 var source_tint := Color.WHITE
 var weapon_id: StringName
+var grade: int = 0
 var effect: StringName = &"hit"
 var explosion_radius: float = 0.0
 var explosion_damage: float = 0.0

@@ -1,17 +1,18 @@
-# Take Stack 0.18.7 · Yesterday is already there.
+# Take Stack 0.18.8 · Your route comes back.
 
-The demo opens with one copy beside you. The first public clip is the cross tearing that copy. The store line is that sentence.
+The demo's second wave replays the path you just walked. A purchase is a click on the offer. When a copy stands in the cross, that copy tears and you do not.
 
-- **Demo.** A demo start puts one pistol echo about 48 units beside the player. The campaign's first wave is unchanged. The demo shop does not open wave 2.
-- **The clip.** `tools/spread_clip.gd` stages both bodies inside the paradox cross. The existing absorb spends the copy. The file has audio. A person still has to listen before it is called the Steam trailer.
-- **The line.** The short description is "Yesterday's you gets copied, stapled, and sent back." Capsules are cropped from that frame.
-- **Keep your shift.** Snapshot v4 and the published data directory are unchanged. Real 0.17 through 0.18.6 wave/shop saves continue.
+- **Demo.** Wave 1 is only you. Wave 2 puts that recording on the field and lets it fire. The demo shop closes after that wave. Daily runs do not keep the demo flag.
+- **Shop.** Click the offer card to buy. An empty slot click spends nothing; dropping a card on a slot still installs it. Weapons show I / II / III / IV. An upgrade reads as the next grade and its price. Binding two copies names the action: inherit, repair, or reinforce.
+- **The cross.** A copy inside the cross is spent as a block, not as natural wear. The tear stops on the copy. Your body keeps a closed mark and its hit points.
+- **Keep your shift.** Snapshot v4 is unchanged. A walked first wave is stored. An ungraded shot and an unwalked wave omit those fields, so 0.17 through 0.18.7 saves keep their original bytes.
 
-试玩开局场上就有一个昨天。公开的第一段片子是十字把这份副本撕掉。短描述只留这一句。
+试玩第二场回放你刚才走过的路。购买只点商品卡。副本站在十字里时，撕开的是副本，不是你。
 
-
-
-
+- **试玩。** 第一场只有你。第二场把这段记录放回场上并让它开火。打完这一场，试玩才停。每日挑战不会带上试玩标记。
+- **商店。** 点商品卡才扣钱。点空槽不扣钱；把卡拖进槽里仍然装配。武器显示 I／II／III／IV。升级写成下一级和价格。两份回响装订时，按钮写明继承、修复或强化。
+- **十字。** 副本挡住这一下，不算自己耗尽。撕裂停在副本身上。你的身体留下挡住的痕迹，生命不动。
+- **存档。** 仍是 Snapshot v4。第一波已经走过的距离会保存。没走过、弹丸没有等级时不写这两个字段，0.17 到 0.18.7 的原文还能原样续读。
 
 ## Downloads / 下载
 
@@ -25,9 +26,9 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.7 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, and 0.18.6 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.8 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, and 0.18.7 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
 
-0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
 
 ## Build and evidence / 构建与验证
 

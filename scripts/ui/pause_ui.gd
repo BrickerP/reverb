@@ -4,6 +4,7 @@ extends Control
 signal resume_requested
 signal settings_requested
 signal history_requested
+signal codex_requested
 signal story_requested
 signal mute_requested
 signal quit_requested
@@ -12,6 +13,7 @@ signal save_requested
 var resume_button: Button
 var settings_button: Button
 var history_button: Button
+var codex_button: Button
 var story_button: Button
 var mute_button: Button
 var quit_button: Button
@@ -55,17 +57,22 @@ func _ready() -> void:
 	secondary.alignment = BoxContainer.ALIGNMENT_CENTER
 	secondary.add_theme_constant_override("separation", 20)
 	settings_button = _button(Loc.t("hud.settings"))
-	settings_button.custom_minimum_size = Vector2(160.0, 36.0)
+	settings_button.custom_minimum_size = Vector2(120.0, 36.0)
 	settings_button.flat = true
 	settings_button.pressed.connect(func() -> void: settings_requested.emit())
 	secondary.add_child(settings_button)
 	history_button = _button(Loc.t("select.history"))
-	history_button.custom_minimum_size = Vector2(160.0, 36.0)
+	history_button.custom_minimum_size = Vector2(110.0, 36.0)
 	history_button.flat = true
 	history_button.pressed.connect(func() -> void: history_requested.emit())
 	secondary.add_child(history_button)
+	codex_button = _button(Loc.t("select.codex"))
+	codex_button.custom_minimum_size = Vector2(110.0, 36.0)
+	codex_button.flat = true
+	codex_button.pressed.connect(func() -> void: codex_requested.emit())
+	secondary.add_child(codex_button)
 	story_button = _button(Loc.t("select.story"))
-	story_button.custom_minimum_size = Vector2(130.0, 36.0)
+	story_button.custom_minimum_size = Vector2(100.0, 36.0)
 	story_button.add_theme_font_size_override("font_size", 14)
 	story_button.flat = true
 	story_button.pressed.connect(func() -> void: story_requested.emit())
@@ -104,10 +111,14 @@ func _button(text: String) -> Button:
 	return b
 
 
-func open(muted: bool = false) -> void:
+func open(muted: bool = false, letters: bool = false) -> void:
 	set_muted(muted)
+	story_button.visible = letters
 	visible = true
-	UiFocus.cycle([resume_button, settings_button, history_button, story_button, mute_button, save_button, quit_button])
+	var cycle: Array[Control] = [resume_button, settings_button, history_button, codex_button, mute_button, save_button, quit_button]
+	if letters:
+		cycle.insert(4, story_button)
+	UiFocus.cycle(cycle)
 	resume_button.grab_focus()
 
 

@@ -167,6 +167,64 @@ static func cross_life(hp: float, max_hp: float, stapled: bool = false) -> Strin
 	return t("shop.life", [number(hp), number(max_hp), wave, number(cross), tail])
 
 
+static func item_scope(stat: StringName) -> String:
+	match stat:
+		Stats.DAMAGE_PCT:
+			return t("item.does.damage_pct")
+		Stats.ATTACK_SPEED_PCT:
+			return t("item.does.attack_speed_pct")
+		Stats.RANGE_PCT:
+			return t("item.does.range_pct")
+		Stats.MOVE_SPEED:
+			return t("item.does.move_speed")
+		Stats.CRIT_CHANCE:
+			return t("item.does.crit_chance")
+		Stats.PICKUP_RANGE:
+			return t("item.does.pickup_range")
+		Stats.HP_REGEN:
+			return t("item.does.hp_regen")
+		Stats.MAX_HP:
+			return t("item.does.max_hp")
+		Stats.ECHO_SLOTS:
+			return t("item.does.echo_slots")
+		_:
+			return stat_name(stat)
+
+
+static func item_shift(stat: StringName, amount: float, sim: Sim) -> String:
+	var before := 0.0
+	var after := 0.0
+	if stat == Stats.ECHO_SLOTS:
+		before = float(sim.echo_capacity())
+		after = before + amount
+		return t("item.now_next", [number(before), number(after)])
+	before = sim.player.stats.get_stat(stat)
+	after = before + amount
+	if stat == Stats.DAMAGE_PCT or stat == Stats.ATTACK_SPEED_PCT or stat == Stats.RANGE_PCT:
+		return t("item.now_next", [number((1.0 + before) * 100.0) + "%", number((1.0 + after) * 100.0) + "%"])
+	if Stats.PERCENT.has(stat):
+		return t("item.now_next", [stat_value(stat, before, false), stat_value(stat, after, false)])
+	return t("item.now_next", [number(before), number(after)])
+
+
+# The shelf shows one change. The full rule, including the final cross, stays on the tooltip.
+static func item_face(it: ItemDef, sim: Sim = null) -> String:
+	if it == null:
+		return ""
+	if it.id == &"long_play" or it.id == &"loud_speaker":
+		return item_desc(it, sim)
+	var parts := PackedStringArray()
+	for stat: StringName in it.mods:
+		var amount := float(it.mods[stat])
+		if stat == Stats.MAX_HP:
+			parts.append("%s %s · %s" % [item_scope(stat), stat_value(stat, amount), t("item.max_hp_now")])
+		elif sim != null:
+			parts.append("%s %s" % [item_scope(stat), item_shift(stat, amount, sim)])
+		else:
+			parts.append("%s %s" % [item_scope(stat), stat_value(stat, amount)])
+	return "  ".join(parts)
+
+
 static func item_desc(it: ItemDef, sim: Sim = null) -> String:
 	if it != null and it.id == &"long_play":
 		var before := Stats.DEFAULTS[Stats.ECHO_DURATION] if sim == null else sim.echo_duration()
@@ -178,7 +236,11 @@ static func item_desc(it: ItemDef, sim: Sim = null) -> String:
 		return t("item.loud_speaker_fact", [int(round(before * 100.0)), int(round(after * 100.0))])
 	var parts := PackedStringArray()
 	for stat: StringName in it.mods:
-		parts.append("%s %s" % [stat_value(stat, float(it.mods[stat])), stat_name(stat)])
+		var amount := float(it.mods[stat])
+		var line := "%s %s" % [item_scope(stat), stat_value(stat, amount)]
+		if sim != null and stat != Stats.MAX_HP:
+			line += " · " + item_shift(stat, amount, sim)
+		parts.append(line)
 	if it.mods.has(Stats.MAX_HP):
 		parts.append(t("item.max_hp_now"))
 		if sim != null:

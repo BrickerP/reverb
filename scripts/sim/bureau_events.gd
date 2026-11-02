@@ -294,7 +294,7 @@ static func validate_plain(bureau: Variant, items: Array) -> bool:
 				or not Expedition._integer_between(row["uid"], 1, 2147483647) or ids.has(row["uid"]) \
 				or not Expedition._integer_between(row["wave"], 1, 1000000) or not Expedition._integer_between(row["recorded_wave"], 0, 100000) \
 				or typeof(row["weapon_id"]) != TYPE_STRING_NAME or Content.weapon(row["weapon_id"]) == null \
-				or not Expedition._name_in(row["reason"], [EchoRetirementInfo.ACTIVE, EchoRetirementInfo.EXHAUSTED]) \
+				or not Expedition._name_in(row["reason"], [EchoRetirementInfo.ACTIVE, EchoRetirementInfo.EXHAUSTED, EchoRetirementInfo.ABSORBED]) \
 				or not Expedition._integer_between(row["work"], 0, 1000000) or not Expedition._number_between(row["condition"], 0.0, 100.0) \
 				or typeof(row["merged"]) != TYPE_BOOL or (row["reason"] == EchoRetirementInfo.EXHAUSTED and float(row["condition"]) != 0.0):
 			return false

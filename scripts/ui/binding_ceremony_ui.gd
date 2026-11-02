@@ -93,7 +93,8 @@ func present(result: ShopResult, reduced: bool = false) -> bool:
 	_detail.accessibility_description = _detail.tooltip_text
 	skip_button.text = Loc.t("binding.skip")
 	active = true
-	visible = true
+	# The staple on the kept route is the receipt. This overlay stays data-only.
+	visible = false
 	queue_redraw()
 	return true
 

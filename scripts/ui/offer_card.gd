@@ -112,19 +112,32 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	box.add_child(_title_row(o, reason, selected, slots_full))
 	if o.is_weapon():
 		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
+	elif o.is_contract():
+		var plate := OrderPlate.new()
+		plate.name = "OrderPlate"
+		plate.kind = o.contract.kind
+		plate.custom_minimum_size = Vector2(0.0, 28.0)
+		plate.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var job := Loc.t("order.%s.objective" % o.contract.kind) + "\n" + _description(o)
+		plate.tooltip_text = job
+		tooltip_text = job
+		box.add_child(plate)
 	else:
-		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 14, UiTheme.DIM)
+		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 15, UiTheme.INK)
 		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		desc.clip_text = true
 		desc.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		desc.tooltip_text = _visible_blurb(o)
+		desc.tooltip_text = _description(o)
 		box.add_child(desc)
 	if reason != &"" and reason != &"sold":
 		var why := UiTheme.label(_blocked_text(reason), 13, UiTheme.WARN)
 		why.clip_text = true
 		why.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		box.add_child(why)
-	box.add_child(_actions_row(o, reason, can_swap))
+	var actions := _actions_row(o, reason, can_swap)
+	if actions != null:
+		box.add_child(actions)
 	_sim = null
 
 
@@ -237,22 +250,17 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	identity.add_theme_constant_override("separation", 0)
 	var title := _offer_name(o)
-	var name_label := UiTheme.label(title, 15)
+	var name_label := UiTheme.label(title, 18)
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(name_label)
-	row.add_child(identity)
 	if o.is_weapon():
-		var tags := UiTheme.label(Loc.t("shop.level", [o.weapon_level + 1]) + " · " + Loc.weapon_family(o.weapon.family) + " · " + Loc.rarity_name(o.weapon.rarity), 11, UiTheme.DIM)
-		tags.clip_text = true
-		tags.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		identity.add_child(tags)
-	elif o.is_contract():
-		var order_tag := UiTheme.label(Loc.t("workshop.order"), 11, UiTheme.ECHO)
-		order_tag.clip_text = true
-		identity.add_child(order_tag)
-	elif o.item.echo_item:
+		var grade := UiTheme.label(WeaponDef.grade_mark(o.weapon_level), 16, UiTheme.ACCENT)
+		grade.name = "GradeMark"
+		identity.add_child(grade)
+	if not o.is_weapon() and not o.is_contract() and o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
+	row.add_child(identity)
 	price_tag = PanelContainer.new()
 	price_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	price_tag.custom_minimum_size = Vector2(42.0, 32.0)
@@ -271,21 +279,20 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 
 
 func _actions_row(o: Offer, reason: StringName, can_swap: bool) -> Control:
+	var swap := o.is_weapon() and reason != &"sold" and can_swap
+	var replacing := not o.is_weapon() and reason == &"order_active"
+	if not swap and not replacing:
+		return null
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 6)
-	if o.is_weapon():
-		var meta := UiTheme.label(Loc.t("workshop.buy", [o.price]), 13, UiTheme.COIN)
-		meta.add_theme_font_size_override("font_size", 12)
-		meta.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(meta)
-	else:
-		var spacer := Control.new()
-		spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(spacer)
-		row.add_child(UiTheme.label(Loc.t("shop.replace_action") if reason == &"order_active" else Loc.t("workshop.buy", [o.price]), 13, UiTheme.COIN))
-	if o.is_weapon() and reason != &"sold" and can_swap:
+	var spacer := Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(spacer)
+	if replacing:
+		row.add_child(UiTheme.label(Loc.t("shop.replace_action"), 13, UiTheme.ACCENT))
+	if swap:
 		swap_button = Button.new()
 		swap_button.text = Loc.t("shop.replace_action")
 		swap_button.tooltip_text = Loc.t("shop.replace", [Loc.weapon_name(o.id())])
@@ -417,13 +424,10 @@ func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:
 
 func _visible_blurb(o: Offer) -> String:
 	if o.is_contract():
-		var line := Loc.t("order.credit_fact") if o.contract.kind == AnomalyContract.CREDIT \
-				else Loc.t("order.payoff", [o.contract.deposit, o.contract.reward])
-		if o.contract.kind == AnomalyContract.REPAIR:
-			line += " · " + Loc.t("order.repair.stay")
-		line += "\n" + _next_encounter(o)
-		return line
-	return _description(o)
+		return Loc.t("order.%s.objective" % o.contract.kind)
+	if o.is_weapon():
+		return _description(o)
+	return Loc.item_face(o.item, _sim)
 
 
 func _next_encounter(o: Offer) -> String:
@@ -459,7 +463,7 @@ static func decision(o: Offer, sim: Sim) -> String:
 	if o == null or sim == null:
 		return ""
 	if o.is_contract():
-		var got := Loc.t("order.%s.name" % o.contract.kind)
+		var got := Loc.t("order.%s.name" % o.contract.kind) + " · " + Loc.t("order.%s.objective" % o.contract.kind)
 		if o.contract.kind == AnomalyContract.CREDIT:
 			return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.credit_fact"), got])
 		return Loc.t("shop.decision", [Loc.t("shop.keep_run"), Loc.t("order.payoff", [o.contract.deposit, o.contract.reward]), got])
@@ -476,10 +480,49 @@ func _description(o: Offer) -> String:
 		if o.contract.kind == AnomalyContract.REPAIR:
 			payoff += " · " + Loc.t("order.repair.stay")
 		var body := Loc.t("order.%s.desc" % o.contract.kind)
+		var next := _next_encounter(o)
+		if next != "":
+			body += "\n" + next
 		if not _order_context.is_empty():
 			body += "\n" + _order_context
 		return payoff + "\n" + body
 	return Loc.weapon_desc(o.weapon.id) + "\n" + Loc.weapon_line(o.weapon, o.weapon_level) if o.is_weapon() else Loc.item_desc(o.item, _sim)
+
+
+class OrderPlate extends Control:
+	var kind: StringName = &""
+
+	func _draw() -> void:
+		var ink := UiTheme.INK
+		var y := size.y * 0.5
+		match kind:
+			&"salvage":
+				for index in 3:
+					var at := Vector2(18.0 + float(index) * 22.0, y)
+					draw_rect(Rect2(at - Vector2(6, 6), Vector2(12, 12)), ink, false, 1.6)
+			&"audit":
+				for index in 2:
+					var at := Vector2(22.0 + float(index) * 28.0, y)
+					draw_circle(at, 7.0, ink, false, 1.6)
+					draw_line(at + Vector2(-3, 0), at + Vector2(3, 0), ink, 1.4)
+			&"repair":
+				draw_circle(Vector2(18, y), 8.0, ink, false, 1.6)
+				draw_circle(Vector2(18, y), 3.0, ink, true)
+			&"rescue":
+				draw_circle(Vector2(14, y - 6), 4.0, ink, false, 1.4)
+				draw_line(Vector2(14, y - 2), Vector2(14, y + 8), ink, 1.6)
+				draw_line(Vector2(36, y), Vector2(48, y - 6), ink, 1.6)
+				draw_line(Vector2(48, y - 6), Vector2(60, y), ink, 1.6)
+				draw_line(Vector2(48, y - 6), Vector2(48, y + 6), ink, 1.6)
+			&"recruit":
+				for index in 3:
+					var at := Vector2(16.0 + float(index) * 20.0, y)
+					draw_rect(Rect2(at - Vector2(7, 8), Vector2(14, 16)), ink, false, 1.4)
+			&"credit":
+				draw_string(UiTheme.font(), Vector2(8, y + 5), "+30", HORIZONTAL_ALIGNMENT_LEFT, 40, 14, ink)
+				draw_string(UiTheme.font(), Vector2(52, y + 5), "8", HORIZONTAL_ALIGNMENT_LEFT, 24, 14, ink)
+			_:
+				draw_circle(Vector2(16, y), 5.0, ink, false, 1.4)
 
 
 func _offer_name(o: Offer) -> String:

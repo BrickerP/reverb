@@ -526,7 +526,8 @@ func _on_damage_info(info: DamageInfo) -> void:
 			"contact_pos": contact_pos, "target_radius": target_radius,
 			"weapon_id": info.weapon_id, "source": info.source, "effect": info.effect,
 			"target_uid": info.target_uid, "actor_token": info.actor_token,
-			"source_tint": info.source_tint, "color": hit_color, "has_direction": has_direction}, MAX_HITS)
+			"source_tint": info.source_tint, "color": hit_color, "has_direction": has_direction,
+			"level": info.grade}, MAX_HITS)
 	_last_event = {"kind": &"damage", "weapon_id": info.weapon_id, "direction": direction,
 			"pos": info.pos, "source": info.source, "crit": info.crit,
 			"contact_pos": contact_pos, "target_radius": target_radius,
