@@ -803,11 +803,20 @@ func test_presentation_cues_stay_out_of_snapshot_v4(c: Check) -> void:
 	sim.action_notice_key = &"hud.rescue_done"
 	sim.action_notice_text = "rescued"
 	sim.action_notice_until = 4.0
-	var restored := RunSnapshot.restore(RunSnapshot.capture(sim))
+	var saved := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(saved)
 	c.ok(restored != null, "a run with live cues still restores: %s" % RunSnapshot.last_error)
 	if restored == null:
 		return
-	c.eq(restored.wave_travel, 0.0, "wave travel is not saved")
+	c.eq(restored.wave_travel, 90.0, "wave travel survives the save")
+	var legacy_saved := saved.duplicate(true)
+	for row: Dictionary in legacy_saved["objects"]:
+		if row["type"] == "Sim":
+			row["fields"].erase("wave_travel")
+	var legacy := RunSnapshot.restore(legacy_saved)
+	c.ok(legacy != null, "a save from before travel was stored still loads: %s" % RunSnapshot.last_error)
+	if legacy != null:
+		c.eq(legacy.wave_travel, 0.0, "a missing travel key resumes as not yet walked")
 	c.eq(restored.cue_slot, -1, "the slot cue is not saved")
 	c.eq(String(restored.action_notice_key), "", "the action notice is not saved")
 	c.eq(restored.action_notice_text, "", "the action sentence is not saved")

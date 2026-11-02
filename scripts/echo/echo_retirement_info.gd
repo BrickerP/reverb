@@ -3,6 +3,7 @@ extends RefCounted
 
 const ACTIVE := &"active"
 const EXHAUSTED := &"exhausted"
+const ABSORBED := &"absorbed"
 
 var reason: StringName = ACTIVE
 var exhausted: bool = false

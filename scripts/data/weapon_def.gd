@@ -68,6 +68,10 @@ func dps() -> float:
 	return damage * hits / maxf(0.01, cooldown)
 
 
+static func grade_mark(level: int) -> String:
+	return ["I", "II", "III", "IV"][clampi(level, 0, MAX_LEVEL)]
+
+
 func level_mult(level: int) -> float:
 	return GRADE_MULTIPLIERS[clampi(level, 0, MAX_LEVEL)]
 

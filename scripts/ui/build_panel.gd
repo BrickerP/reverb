@@ -6,8 +6,6 @@ signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
 signal detail_changed(text: String)
 signal workshop_requested(index: int)
-signal install_requested(kind: StringName, index: int)
-
 var weapons_label: Label
 var items_label: Label
 var replacing: bool = false
@@ -210,7 +208,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, pl: PlayerState, sim: Si
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_theme_constant_override("separation", 4)
 	face.add_child(UiTheme.weapon_icon(w, Vector2(36.0, 24.0)))
-	var grade := UiTheme.label("●".repeat(level + 1), 12, UiTheme.INK)
+	var grade := UiTheme.label(WeaponDef.grade_mark(level), 14, UiTheme.INK)
 	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grade.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	face.add_child(grade)
@@ -270,8 +268,7 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	var target := ShopDropTarget.new()
 	target.configure(kind, -1, _quote_drop, _apply_drop, _clear_drop)
 	target.accessibility_name = text
-	target.tooltip_text = Loc.t("shop.pick_offer")
-	target.clicked.connect(func() -> void: install_requested.emit(kind, -1))
+	target.tooltip_text = text
 	target.custom_minimum_size = Vector2(0.0, 36.0)
 	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.35), 1, 18)
 	style.shape = InkStyleBox.Shape.TAG

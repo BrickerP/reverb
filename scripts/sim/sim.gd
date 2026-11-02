@@ -876,6 +876,8 @@ func cycle_echo(direction: int) -> bool:
 
 
 func _on_echo_retired(info: EchoRetirementInfo) -> void:
+	if info.reason == EchoRetirementInfo.ABSORBED:
+		return
 	if not info.exhausted:
 		retirements += 1
 		wave_retirements += 1

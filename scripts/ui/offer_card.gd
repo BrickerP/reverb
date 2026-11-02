@@ -254,6 +254,10 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(name_label)
+	if o.is_weapon():
+		var grade := UiTheme.label(WeaponDef.grade_mark(o.weapon_level), 16, UiTheme.ACCENT)
+		grade.name = "GradeMark"
+		identity.add_child(grade)
 	if not o.is_weapon() and not o.is_contract() and o.item.echo_item:
 		identity.add_child(UiTheme.label(Loc.t("shop.tag_echo"), 12, UiTheme.ECHO))
 	row.add_child(identity)

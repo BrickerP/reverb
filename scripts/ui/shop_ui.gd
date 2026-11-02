@@ -96,7 +96,6 @@ func _ready() -> void:
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
 	build_panel.detail_changed.connect(_on_weapon_detail)
 	build_panel.workshop_requested.connect(_open_weapon_workshop)
-	build_panel.install_requested.connect(_install_focused)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
 	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -264,7 +263,7 @@ func refresh(animate_echo: bool = false) -> void:
 	start_button.text = Loc.t("shop.start", [sim.next_wave_number()])
 	start_button.tooltip_text = Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD]) if next_delivery else ""
 	start_button.disabled = not sim.can_start_wave()
-	if demo_closed and sim.wave >= 1:
+	if demo_closed and sim.wave >= 2:
 		start_button.disabled = true
 		start_button.text = Loc.t("demo.done")
 		start_button.tooltip_text = start_button.text
@@ -385,17 +384,6 @@ func _lock_focused() -> void:
 		_say(Loc.t("shop.pick_offer"))
 		return
 	_on_lock_offer(_focused_offer)
-
-
-func _install_focused(kind: StringName, index: int) -> void:
-	if sim == null or not visible or sim.phase != Sim.Phase.SHOP:
-		return
-	if _focused_offer == null or _focused_offer.sold or not sim.shop.offers.has(_focused_offer):
-		_focused_offer = null
-		_sync_lock()
-		_say(Loc.t("shop.pick_offer"))
-		return
-	apply_drop(drag_payload_for(_focused_offer), kind, index)
 
 
 func _on_weapon_detail(text: String) -> void:

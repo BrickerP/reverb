@@ -136,6 +136,18 @@ func consume_echo_work(info: Dictionary) -> void:
 func consume_retirement(info: EchoRetirementInfo, body_key: StringName) -> void:
 	if info == null or info.uid <= 0 or not info.pos.is_finite():
 		return
+	if info.reason == EchoRetirementInfo.ABSORBED:
+		var threat: Vector2 = info.profile.get("threat", info.pos)
+		var spared: Vector2 = info.profile.get("spared", info.pos)
+		if not threat.is_finite():
+			threat = info.pos
+		if not spared.is_finite():
+			spared = info.pos
+		var blocked := {"family": &"blocked", "uid": info.uid, "pos": info.pos,
+			"threat": threat, "spared": spared, "target_pos": spared, "tint": info.tint}
+		_replace(&"blocked", info.uid)
+		_push(blocked, 0.72)
+		return
 	var exhausted := info.exhausted or info.reason == EchoRetirementInfo.EXHAUSTED
 	var mark := {"family": &"retirement", "uid": info.uid, "pos": info.pos,
 		"kind": info.kind, "weapon_id": info.weapon_id, "condition": clampf(info.condition, 0.0, 100.0),
@@ -341,6 +353,7 @@ func draw(ci: CanvasItem, view: Rect2, reduced: bool = false, sim: Sim = null) -
 			&"recruit": _draw_recruit(ci, p)
 			&"rescue": _draw_rescue(ci, p)
 			&"missed": _draw_missed_recruit(ci, p)
+			&"blocked": _draw_blocked(ci, p)
 
 
 func _push(mark: Dictionary, duration: float) -> void:
@@ -563,6 +576,31 @@ static func _patch(ci: CanvasItem, pos: Vector2, progress: float, alpha: float, 
 	ci.draw_line(pos + Vector2(-3, -1 - fall), pos + Vector2(4, -1 - fall), Color(INK, alpha), 1.2, true)
 	if pressure > 0.0:
 		ci.draw_line(patch.position + Vector2(2, -2 - pressure * 2), Vector2(patch.end.x - 2, patch.position.y - 2 - pressure * 2), Color(INK, alpha), 2.0, true)
+
+
+static func _draw_blocked(ci: CanvasItem, p: Dictionary) -> void:
+	var copy: Vector2 = p["pos"]
+	var threat: Vector2 = p.get("threat", copy)
+	var spared: Vector2 = p.get("spared", copy)
+	var alpha := float(p["alpha"])
+	var progress := float(p["progress"])
+	var incoming := copy - threat
+	var direction := incoming.normalized() if incoming.length_squared() > 1.0 else Vector2.RIGHT
+	var normal := Vector2(-direction.y, direction.x)
+	var reach := incoming.length()
+	var arrived := clampf(progress / 0.35, 0.0, 1.0)
+	ci.draw_line(threat, threat + direction * reach * arrived, Color(INK, alpha), 2.6, true)
+	var squeeze := sin(minf(1.0, progress / 0.45) * PI)
+	var split := maxf(0.0, progress - 0.35) / 0.65 * 12.0
+	for side: float in [-1.0, 1.0]:
+		var center := copy + normal * side * (4.0 * squeeze + split)
+		ci.draw_line(center - direction * 9.0, center + direction * 7.0, Color(PAPER, alpha), 4.0, true)
+		ci.draw_line(center - direction * 9.0, center + normal * side * 6.0, Color(INK, alpha), 1.6, true)
+	var face := spared - threat
+	var angle := face.angle() if face.length_squared() > 1.0 else direction.angle() + PI
+	var radius := 22.0
+	ci.draw_arc(spared, radius, angle - 0.95, angle + 0.95, 16, Color(PAPER, alpha), 5.0, true)
+	ci.draw_arc(spared, radius, angle - 0.95, angle + 0.95, 16, Color(Color("729585"), alpha), 2.0, true)
 
 
 static func _draw_retirement(ci: CanvasItem, p: Dictionary) -> void:

@@ -122,8 +122,12 @@ func test_echo_inside_the_cross_is_spent_and_the_player_is_not(c: Check) -> void
 	var boss := _enemy(&"paradox", sim.player.pos + Vector2(500.0, 0.0))
 	boss.attack_target = sim.player.pos
 	var hp := sim.player.hp
+	var reasons: Array[StringName] = []
+	sim.echo_retired.connect(func(info: EchoRetirementInfo) -> void: reasons.append(info.reason))
 	EnemyBrain._boss_impact(sim, boss)
 	c.eq(sim.player.hp, hp, "a copy inside the cross takes the hit")
+	c.eq(reasons, [&"absorbed"], "the copy is spent by the cross, not by wearing out")
+	c.eq(sim.retirements, 0, "a block is not a voluntary retirement")
 	c.eq(sim.echoes.size(), 0, "that copy leaves the field")
 	c.eq(sim.bank.takes.size(), 0, "the recording is consumed")
 	c.ok(not sim.is_cross_stapled(), "a body in the cross is not the staple")

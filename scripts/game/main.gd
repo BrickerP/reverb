@@ -193,7 +193,8 @@ func _ready() -> void:
 
 
 func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: int = -1,
-		daily_modifier: StringName = &"") -> void:
+		daily_modifier: StringName = &"", demo: bool = false) -> void:
+	demo_run = demo
 	SuspendStore.clear()
 	_detach_presentation_session()
 	feedback_ui.reset()
@@ -212,9 +213,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 	if def != null:
 		def.apply(sim)
 	var inherited: EchoTake = null
-	if demo_run:
-		sim.bank.add(EchoArchive.demo_take(Sim.ARENA.get_center()))
-	else:
+	if not demo_run:
 		inherited = EchoArchive.load(meta, character_id, sim)
 		if inherited != null:
 			sim.bank.add(inherited)
@@ -243,8 +242,7 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 
 
 func start_demo() -> void:
-	demo_run = true
-	new_run(-1, &"looper")
+	new_run(-1, &"looper", -1, &"", true)
 
 
 func choose_character(id: StringName, seed_value: int = -1) -> void:
