@@ -107,6 +107,16 @@ func _run() -> void:
 
 func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	var before := RunSnapshot.capture(sim)
+	ui._offers_scroll.ensure_control_visible(ui.offers_box.get_child(5))
+	await _settle()
+	var scroll := ui._offers_scroll.scroll_vertical
+	ui.build_panel.upgrade_button.pressed.emit()
+	await _settle()
+	_check.eq(ui._offers_scroll.scroll_vertical, scroll, "upgrading preserves the reader's stock position")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(ui._offers_scroll.scroll_vertical, scroll, "Undo preserves the reader's stock position")
+	_check.eq(RunSnapshot.capture(sim), before, "scroll preservation leaves the transaction and both RNGs exact")
 	var item_card := ui.offers_box.get_child(3) as OfferCard
 	ui._offers_scroll.ensure_control_visible(item_card)
 	await _settle()
