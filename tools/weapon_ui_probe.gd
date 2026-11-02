@@ -59,6 +59,18 @@ func _run() -> void:
 			await _settle()
 			_check.eq(RunSnapshot.capture(sim), before, "native purchase Undo restores complete snapshot and both RNGs")
 			await _exercise_workshop(ui, sim, extent)
+			var resize_before := RunSnapshot.capture(sim)
+			var alternate := Vector2i(960, 540) if extent.x == 1280 else Vector2i(1280, 720)
+			root.size = alternate
+			root.content_scale_size = alternate
+			await _settle()
+			_check.eq(ui.inventory_overview(), alternate.x == 1280, "live resize chooses the actual viewport layout")
+			_check.eq(ui.build_panel.show_heading, alternate.x == 1280, "live resize rebuilds the matching paper heading")
+			_bounds(ui, alternate)
+			root.size = extent
+			root.content_scale_size = extent
+			await _settle()
+			_check.eq(RunSnapshot.capture(sim), resize_before, "window resize preserves the complete run and both RNGs")
 
 			# Every tool must fit the selected sheet, including long translations,
 			# field ticks, both ready combos and grade-dependent support effects.
@@ -77,14 +89,21 @@ func _run() -> void:
 			ui.refresh()
 			await _settle()
 			await _capture(ui, extent, "unaffordable-tree")
-			ui.equipment_button.grab_focus()
-			await _action(&"ui_right")
-			_check.eq(root.gui_get_focus_owner(), ui.echoes_button, "directional navigation reaches the copy page")
-			await _action(&"ui_accept")
-			_check.ok(ui.echo_panel.is_visible_in_tree(), "mapped accept opens the copy page")
-			await _settle()
-			await _capture(ui, extent, "echoes")
-			ui.echo_panel.merge_button.pressed.emit()
+			if ui.inventory_overview():
+				ui.build_panel.passives_button.grab_focus()
+				await _action(&"ui_right")
+				_check.eq(root.gui_get_focus_owner(), ui.echo_panel.merge_button, "overview navigation reaches the visible bank")
+				await _capture(ui, extent, "echoes")
+				await _action(&"ui_accept")
+			else:
+				ui.equipment_button.grab_focus()
+				await _action(&"ui_right")
+				_check.eq(root.gui_get_focus_owner(), ui.echoes_button, "directional navigation reaches the copy page")
+				await _action(&"ui_accept")
+				_check.ok(ui.echo_panel.is_visible_in_tree(), "mapped accept opens the copy page")
+				await _capture(ui, extent, "echoes")
+				ui.echo_panel.merge_button.pressed.emit()
+			_check.ok(ui.echo_panel.is_ancestor_of(root.gui_get_focus_owner()), "merge keeps keyboard focus in the active bank")
 			ui.echo_panel.select_take(sim.bank.takes[1])
 			ui.echo_panel.select_take(sim.bank.takes.back())
 			_check.eq(ui.echo_panel.trait_buttons.size(), 3, "merge evidence includes all three actual decisions")
@@ -301,6 +320,7 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 						-1, button.get_theme_font_size("font_size")).x
 					_check.ok(width <= button.size.x - 12.0, "workshop action text is not clipped")
 	if ui.build_panel.visible:
+		_check.ok(ui.build_panel.size.y <= ui.build_panel._box.get_combined_minimum_size().y + 16.0, "weapon paper follows its content height")
 		for label: Label in [ui.build_panel.detail_title, ui.build_panel.detail_behavior,
 				ui.build_panel.detail_stats, ui.build_panel.detail_upgrade, ui.build_panel.detail_combo,
 				ui.build_panel.detail_reason]:
@@ -313,7 +333,10 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 			for label: Label in card.find_children("*", "Label", true, false):
 				_check.ok(card.get_global_rect().grow(1).encloses(label.get_global_rect()), "slot name, level and material refund stay inside their paper")
 				_check.eq(label.get_visible_line_count(), label.get_line_count(), "trade-in values have no hidden lines")
-	else:
+	if ui.build_panel.visible and ui.echo_panel.visible:
+		_check.ok(ui.build_panel.get_global_rect().end.y <= ui.echo_panel.get_global_rect().position.y + 1.0,
+				"overview papers keep distinct vertical space")
+	if ui.echo_panel.visible:
 		for button: Button in ui.echo_panel.trait_buttons:
 			_check.ok(viewport.encloses(button.get_global_rect()), "named merge action stays inside the native canvas")
 

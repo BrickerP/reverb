@@ -183,7 +183,7 @@ func test_native_small_canvas_has_six_slots_and_pages_without_forced_cleanup(c: 
 	ui.set_reduced_effects(true)
 	ui.open(sim)
 	c.eq(ui.build_panel._slot_buttons.size(), 6, "all six equipment slots stay in the core view")
-	c.eq(ui.echo_panel.page_size, 1, "small native canvas pages copies explicitly")
+	c.eq(ui.echo_panel.page_size, 3, "focused copy page uses its available height")
 	c.eq(ui.build_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "equipment has no mandatory vertical scroll")
 	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "copies have no mandatory nested scroll")
 	c.ok(not ui.start_button.disabled, "capacity-eight bank requires no forced discard")

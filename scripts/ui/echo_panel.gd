@@ -69,8 +69,10 @@ func _init() -> void:
 func refresh(sim: Sim, animate_new: bool = false) -> void:
 	_sim = sim
 	_animate_new = animate_new and not reduced_effects
-	page_size = 1 if get_viewport_rect().size.y < 620.0 else 2
+	page_size = maxi(1, page_size)
 	page = clampi(page, 0, maxi(0, ceili(float(sim.bank.takes.size()) / page_size) - 1))
+	if _merge_mode and _host_uid != 0:
+		_show_uid(_host_uid)
 	_render()
 	_animate_new = false
 
@@ -372,6 +374,8 @@ func _on_merge_button() -> void:
 	_spent_uid = 0
 	_host_uid = 0
 	_render()
+	if not _identity_buttons.is_empty():
+		(_identity_buttons.values()[0] as Button).grab_focus()
 
 
 func _pick(take: EchoTake) -> void:
@@ -385,6 +389,11 @@ func _pick(take: EchoTake) -> void:
 	if _host_uid != 0:
 		_show_uid(_host_uid)
 	_render()
+	for button: Button in trait_buttons:
+		if not button.disabled:
+			button.grab_focus()
+			return
+	focus_take(take.uid)
 
 
 func _show_uid(uid: int) -> void:

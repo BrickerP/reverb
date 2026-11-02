@@ -46,6 +46,8 @@ var equipment_button: Button
 var echoes_button: Button
 var _stock_scroll_pending := -1
 var _stock_scroll_frames := 0
+var _inventory_tabs: HBoxContainer
+var _layout_extent := Vector2.ZERO
 var _equipment_page := 0
 var _unread_copy := false
 var _pending_feedback: Dictionary = {}
@@ -93,20 +95,20 @@ func _ready() -> void:
 	dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dossier.add_theme_constant_override("separation", 6)
 	columns.add_child(dossier)
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 6)
-	dossier.add_child(tabs)
+	_inventory_tabs = HBoxContainer.new()
+	_inventory_tabs.add_theme_constant_override("separation", 6)
+	dossier.add_child(_inventory_tabs)
 	equipment_button = Button.new()
 	echoes_button = Button.new()
 	for button: Button in [equipment_button, echoes_button]:
 		button.toggle_mode = true
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		WorkshopUi.fit_button(button, 16, 34.0)
-		tabs.add_child(button)
+		_inventory_tabs.add_child(button)
 	equipment_button.pressed.connect(show_equipment_page.bind(0))
 	echoes_button.pressed.connect(show_equipment_page.bind(1))
 	build_panel = BuildPanel.new()
-	build_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	build_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	build_panel.size_flags_stretch_ratio = 1.0
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
@@ -117,11 +119,11 @@ func _ready() -> void:
 	build_panel.workshop_requested.connect(_open_weapon_workshop)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
-	echo_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	echo_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
 	echo_panel.staple_requested.connect(_on_merge)
-	echo_panel.navigation_changed.connect(_rebuild_focus)
+	echo_panel.navigation_changed.connect(_on_echo_navigation_changed)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	echo_panel.visible = false
@@ -148,6 +150,7 @@ func _ready() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	resized.connect(_on_inventory_resized)
 
 
 func _exit_tree() -> void:
@@ -297,8 +300,6 @@ func refresh(animate_echo: bool = false) -> void:
 		start_button.text = Loc.t("demo.done")
 		start_button.tooltip_text = start_button.text
 	start_button.accessibility_description = start_button.tooltip_text if start_button.tooltip_text != "" else start_button.text
-	echo_panel.size_flags_stretch_ratio = 1.0
-	build_panel.size_flags_stretch_ratio = 1.0
 	var notices: Array[String] = []
 	if sim.last_contract_done:
 		notices.append(Loc.t("contract.result_success", [sim.last_contract_reward])
@@ -312,6 +313,9 @@ func refresh(animate_echo: bool = false) -> void:
 		replace_with = Loc.weapon_name(_replacing.id())
 		chooser = _on_replace_slot
 	_say("")
+	_layout_extent = get_viewport_rect().size
+	build_panel.show_heading = inventory_overview()
+	echo_panel.page_size = 2 if inventory_overview() else 3
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	equipment_button.text = Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS])
@@ -422,11 +426,43 @@ func _lock_focused() -> void:
 	_on_lock_offer(_focused_offer)
 
 
+# Wide desks show the loadout and the bank together. Small windows use the
+# existing category pages so the text and buttons keep their native size.
+func inventory_overview() -> bool:
+	var extent := get_viewport_rect().size
+	return extent.x >= 1100.0 and extent.y >= 680.0
+
+
+func _on_echo_navigation_changed() -> void:
+	show_equipment_page(_equipment_page)
+
+
+func _on_inventory_resized() -> void:
+	if sim == null or not visible or get_viewport_rect().size == _layout_extent:
+		return
+	var focus := get_viewport().gui_get_focus_owner()
+	var copy_focus := focus != null and echo_panel.is_ancestor_of(focus)
+	var weapon_focus := focus != null and build_panel.is_ancestor_of(focus)
+	if copy_focus and not inventory_overview():
+		_equipment_page = 1
+	refresh()
+	if copy_focus and echo_panel.visible:
+		echo_panel.focus_first_discard()
+	elif weapon_focus and build_panel.visible:
+		build_panel.focus_slot(build_panel._selected)
+
+
 func show_equipment_page(index: int) -> void:
 	_equipment_page = clampi(index, 0, 1)
-	build_panel.visible = _equipment_page == 0
-	echo_panel.visible = _equipment_page == 1
-	if _equipment_page == 1 and sim != null:
+	var overview := inventory_overview()
+	_inventory_tabs.visible = not overview
+	if overview:
+		build_panel.visible = _replacing != null or not echo_panel.is_merging()
+		echo_panel.visible = _replacing == null
+	else:
+		build_panel.visible = _equipment_page == 0
+		echo_panel.visible = _equipment_page == 1
+	if echo_panel.visible and sim != null:
 		_unread_copy = false
 		echoes_button.text = Loc.t("shop.echoes", [sim.bank.takes.size(), sim.echo_capacity()])
 	equipment_button.button_pressed = _equipment_page == 0

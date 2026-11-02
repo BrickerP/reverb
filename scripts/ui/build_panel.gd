@@ -8,6 +8,7 @@ signal selection_changed
 signal workshop_requested(index: int)
 signal passives_requested(index: int)
 signal stats_requested(index: int)
+var show_heading := false
 var weapons_label: Label
 var items_label: Label
 var replacing: bool = false
@@ -97,6 +98,9 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	# The page title already identifies the inventory. Keep statistics on the
 	# fixed bottom row instead of spending a second header above six slots.
 	weapons_label = null
+	if show_heading:
+		weapons_label = UiTheme.label(Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS]), 17)
+		_box.add_child(weapons_label)
 	_weapons_row = _weapon_chips(sim.player, sim)
 	_box.add_child(_weapons_row)
 	_build_inspector()
@@ -255,7 +259,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	identity.add_theme_constant_override("separation", 0)
 	var title := UiTheme.label(Loc.weapon_name(w.id), 13)
-	if index == 0:
+	if index == 0 and weapons_label == null:
 		weapons_label = title
 	title.name = "WeaponName"
 	title.clip_text = true

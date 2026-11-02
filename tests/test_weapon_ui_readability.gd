@@ -130,18 +130,49 @@ func test_offers_show_attack_and_purchase_while_orders_use_words(c: Check) -> vo
 	card.free()
 
 
-func test_equipment_tabs_keep_both_inventories_reachable_without_mutating_run(c: Check) -> void:
+func test_small_equipment_pages_keep_both_inventories_reachable_without_mutation(c: Check) -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(960, 540)
+	_root().add_child(viewport)
 	var sim := _sim()
-	var ui := _open(sim)
+	var ui := ShopUi.new()
+	ui.theme = UiTheme.build()
+	viewport.add_child(ui)
+	ui.set_reduced_effects(true)
+	ui.open(sim)
 	var before := RunSnapshot.capture(sim)
-	c.ok(ui.build_panel.visible and not ui.echo_panel.visible, "shop starts with readable weapon details")
+	c.ok(ui.build_panel.visible and not ui.echo_panel.visible, "small shop starts on its readable weapon sheet")
 	ui.echoes_button.pressed.emit()
-	c.ok(not ui.build_panel.visible and ui.echo_panel.visible, "copies have a named page, not a nested scroll")
-	c.ok(not ui.equipment_button.focus_next.is_empty(), "keyboard and controller can reach the other page")
+	c.ok(not ui.build_panel.visible and ui.echo_panel.visible, "small windows keep a focused copy page")
+	c.eq(ui.echo_panel.page_size, 3, "the full copy page shows three rows")
+	c.ok(not ui.equipment_button.focus_next.is_empty(), "navigation reaches the other page")
 	ui.equipment_button.pressed.emit()
 	c.ok(ui.build_panel.visible and not ui.echo_panel.visible, "weapon page can be restored")
-	c.eq(RunSnapshot.capture(sim), before, "page navigation leaves the entire run unchanged")
-	ui.free()
+	c.eq(RunSnapshot.capture(sim), before, "navigation leaves the entire run unchanged")
+	viewport.free()
+
+
+func test_wide_inventory_is_an_overview_with_content_sized_papers(c: Check) -> void:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(1280, 720)
+	_root().add_child(viewport)
+	var sim := _sim()
+	var take := EchoTake.new()
+	take.weapons.append(Content.weapon(&"pistol"))
+	sim.bank.add(take)
+	var before := RunSnapshot.capture(sim)
+	var ui := ShopUi.new()
+	ui.theme = UiTheme.build()
+	viewport.add_child(ui)
+	ui.set_reduced_effects(true)
+	ui.open(sim)
+	c.ok(ui.build_panel.visible and ui.echo_panel.visible, "weapons and copies are visible together")
+	c.ok(not ui.equipment_button.is_visible_in_tree(), "wide overview needs no category switch")
+	c.ok(ui.build_panel.show_heading, "the weapon paper owns its section title")
+	c.eq(ui.build_panel.size_flags_vertical, Control.SIZE_SHRINK_BEGIN, "weapon paper follows its actual content")
+	c.eq(ui.echo_panel.size_flags_vertical, Control.SIZE_SHRINK_BEGIN, "copy paper follows its actual content")
+	c.eq(RunSnapshot.capture(sim), before, "overview never changes the run")
+	viewport.free()
 
 
 func test_rebuilt_or_closed_upgrade_controls_cannot_spend_again(c: Check) -> void:
