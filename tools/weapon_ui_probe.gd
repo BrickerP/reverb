@@ -66,6 +66,7 @@ func _run() -> void:
 			await _settle()
 			_check.eq(ui.inventory_overview(), alternate.x == 1280, "live resize chooses the actual viewport layout")
 			_check.eq(ui.build_panel.show_heading, alternate.x == 1280, "live resize rebuilds the matching paper heading")
+			_check.ok(root.gui_get_focus_owner() != null, "live resize keeps an actionable keyboard focus")
 			_bounds(ui, alternate)
 			root.size = extent
 			root.content_scale_size = extent

@@ -443,6 +443,13 @@ func _on_inventory_resized() -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	var copy_focus := focus != null and echo_panel.is_ancestor_of(focus)
 	var weapon_focus := focus != null and build_panel.is_ancestor_of(focus)
+	var stock_focus := -1
+	if focus != null:
+		for index in offers_box.get_child_count():
+			var card := offers_box.get_child(index)
+			if card == focus or card.is_ancestor_of(focus):
+				stock_focus = index
+				break
 	if copy_focus and not inventory_overview():
 		_equipment_page = 1
 	refresh()
@@ -450,6 +457,9 @@ func _on_inventory_resized() -> void:
 		echo_panel.focus_first_discard()
 	elif weapon_focus and build_panel.visible:
 		build_panel.focus_slot(build_panel._selected)
+	elif stock_focus >= 0:
+		_stock_scroll_frames = 0
+		_focus_card(stock_focus)
 
 
 func show_equipment_page(index: int) -> void:
