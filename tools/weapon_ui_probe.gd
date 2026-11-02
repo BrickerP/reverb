@@ -75,7 +75,11 @@ func _run() -> void:
 			ui.refresh()
 			await _settle()
 			await _capture(ui, extent, "unaffordable-tree")
-			ui.echoes_button.pressed.emit()
+			ui.equipment_button.grab_focus()
+			await _action(&"ui_right")
+			_check.eq(root.gui_get_focus_owner(), ui.echoes_button, "directional navigation reaches the copy page")
+			await _action(&"ui_accept")
+			_check.ok(ui.echo_panel.is_visible_in_tree(), "mapped accept opens the copy page")
 			await _settle()
 			await _capture(ui, extent, "echoes")
 			ui.echo_panel.merge_button.pressed.emit()
@@ -135,6 +139,15 @@ func _fixture() -> Sim:
 	return sim
 
 
+func _action(name: StringName) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventAction.new()
+		event.action = name
+		event.pressed = pressed
+		Input.parse_input_event(event)
+		await _settle()
+
+
 func _settle() -> void:
 	for _index in 5:
 		await process_frame
@@ -146,6 +159,11 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 			ui.reroll_button, ui.undo_button, ui.equipment_button, ui.echoes_button]:
 		if control.is_visible_in_tree():
 			_check.ok(viewport.encloses(control.get_global_rect()), "%s remains inside the native canvas" % control.name)
+	for card: OfferCard in ui.offers_box.get_children():
+		var purchase := card.find_child("PurchaseAction", true, false) as Label
+		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
+		if card.swap_button != null:
+			_check.ok(card.get_global_rect().grow(1).encloses(card.swap_button.get_global_rect()), "replace action stays inside its stock card")
 	if ui.build_panel.visible:
 		for label: Label in [ui.build_panel.detail_title, ui.build_panel.detail_behavior,
 				ui.build_panel.detail_stats, ui.build_panel.detail_upgrade, ui.build_panel.detail_combo,

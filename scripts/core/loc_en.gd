@@ -2,6 +2,12 @@ class_name LocEn
 extends RefCounted
 
 const TABLE := {
+	"weapon.summary_repair": "Heals %s HP · repairs %s condition\nEvery %.1fs · %d charges · lasts %.0fs",
+	"weapon.summary_tree": "Shield %s · energy %s per pulse\nEvery %.1fs · %d charges · lasts %.0fs",
+	"weapon.summary_hound": "Bite %s · every %.1fs · lasts %.0fs",
+	"shop.new_copy": " · new copy",
+	"shop.shortfall": "Short %d materials",
+
 	"shop.inspect": "Inspect",
 	"weapon.support_amount_tree": "Each pulse gives %s shield and %s energy · tree HP %s",
 	"weapon.support_amount_repair": "Heals %s HP and repairs %s condition per pulse · station HP %s",
@@ -27,7 +33,6 @@ const TABLE := {
 	"shop.inspector_empty": "Buy a weapon from the stock to equip it.",
 	"shop.combine_materials": "Combine · %d materials",
 	"shop.sell_materials": "Sell · +%d materials",
-	"shop.auto_fire": "Automatic weapons",
 	"shop.price_materials": "%d materials",
 
 	"feedback.temporary": "TEMP",

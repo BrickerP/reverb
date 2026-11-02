@@ -266,6 +266,23 @@ static func weapon_line(w: WeaponDef, level: int = 0) -> String:
 	return line
 
 
+# Compact inspection uses the same deployment profile as the detailed sheet.
+static func weapon_summary(w: WeaponDef, level: int) -> String:
+	var profile := SupportSystem.weapon_profile(w, level, w.damage * w.level_mult(level))
+	match w.support_kind:
+		&"repair_station":
+			return t("weapon.summary_repair", [number(profile["heal_hp"]), number(profile["repair_condition"]),
+				float(profile["interval"]), int(profile["charges"]), float(profile["life"])])
+		&"paper_tree":
+			return t("weapon.summary_tree", [number(profile["shield"]), number(profile["energy"]),
+				float(profile["interval"]), int(profile["charges"]), float(profile["life"])])
+		&"hound":
+			return t("weapon.summary_hound", [number(profile["damage"]), float(profile["interval"]), float(profile["life"])])
+	if w.support_kind != &"":
+		return support_short(w, level)
+	return weapon_line(w, level)
+
+
 static func weapon_upgrade(w: WeaponDef, level: int) -> String:
 	if level >= WeaponDef.MAX_LEVEL:
 		return t("shop.max_level")

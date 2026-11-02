@@ -2,6 +2,12 @@ class_name LocZh
 extends RefCounted
 
 const TABLE := {
+	"weapon.summary_repair": "每次回复 %s 生命、修复 %s 完好度\n间隔 %.1f 秒 · 共 %d 次 · 持续 %.0f 秒",
+	"weapon.summary_tree": "每次补充 %s 护盾、%s 能量\n间隔 %.1f 秒 · 共 %d 次 · 持续 %.0f 秒",
+	"weapon.summary_hound": "每次咬击 %s · 间隔 %.1f 秒 · 持续 %.0f 秒",
+	"shop.new_copy": " · 新副本",
+	"shop.shortfall": "差 %d 材料",
+
 	"shop.inspect": "查看",
 	"weapon.support_amount_tree": "每次补充 %s 护盾、%s 能量 · 纸树生命 %s",
 	"weapon.support_amount_repair": "每次回复 %s 生命、修复 %s 完好度 · 修补站生命 %s",
@@ -27,7 +33,6 @@ const TABLE := {
 	"shop.inspector_empty": "在左侧商品卡购买武器，自动装入空槽。",
 	"shop.combine_materials": "合成 · %d 材料",
 	"shop.sell_materials": "出售 · 返还 %d 材料",
-	"shop.auto_fire": "自动攻击武器",
 	"shop.price_materials": "%d 材料",
 
 	"feedback.temporary": "临时",

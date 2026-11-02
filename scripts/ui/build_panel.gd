@@ -23,6 +23,7 @@ var upgrade_button: Button
 var stats_button: Button
 var passives_button: Button
 var _generation := 0
+var detail_art: TextureRect
 var detail_title: Label
 var detail_behavior: Label
 var detail_stats: Label
@@ -75,6 +76,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	upgrade_button = null
 	stats_button = null
 	passives_button = null
+	detail_art = null
 	detail_title = null
 	detail_behavior = null
 	detail_stats = null
@@ -87,17 +89,9 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	slot_drop_targets.clear()
 	empty_drop_target = null
 	items_drop_target = null
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
-	weapons_label = UiTheme.label(Loc.t("shop.auto_fire"), 17)
-	weapons_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(weapons_label)
-	stats_button = Button.new()
-	stats_button.text = Loc.t("shop.build_details")
-	stats_button.add_theme_font_size_override("font_size", 14)
-	stats_button.pressed.connect(func() -> void: stats_requested.emit(_selected))
-	head.add_child(stats_button)
-	_box.add_child(head)
+	# The page title already identifies the inventory. Keep statistics on the
+	# fixed bottom row instead of spending a second header above six slots.
+	weapons_label = null
 	_weapons_row = _weapon_chips(sim.player, sim)
 	_box.add_child(_weapons_row)
 	_build_inspector()
@@ -105,6 +99,10 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	actions.add_theme_constant_override("separation", 6)
 	items_label = UiTheme.label(Loc.t("workshop.passives", [sim.player.items.size()]), 13, UiTheme.DIM)
 	items_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stats_button = Button.new()
+	stats_button.text = Loc.t("shop.build_details")
+	stats_button.pressed.connect(func() -> void: stats_requested.emit(_selected))
+	actions.add_child(stats_button)
 	actions.add_child(items_label)
 	passives_button = Button.new()
 	passives_button.text = Loc.t("shop.inspect")
@@ -142,6 +140,7 @@ func close_session() -> void:
 	upgrade_button = null
 	stats_button = null
 	passives_button = null
+	detail_art = null
 	detail_title = null
 	detail_behavior = null
 	detail_stats = null
@@ -249,6 +248,8 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	identity.add_theme_constant_override("separation", 0)
 	var title := UiTheme.label(Loc.weapon_name(w.id), 13)
+	if index == 0:
+		weapons_label = title
 	title.name = "WeaponName"
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -283,17 +284,28 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 func _build_inspector() -> void:
 	var generation := _generation
 	var sheet := VBoxContainer.new()
-	sheet.add_theme_constant_override("separation", 5)
+	sheet.add_theme_constant_override("separation", 3)
 	_box.add_child(sheet)
-	detail_title = UiTheme.label(Loc.t("shop.inspector_empty") if _cards.is_empty() else "", 19)
+	var identity_row := HBoxContainer.new()
+	identity_row.add_theme_constant_override("separation", 8)
+	sheet.add_child(identity_row)
+	detail_art = UiTheme.art_icon(&"weapon_pistol", Vector2(52, 44))
+	identity_row.add_child(detail_art)
+	var identity := VBoxContainer.new()
+	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	identity.add_theme_constant_override("separation", 2)
+	identity_row.add_child(identity)
+	detail_title = UiTheme.label(Loc.t("shop.inspector_empty") if _cards.is_empty() else "", 18)
 	detail_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	sheet.add_child(detail_title)
-	detail_behavior = UiTheme.label("", 15)
+	identity.add_child(detail_title)
+	detail_behavior = UiTheme.label("", 14)
+	detail_behavior.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	identity.add_child(detail_behavior)
 	detail_stats = UiTheme.label("", 13, UiTheme.DIM)
 	detail_combo = UiTheme.label("", 13, UiTheme.ECHO)
 	detail_upgrade = UiTheme.label("", 14, UiTheme.ACCENT)
 	detail_reason = UiTheme.label("", 13, UiTheme.WARN)
-	for label: Label in [detail_behavior, detail_stats, detail_combo, detail_upgrade, detail_reason]:
+	for label: Label in [detail_stats, detail_combo, detail_upgrade, detail_reason]:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sheet.add_child(label)
@@ -313,6 +325,7 @@ func _build_inspector() -> void:
 	actions.add_child(upgrade_button)
 	var manage := Button.new()
 	manage.text = Loc.t("shop.manage")
+	manage.disabled = _cards.is_empty()
 	manage.pressed.connect(func() -> void: workshop_requested.emit(_selected))
 	actions.add_child(manage)
 
@@ -406,9 +419,14 @@ func _select(index: int) -> void:
 		_apply_card_style(_cards[i], _card_weapons[i], i == index)
 	var w := _card_weapons[index]
 	var level := _card_levels[index]
+	var key := PresentationAssets.weapon_key(w)
+	var atlas := AtlasTexture.new()
+	atlas.atlas = PresentationAssets.texture(key)
+	atlas.region = PresentationAssets.idle_region(key)
+	detail_art.texture = atlas
 	detail_title.text = Loc.weapon_name(w.id) + " · " + Loc.t("shop.level", [level + 1])
 	detail_behavior.text = Loc.weapon_desc(w.id)
-	detail_stats.text = Loc.t("shop.base_output", [Loc.weapon_line(w, level)])
+	detail_stats.text = Loc.t("shop.base_output", [Loc.weapon_summary(w, level)])
 	detail_combo.text = Loc.weapon_combo(w, _sim.player.weapons)
 	detail_combo.visible = not detail_combo.text.is_empty()
 	detail_upgrade.text = Loc.t("shop.upgrade_preview", [Loc.weapon_upgrade(w, level)])

@@ -141,3 +141,20 @@ func test_equipment_tabs_keep_both_inventories_reachable_without_mutating_run(c:
 	c.ok(ui.build_panel.visible and not ui.echo_panel.visible, "weapon page can be restored")
 	c.eq(RunSnapshot.capture(sim), before, "page navigation leaves the entire run unchanged")
 	ui.free()
+
+
+func test_rebuilt_or_closed_upgrade_controls_cannot_spend_again(c: Check) -> void:
+	var sim := _sim()
+	var ui := _open(sim)
+	var old_button := ui.build_panel.upgrade_button
+	ui.refresh()
+	var before := RunSnapshot.capture(sim)
+	old_button.pressed.emit()
+	c.eq(RunSnapshot.capture(sim), before, "a queued pre-refresh action cannot buy another upgrade")
+	var closing_button := ui.build_panel.upgrade_button
+	ui.close_session()
+	ui.open(_sim())
+	before = RunSnapshot.capture(ui.sim)
+	closing_button.pressed.emit()
+	c.eq(RunSnapshot.capture(ui.sim), before, "a previous run's action cannot spend the new run's materials")
+	ui.free()

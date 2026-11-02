@@ -145,7 +145,18 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	var actions := _actions_row(o, reason, can_swap)
 	if actions != null:
 		box.add_child(actions)
+	box.minimum_size_changed.connect(_fit_paper.bind(box))
+	box.resized.connect(_fit_paper.bind(box))
+	_fit_paper.call_deferred(box)
 	_sim = null
+
+
+func _fit_paper(box: VBoxContainer) -> void:
+	if not is_instance_valid(box) or is_queued_for_deletion() or box.size.x <= 0.0:
+		return
+	# These cards are Buttons with child artwork, so the stock grid cannot infer
+	# wrapped content height. Keep every visible action inside its paper.
+	custom_minimum_size.y = maxf(HEIGHT, box.get_combined_minimum_size().y + 8.0)
 
 
 func _get_drag_data(at_position: Vector2) -> Variant:

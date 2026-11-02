@@ -45,6 +45,7 @@ var _connected_sim: Sim
 var equipment_button: Button
 var echoes_button: Button
 var _equipment_page := 0
+var _unread_copy := false
 var _pending_feedback: Dictionary = {}
 var _feedback_epoch := 0
 var _refresh_generation := 0
@@ -176,6 +177,7 @@ func open(s: Sim) -> void:
 	_replacing = null
 	_replacing_index = -1
 	_equipment_page = 0
+	_unread_copy = sim.bank.takes.any(func(take: EchoTake) -> bool: return take.wave == sim.wave)
 	refresh(true)
 	_fly_take_token()
 	_focus_card(0)
@@ -259,7 +261,7 @@ func refresh(animate_echo: bool = false) -> void:
 	var reroll_quote := sim.shop.quote(ShopResult.REROLL, sim)
 	reroll_button.disabled = not reroll_quote.ok
 	if reroll_button.disabled:
-		reroll_button.text += " · " + _drop_reason_text(reroll_quote.reason)
+		reroll_button.text += " · " + Loc.t("shop.shortfall", [maxi(0, cost - sim.player.materials)])
 	reroll_button.tooltip_text = _drop_reason_text(reroll_quote.reason) if not reroll_quote.ok else reroll_button.text
 	reroll_button.accessibility_description = reroll_button.tooltip_text
 	undo_button.text = Loc.t("shop.undo")
@@ -304,6 +306,8 @@ func refresh(animate_echo: bool = false) -> void:
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	equipment_button.text = Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS])
 	echoes_button.text = Loc.t("shop.echoes", [sim.bank.takes.size(), sim.echo_capacity()])
+	if _unread_copy:
+		echoes_button.text += Loc.t("shop.new_copy")
 	show_equipment_page(_equipment_page)
 	_sync_lock()
 	_rebuild_focus()
@@ -410,6 +414,9 @@ func show_equipment_page(index: int) -> void:
 	_equipment_page = clampi(index, 0, 1)
 	build_panel.visible = _equipment_page == 0
 	echo_panel.visible = _equipment_page == 1
+	if _equipment_page == 1 and sim != null:
+		_unread_copy = false
+		echoes_button.text = Loc.t("shop.echoes", [sim.bank.takes.size(), sim.echo_capacity()])
 	equipment_button.button_pressed = _equipment_page == 0
 	echoes_button.button_pressed = _equipment_page == 1
 	for button: Button in [equipment_button, echoes_button]:
@@ -943,7 +950,12 @@ func _fly_receipt(result: ShopResult) -> void:
 				break
 	var convert := _overlay.get_global_transform().affine_inverse()
 	var origin := convert * from_control.get_global_rect().get_center()
-	var destination := convert * to_control.get_global_rect().get_center()
+	var visible_target := to_control
+	if to_control == echo_panel and not echo_panel.visible:
+		visible_target = echoes_button
+	elif to_control == build_panel and not build_panel.visible:
+		visible_target = equipment_button
+	var destination := convert * visible_target.get_global_rect().get_center()
 	var receipt := PanelContainer.new()
 	receipt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := UiTheme.paper_panel(UiTheme.PAPER)
@@ -1313,7 +1325,9 @@ func _fly_take_token_after_layout(session_epoch: int, frames: int) -> void:
 		if not get_tree().process_frame.is_connected(next_frame):
 			get_tree().process_frame.connect(next_frame, CONNECT_ONE_SHOT)
 		return
-	var arrival := echo_panel.arrival_point()
+	var arrival := echo_panel.arrival_point() if echo_panel.visible else echoes_button.get_global_rect().get_center()
+	if sim.bank.takes.is_empty():
+		return
 	if arrival == Vector2.ZERO:
 		return
 	var target := _overlay.get_global_transform().affine_inverse() * arrival
@@ -1444,6 +1458,8 @@ func _on_weapon_workshop_action(value: Variant, index: int) -> void:
 
 
 func _open_build_stats(index: int, page: int = 0) -> void:
+	if sim == null:
+		return
 	var lines: Array[String] = [Loc.t("shop.take_dps", [int(round(OfferCard.total_dps(sim.player)))])]
 	lines.append(Loc.t("shop.echo_value", [sim.echo_capacity(), int(round(sim.echo_power() * 100.0))]))
 	for stat in Stats.ORDER:
@@ -1493,6 +1509,8 @@ func _open_family_stats(index: int, page: int = 0) -> void:
 
 
 func _open_build_passives(index: int) -> void:
+	if sim == null:
+		return
 	var lines: Array[String] = []
 	for id: StringName in sim.player.items:
 		lines.append("%s ×%d · %s" % [Loc.item_name(id), sim.player.item_count(id), Loc.item_desc(Content.item(id))])
