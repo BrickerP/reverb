@@ -31,6 +31,7 @@ var detail_reason: Label
 var _box: VBoxContainer
 var _weapons_row: Control
 var _slot_buttons: Array[Button] = []
+var _replacement_name := ""
 var _generation := 0
 var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
@@ -72,6 +73,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_apply_drop = apply_drop
 	_clear_drop = clear_drop
 	replacing = replace_with != ""
+	_replacement_name = replace_with
 	var selected_before := _selected
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
@@ -125,7 +127,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	for button: Button in find_children("*", "Button", true, false):
 		WorkshopUi.fit_button(button, 13, 28.0)
 	for button in _slot_buttons:
-		button.custom_minimum_size.y = 38.0
+		button.custom_minimum_size.y = 72.0 if replacing else 38.0
 
 
 
@@ -138,6 +140,7 @@ func close_session() -> void:
 	weapons_label = null
 	items_label = null
 	replacing = false
+	_replacement_name = ""
 	_weapons_row = null
 	_slot_buttons.clear()
 	upgrade_button = null
@@ -240,7 +243,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var select := Button.new()
-	select.custom_minimum_size.y = 38.0
+	select.custom_minimum_size.y = 72.0 if replacing else 38.0
 	select.accessibility_name = Loc.weapon_name(w.id) + " · " + Loc.t("shop.level", [level + 1])
 	select.tooltip_text = _detail_text_for(w, level)
 	var face := HBoxContainer.new()
@@ -259,11 +262,14 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	identity.add_child(title)
 	var grade := Loc.t("shop.level", [level + 1])
-	if replacing:
-		grade = Loc.t("shop.refund_materials", [Shop.resale_for(sim, index)])
-	elif index == marked_slot:
+	if index == marked_slot and not replacing:
 		grade += " · " + Loc.t("shop.just_equipped")
 	identity.add_child(UiTheme.label(grade, 12, UiTheme.ACCENT if index == marked_slot else UiTheme.DIM))
+	if replacing:
+		var refund := UiTheme.label(Loc.t("shop.refund_materials", [Shop.resale_for(sim, index)]), 12, UiTheme.COIN)
+		refund.name = "TradeInValue"
+		refund.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		identity.add_child(refund)
 	face.add_child(identity)
 	select.add_child(face)
 	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -320,7 +326,7 @@ func _build_inspector() -> void:
 	upgrade_button.disabled = true
 	upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upgrade_button.pressed.connect(func() -> void:
-		if _sim == null or generation != _generation or upgrade_button.disabled:
+		if _sim == null or generation != _generation or replacing or upgrade_button.disabled:
 			return
 		if _card_levels[_selected] >= WeaponDef.MAX_LEVEL:
 			evolve_requested.emit(_selected)
@@ -449,6 +455,12 @@ func _select(index: int) -> void:
 		upgrade_button.disabled = not _sim.shop.quote(ShopResult.UPGRADE, _sim, null, index).ok
 		if upgrade_button.disabled:
 			detail_reason.text = Loc.t("shop.need_materials", [maxi(0, cost - _sim.player.materials)])
+	upgrade_button.visible = not replacing
+	manage_button.visible = not replacing
+	detail_upgrade.visible = not replacing
+	if replacing:
+		detail_combo.visible = false
+		detail_reason.text = Loc.t("shop.replace", [_replacement_name])
 	detail_reason.visible = not detail_reason.text.is_empty()
 	upgrade_button.tooltip_text = detail_upgrade.text
 	upgrade_button.accessibility_name = upgrade_button.text

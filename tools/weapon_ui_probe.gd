@@ -133,6 +133,38 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.undo_button.pressed.emit()
 	await _settle()
 	_check.eq(RunSnapshot.capture(sim), before, "pointer purchase Undo restores the exact run")
+	# Trade-in prices are largest on fully upgraded equipment. Exercise that
+	# real selection state, including its material refund and confirmation.
+	var original_levels := sim.player.weapon_levels.duplicate()
+	var original_investments := sim.player.weapon_investments.duplicate()
+	for index in sim.player.weapons.size():
+		var w := sim.player.weapons[index]
+		sim.player.weapon_levels[index] = WeaponDef.MAX_LEVEL
+		sim.player.weapon_investments[index] = w.price
+		for level in WeaponDef.MAX_LEVEL:
+			sim.player.weapon_investments[index] += Shop.upgrade_cost(w, level)
+	ui.refresh()
+	await _settle()
+	var trade_before := RunSnapshot.capture(sim)
+	(ui.offers_box.get_child(0) as OfferCard).pressed.emit()
+	await _settle()
+	_check.ok(ui.is_replacing(), "a full inventory enters an explicit trade-in selection")
+	_check.ok(not ui.build_panel.upgrade_button.visible, "trade-in selection cannot accidentally buy an upgrade")
+	await _capture(ui, extent, "trade-in-selection")
+	ui.build_panel._slot_buttons[1].pressed.emit()
+	await _settle()
+	await _capture(ui, extent, "replacement-confirmation")
+	ui.workshop.choice_buttons[0].pressed.emit()
+	await _settle()
+	_check.eq(sim.player.weapons[1].id, &"smg", "confirmed replacement installs the chosen offer")
+	ui.undo_button.pressed.emit()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), trade_before, "trade-in Undo restores grades, investments, funds and both RNGs")
+	sim.player.weapon_levels.assign(original_levels)
+	sim.player.weapon_investments.assign(original_investments)
+	ui.refresh()
+	await _settle()
+	_check.eq(RunSnapshot.capture(sim), before, "trade-in fixture returns to the original shop")
 	ui.build_panel.manage_button.pressed.emit()
 	await _settle()
 	await _capture(ui, extent, "manage-weapon")
@@ -266,6 +298,10 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 				_check.eq(label.get_visible_line_count(), label.get_line_count(), "selected explanation has no hidden lines")
 		_check.ok(viewport.encloses(ui.build_panel.upgrade_button.get_global_rect()), "upgrade has a visible native hit area")
 		_check.eq(ui.build_panel._slot_buttons.size(), Content.MAX_WEAPON_SLOTS, "all six weapon slots remain in view")
+		for card: PanelContainer in ui.build_panel._cards:
+			for label: Label in card.find_children("*", "Label", true, false):
+				_check.ok(card.get_global_rect().grow(1).encloses(label.get_global_rect()), "slot name, level and material refund stay inside their paper")
+				_check.eq(label.get_visible_line_count(), label.get_line_count(), "trade-in values have no hidden lines")
 	else:
 		for button: Button in ui.echo_panel.trait_buttons:
 			_check.ok(viewport.encloses(button.get_global_rect()), "named merge action stays inside the native canvas")

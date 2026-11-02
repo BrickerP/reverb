@@ -173,3 +173,26 @@ func test_passive_effect_numbers_wrap_instead_of_truncating(c: Check) -> void:
 	c.eq(effect.autowrap_mode, TextServer.AUTOWRAP_WORD_SMART, "narrow cards wrap the numbers")
 	c.ok(not effect.clip_text, "critical item values are never clipped")
 	card.free()
+
+
+func test_trade_in_keeps_grade_refund_and_confirmation_distinct(c: Check) -> void:
+	var sim := _sim()
+	sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	sim.player.weapon_investments[0] = 240
+	var offer := Offer.new()
+	offer.weapon = Content.weapon(&"smg")
+	offer.price = 24
+	sim.shop.offers[0] = offer
+	var ui := _open(sim)
+	var before := RunSnapshot.capture(sim)
+	ui._begin_replace(offer)
+	var refund := ui.build_panel._cards[0].find_child("TradeInValue", true, false) as Label
+	c.eq(refund.text, Loc.t("shop.refund_materials", [Shop.resale_for(sim, 0)]), "trade-in has a named currency value")
+	c.eq(refund.autowrap_mode, TextServer.AUTOWRAP_WORD_SMART, "large refunds wrap inside a slot")
+	c.ok(not ui.build_panel.upgrade_button.visible, "trade-in is a choice of slot, not a second purchase action")
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	c.ok(ui.workshop.visible, "choosing a slot previews the net transaction")
+	c.eq(RunSnapshot.capture(sim), before, "reading the replacement changes no resources")
+	ui.workshop.cancel_button.pressed.emit()
+	c.eq(RunSnapshot.capture(sim), before, "cancelling preserves the complete original run")
+	ui.free()
