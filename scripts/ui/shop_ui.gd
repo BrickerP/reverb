@@ -42,7 +42,9 @@ var _replacing: Offer
 var _replacing_index: int = -1
 var _connected_shop: Shop
 var _connected_sim: Sim
-var _weapon_detail := ""
+var equipment_button: Button
+var echoes_button: Button
+var _equipment_page := 0
 var _pending_feedback: Dictionary = {}
 var _feedback_epoch := 0
 var _refresh_generation := 0
@@ -88,13 +90,27 @@ func _ready() -> void:
 	dossier.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dossier.add_theme_constant_override("separation", 6)
 	columns.add_child(dossier)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	dossier.add_child(tabs)
+	equipment_button = Button.new()
+	echoes_button = Button.new()
+	for button: Button in [equipment_button, echoes_button]:
+		button.toggle_mode = true
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		WorkshopUi.fit_button(button, 16, 34.0)
+		tabs.add_child(button)
+	equipment_button.pressed.connect(show_equipment_page.bind(0))
+	echoes_button.pressed.connect(show_equipment_page.bind(1))
 	build_panel = BuildPanel.new()
 	build_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	build_panel.size_flags_stretch_ratio = 1.0
 	build_panel.replace_cancelled.connect(_cancel_replace)
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
-	build_panel.detail_changed.connect(_on_weapon_detail)
+	build_panel.selection_changed.connect(_rebuild_focus)
+	build_panel.stats_requested.connect(_open_build_stats)
+	build_panel.passives_requested.connect(_open_build_passives)
 	build_panel.workshop_requested.connect(_open_weapon_workshop)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
@@ -104,6 +120,7 @@ func _ready() -> void:
 	echo_panel.staple_requested.connect(_on_merge)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
+	echo_panel.visible = false
 	root.add_child(_build_footer())
 	workshop = WorkshopUi.new()
 	workshop.z_index = 10
@@ -158,6 +175,7 @@ func open(s: Sim) -> void:
 	UiTheme.animate_open(self, reduced_effects)
 	_replacing = null
 	_replacing_index = -1
+	_equipment_page = 0
 	refresh(true)
 	_fly_take_token()
 	_focus_card(0)
@@ -179,7 +197,6 @@ func close_session() -> void:
 	sim = null
 	_replacing = null
 	_replacing_index = -1
-	_weapon_detail = ""
 	_focused_offer = null
 	if _offer_lock != null:
 		_offer_lock.visible = false
@@ -285,6 +302,9 @@ func refresh(animate_echo: bool = false) -> void:
 	_say("")
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
+	equipment_button.text = Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS])
+	echoes_button.text = Loc.t("shop.echoes", [sim.bank.takes.size(), sim.echo_capacity()])
+	show_equipment_page(_equipment_page)
 	_sync_lock()
 	_rebuild_focus()
 	call_deferred("_flush_feedback_deferred", _feedback_epoch, _refresh_generation)
@@ -386,8 +406,21 @@ func _lock_focused() -> void:
 	_on_lock_offer(_focused_offer)
 
 
-func _on_weapon_detail(text: String) -> void:
-	_weapon_detail = text.replace("\n", " · ")
+func show_equipment_page(index: int) -> void:
+	_equipment_page = clampi(index, 0, 1)
+	build_panel.visible = _equipment_page == 0
+	echo_panel.visible = _equipment_page == 1
+	equipment_button.button_pressed = _equipment_page == 0
+	echoes_button.button_pressed = _equipment_page == 1
+	for button: Button in [equipment_button, echoes_button]:
+		var chosen := button.button_pressed
+		var paper := UiTheme.paper_panel(UiTheme.PAPER if chosen else UiTheme.SURFACE)
+		paper.content_margin_left = 10.0
+		paper.content_margin_right = 10.0
+		paper.content_margin_top = 4.0
+		paper.content_margin_bottom = 4.0
+		button.add_theme_stylebox_override("normal", paper)
+	_rebuild_focus()
 
 
 func _build_header() -> Control:
@@ -454,7 +487,7 @@ func _build_left() -> Control:
 	column.add_child(_build_supplier())
 	_offers_scroll = ScrollContainer.new()
 	_offers_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_offers_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	_offers_scroll.follow_focus = true
 	_offers_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_offers_scroll)
@@ -524,6 +557,7 @@ func _on_offer(o: Offer, card: OfferCard) -> void:
 	var result := sim.shop.apply(ShopResult.BUY, sim, o)
 	if result.ok:
 		if o.is_weapon():
+			_equipment_page = 0
 			build_panel.marked_slot = sim.player.weapons.size() - 1
 			sim.cue_slot = sim.player.weapons.size() - 1
 		refresh()
@@ -1363,6 +1397,7 @@ func _on_workshop_closed() -> void:
 	if _workshop_origin == &"echo" and echo_panel.merge_button != null:
 		echo_panel.merge_button.grab_focus()
 		return
+	show_equipment_page(0)
 	if not build_panel.focus_upgrade(_workshop_slot) and not build_panel.focus_slot(_workshop_slot):
 		_focus_card(0)
 
@@ -1376,7 +1411,7 @@ func _open_weapon_workshop(index: int) -> void:
 	var level := sim.player.level_at(index)
 	var choices: Array[Dictionary] = []
 	var refit := sim.shop.quote(ShopResult.UPGRADE, sim, null, index)
-	choices.append({"text": Loc.t("shop.upgrade", [refit.cost]), "value": &"refit", "disabled": not refit.ok})
+	choices.append({"text": Loc.t("shop.upgrade_materials", [level + 2, refit.cost]) if level < WeaponDef.MAX_LEVEL else Loc.t("shop.max_level"), "value": &"refit", "disabled": not refit.ok})
 	var combine_available := false
 	var combine_price := 0
 	for donor in sim.player.weapons.size():
@@ -1384,11 +1419,11 @@ func _open_weapon_workshop(index: int) -> void:
 		if combine_quote.ok or combine_quote.reason == &"poor":
 			combine_available = true
 			combine_price = combine_quote.cost
-	var combine_text := Loc.t("workshop.combine") + (" · %d" % combine_price if combine_available else "")
+	var combine_text := Loc.t("shop.combine_materials", [combine_price]) if combine_available else Loc.t("workshop.combine")
 	choices.append({"text": combine_text, "value": &"combine", "disabled": not combine_available, "hint": Loc.t("workshop.reason_duplicate")})
 	choices.append({"text": Loc.t("workshop.evolve"), "value": &"evolve", "disabled": sim.shop.evolution_choices(sim, index).is_empty()})
 	var sell := sim.shop.quote(ShopResult.SELL, sim, null, index)
-	choices.append({"text": Loc.t("shop.sell", [absi(sell.cost)]), "value": &"sell", "disabled": not sell.ok, "hint": Loc.t("shop.sell_last_reason") if not sell.ok else Loc.t("shop.sell_hint")})
+	choices.append({"text": Loc.t("shop.sell_materials", [absi(sell.cost)]), "value": &"sell", "disabled": not sell.ok, "hint": Loc.t("shop.sell_last_reason") if not sell.ok else Loc.t("shop.sell_hint")})
 	choices.append({"text": Loc.t("shop.core"), "value": &"stats"})
 	choices.append({"text": Loc.t("shop.items"), "value": &"passives"})
 	workshop.show_choices(Loc.weapon_name(weapon.id), build_panel._detail_text_for(weapon, level), choices, _on_weapon_workshop_action.bind(index))
@@ -1502,7 +1537,7 @@ func _open_combine_donors(host: int) -> void:
 	workshop.show_choices(Loc.t("workshop.combine"), Loc.t("workshop.combine_hint", [host + 1, Loc.weapon_name(sim.player.weapons[host].id)]), choices, func(value: Variant) -> void:
 		var donor := int(value)
 		var quote := sim.shop.combine_quote(sim, host, donor)
-		var confirms: Array[Dictionary] = [{"text": Loc.t("workshop.confirm_combine", [quote.cost]), "value": donor, "disabled": not quote.ok}]
+		var confirms: Array[Dictionary] = [{"text": Loc.t("shop.combine_materials", [quote.cost]), "value": donor, "disabled": not quote.ok}]
 		workshop.show_choices(Loc.t("workshop.combine"), Loc.t("workshop.combine_result", [host + 1, donor + 1, sim.player.level_at(host) + 2]), confirms, func(selected: Variant) -> void:
 			var result := sim.shop.combine_weapons(sim, host, int(selected))
 			if result.ok:

@@ -326,7 +326,7 @@ func test_clicking_an_empty_slot_does_not_buy_the_focused_weapon(c: Check) -> vo
 	c.eq(s.player.weapons.size(), 1, "a socket click does not buy the focused offer")
 	c.eq(s.player.materials, 300, "a socket click spends nothing")
 	var card := _card_for(ui, offer)
-	c.eq((card.find_child("GradeMark", true, false) as Label).text, WeaponDef.grade_mark(offer.weapon_level),
+	c.eq((card.find_child("GradeMark", true, false) as Label).text, Loc.t("shop.level", [offer.weapon_level + 1]),
 			"the offer shows the level a same-tier combine needs")
 	card.pressed.emit()
 	c.eq(s.player.weapons.size(), 2, "the offer card is the purchase")
@@ -374,8 +374,8 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 	s.shop.offers.append(offer)
 	var ui := _open(s)
 	var card := ui.offers_box.get_child(0) as OfferCard
-	var plate := card.find_child("OrderPlate", true, false) as Control
-	c.ok(plate != null and plate.get("kind") == AnomalyContract.RECRUIT, "the order card shows the recruit marks")
+	var plate := card.find_child("OrderObjective", true, false) as Label
+	c.ok(plate != null and plate.text == Loc.t("order.recruit.objective"), "the order card states the recruit objective without decoding marks")
 	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.objective")), "hovering the marks states the job")
 	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.desc")), "hovering the marks states the rule")
 	ui._arm_lock(offer)

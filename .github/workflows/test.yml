@@ -60,6 +60,7 @@ jobs:
         run: |
           ./tools/checked.sh --headless --path . --check-only --script res://tools/paper_action_probe.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/release_save_compat.gd
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/weapon_ui_probe.gd
 
       - name: Smoke test
         shell: bash
@@ -106,6 +107,17 @@ jobs:
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
         run: ./tools/checked.sh --headless --path . --import
+
+      - name: Verify readable weapons and native shop navigation
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_BUILD_COMMIT: ${{ github.sha }}
+          REVERB_UI_EVIDENCE_OUTPUT: ${{ github.workspace }}/shots/paper-actions/weapon-ui
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --script res://tools/weapon_ui_probe.gd
 
       - name: Archive public versions and write actual 0.17 and 0.18 saves
         env:

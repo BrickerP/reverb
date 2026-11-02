@@ -47,7 +47,7 @@ func test_sell_button_uses_quote_and_last_weapon_has_accessible_reason(c: Check)
 	var ui := _open(sim)
 	var quote := sim.shop.quote(ShopResult.SELL, sim, null, 1)
 	c.ok(quote.ok and quote.cost < 0, "mechanics exposes the sell refund quote")
-	c.eq(_sell_button(ui, 1).text, Loc.t("shop.sell", [absi(quote.cost)]),
+	c.eq(_sell_button(ui, 1).text, Loc.t("shop.sell_materials", [absi(quote.cost)]),
 			"sell label displays the authoritative quote")
 	ui._open_weapon_workshop(1)
 	ui.workshop.choice_buttons[3].pressed.emit()
@@ -77,7 +77,7 @@ func test_sale_refund_focus_and_audio_follow_committed_result_once(c: Check) -> 
 	c.eq(sim.player.materials, materials_before + absi(quote.cost),
 			"committed sale refunds the exact quoted materials")
 	c.ok(not ui.workshop.visible, "sale closes the workbench")
-	c.ok(ui.build_panel._upgrade_buttons[0].has_focus() or ui.undo_button.has_focus(), "sale restores a stable action focus")
+	c.ok(ui.build_panel.upgrade_button.has_focus() or ui.undo_button.has_focus(), "sale restores a stable action focus")
 	c.eq(audio.play_count(&"buy"), 1, "sale uses one existing transaction cue")
 	c.eq(audio.play_count(&"equipment_apply"), 0, "sale does not duplicate the purchase cue")
 	ui.undo_button.pressed.emit()

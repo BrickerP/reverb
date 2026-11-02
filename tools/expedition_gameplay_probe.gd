@@ -177,7 +177,7 @@ func _evolutions() -> void:
 		var ui: ShopUi = _main.shop_ui
 		var before := RunSnapshot.capture(sim)
 		var target := sim.shop.evolution_choices(sim, 0)[branch]
-		await _activate(ui.build_panel._upgrade_buttons[0])
+		await _activate(ui.build_panel.upgrade_button)
 		_check(ui.workshop.choice_buttons.size() == 2 and RunSnapshot.capture(sim) == before, "evolution_two_branch_selector_is_pure_%d" % branch)
 		await _shot("evolution_selector_%d" % branch)
 		await _activate(ui.workshop.choice_buttons[branch])

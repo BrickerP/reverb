@@ -39,7 +39,8 @@ func test_combine_actual_slot_entry_requires_result_confirmation_and_undo(c: Che
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
 	ui.build_panel._slot_buttons[0].pressed.emit()
-	c.ok(ui.workshop.visible, "slot enters workbench")
+	c.ok(not ui.workshop.visible, "slot inspects without a modal")
+	ui._open_weapon_workshop(0)
 	ui.workshop.choice_buttons[1].pressed.emit()
 	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(ShopState.capture(sim).to_dict(), before, "host and donor choices only preview")
@@ -58,12 +59,13 @@ func test_incompatible_combine_and_cancel_leave_inventory_unchanged(c: Check) ->
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
 	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui._open_weapon_workshop(0)
 	c.ok(ui.workshop.choice_buttons[1].disabled, "unmatched host has no combine action")
 	ui.workshop.choice_buttons[1].pressed.emit()
 	c.eq(ShopState.capture(sim).to_dict(), before, "disabled combine cannot mutate even if signaled")
 	ui.workshop.cancel_button.pressed.emit()
 	c.ok(not ui.workshop.visible, "cancel returns to the same equipment view")
-	c.ok(ui.build_panel._upgrade_buttons[0].has_focus(), "cancel restores the selected slot focus")
+	c.ok(ui.build_panel.upgrade_button.has_focus(), "cancel restores the selected slot focus")
 	ui.free()
 
 
@@ -124,7 +126,8 @@ func test_evolution_requires_explicit_branch_and_keeps_slot_selected(c: Check) -
 	sim.player.weapon_levels[1] = WeaponDef.MAX_LEVEL
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
-	ui.build_panel._upgrade_buttons[1].pressed.emit()
+	ui.build_panel._select(1)
+	ui.build_panel.upgrade_button.pressed.emit()
 	c.eq(ui.workshop.choice_buttons.size(), 2, "both final forms are concrete choices")
 	c.eq(ShopState.capture(sim).to_dict(), before, "branch chooser does not auto evolve")
 	var target := sim.shop.evolution_choices(sim, 1)[1]

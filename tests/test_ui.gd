@@ -44,7 +44,7 @@ func test_build_panel_can_evolve_a_maxed_weapon(c: Check) -> void:
 	s.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
 	s.player.materials = Shop.evolution_cost(s.player.weapons[0])
 	var ui := _open_shop(s)
-	ui.build_panel._upgrade_buttons[0].pressed.emit()
+	ui.build_panel.upgrade_button.pressed.emit()
 	c.ok(ui.workshop.visible, "evolution opens a branch choice")
 	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(s.player.weapons[0].id, &"twin_fangs", "build panel evolves the weapon")
@@ -58,10 +58,10 @@ func test_build_panel_can_upgrade_an_equipped_weapon(c: Check) -> void:
 	s.player.weapon_levels.clear()
 	s.player.add_weapon(Content.weapon(&"pistol"))
 	var ui := _open_shop(s)
-	c.eq(ui.build_panel._upgrade_buttons.size(), 1, "one upgrade button per slot")
+	c.ok(ui.build_panel.upgrade_button != null, "selected weapon has one explicit upgrade action")
 	var before := s.player.materials
 	var cost := Shop.upgrade_cost(s.player.weapons[0], 0)
-	ui.build_panel._upgrade_buttons[0].pressed.emit()
+	ui.build_panel.upgrade_button.pressed.emit()
 	c.eq(s.player.level_at(0), 1, "panel upgrade raises the slot level")
 	c.eq(s.player.materials, before - cost, "panel upgrade spends materials")
 	ui.free()

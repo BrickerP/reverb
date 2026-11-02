@@ -255,7 +255,9 @@ static func weapon_line(w: WeaponDef, level: int = 0) -> String:
 	if w.support_kind != &"":
 		return support_line(w, level)
 	var per_shot := number(w.damage * w.level_mult(level))
-	var line := t("weapon.burst_line", [per_shot, w.pellets, w.cooldown, int(w.reach)]) if w.pellets > 1 \
+	var count := maxi(1, w.pellets) * (maxi(1, w.burst_count) if w.attack_style == &"burst" else 1)
+	var line := t("weapon.burst_line", [per_shot, count, w.cooldown, int(w.reach)]) if count > 1 \
+			else t("weapon.tick_line", [per_shot, w.tick_interval, w.cooldown]) if w.attack_style in [&"line", &"ink", &"tape", &"orbit"] \
 			else t("weapon.line", [per_shot, w.cooldown, int(w.reach)])
 	if w.pierce >= 50:
 		line += " · " + t("weapon.pierce_all")
@@ -264,15 +266,49 @@ static func weapon_line(w: WeaponDef, level: int = 0) -> String:
 	return line
 
 
+static func weapon_upgrade(w: WeaponDef, level: int) -> String:
+	if level >= WeaponDef.MAX_LEVEL:
+		return t("shop.max_level")
+	var before := SupportSystem.weapon_profile(w, level, w.damage * w.level_mult(level))
+	var after := SupportSystem.weapon_profile(w, level + 1, w.damage * w.level_mult(level + 1))
+	match w.support_kind:
+		&"repair_station":
+			return t("weapon.upgrade_repair", [number(before["heal_hp"]), number(after["heal_hp"]),
+				number(before["repair_condition"]), number(after["repair_condition"]),
+				number(before["hp"]), number(after["hp"])])
+		&"paper_tree":
+			return t("weapon.upgrade_tree", [number(before["shield"]), number(after["shield"]),
+				number(before["energy"]), number(after["energy"]), number(before["hp"]), number(after["hp"])])
+		&"decoy":
+			return t("weapon.upgrade_decoy", [number(before["hp"]), number(after["hp"])])
+	var key := "weapon.upgrade_tick" if w.attack_style in [&"line", &"ink", &"tape", &"orbit"] else "weapon.upgrade_hit"
+	var line := t(key, [number(w.damage * w.level_mult(level)), number(w.damage * w.level_mult(level + 1))])
+	if w.id == &"stamp":
+		line += " · " + t("weapon.upgrade_radius", [int(w.mark_radius(level)), int(w.mark_radius(level + 1))])
+	return line
+
+
+static func weapon_combo(w: WeaponDef, weapons: Array[WeaponDef]) -> String:
+	if w.support_kind != &"":
+		return ""
+	var lines := PackedStringArray()
+	for profile: Dictionary in Combat.combo_profile(weapons):
+		var relevant := (w.pin_duration > 0.0 or w.family == &"press") if profile["id"] == &"pin_press" \
+				else (w.ink_duration > 0.0 or (w.family == &"arcane" and w.attack_style != &"ink"))
+		if relevant:
+			lines.append(combo_line(profile))
+	return " · ".join(lines)
+
+
 static func support_line(w: WeaponDef, level: int = 0) -> String:
-	var profile := SupportSystem.weapon_profile(w, level, w.damage)
+	var profile := SupportSystem.weapon_profile(w, level, w.damage * w.level_mult(level))
 	if profile.is_empty():
 		return weapon_desc(w.id)
 	return _support_text(w, profile, false)
 
 
 static func support_short(w: WeaponDef, level: int = 0) -> String:
-	var profile := SupportSystem.weapon_profile(w, level, w.damage)
+	var profile := SupportSystem.weapon_profile(w, level, w.damage * w.level_mult(level))
 	if profile.is_empty():
 		return weapon_desc(w.id)
 	return _support_text(w, profile, true)
