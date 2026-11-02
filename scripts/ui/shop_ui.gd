@@ -119,6 +119,7 @@ func _ready() -> void:
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
 	echo_panel.staple_requested.connect(_on_merge)
+	echo_panel.navigation_changed.connect(_rebuild_focus)
 	echo_panel.repair_requested.connect(_on_repair_echo)
 	dossier.add_child(echo_panel)
 	echo_panel.visible = false
@@ -670,10 +671,11 @@ func _on_evolve_weapon(index: int) -> void:
 		weapons[index] = final_weapon
 		levels[index] = WeaponDef.MAX_LEVEL
 		var dps := int(round(OfferCard.list_dps(weapons, levels, sim.player.stats)))
-		choices.append({"text": "%s · %s · %d · %s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), quote.cost, Loc.t("shop.take_dps", [dps])], "value": target,
+		choices.append({"text": "%s · %s · %s\n%s\n%s\n%s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), Loc.t("shop.price_materials", [quote.cost]), Loc.weapon_desc(target), Loc.t("shop.base_output", [Loc.weapon_summary(final_weapon, WeaponDef.MAX_LEVEL)]), Loc.t("shop.take_dps", [dps])], "value": target,
 			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + Loc.t("workshop.evolve_staple") + ((" · " + _drop_reason_text(quote.reason)) if not quote.ok else "")})
 	var weapon := sim.player.weapons[index]
 	var body := Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
+	body += "\n" + Loc.t("workshop.evolve_staple")
 	if blocked != &"":
 		body += "\n" + _drop_reason_text(blocked)
 	workshop.show_choices(Loc.t("workshop.evolve"), body, choices, func(value: Variant) -> void:

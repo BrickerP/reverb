@@ -50,8 +50,8 @@ func _init() -> void:
 		var surface := surface_source.duplicate() as InkStyleBox
 		surface.content_margin_left = 12.0
 		surface.content_margin_right = 12.0
-		surface.content_margin_top = 8.0
-		surface.content_margin_bottom = 8.0
+		surface.content_margin_top = 6.0
+		surface.content_margin_bottom = 6.0
 		add_theme_stylebox_override("panel", surface)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 5)
@@ -122,7 +122,7 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	for button: Button in find_children("*", "Button", true, false):
 		WorkshopUi.fit_button(button, 13, 28.0)
 	for button in _slot_buttons:
-		button.custom_minimum_size.y = 42.0
+		button.custom_minimum_size.y = 38.0
 
 
 
@@ -221,7 +221,7 @@ func _weapon_chips(pl: PlayerState, sim: Sim) -> Control:
 			grid.add_child(_weapon_card(pl.weapons[i], pl.level_at(i), i, pl, sim))
 		else:
 			var empty := _empty_target(&"empty_weapon", Loc.t("shop.empty_weapon", [i + 1]))
-			empty.custom_minimum_size = Vector2(0.0, 52.0)
+			empty.custom_minimum_size = Vector2(0.0, 44.0)
 			grid.add_child(empty)
 			if empty_drop_target == null:
 				empty_drop_target = empty
@@ -236,7 +236,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_apply_card_style(card, w, false)
 	var select := Button.new()
-	select.custom_minimum_size.y = 42.0
+	select.custom_minimum_size.y = 38.0
 	select.accessibility_name = Loc.weapon_name(w.id) + " · " + Loc.t("shop.level", [level + 1])
 	select.tooltip_text = _detail_text_for(w, level)
 	var face := HBoxContainer.new()
@@ -338,6 +338,10 @@ func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
 	target.custom_minimum_size = Vector2(0.0, 36.0)
 	var style := UiTheme.box(UiTheme.SURFACE, Color(UiTheme.EDGE, 0.35), 1, 18)
 	style.shape = InkStyleBox.Shape.TAG
+	style.content_margin_left = 6.0
+	style.content_margin_right = 6.0
+	style.content_margin_top = 5.0
+	style.content_margin_bottom = 5.0
 	target.add_theme_stylebox_override("panel", style)
 	var label := UiTheme.label(text, 12, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -429,7 +433,7 @@ func _select(index: int) -> void:
 	detail_stats.text = Loc.t("shop.base_output", [Loc.weapon_summary(w, level)])
 	detail_combo.text = Loc.weapon_combo(w, _sim.player.weapons)
 	detail_combo.visible = not detail_combo.text.is_empty()
-	detail_upgrade.text = Loc.t("shop.upgrade_preview", [Loc.weapon_upgrade(w, level)])
+	detail_upgrade.text = Loc.weapon_upgrade(w, level)
 	detail_reason.text = ""
 	if level >= WeaponDef.MAX_LEVEL:
 		upgrade_button.text = Loc.t("workshop.evolve") if not w.evolution_options.is_empty() else Loc.t("shop.max_level")

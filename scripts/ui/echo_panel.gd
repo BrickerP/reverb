@@ -6,6 +6,7 @@ signal merge_workbench_requested
 signal detail_requested(take: EchoTake)
 signal repair_requested(take: EchoTake)
 signal staple_requested(host: EchoTake, donor: EchoTake, choice: StringName)
+signal navigation_changed
 
 var discard_buttons: Array[Button] = []
 var repair_buttons: Array[Button] = []
@@ -132,6 +133,11 @@ func trait_button(choice: StringName) -> Button:
 
 
 func _render() -> void:
+	_render_rows()
+	navigation_changed.emit()
+
+
+func _render_rows() -> void:
 	_finish_new_row_animation()
 	UiTheme.clear(_box)
 	discard_buttons.clear()
@@ -272,7 +278,10 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	var line := HBoxContainer.new()
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_theme_constant_override("separation", 5)
-	row.add_child(line)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 5)
+	row.add_child(body)
+	body.add_child(line)
 	var preview := PathPreview.new()
 	preview.custom_minimum_size = Vector2(45.0, 35.0)
 	preview.setup(take, is_new and _animate_new and not reduced_effects)
@@ -324,7 +333,10 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	discard_buttons.append(discard)
 	line.add_child(discard)
 	if _merge_mode and take.uid == _host_uid and _spent_uid != 0:
-		_add_marks(line, take)
+		var marks := HBoxContainer.new()
+		marks.add_theme_constant_override("separation", 5)
+		body.add_child(marks)
+		_add_marks(marks, take)
 	if _merge_mode and take.uid == _spent_uid:
 		row.modulate = Color(1.0, 0.94, 0.78)
 	row.set_meta(&"take_identity", preview)
@@ -420,7 +432,8 @@ func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
 		var button := Button.new()
 		var action := Loc.t("echo.staple.skill") if choice == &"skill" \
 				else (Loc.t("echo.staple.repair") if choice == &"repair" else Loc.t("echo.staple.power"))
-		button.text = "%s · %d" % [action, quote.cost]
+		button.text = "%s\n%s" % [action, Loc.t("shop.price_materials", [quote.cost])]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.disabled = not quote.ok
 		button.set_meta(&"trait", choice)
 		button.tooltip_text = Loc.t("workshop.trait_skill_desc") if choice == &"skill" \

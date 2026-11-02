@@ -84,6 +84,8 @@ func _run() -> void:
 			await _capture(ui, extent, "echoes")
 			ui.echo_panel.merge_button.pressed.emit()
 			ui.echo_panel.select_take(sim.bank.takes[1])
+			ui.echo_panel.select_take(sim.bank.takes.back())
+			_check.eq(ui.echo_panel.trait_buttons.size(), 3, "merge evidence includes all three actual decisions")
 			await _settle()
 			await _capture(ui, extent, "echo-merge")
 			ui.close_session()
@@ -158,7 +160,7 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 	for control: Control in [ui.build_panel, ui.echo_panel, ui.start_button,
 			ui.reroll_button, ui.undo_button, ui.equipment_button, ui.echoes_button]:
 		if control.is_visible_in_tree():
-			_check.ok(viewport.encloses(control.get_global_rect()), "%s remains inside the native canvas" % control.name)
+			_check.ok(viewport.encloses(control.get_global_rect()), "%s %s at %s stays in %s" % [control.name, control.get("text") if control is Button else "panel", control.get_global_rect(), extent])
 	for card: OfferCard in ui.offers_box.get_children():
 		var purchase := card.find_child("PurchaseAction", true, false) as Label
 		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
