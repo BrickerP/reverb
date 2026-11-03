@@ -115,7 +115,7 @@ func _run() -> void:
 		"capture": {"fps": 60, "speed": 1.0, "audio": "real unmuted GameAudio master mix",
 			"simulation": "one Sim.step(1/60) per native frame; Main physics suppressed",
 			"visual_clock": "native process plus actual frame_post_draw; no manual force_draw",
-			"staging": "authored L-shaped take routes and phase offsets; stationary nonlethal high-HP targets; combo cooldown stagger; skill charge starts at 96 then an actual scrap pickup adds 4; final-cohort case stages the earlier plan as consumed",
+			"staging": "authored L-shaped take routes and phase offsets; stationary nonlethal high-HP targets; measured action cases retain the last unmodified natural SpawnEvent at its original future time; combo cooldown stagger; skill charge starts at 96 then an actual scrap pickup adds 4; final-cohort case stages the earlier plan as consumed",
 			"scope": "presentation fixture, not human input or normal campaign/balance evidence",
 			"route_forecast": "forecast compared to 120 actual future Sim steps on a strict restored copy; original state remains unchanged",
 			"reduced": _variant == "reduced", "movie": "continuous native CLI MovieMaker including audio"}}, true)
@@ -167,7 +167,7 @@ func _begin_case(name: String, role: StringName, weapons: Array[StringName]) -> 
 	sim.player.cooldowns.clear()
 	for weapon: StringName in weapons:
 		sim.player.add_weapon(Content.weapon(weapon))
-	_clear_budget(sim)
+	_retain_final_arrival(sim)
 	sim.shot_fired_info.connect(_on_shot)
 	sim.combo_triggered.connect(_on_combo)
 	sim.echo_retired.connect(_on_retirement)
@@ -180,8 +180,12 @@ func _begin_case(name: String, role: StringName, weapons: Array[StringName]) -> 
 	_audio_before = _audio_counts()
 
 
-func _clear_budget(sim: Sim) -> void:
+func _retain_final_arrival(sim: Sim) -> void:
+	if not _require(not sim._plan.is_empty(), "measured fixture retains an actual planned future arrival"):
+		return
+	var arrival: SpawnEvent = sim._plan.back()
 	sim._plan.clear()
+	sim._plan.append(arrival)
 	sim._plan_idx = 0
 	sim.wave_duration = 60.0
 	sim.enemies.clear()
@@ -236,7 +240,7 @@ func _route_case() -> bool:
 		sim.bank.add(take)
 		_route_uids.append(take.uid)
 	sim.start_wave(2)
-	_clear_budget(sim)
+	_retain_final_arrival(sim)
 	_add_target(sim.player.pos + Vector2(220.0, 80.0))
 	if _failed:
 		return false
@@ -369,7 +373,7 @@ func _retirement_case() -> bool:
 	sim.bank.add(take)
 	_retire_uid = take.uid
 	sim.start_wave(2)
-	_clear_budget(sim)
+	_retain_final_arrival(sim)
 	_target = _add_target(sim.player.pos + Vector2(150.0, 20.0))
 	if _target == null:
 		return false
@@ -532,6 +536,14 @@ func _finish_case(first: int, staging: Dictionary) -> bool:
 		audio_delta += int(audio_after[cue]) - int(_audio_before.get(cue, 0))
 	if not _require(audio_delta > 0, "real case events reached bound GameAudio routes"):
 		return false
+	var sim: Sim = _main.sim
+	if _case != "finite_assault_close":
+		if not _require(sim.phase == Sim.Phase.WAVE and sim._plan_idx < sim._plan.size(),
+				"measured action remains in its actual encounter with a future arrival"):
+			return false
+		staging["retained_arrival"] = {"enemy_id": String(sim._plan[sim._plan_idx].def.id),
+			"time": sim._plan[sim._plan_idx].time, "wave_time": sim.wave_time,
+			"unmodified_natural_event": true}
 	_cases.append({"name": _case, "first_native_frame": first, "last_native_frame": _native_frames,
 		"frames": _native_frames - first, "staging": staging, "events": _counts.duplicate(true),
 		"audio_play_counts_before": _audio_before.duplicate(true), "audio_play_counts_after": audio_after,
