@@ -237,8 +237,8 @@ func test_reduced_effects_keeps_arrival_status_without_animation(c: Check) -> vo
 	_root().add_child(panel)
 	panel.refresh(sim, true)
 	var new_badges := 0
-	for label: Label in panel.find_children("*", "Label", true, false):
-		if label.text == "[%s]" % Loc.t("shop.new"):
+	for tile: Control in panel._takes_box.get_children():
+		if bool(tile.get_meta(&"new_copy", false)):
 			new_badges += 1
 	c.eq(new_badges, 1, "reduced mode keeps the real arriving copy badge")
 	c.eq(panel._new_row_tween, null, "arrival status does not require a motion tween")

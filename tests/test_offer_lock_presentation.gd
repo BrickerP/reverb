@@ -143,8 +143,10 @@ func test_offer_states_keep_lock_boundary_and_full_explanation(c: Check) -> void
 	c.ok(full_card.swap_button != null, "full-slot offer can be replaced")
 	c.ok(full_card.accessibility_description.contains(Loc.t("shop.full_reason")),
 			"full-slot accessible description explains replacement")
-	c.eq(full_card.tooltip_text, Loc.t("shop.full_reason"),
-			"full-slot tooltip carries the complete reason behind the short badge")
+	full_ui.inspection.pointer_enabled = true
+	full_card.mouse_entered.emit()
+	c.ok(str(full_ui.inspection._payload["rules"][0]["body"]).contains(Loc.t("shop.full_reason")),
+			"tertiary inspection carries the complete replacement reason")
 	c.eq(full_card._get_drag_data(_nested_center(full_card, full_card.swap_button)), null,
 			"drag beginning over Replace never starts the offer drag")
 	_press_lock(full_ui, 0)

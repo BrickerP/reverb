@@ -225,12 +225,13 @@ func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var selected := _merge_mode and take.uid in [_host_uid, _spent_uid]
 	var ink := UiTheme.WARN if take.uid == _spent_uid else UiTheme.ACCENT
-	var style := UiTheme.box(UiTheme.CARD.lerp(take.tint(), 0.09), ink, 3 if selected else 0, 16)
+	var style := UiTheme.box(UiTheme.CARD.lerp(take.tint(), 0.09), ink, 3 if selected else (2 if is_new else 0), 16)
 	style.content_margin_left = 3
 	style.content_margin_right = 3
 	style.content_margin_top = 3
 	style.content_margin_bottom = 3
 	row.add_theme_stylebox_override("panel", style)
+	row.set_meta(&"new_copy", is_new)
 	var identity := Button.new()
 	identity.custom_minimum_size = Vector2(0, 104)
 	identity.set_meta(&"echo_uid", take.uid)
