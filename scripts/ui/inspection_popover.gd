@@ -22,6 +22,7 @@ var _definition_box: VBoxContainer
 var _payload: Dictionary = {}
 var _generation := 0
 var _leave_time := 0.0
+var _rule_leave_time := 0.0
 var _term_source: Control
 
 
@@ -58,6 +59,8 @@ func present(source: Control, payload: Dictionary, pin: bool = false) -> void:
 		return
 	_generation += 1
 	var generation := _generation
+	if _ignored_source != source.get_instance_id():
+		_ignored_source = 0
 	_source = source
 	_payload = payload
 	pinned = pin
@@ -145,6 +148,7 @@ func reveal_rule(index: int, source: Control) -> void:
 	definition_body = _text(str(rules[index]["body"]), 14)
 	_definition_box.add_child(definition_body)
 	_term_source = source
+	_rule_leave_time = 0.0
 	definition.show()
 	definition.reset_size()
 	_place()
@@ -153,6 +157,11 @@ func reveal_rule(index: int, source: Control) -> void:
 func _emit_action(action: StringName, generation: int) -> void:
 	if visible and generation == _generation:
 		action_requested.emit(action)
+
+
+func source_left(source: Control) -> void:
+	if is_instance_valid(source) and _ignored_source == source.get_instance_id():
+		_ignored_source = 0
 
 
 func close_inspection() -> void:
@@ -188,9 +197,15 @@ func _process(delta: float) -> void:
 		reset()
 		return
 	_place()
+	var point := get_global_mouse_position()
+	if definition.visible:
+		var over_rule := is_instance_valid(_term_source) and _term_source.get_global_rect().has_point(point)
+		var rule_focus := focus_enabled and get_viewport().gui_get_focus_owner() == _term_source
+		_rule_leave_time = 0.0 if over_rule or rule_focus or definition.get_global_rect().has_point(point) else _rule_leave_time + delta
+		if _rule_leave_time > 0.2:
+			definition.hide()
 	if pinned:
 		return
-	var point := get_global_mouse_position()
 	var over := _source.get_global_rect().has_point(point) or sheet.get_global_rect().has_point(point) \
 			or (definition.visible and definition.get_global_rect().has_point(point))
 	var keyboard := focus_enabled and get_viewport().gui_get_focus_owner() == _source

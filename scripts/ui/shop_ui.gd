@@ -1500,6 +1500,8 @@ func _bind_inspection(source: Control, kind: StringName, reference: Variant, pin
 		source.mouse_entered.connect(hover)
 		source.focus_entered.connect(_inspection_focus.bind(source))
 		source.gui_input.connect(_inspection_source_input.bind(source))
+		source.mouse_exited.connect(inspection.source_left.bind(source))
+		source.focus_exited.connect(inspection.source_left.bind(source))
 		if pin_on_press and source is Button:
 			(source as Button).pressed.connect(_inspection_primary.bind(source))
 
@@ -1614,7 +1616,7 @@ func _inspection_content(kind: StringName, reference: Variant) -> Dictionary:
 			"summary": Loc.t("inspection.copy_summary"), "facts": Loc.t("inspection.copy_facts", [ceili(take.condition), seconds]),
 			"rules": [{"title": Loc.t("inspection.wear"), "body": wear_rule},
 			{"title": Loc.t("inspection.skill"), "body": Loc.echo_profile(profile, true)}],
-			"actions": [{"text": Loc.t("workshop.repair", [quote.cost]), "action": &"repair", "disabled": not quote.ok},
+			"actions": [] if echo_panel.is_merging() else [{"text": Loc.t("workshop.repair", [quote.cost]), "action": &"repair", "disabled": not quote.ok},
 			{"text": Loc.t("shop.discard"), "action": &"discard"}]}
 	if kind == &"item":
 		var item := Content.item(StringName(reference))
@@ -1663,13 +1665,20 @@ func _on_inspection_action(action: StringName) -> void:
 		var take := _inspection_take(int(reference))
 		if take == null:
 			return
+		if action in [&"repair", &"discard"] and echo_panel.is_merging():
+			return
 		match action:
 			&"repair": _on_repair_echo(take)
 			&"discard": _on_discard(take)
 			&"details": echo_panel.detail_requested.emit(take)
 	elif action == &"details":
 		if kind in [&"weapon", &"upgrade"]:
-			_open_weapon_workshop(int(reference))
+			var index := int(reference)
+			if build_panel.replacing:
+				workshop.show_choices(Loc.weapon_name(sim.player.weapons[index].id),
+					build_panel._detail_text_for(sim.player.weapons[index], sim.player.level_at(index)), [], Callable())
+			else:
+				_open_weapon_workshop(index)
 		else:
 			_workshop_origin = &"order" if kind == &"offer" else &"weapon"
 			_workshop_slot = sim.shop.offers.find(reference) if kind == &"offer" else build_panel._selected
@@ -1691,6 +1700,8 @@ func _open_echo_details(take: EchoTake) -> void:
 	var quote := sim.shop.echo_repair_quote(sim, take)
 	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.repair", [quote.cost]), "value": &"repair", "disabled": not quote.ok},
 		{"text": Loc.t("shop.discard"), "value": &"discard"}]
+	if echo_panel.is_merging():
+		choices.clear()
 	workshop.show_choices(str(info["title"]), "\n".join(lines), choices, func(value: Variant) -> void:
 		if StringName(value) == &"repair":
 			_on_repair_echo(take)

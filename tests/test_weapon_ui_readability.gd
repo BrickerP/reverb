@@ -253,3 +253,36 @@ func test_new_weapon_is_selected_and_old_upgrade_controls_are_inert(c: Check) ->
 	ui.undo_button.pressed.emit()
 	c.eq(ui.build_panel.marked_slot, -1, "Undo clears the purchase cue")
 	_release(ui)
+
+
+func test_inspection_reopens_after_leaving_and_nested_rules_collapse(c: Check) -> void:
+	var sim := _sim()
+	var ui := _open(sim)
+	var source := ui.build_panel._slot_buttons[0]
+	source.pressed.emit()
+	ui.inspection.rule_buttons[0].focus_entered.emit()
+	c.ok(ui.inspection.definition.visible, "nested rule can be revealed")
+	ui.inspection.focus_enabled = false
+	ui.inspection.details_button.grab_focus()
+	ui.inspection._process(0.3)
+	c.ok(not ui.inspection.definition.visible and ui.inspection.pinned, "leaving a rule collapses only the third layer")
+	ui.inspection.close_inspection()
+	c.ok(not ui.inspection.visible, "close returns to the visual primary layer")
+	source.focus_exited.emit()
+	ui.inspection.focus_enabled = true
+	source.focus_entered.emit()
+	c.ok(ui.inspection.visible, "returning to a source can inspect it again")
+	_release(ui)
+
+
+func test_merge_inspection_cannot_discard_its_pending_participants(c: Check) -> void:
+	var sim := _sim()
+	_take(sim, 30)
+	_take(sim, 60)
+	var ui := _open(sim)
+	ui.echo_panel.merge_button.pressed.emit()
+	var before := RunSnapshot.capture(sim)
+	ui._request_inspection(ui.echo_panel.copy_buttons[0], true)
+	c.eq(ui.inspection.action_buttons.size(), 0, "merge inspection has no competing repair or discard transaction")
+	c.eq(RunSnapshot.capture(sim), before, "opening merge inspection preserves both participants")
+	_release(ui)
