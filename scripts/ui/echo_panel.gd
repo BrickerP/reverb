@@ -196,7 +196,7 @@ func _render_rows() -> void:
 	last_new_row = null
 	last_new_tint = Color.WHITE
 	for take: EchoTake in newest.slice(page * page_size, (page + 1) * page_size):
-		var is_new := take.wave == sim.wave and take == sim.bank.takes.back()
+		var is_new: bool = take.wave == sim.wave and take == sim.bank.takes.back()
 		var row := _row(take, sim, is_new)
 		_takes_box.add_child(row)
 		if is_new:

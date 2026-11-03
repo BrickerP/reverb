@@ -125,7 +125,8 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	_selected = clampi(selected_before, 0, maxi(0, sim.player.weapons.size() - 1))
 	_select(_selected)
 	for button: Button in find_children("*", "Button", true, false):
-		WorkshopUi.fit_button(button, 13, 28.0)
+		if not _slot_buttons.has(button) and not passive_buttons.has(button):
+			WorkshopUi.fit_button(button, 13, 28.0)
 	for button in _slot_buttons:
 		button.custom_minimum_size.y = 112.0 if replacing else 78.0
 
