@@ -16,7 +16,7 @@ Every row maps a real entry to authoritative behavior and an executable check. N
 | 10 Echo merge | Host route/key work retained; donor skill/repair/power choices with pure preview and exact undo | `test_echo`, `test_shop`, `test_echo_work` |
 | 11 Full stock | Full inventory still rolls weapons; replacement names exact target and net cost | `test_shop`, native full-inventory replacement |
 | 12 Reroll | Current/next authoritative prices visible; one charge per action | `test_shop_ui`, native reroll |
-| 13 Tail pressure | Spawns remain active through final encounter seconds under unchanged caps | `test_expedition`, `test_wave_director` |
+| 13 Tail pressure | Finite final cohort supplies pressure under unchanged caps; cleared cohorts can advance early, and full clear can clock out early | `test_expedition`, `test_wave_director` |
 | 14 Role mechanics | Six distinct100-energy actions; rewind cannot duplicate key work | `test_character`, `test_echo_work`, native role inputs |
 | 15 Large world |2400×1200 camera world; native960 camera field adapts while actor pixels retain size | `test_world_arena`, native full-size screenshots |
 | 16 Permanent Echo | Any retained route/utility selectable, explicit overwrite, actual normalized next-run preview | `test_echo_archive`, `test_closeout_main`, native archive |

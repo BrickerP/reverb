@@ -46,6 +46,20 @@ func test_enemy_types_unlock_by_wave(c: Check) -> void:
 	c.ok(brutes > 0, "brutes appear in later waves")
 
 
+func test_finite_cohort_boundaries_cover_every_planned_enemy_once(c: Check) -> void:
+	for count in [1, 2, 3, 4, 5, 8, 23]:
+		var cursor := 0
+		var covered := 0
+		while cursor < count:
+			var end := WaveDirector.cohort_end(cursor, count)
+			c.ok(end > cursor and end <= count, "a nonempty cohort stays inside its finite plan")
+			for index in range(cursor, end):
+				c.eq(WaveDirector.cohort_index(index, count), WaveDirector.cohort_index(cursor, count), "the entire contiguous cohort has one identity")
+				covered += 1
+			cursor = end
+		c.eq(covered, count, "small and uneven budgets neither repeat nor omit enemies")
+
+
 func test_elites_start_at_wave_ten_and_never_replace_the_boss(c: Check) -> void:
 	for wave in range(1, WaveDirector.ELITE_START_WAVE):
 		for e in WaveDirector.plan(wave, 5):

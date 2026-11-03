@@ -614,12 +614,15 @@ static func _life(data: Dictionary) -> float:
 
 
 static func draw_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Array[Dictionary],
-		explosions: Array[Dictionary], reduced: bool = false) -> void:
+		explosions: Array[Dictionary], reduced: bool = false, accented: bool = false) -> void:
 	_last_feedback = {"muzzles": 0, "hits": 0, "blasts": 0}
 	if ci == null:
 		return
 	var muzzle_limit := 10 if reduced else MAX_MUZZLE_MARKS
 	var hit_limit := 16 if reduced else MAX_HIT_MARKS
+	if accented:
+		muzzle_limit = maxi(4, int(muzzle_limit / 2))
+		hit_limit = maxi(8, int(hit_limit / 2))
 	for index in range(maxi(0, muzzles.size() - muzzle_limit), muzzles.size()):
 		var data: Dictionary = muzzles[index]
 		var t := _life(data)

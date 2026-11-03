@@ -1,107 +1,37 @@
-# 《回响》/ Take Stack 0.15 设计
+# Take Stack — current game design
 
-本文描述 0.15 开发版的当前规则。权威接口见 [INTERFACES.md](INTERFACES.md)，20 项验收映射见 [closeout-acceptance.md](docs/closeout-acceptance.md)。
+The player works through a three-act expedition in the Recycling Bureau. Movement and automatic weapons create recordings; those Echoes carry earlier routes and equipment into later encounters. The player decides which past selves to keep, repair, bind or retire. Work orders, machines and actual rescued colleagues give those decisions consequences beyond kill counts.
 
-## 核心循环
+Exact runtime rules and ownership live in [INTERFACES.md](INTERFACES.md). That contract and the implementation are authoritative; this document describes player-facing intent.
 
-玩家在废件回收局完成三幕远征。每一场由固定世界内的走位、自动攻击、限量支援、世界交互和工作单目标组成；战后进入商店，整理装备与回响，再决定下一场承担什么任务。
+## Position makes the recording useful
 
-设计支柱：
+Each Echo follows its actual recording and responds to current enemies with its recorded build. Its next two seconds appear as cutting dashes on the floor. These show upcoming turns and known pauses, giving the player enough information to arrange crossfire, approach support, or exploit a useful old position. Selection improves contrast without hiding the other bodies' routes.
 
-1. **空间必须产生决定。** 2400×1200 世界、机器掩体、跟随镜头、攻击预警和任务交互都使用真实模型几何；HUD 不改变世界缩放。
-2. **经济必须给出真实替代。** 同级装配用供体换升级；现金改装不消耗供体但刻意昂贵；信用只在玩家明确购买时产生债务。
-3. **过去必须有成本。** 回响会磨损，占用容量；合并保留宿主路线，只购买一种供体特质；跨局档案也占用正常容量并被开局预算压平。
-4. **提示必须与结果同源。** Boss 预警、交互提示、主动技状态、商店报价和合并预览都读取权威规则，不在 UI 复制伤害、价格或可用性判断。
-5. **所有增长必须有界。** 敌人、掉落、支援、弹道、表现快照、撤销和存档对象都有硬上限。
+The route is information, not another command system. Roles retain their own rewind, swap, anchor and sacrifice mechanics. Active retirement spends the actual copy; natural wear remains a separate outcome. Merge retains the host's route and equipment while transferring one explicit donor contribution. Permanent archives use the same bounded opening normalization as deployment.
 
-## 三幕远征
+## Good play can finish the work early
 
-普通主线共 12 场，每幕四场：
+Ordinary encounters contain three finite groups. Clearing the current group earns a short breather and can bring the next one forward. Clearing all planned pressure can end the shift before its survival deadline. The deadline remains the alternative survival condition, and Boss encounters still end through their actual defeat.
 
-| 场次 | 幕末 Boss | 锁定攻击 |
-|---|---|---|
-| 4 | 监工 / Foreman | 1.1 秒预警后，以目标点为中心的压印 |
-| 8 | 收集者 / Collector | 0.95 秒锁向后沿线冲锋 |
-| 12 | 悖论体 / Paradox | 1.1 秒预警后，以目标点为中心的十字裁切；保留真实分裂机制 |
+Accepted work retains its promised opportunity. An unfinished order, pending negotiation, carried document or signed active inspection prevents automatic early departure. Natural world opportunities do not silently become mandatory work.
 
-普通场时长为 `min(60, 24 + 3 × (stage - 1))` 秒。敌人预算为 `min(360, 10 + 8 × stage)`，现金掉落上限为 `min(300, 24 + 6 × stage)`。第三段在最后时刻继续补压，但总敌人数最多 96，其中普通敌人最多 94，为 Boss/碎片保留 2 个槽位；待生成队列最多 24。容量不足时 Boss 与分裂体重试，不能被静默抹掉。
+The spawn plan owns the finite budget, including purchased-order additions. Arrivals retain their warning and retry at capacity. Early completion does not jump the simulation clock, invent drops or pay a completion subsidy. Actual shorter combat also preserves Echo condition; that benefit is part of balance evaluation.
 
-每场三段进攻占 0–24%、36–60%、72–100%，中间保留喘息。出生先显示 0.8 秒预警。胜利后可进入无尽或 Boss Rush：二者从 12 场基线继续，每四场出现 Boss，即 16、20、24……。
+## Results deserve a distinct beat
 
-## 工作单与世界交互
+Routine weapon fire stays material-specific and restrained. Real combo completion, player damage, successful blocking, skill readiness, machine repair, rescue, retirement and Boss phase changes receive distinct emphasis. Concurrent copies cannot fill every audio voice or continuously restart the visual accent.
 
-商店每次提供六件货：两把武器、两件被动、两张互不相同的工作单。工作单通过同一报价与购买事务进入下一场；同时只能持有一张。新单替换旧单需要明确确认，差价、活动单、任务状态、债务和报价状态都进入同一次撤销。
+Key moments use a short local paper impression, authored body reactions and restrained music ducking. Ground warnings, attack geometry and the player remain readable. Reduced Effects preserves useful route and danger information. No death coaching or failure-recap system is added.
 
-| 工作单 | 权威目标 | 路线影响 |
-|---|---|---|
-| salvage | 亲自交互 3 个零件 | 增加收益倾向 |
-| audit | 激活 2 台会产生危险区的终端 | 累计审计；两次成功优先释放结局 |
-| repair | 关闭 1 台故障压机 | 增加互助倾向 |
-| rescue | 在敌人接触摧毁前救出 1 个目标 | 增加互助倾向 |
-| recruit | 击倒 Boss 后在 8 秒内谈判 | 增加互助倾向并生成一名同伴 |
-| credit | 获得 30 材料并背负 40 债务，击杀 8 个目标 | 增加收益倾向 |
+## Preparation has real alternatives
 
-`E / X` 使用最近的可用交互物。压机预警后伤害玩家、敌人和支援；传送带推动范围内单位；回收机花 8 材料恢复 6 生命和 30 能量。目标提示、距离、价格与冷却由模拟层统一返回。
+The shop offers weapons, passives and work orders. Assembly trades a duplicate for grade and space; cash refit is the expensive stable alternative; evolution is an explicit branch choice. Purchase and replacement quote actual costs and preserve atomic Undo.
 
-信用单是唯一主动增加债务的路径。普通任务失败不会在已支付成本之外新增金融债务。每场结算最多从现有材料中偿还 `min(6 + floor(stage / 2), debt)`；仍欠债时不能再次取得信用，也不能把回响写入跨局档案。
+Primary shop views are visual. Real weapon art and Echo paper dolls carry names, essential costs and wear. Hover/focus exposes short facts, deeper rules remain intentional inspection, and keyboard/controller access follows the same hierarchy.
 
-## 角色主动技与拾取
+## The bureau remembers actual outcomes
 
-六名角色都使用 0–100 能量槽。手动拾取材料获得现金，并补充 `4 × min(value, 5)` 能量，因此单次最多 20；支援代拾和波末自动结算不算玩家输入。技能成功后消耗 100 能量并进入 6 秒冷却，失败保持原状态。
+Repair and rescue address people and faults that already exist. Credit creates explicit debt; ordinary failure creates no surprise loan. Final departure is an explicit choice involving actual surviving workers and retained recordings. Debt, clearance and exit choice are separate facts.
 
-| 角色 | 主动技 |
-|---|---|
-| looper | 回到短期历史位置，将回响播放倒退 2 秒并清空本体武器冷却 |
-| solo | 沿朝向冲刺 220，伤害路径敌人并获得 0.8 秒格挡 |
-| mirror | 与所选回响交换位置，保留 2 秒锚点 |
-| conductor | 在所选回响处放置 4 秒锚点，释放 3 次有限接力脉冲 |
-| mender | 在当前位置放置有限生命、有限次数的修补站 |
-| overloader | 报废所选回响，并按其当前耐久缩放强化压印爆发 |
-
-角色主动技使用 `Shift / LB`，与 `Space / RB` 的回响主动报废完全独立。
-
-## 装备、装配与支援
-
-武器内容共 35 个配置：18 把基础武器、每家族两条分支构成的 12 把终极武器，以及 5 把支援武器。六个家族仍是 sidearm、scatter、marksman、arcane、press、salvage；支援武器通过 carrier、role、school、cost 等元数据描述，不被强行抹平成家族奖励。
-
-武器等级为 0–3，实际伤害倍率固定为 `[1.0, 1.8, 3.2, 5.5]`。报价在阶段系数外按 `1.65^grade` 增长。第 5 场起，第一件武器报价会优先尝试匹配玩家已持武器的同等级版本，使高等级装配可到达，但高价角色并不保证当场买得起配对与装配，跨场存钱是刻意保留的机会成本。
-
-装配要求同 ID、同等级、非满级：宿主升一级，供体被消耗，供体的真实投入与装配费都进入宿主账本，并空出一个装备槽。相对两件装配前的即时总火力，0→1、1→2、2→3 分别保留约 90%、88.9%、85.9%；这是用少量当前火力换槽位和更强宿主。卖出和满槽替换只按真实已投入价值计算，不把免费等级变成现金。现金改装保留当前槽位、无需供体，成本高于对应配对报价加装配费，是稳定且有意昂贵的替代。
-
-每把基础武器拥有两个明确终极分支；选择、费用、满级和三件同族条件都由 Shop 验证。进化后成品保留等级 3 与原有实际投入账本，只追加真实分支费用，不重置到等级 0。UI 必须先显示分支并让玩家确认，不能默认选第一项。
-
-支援单位上限为 12，招募同伴上限为 1。每个单位有 UID、位置、生命、寿命、冷却、来源 token 与武器 ID；敌人接触、危险区、压机和 Boss 攻击都能伤害它们。纸猎犬攻击并拾取普通材料，哨戒炮发射有界弹丸，修补站用有限次数修复单位与回响，纸树用四次供给补充护盾/能量，诱饵改变敌人目标。任何路径都不制造免费现金。
-
-## 回响、合并与档案
-
-回响仍保存路线、武器/等级、属性快照、波数、耐久与稳定 UID。播放磨损、主动报废和技能预测沿用同一权威规则。
-
-合并改为宿主/供体模型：
-
-| 特质 | 结果 | 代价 |
-|---|---|---|
-| skill | 宿主保留路线与构筑，继承供体主动报废类别 | 耐久取两者较低值，费用 6 |
-| repair | 宿主耐久增加供体耐久的 50%，不超过 100 | 宿主必须未满，费用 10 |
-| power | 宿主最强可升级武器升一级 | 耐久取较低值后再减 15，费用 14 |
-
-`preview_merge` 返回分离值，不分配 UID、不修改计数器或输入。确认后才移除两张原件并分配新 UID。所有路径都不拼接供体路线，也不复制第二个身体。
-
-结算页可将本局最强回响写入 Meta；每个有回响容量的角色最多一张，强度更高或同强度但耐久更好的旧记录受到保护并给出明确反馈。Solo、每日挑战和未清信用债务不允许归档。继承默认开启，可在标题页预览和关闭；载入后占用现有容量，属性以当前角色为基准，开局目标 DPS 不超过存档自身与当前本体 DPS 的 0.75 倍，耐久最多 60。
-
-## 三种结局
-
-终局结果只应用一次，进入无尽后不会重复兑现：
-
-- **released**：累计两次审计时优先选中；修满现有回响并核销剩余信用债务。
-- **collective**：生命回满；已有招募同伴恢复生命与寿命，否则在支援容量允许时生成一名监工同伴，容量不足则保留待兑现状态。
-- **indebted**：获得 24 材料，债务账本保持不变。
-
-## 保存与边界
-
-Snapshot v2 保存并验证角色、能量、技能冷却、支援、交互物、远征任务、债务、谈判、终局兑现、分级报价、装配账本、完整撤销与回响元数据。商店源归档与 SuspendStore 都采用有界、已知类型和原子写入；验证失败不得部分修复或替换实时状态。
-
-0.15 不读取 0.14 对局快照，也不保留平行兼容分支。永久 Meta 解锁、故事线索、回响档案与设置不属于这次对局断代。
-
-经济工具执行了 24 次真实 Sim 对局：不理解 Boss 预警的基线策略 12 次都在第 4 场监工处失败；理解预警的 12 次中有 7 次完成第 12 场，且实际胜局都依次遇到监工、收集者和悖论体。这证明预警和构筑进入了真实对局路径，不证明人类难度、趣味或长期平衡已经定稿。
-
-原生 UI 探针已完成 EN 1280×720 与 ZH Reduced 960×540，两套失败列表为空；导出仍单独收口。自动化不证明实体手柄可用或所有目标设备稳定 60 FPS。当前验证状态以 [closeout-acceptance.md](docs/closeout-acceptance.md) 为准。
+Suspended runs preserve the exact simulation, RNG, pending decisions and transaction history. Visual and audio feedback are read-only. Automated tests and disclosed native fixtures validate rules and rendering; human playtesting remains necessary to judge strategic interest, pressure, sound and feel.

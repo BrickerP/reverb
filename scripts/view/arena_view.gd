@@ -2,8 +2,6 @@ class_name ArenaView
 extends Node2D
 
 const MAX_SPARKS := 260
-const PATH_STRIDE := 3
-const REVEAL_TIME := 0.8
 const RECORD_BEAT := 0.6
 const VICTORY_BEAT := 0.9
 const MAX_MUZZLES := 48
@@ -16,8 +14,6 @@ const MAX_WORK_MARKS := 8
 var sim: Sim
 var character_id: StringName = &"looper"
 var _backdrop: ArenaBackdrop
-var _paths: Dictionary = {}
-var _reveal: Dictionary = {}
 var _sparks: Array[Spark] = []
 var _shake: float = 0.0
 var _beat_take: EchoTake
@@ -50,6 +46,10 @@ var _retirement_note: Dictionary = {}
 var _retirement_note_time := 0.0
 var _noise_counter := 0
 var _director := BattleDirector.new()
+var _moment := MomentInk.new()
+var _was_charged := false
+var _charge_phase := -1
+var _charge_wave := -1
 var _interaction_ink := InteractionInk.new()
 
 
@@ -69,8 +69,6 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 		_disconnect_sim(sim)
 	sim = s
 	character_id = id
-	_paths.clear()
-	_reveal.clear()
 	_sparks.clear()
 	_shake = 0.0
 	_beat_take = null
@@ -86,8 +84,13 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_clear_feedback()
 	_interaction_ink.reset()
 	_director.clear()
+	_moment.clear()
+	_was_charged = CharacterSkills.is_charged(sim)
+	_charge_phase = int(sim.phase) if sim != null else -1
+	_charge_wave = sim.wave if sim != null else -1
 	_reset_motion()
 	_update_camera()
+	sim.combo_triggered.connect(_on_combo)
 	sim.enemy_killed.connect(_on_kill)
 	sim.shot_fired_info.connect(_on_shot_info)
 	sim.damage_event.connect(_on_damage_info)
@@ -108,12 +111,6 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	sim.wave_ended.connect(_on_wave_phase)
 	sim.run_lost.connect(_on_run_lost)
 	sim.run_won.connect(_on_run_won)
-	for actor in sim.echoes:
-		var points := PackedVector2Array()
-		for index in range(0, actor.take.samples.size(), PATH_STRIDE):
-			points.append(actor.take.samples[index])
-		_paths[actor] = points
-		_reveal[actor] = 1.0
 	_sync_backdrop()
 	_refresh_world_presentation()
 
@@ -124,12 +121,14 @@ func unbind() -> void:
 	sim = null
 	_world_profile.clear()
 	character_id = &"looper"
-	_paths.clear()
-	_reveal.clear()
 	_sparks.clear()
 	_clear_feedback()
 	_interaction_ink.reset()
 	_director.clear()
+	_moment.clear()
+	_was_charged = CharacterSkills.is_charged(sim)
+	_charge_phase = int(sim.phase) if sim != null else -1
+	_charge_wave = sim.wave if sim != null else -1
 	_actor_motion.clear()
 	_actor_positions.clear()
 	_motion_sample_time = -1.0
@@ -255,6 +254,8 @@ func _process(delta: float) -> void:
 	if sim == null or _paused:
 		return
 	_interaction_ink.step(delta)
+	_moment.step(delta)
+	_observe_charge()
 	var running := sim.phase == Sim.Phase.WAVE
 	if running:
 		_director.step(delta)
@@ -283,9 +284,6 @@ func _process(delta: float) -> void:
 	_expire_feedback(_work_marks, delta)
 	if not _retirement_note.is_empty():
 		_retirement_note_time = minf(1.5, _retirement_note_time + delta)
-	# Fast-forward the recorded route once at wave start, so the echo's position has a visible cause.
-	for actor in _reveal.keys():
-		_reveal[actor] = minf(1.0, float(_reveal[actor]) + delta / REVEAL_TIME)
 	if _beat_take != null:
 		_beat_time = minf(RECORD_BEAT, _beat_time + delta)
 		if _beat_time >= RECORD_BEAT:
@@ -387,6 +385,10 @@ func _on_world_event(info: Dictionary) -> void:
 			if anchor["from_pos"] != anchor["to_pos"]:
 				_reset_shift_sample(int(anchor["uid"]), anchor["to_pos"])
 	var kind := StringName(info.get("kind", &""))
+	if kind == &"character_skill" and bool(info.get("ok", false)):
+		_offer_moment(&"skill", sim.player.pos, ArenaPainter.PAPER)
+	elif kind in [&"machine_repaired", &"worker_saved"]:
+		_offer_moment(&"repair" if kind == &"machine_repaired" else &"rescue", (info.get("from_pos", info.get("pos", sim.player.pos)) if kind == &"worker_saved" else info.get("pos", sim.player.pos)), Color("91ab80"))
 	if kind != &"character_relay" and (kind != &"character_skill" or info.get("ability", &"") == &"overloader"):
 		_refresh_world_presentation()
 
@@ -426,13 +428,15 @@ func _draw() -> void:
 	if sim == null:
 		return
 	var body_feedback: InteractionInk = _interaction_ink if _interaction_ink.has_actor_actions() else null
-	BureauInk.draw(self, BureauInk.snapshot(sim, _display_rect), reduced_effects)
-	ArenaPainter.pending(self, sim)
 	if _beat_take == null:
-		ArenaPainter.echo_paths(self, sim, _paths, _reveal, reduced_effects)
+		for path: Dictionary in future_path_profiles():
+			EchoPathPreview.draw(self, path)
 	else:
 		ArenaPainter.record_beat(self, sim, _beat_take, _beat_time / RECORD_BEAT, reduced_effects)
 	ArenaPainter.pickup_range(self, sim)
+	MomentInk.draw(self, _moment.snapshot(), WorldArena.camera_rect(sim.player.pos, _display_rect), reduced_effects)
+	BureauInk.draw(self, BureauInk.snapshot(sim, _display_rect), reduced_effects)
+	ArenaPainter.pending(self, sim)
 	ThreatInk.draw_enemy_zones(self, sim)
 	ArenaPainter.rifts(self, sim, reduced_effects)
 	ArenaPainter.pickups(self, sim)
@@ -446,7 +450,7 @@ func _draw() -> void:
 	ArenaPainter.boss_tear(self, _director, reduced_effects)
 	ArenaPainter.projectiles(self, sim, reduced_effects)
 	ArenaPainter.combat_feedback(self, _muzzles, _hits, _explosions, _hurts, _weapon_changes,
-			reduced_effects)
+			reduced_effects, moment_visible())
 	ArenaPainter.sparks(self, _sparks)
 	# The original remains legible through decorative debris and routine hit ink.
 	ArenaPainter.player(self, sim, character_id, motion_stats(), _muzzles, _director, body_feedback)
@@ -563,6 +567,8 @@ func _on_hit(pos: Vector2, amount: float, crit: bool, source: int) -> void:
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
 	var blocked := info.full_block()
+	if blocked or info.hp_loss > 0.0:
+		_offer_moment(&"block" if blocked else &"hurt", info.pos, Color("91ab80") if blocked else UiTheme.WARN)
 	if not blocked and info.amount <= 0.0:
 		return
 	if not blocked:
@@ -585,12 +591,6 @@ func _on_hurt_info(info: PlayerHurtInfo) -> void:
 
 
 func _on_echo(actor: EchoActor) -> void:
-	var pts := PackedVector2Array()
-	for i in range(0, actor.take.samples.size(), PATH_STRIDE):
-		pts.append(actor.take.samples[i])
-	_paths[actor] = pts
-	# Newest first; older echoes start their reveal a beat later so the routes do not overlap in time.
-	_reveal[actor] = -0.12 * float(maxi(0, sim.bank.takes.size() - 1 - actor.index))
 	var ring := _spark(actor.pos, actor.take.tint(), 0.0, 0.6)
 	if ring != null:
 		ring.ring = true
@@ -606,10 +606,8 @@ func react_retirement(info: EchoRetirementInfo) -> void:
 	_interaction_ink.consume_retirement(info, PresentationAssets.character_key(character_id))
 	_actor_positions.erase(info.uid)
 	_actor_motion.erase(info.uid)
-	for actor in _paths.keys():
-		if actor.take.uid == info.uid:
-			_paths.erase(actor)
-			_reveal.erase(actor)
+	if info.reason != EchoRetirementInfo.EXHAUSTED:
+		_offer_moment(&"retire", info.pos, info.tint)
 
 
 func _on_boss_spawned(enemy: EnemyState) -> void:
@@ -624,6 +622,7 @@ func _on_boss_phase_changed(phase: int) -> void:
 		return
 	var origin := sim.boss.pos if sim.boss != null else sim.boss_origin()
 	_director.begin_tear(origin)
+	_offer_moment(&"boss", origin, ArenaPainter.PAPER)
 	var ring := _spark(origin, ArenaPainter.PAPER, 0.0, 1.1)
 	if ring != null:
 		ring.ring = true
@@ -736,7 +735,7 @@ func feedback_counts() -> Dictionary:
 			"hurts": _hurts.size(), "recoils": _muzzles.size(),
 			"weapon_changes": _weapon_changes.size(), "sparks": _sparks.size(),
 			"interactions": int(_interaction_ink.counts()["active"]),
-			"corpses": _director.corpses.size(), "actor_actions": int(_director.counts()["shots"])}
+			"corpses": _director.corpses.size(), "actor_actions": int(_director.counts()["shots"]), "moment": int(_moment.active())}
 
 
 func event_last_data() -> Dictionary:
@@ -792,6 +791,7 @@ func _clear_feedback() -> void:
 	_retirement_note.clear()
 	_retirement_note_time = 0.0
 	_last_event.clear()
+	_moment.clear()
 
 
 func _on_wave_phase(_wave: int) -> void:
@@ -806,20 +806,15 @@ func _on_wave_started(_wave: int) -> void:
 	_interaction_ink.reset()
 	_refresh_world_presentation()
 	_director.clear()
+	_moment.clear()
+	_was_charged = CharacterSkills.is_charged(sim)
+	_charge_phase = int(sim.phase) if sim != null else -1
+	_charge_wave = sim.wave if sim != null else -1
 	_motion_amount = 0.0
 	_motion_speed = 0.0
 	_reset_motion()
 	_update_camera()
-	if sim == null:
-		_paths.clear()
-		_reveal.clear()
-		return
-	for actor in _paths.keys():
-		if not sim.echoes.has(actor):
-			_paths.erase(actor)
-	for actor in _reveal.keys():
-		if not sim.echoes.has(actor):
-			_reveal.erase(actor)
+
 
 
 func _on_run_lost() -> void:
@@ -844,7 +839,7 @@ func _noise01(index: int) -> float:
 
 func _disconnect_sim(s: Sim) -> void:
 	var pairs: Array = [
-		[s.enemy_killed, _on_kill], [s.shot_fired_info, _on_shot_info],
+		[s.combo_triggered, _on_combo], [s.enemy_killed, _on_kill], [s.shot_fired_info, _on_shot_info],
 		[s.damage_event, _on_damage_info], [s.player_hurt_info, _on_hurt_info],
 		[s.explosion_info, _on_explosion_info], [s.weapon_changed, _on_weapon_changed],
 		[s.echo_work_performed, _on_echo_work], [s.world_event, _on_world_event],
@@ -863,3 +858,45 @@ func _disconnect_sim(s: Sim) -> void:
 		var callable: Callable = pair[1]
 		if signal_value.is_connected(callable):
 			signal_value.disconnect(callable)
+
+
+func future_path_profiles() -> Array[Dictionary]:
+	var profiles: Array[Dictionary] = []
+	if sim == null or sim.phase != Sim.Phase.WAVE:
+		return profiles
+	var clip := WorldArena.camera_rect(sim.player.pos, _display_rect)
+	for index in mini(sim.echoes.size(), EchoPathPreview.MAX_ACTORS):
+		var actor: EchoActor = sim.echoes[index]
+		var data := EchoPathPreview.snapshot(actor, sim, clip, actor.take.uid == sim.selected_echo_uid, reduced_effects)
+		if bool(data.get("valid", false)):
+			profiles.append(data)
+	return profiles
+
+
+func _on_combo(info: ComboInfo) -> void:
+	if info != null and info.affected > 0:
+		_offer_moment(&"combo", info.pos, info.source_tint if info.source >= 0 else ArenaPainter.PAPER)
+
+
+func _observe_charge() -> void:
+	var charged := CharacterSkills.is_charged(sim)
+	var same_wave := _charge_phase == int(sim.phase) and _charge_wave == sim.wave
+	if same_wave and charged and not _was_charged:
+		_offer_moment(&"ready", sim.player.pos, Color("91ab80"))
+	_was_charged = charged
+	_charge_phase = int(sim.phase)
+	_charge_wave = sim.wave
+
+
+func moment_visible() -> bool:
+	var data := _moment.snapshot()
+	return sim != null and not data.is_empty() \
+		and WorldArena.camera_rect(sim.player.pos, _display_rect).has_point(data["pos"])
+
+
+func _offer_moment(kind: StringName, pos: Vector2, tint: Color = ArenaPainter.PAPER) -> bool:
+	if sim == null or not WorldArena.camera_rect(sim.player.pos, _display_rect).has_point(pos):
+		return false
+	if not moment_visible():
+		_moment.clear()
+	return _moment.offer(kind, pos, tint)

@@ -175,20 +175,74 @@ func test_negotiation_pauses_until_explicit_decline_releases_protection(c: Check
 	c.eq(sim.support_units.size(), 0, "decline creates no free companion")
 
 
-func test_cash_budget_is_linear_and_tail_reinforcement_is_bounded(c: Check) -> void:
+func test_cash_budget_is_linear_and_empty_tail_never_refills(c: Check) -> void:
 	c.eq(WaveDirector.cash_budget(12) - WaveDirector.cash_budget(11), 6, "normal reward allowance grows linearly")
 	c.ok(WaveDirector.cash_budget(10000) <= 300, "endless economy has a finite reward cap")
 	var sim := _sim(7)
 	sim.wave_time = sim.wave_duration - 2.0
-	sim._step_tail_pressure(2.0)
-	c.eq(sim.pending.size(), 1, "clearing late enemies triggers actual last-second pressure")
 	for index in 100:
-		sim._step_tail_pressure(2.0)
-	c.ok(sim.pending.size() <= 8, "late pressure cannot allocate unlimited arrivals")
-	var before := sim.pending.size()
+		sim._step_cleared_cohort(2.0)
+	c.eq(sim.pending.size(), 0, "clearing a finite plan never creates budget-free tail enemies")
+	c.ok(sim._encounter_finished(), "an empty late encounter can finish instead of refilling forever")
+
+
+func test_accepted_work_keeps_its_original_window_until_complete(c: Check) -> void:
+	for kind: StringName in [&"salvage", &"audit", &"repair", &"rescue", &"credit"]:
+		var sim := _sim()
+		var order := _order(sim, kind)
+		c.ok(not sim._encounter_finished(), "an accepted %s order prevents premature empty-field failure" % kind)
+		if kind == &"credit":
+			sim.wave_kills = 8
+			Expedition.step(sim, 0.01)
+		else:
+			sim.expedition["mission"]["progress"] = order.target
+		c.ok(order.is_complete(sim), "the same authoritative %s order determines completion" % kind)
+		c.ok(sim._encounter_finished(), "a completed %s order releases finite-clear completion" % kind)
+		if kind == &"credit":
+			c.eq(sim.expedition["debt"], 40, "unsettled debt is independent of whether accepted work is complete")
+			sim.step(0.01, Vector2.ZERO)
+			c.eq(sim.expedition["debt"], 20, "early settlement applies the normal earned credit rebate once")
+		else:
+			sim.expedition["mission"]["progress"] = 0
+			sim.wave_time = sim.wave_duration
+			c.ok(sim._encounter_finished(), "the original deadline still resolves unfinished %s work" % kind)
+
+
+func test_natural_worker_does_not_block_but_taken_delivery_keeps_its_window(c: Check) -> void:
+	var sim := _sim(2)
+	c.ok(sim._encounter_finished(), "an automatically appearing endangered worker is optional")
+	var delivery: Dictionary = sim.expedition["bureau"]["delivery"]
+	c.eq(delivery.get("state"), &"waiting", "the ordinary delivery exists before the player accepts it")
+	for item: Dictionary in sim.interactables:
+		if item["id"] == BureauEvents.PICKUP_ID:
+			sim.player.pos = item["pos"]
+			c.ok(BureauEvents.interact(sim, item), "taking a real document accepts the delivery")
+	c.ok(not sim._encounter_finished(), "taking the document preserves the remaining delivery window")
 	sim.wave_time = sim.wave_duration
-	sim._step_tail_pressure(2.0)
-	c.eq(sim.pending.size(), before, "finished encounter cannot generate new arrivals")
+	c.ok(sim._encounter_finished(), "the delivery keeps the original deadline rather than blocking indefinitely")
+	sim.wave_time = 0.0
+	for item: Dictionary in sim.interactables:
+		if item["id"] == BureauEvents.INBOX_ID:
+			sim.player.pos = item["pos"]
+			c.ok(BureauEvents.interact(sim, item), "the accepted document reaches its real inbox")
+	c.ok(sim._encounter_finished(), "delivering the accepted document releases the early clear")
+
+
+func test_signed_inspection_keeps_its_window_until_the_actual_terminal_is_used(c: Check) -> void:
+	var sim := _sim()
+	sim._end_wave()
+	c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "a real shop signature accepts the upcoming inspection")
+	sim.start_wave(2)
+	sim._plan.clear()
+	c.ok(not sim._encounter_finished(), "an accepted inspection cannot be failed by an early empty-field close")
+	sim.wave_time = sim.wave_duration
+	c.ok(sim._encounter_finished(), "the inspection still has the original finite deadline")
+	sim.wave_time = 0.0
+	for item: Dictionary in sim.interactables:
+		if item["id"] == BureauConfession.TERMINAL_ID:
+			sim.player.pos = item["pos"]
+			c.ok(BureauEvents.interact(sim, item), "the real signed inspection registers at its terminal")
+	c.ok(sim._encounter_finished(), "registering the inspection releases the finite clear")
 
 
 func test_debt_does_not_choose_an_ending(c: Check) -> void:

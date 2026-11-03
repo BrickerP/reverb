@@ -5,6 +5,8 @@ const POOL := 12
 const COMMON_POOL := 7
 const PROTECTED_POOL := 5
 const SUPPORT_PRIORITY := 10
+const PROTECTED_PRIORITY := 20
+const PLAYER_SHOT_PRIORITY := 6
 const PRESENTATION_DIR := "res://audio/presentation"
 const MUSIC_DB := -9.0
 const MUSIC_DIR := "res://audio/music"
@@ -157,6 +159,17 @@ const PROTECTED_PRIORITIES := {
 const PAUSE_ALLOWED_NAMES: Array[StringName] = [
 	&"buy", &"click", &"equipment_apply", &"equipment_undo", &"shop_reroll",
 ]
+const EMPHASIS_PROFILES := {
+	&"combo_pin_press": {"cue": &"weapon_rail_spike", "volume": 0.0, "pitch": 0.78, "gate": 0.20, "priority": 36, "window": 0.22, "duck": 0.10},
+	&"combo_ink_arc": {"cue": &"weapon_hex_bolt", "volume": 1.0, "pitch": 0.86, "gate": 0.24, "priority": 36, "window": 0.25, "duck": 0.12},
+	&"exhausted": {"cue": &"echo", "volume": -3.0, "pitch": 0.58, "gate": 0.17, "priority": 0, "window": 0.35, "duck": 0.0},
+	&"absorbed": {"cue": &"echo", "volume": 0.0, "pitch": 1.12, "gate": 0.20, "priority": 24, "window": 0.18, "duck": 0.0},
+	&"machine_repaired": {"cue": &"equipment_apply", "volume": 0.0, "pitch": 0.80, "gate": 0.23, "priority": 38, "window": 0.22, "duck": 0.12},
+	&"worker_saved": {"cue": &"echo", "volume": 2.0, "pitch": 1.16, "gate": 0.30, "priority": 42, "window": 0.22, "duck": 0.16},
+	&"charged": {"cue": &"click", "volume": 3.0, "pitch": 1.30, "gate": 0.10, "priority": 30, "window": 0.25, "duck": 0.08},
+	&"second_push": {"cue": &"wave_start", "volume": -3.0, "pitch": 1.06, "gate": 0.18, "priority": 28, "window": 0.6, "duck": 0.10},
+	&"final_push": {"cue": &"wave_start", "volume": -1.5, "pitch": 0.84, "gate": 0.25, "priority": 32, "window": 0.6, "duck": 0.14},
+}
 
 var _streams: Dictionary = {}
 var _players: Array[AudioStreamPlayer] = []
@@ -169,6 +182,7 @@ var _play_serial := 0
 var _next_common := 0
 var _next_protected := 0
 var _last: Dictionary = {}
+var _last_priority: Dictionary = {}
 var _plays: Dictionary = {}
 var _muted := false
 var _paused := false
@@ -191,6 +205,9 @@ var _effects_volume := 1.0
 var _voice_base_db: Dictionary = {}
 var _voice_left: Dictionary = {}
 var _duck_remaining := 0.0
+var _charged := false
+var _encounter_phase: StringName = &""
+var _last_feedback: Dictionary = {}
 
 
 func _ready() -> void:
@@ -231,6 +248,7 @@ func _process(delta: float) -> void:
 		if _music_poll <= 0.0:
 			_music_poll = 0.25
 			var state := music_profile(_bound, _music_mode)
+			_observe_emphasis(state)
 			_music_intensity = float(state["intensity"])
 			var mode: StringName = state["mode"]
 			if mode != _music_mode and (mode not in [&"battle", &"pressure"] or _music_hold <= 0.0) and _music_fade <= 0.0:
@@ -244,7 +262,7 @@ func _process(delta: float) -> void:
 
 
 func _duck_room(seconds: float) -> void:
-	if _paused:
+	if _paused or _effects_volume <= 0.0001:
 		return
 	_duck_remaining = maxf(_duck_remaining, seconds)
 	_update_music_levels()
@@ -332,7 +350,7 @@ static func music_profile(sim: Sim, current: StringName = &"battle") -> Dictiona
 			if enemy.brain_state in [&"warn", &"dash", &"slam", &"seal"]:
 				attacks += 1
 	boss_active = boss_active or (sim.boss != null and not sim.boss.dead)
-	var pacing := WaveDirector.phase_profile(sim.wave_time, sim.wave_duration)
+	var pacing := sim.encounter_profile()
 	var intensity := float(nearby) * 0.4 + float(attacks) * 1.2 + float(pacing["intensity"]) * 1.1
 	if sim.player.hp < sim.player.max_hp() * 0.3:
 		intensity += 1.5
@@ -383,6 +401,7 @@ func set_paused(on: bool) -> void:
 	for player in _music_players:
 		player.stream_paused = on
 	if not on:
+		_seed_emphasis()
 		return
 	for player in _common_players:
 		player.stop()
@@ -415,6 +434,7 @@ func bind(sim: Sim) -> void:
 	sim.material_collected.connect(_on_pickup)
 	sim.echo_spawned.connect(_on_echo)
 	sim.echo_retired.connect(_on_echo_retired)
+	sim.combo_triggered.connect(_on_combo)
 	sim.echo_work_performed.connect(_on_echo_work)
 	sim.world_event.connect(_on_world_event)
 	sim.support_event.connect(_on_support_event)
@@ -426,6 +446,7 @@ func bind(sim: Sim) -> void:
 	sim.echoes_silenced.connect(_on_silence)
 	_bound_shop.shop_action_resolved.connect(_on_shop_action)
 	_start_music(music_profile(sim)["mode"], true)
+	_seed_emphasis()
 
 
 func _disconnect_bound() -> void:
@@ -438,6 +459,7 @@ func _disconnect_bound() -> void:
 		_disconnect_signal(_bound.material_collected, _on_pickup)
 		_disconnect_signal(_bound.echo_spawned, _on_echo)
 		_disconnect_signal(_bound.echo_retired, _on_echo_retired)
+		_disconnect_signal(_bound.combo_triggered, _on_combo)
 		_disconnect_signal(_bound.echo_work_performed, _on_echo_work)
 		_disconnect_signal(_bound.world_event, _on_world_event)
 		_disconnect_signal(_bound.support_event, _on_support_event)
@@ -460,11 +482,15 @@ func _reset_session_state() -> void:
 	_player_priorities.clear()
 	_player_serials.clear()
 	_last.clear()
+	_last_priority.clear()
 	_next_common = 0
 	_next_protected = 0
 	_play_serial = 0
 	_paused = false
 	_duck_remaining = 0.0
+	_charged = false
+	_encounter_phase = &""
+	_last_feedback.clear()
 	_voice_left.clear()
 	_voice_base_db.clear()
 	_music_cursor = 0.0
@@ -482,23 +508,30 @@ func _disconnect_signal(signal_value: Signal, handler: Callable) -> void:
 
 
 func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate: float = 0.0,
-		voice_priority: int = -1) -> bool:
+		voice_priority: int = -1, merge_key: StringName = &"", merge_window: float = -1.0) -> bool:
 	var stream: AudioStream = _streams.get(name)
 	if stream == null or _players.is_empty():
 		return false
-	if _paused and not PAUSE_ALLOWED_NAMES.has(name):
+	if _paused and (merge_key != &"" or not PAUSE_ALLOWED_NAMES.has(name)):
 		return false
 	var now := Time.get_ticks_msec() * 0.001
-	var cooldown := float(COOLDOWNS.get(name, 0.0))
-	if now - float(_last.get(name, -100.0)) < cooldown:
+	var key := merge_key if merge_key != &"" else name
+	var priority := priority_for(name) if voice_priority < 0 else voice_priority
+	var cooldown := float(COOLDOWNS.get(name, 0.0)) if merge_window < 0.0 else merge_window
+	if now - float(_last.get(key, -100.0)) < cooldown and priority <= int(_last_priority.get(key, priority)):
 		return false
-	_last[name] = now
 	if _silent:
+		_last[key] = now
+		_last_priority[key] = priority
+		_feedback_played(name, volume_offset, pitch, gate, voice_priority, key)
 		_plays[name] = int(_plays.get(name, 0)) + 1
 		return true
 	var player := _claim_player(name, voice_priority)
 	if player == null:
 		return false
+	_last[key] = now
+	_last_priority[key] = priority
+	_feedback_played(name, volume_offset, pitch, gate, voice_priority, key)
 	player.stream = stream
 	_voice_base_db[player] = float(VOLUMES.get(name, -14.0)) + volume_offset
 	_voice_left.erase(player)
@@ -513,7 +546,9 @@ func play(name: StringName, volume_offset: float = 0.0, pitch: float = 1.0, gate
 
 
 func _claim_player(name: StringName, voice_priority: int = -1) -> AudioStreamPlayer:
-	var protected_voice := is_protected(name)
+	# Explicit priority owns the lane too: a support tick borrowing a UI recording
+	# is still ordinary work; a real combo borrowing a weapon recording is salient.
+	var protected_voice := is_protected(name) if voice_priority < 0 else voice_priority >= PROTECTED_PRIORITY
 	var pool := _protected_players if protected_voice else _common_players
 	if pool.is_empty():
 		return null
@@ -560,6 +595,60 @@ func stream_count() -> int:
 
 func play_count(name: StringName) -> int:
 	return int(_plays.get(name, 0))
+
+
+func _feedback_played(name: StringName, volume: float, pitch: float, gate: float,
+		priority: int, key: StringName) -> void:
+	_last_feedback = {"cue": name, "volume_db": float(VOLUMES.get(name, -14.0)) + volume,
+		"pitch": clampf(pitch, 0.5, 2.0), "gate": gate,
+		"priority": priority_for(name) if priority < 0 else priority, "merge_key": key}
+
+
+func feedback_last_data() -> Dictionary:
+	return _last_feedback.duplicate(true)
+
+
+static func is_copy_source(source: int, token: int) -> bool:
+	return source >= 0 or (token != -1 and token != 0)
+
+
+func _emphasize(kind: StringName, copy: bool = false) -> bool:
+	if _paused or not EMPHASIS_PROFILES.has(kind):
+		return false
+	var profile: Dictionary = EMPHASIS_PROFILES[kind]
+	var accepted := play(profile["cue"], float(profile["volume"]) - (5.0 if copy else 0.0),
+		float(profile["pitch"]), float(profile["gate"]), mini(26, int(profile["priority"])) if copy else int(profile["priority"]),
+		StringName(("echo:" if copy else "accent:") + String(kind)),
+		maxf(0.50, float(profile["window"])) if copy else float(profile["window"]))
+	if accepted and not copy and float(profile["duck"]) > 0.0:
+		_duck_room(float(profile["duck"]))
+	return accepted
+
+
+func _seed_emphasis() -> void:
+	_charged = _bound != null and CharacterSkills.is_charged(_bound)
+	_encounter_phase = StringName(_bound.encounter_profile()["id"]) if _bound != null else &""
+
+
+func _observe_charge() -> void:
+	if _paused:
+		return
+	var charged := _bound != null and CharacterSkills.is_charged(_bound)
+	if charged and not _charged:
+		_emphasize(&"charged")
+	_charged = charged
+
+
+func _observe_emphasis(state: Dictionary) -> void:
+	_observe_charge()
+	if _bound == null or _bound.phase != Sim.Phase.WAVE:
+		_encounter_phase = &""
+		return
+	var phase := StringName(state.get("wave_phase", &""))
+	if phase != _encounter_phase and _encounter_phase != &"" and state["mode"] != &"boss" \
+			and phase in [&"second_push", &"final_push"]:
+		_emphasize(phase)
+	_encounter_phase = phase
 
 
 func binding_state() -> Dictionary:
@@ -622,18 +711,23 @@ static func voice_index(active: Array[bool], priorities: Array[int], serials: Ar
 
 
 func _on_shot_info(info: ShotInfo) -> void:
+	var copy := is_copy_source(info.source, info.actor_token)
 	var profile := weapon_profile(info.weapon_id)
 	if profile.is_empty():
-		play(&"shoot", -2.0 if info.source >= 0 else 0.0, 0.93 if info.source >= 0 else 1.0)
+		play(&"shoot", -6.0 if copy else 0.0, 0.93 if copy else 1.0, 0.10,
+			0 if copy else PLAYER_SHOT_PRIORITY, &"echo:shoot" if copy else &"player:shoot", 0.16 if copy else 0.035)
 		return
 	var cue: StringName = profile["cue"]
-	var volume := float(profile["volume"]) - (3.0 if info.source >= 0 else 0.0)
+	var volume := float(profile["volume"]) - (6.0 if copy else 0.0)
 	var variation := float(posmod(info.sequence, 3) - 1) * 0.015
-	var pitch := float(profile["pitch"]) + variation - (0.04 if info.source >= 0 else 0.0)
-	play(cue, volume, pitch, float(profile.get("gate", 0.0)))
+	var pitch := float(profile["pitch"]) + variation - (0.04 if copy else 0.0)
+	play(cue, volume, pitch, float(profile.get("gate", 0.0)), 0 if copy else PLAYER_SHOT_PRIORITY,
+		StringName(("echo:shot:" if copy else "player:shot:") + String(cue)),
+		maxf(0.16, float(COOLDOWNS.get(cue, 0.0))) if copy else -1.0)
 
 
 func _on_damage_info(info: DamageInfo) -> void:
+	var copy := is_copy_source(info.source, info.actor_token)
 	var cue := &"hit"
 	var pitch := 1.0
 	if info.reduced:
@@ -642,23 +736,37 @@ func _on_damage_info(info: DamageInfo) -> void:
 	elif info.crit:
 		cue = &"hit_crit"
 		pitch = 1.04
-	play(cue, -2.0 if info.source >= 0 else 0.0, pitch)
+	play(cue, -6.0 if copy else 0.0, pitch, 0.14, 0 if copy else 8,
+		StringName(("echo:hit:" if copy else "player:hit:") + String(cue)), 0.14 if copy else -1.0)
+
+
+func _on_combo(info: ComboInfo) -> void:
+	if info.affected <= 0 or info.bonus_damage <= 0.0:
+		return
+	if info.id in [&"pin_press", &"ink_arc"]:
+		_emphasize(StringName("combo_" + String(info.id)), is_copy_source(info.source, info.actor_token))
 
 
 func _on_explosion_info(info: ExplosionInfo) -> void:
+	var copy := is_copy_source(info.source, info.actor_token)
 	var cue := &"bomber_explosion" if info.kind == ExplosionInfo.BOMBER else &"weapon_explosion"
-	play(cue, -2.0 if info.source >= 0 else 0.0, 1.0)
+	play(cue, -5.0 if copy else 0.0, 1.0, 0.26,
+		priority_for(cue) if info.kind == ExplosionInfo.BOMBER else (0 if copy else 8),
+		StringName(("echo:blast:" if copy else "world:blast:") + String(cue)), 0.18 if copy else -1.0)
 
 
 func _on_hurt_info(info: PlayerHurtInfo) -> void:
-	if info.full_block():
-		play(&"shield_block", -1.0, 0.91)
-		return
-	if info.amount <= 0.0:
+	if info.hp_loss <= 0.0:
+		if info.absorbed > 0.0:
+			if play(&"shield_block", -1.0, 0.91, 0.17, 46, &"player:block", 0.12):
+				_duck_room(0.08)
 		return
 	var blast := info.effect == &"bomber_explosion"
-	play(&"hurt_blast" if blast else &"hurt_contact", 2.0 if info.lethal else 0.0,
-			0.90 if info.lethal else 1.0)
+	var severe := info.lethal or info.hp_loss >= maxf(1.0, info.hp_before) * 0.20
+	var cue := &"hurt_blast" if blast else &"hurt_contact"
+	if play(cue, 2.0 if severe else 0.0,
+			0.90 if severe else 1.0, 0.28, 58 if severe else 50, StringName("player:" + String(cue)), 0.14):
+		_duck_room(0.14 if severe else 0.10)
 
 
 func _on_kill(info: EnemyDeathInfo) -> void:
@@ -680,20 +788,23 @@ static func death_profile(enemy_id: StringName) -> Dictionary:
 
 
 func _on_pickup(amount: int) -> void:
-	play(&"pickup", 0.0, 1.0 + minf(0.2, float(amount) * 0.02))
+	if amount <= 0:
+		return
+	play(&"pickup", 0.0, 1.0 + minf(0.2, float(amount) * 0.02), 0.10, 3, &"player:pickup", 0.10)
+	_observe_charge()
 
 
 func _on_echo(actor: EchoActor) -> void:
 	var pitch := 1.03 if actor.take.merged else lerpf(0.74, 0.98, clampf(actor.take.condition / 100.0, 0.0, 1.0))
-	play(&"echo", 0.5 if actor.take.merged else 0.0, pitch)
+	play(&"echo", 0.5 if actor.take.merged else -2.0, pitch, 0.20, 2, &"echo:arrival", 0.18)
 
 
 func _on_echo_retired(info: EchoRetirementInfo) -> void:
 	if info.reason == EchoRetirementInfo.ABSORBED:
-		play(&"echo", 2.0, 1.12, 0.2)
+		_emphasize(&"absorbed")
 		return
 	if info.exhausted or info.reason == EchoRetirementInfo.EXHAUSTED:
-		play(&"echo", 4.0, 0.58, 0.22)
+		_emphasize(&"exhausted")
 		return
 	# The recorded skill determines its material accent. There is no universal
 	# explosion sound, and exhaustion cannot borrow the active skill's weight.
@@ -705,11 +816,10 @@ func _on_echo_retired(info: EchoRetirementInfo) -> void:
 		&"cut": cue = &"weapon_flechette"; pitch = 0.69
 		&"ink": cue = &"weapon_orb"; pitch = 0.70
 		&"arc": cue = &"weapon_nova_core"; pitch = 0.76
-	# This explicit player action must not disappear behind the same weapon's
-	# preceding shot cooldown. It still uses the existing bounded common pool.
-	_last.erase(cue)
-	play(cue, 1.0, pitch, 0.32)
-	_duck_room(0.32)
+	# Accepted player sacrifices have one independent event window. Simultaneous
+	# overload retirements form one accent, never eight competing weapon voices.
+	if play(cue, 1.0, pitch, 0.32, 44, &"player:retirement", 0.08):
+		_duck_room(0.32)
 
 
 func _on_echo_work(info: Dictionary) -> void:
@@ -720,58 +830,68 @@ func _on_echo_work(info: Dictionary) -> void:
 	# Signature attacks already emit their own weapon cue. Devices use the same
 	# bounded dry palette and cooldowns as the rest of the bureau.
 	match info.get("kind", &""):
-		&"press": play(&"weapon_rail_spike", -4.0, 0.65, 0.18)
-		&"conveyor": play(&"click", -5.0, 0.82, 0.12)
+		&"press": play(&"weapon_rail_spike", -5.0, 0.65, 0.18, SUPPORT_PRIORITY, &"work:press", 0.18)
+		&"conveyor": play(&"click", -6.0, 0.82, 0.12, SUPPORT_PRIORITY, &"work:conveyor", 0.18)
 
 
 func _on_wave_start(_wave: int) -> void:
 	play(&"wave_start")
+	_seed_emphasis()
 
 
 func _on_world_event(info: Dictionary) -> void:
+	if _paused:
+		return
 	match info.get("kind", &""):
-		&"dispatch_impact": play(&"weapon_rail_spike", -1.0, 0.62, 0.18)
-		&"dispatch_safe": play(&"click", -3.0, 0.92, 0.10)
-		&"dispatch_delivered": play(&"equipment_apply", -3.0, 1.05, 0.16)
-		&"dispatch_carried", &"inspection_registered": play(&"click", -3.0, 1.0, 0.12)
+		&"machine_repaired", &"worker_saved": _emphasize(info["kind"])
+		&"dispatch_impact": play(&"weapon_rail_spike", -1.0, 0.62, 0.18, 30, &"world:stamp", 0.18)
+		&"dispatch_safe": play(&"click", -3.0, 0.92, 0.10, 16, &"world:lever", 0.18)
+		&"dispatch_delivered": play(&"equipment_apply", -3.0, 1.05, 0.16, 36, &"world:delivery", 0.18)
+		&"dispatch_carried", &"inspection_registered": play(&"click", -3.0, 1.0, 0.12, 10, &"world:paperwork", 0.18)
 		&"interaction_result":
 			if not bool(info.get("ok", false)):
-				play(&"click", -5.0, 0.62, 0.08)
+				play(&"click", -5.0, 0.62, 0.08, 1, &"world:rejected", 0.25)
 				return
 			match info.get("target_kind", &""):
-				&"repair", &"rescue", &"recycler": play(&"equipment_apply", -4.0, 1.12, 0.18)
-				&"press": play(&"weapon_rail_spike", -5.0, 0.71, 0.16)
-				&"conveyor": play(&"click", -4.0, 0.83, 0.12)
+				# Repair and rescue already emitted their canonical success event.
+				&"recycler": play(&"equipment_apply", -4.0, 1.12, 0.18, 26, &"world:recycler", 0.18)
+				&"press": play(&"weapon_rail_spike", -5.0, 0.71, 0.16, 26, &"world:press", 0.18)
+				&"conveyor": play(&"click", -4.0, 0.83, 0.12, 16, &"world:conveyor", 0.18)
 		&"character_skill":
 			if not bool(info.get("ok", false)):
 				return
+			_charged = false
 			match info.get("ability", &""):
-				&"looper": play(&"echo", -3.0, 0.72, 0.24)
-				&"mirror": play(&"echo", -3.0, 1.12, 0.24)
-				&"solo": play(&"weapon_longbow", -3.0, 0.64, 0.20)
-				&"conductor": play(&"weapon_nova_core", -4.0, 0.86, 0.22)
+				&"looper": play(&"echo", -1.0, 0.72, 0.24, 40, &"player:character_skill", 0.08)
+				&"mirror": play(&"echo", -1.0, 1.12, 0.24, 40, &"player:character_skill", 0.08)
+				&"solo": play(&"weapon_longbow", -1.0, 0.64, 0.20, 40, &"player:character_skill", 0.08)
+				&"conductor": play(&"weapon_nova_core", -2.0, 0.86, 0.22, 40, &"player:character_skill", 0.08)
 				# Mender's real support spawn and Overloader's real retirement own
 				# their sounds; a successful key press cannot play those twice.
-		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24)
-		&"seal_stamp": play(&"click", -1.0, 0.58, 0.12)
+			_duck_room(0.18)
+		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24, 32, &"world:companion", 0.20)
+		&"seal_stamp": play(&"click", -1.0, 0.58, 0.12, 4, &"world:seal", 0.16)
 
 
 func _on_support_event(info: Dictionary) -> void:
 	# Support attacks are not ShotInfo events. They have their own finite bodies,
 	# and cannot animate or replay the deploying character's weapon.
 	match info.get("kind", &""):
-		&"spawn": play(&"echo", -8.0, 1.08, 0.14)
-		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20, SUPPORT_PRIORITY)
-		&"produce": play(&"click", -7.0, 1.16, 0.10, SUPPORT_PRIORITY)
-		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09)
-		&"damage": play(&"hit", -4.0, 0.77, 0.10)
-		&"destroy": play(&"kill", -3.0, 0.70, 0.24)
-		&"expire": play(&"echo", -9.0, 0.60, 0.18)
+		&"spawn": play(&"echo", -8.0, 1.08, 0.14, 0, &"support:spawn", 0.20)
+		&"repair": play(&"equipment_apply", -5.0, 1.12, 0.20, SUPPORT_PRIORITY, &"support:repair", 0.30)
+		&"produce":
+			play(&"click", -7.0, 1.16, 0.10, SUPPORT_PRIORITY, &"support:produce", 0.30)
+			_observe_charge()
+		&"retrieve": play(&"pickup", -7.0, 1.08, 0.09, 0, &"support:retrieve", 0.20)
+		&"damage": play(&"hit", -5.0, 0.77, 0.10, 0, &"support:damage", 0.20)
+		&"destroy": play(&"kill", -3.0, 0.70, 0.24, SUPPORT_PRIORITY, &"support:destroy", 0.20)
+		&"expire": play(&"echo", -9.0, 0.60, 0.18, 0, &"support:expire", 0.30)
 		&"attack":
 			var profile := weapon_profile(StringName(info.get("weapon_id", &"")))
 			if not profile.is_empty():
 				play(profile["cue"], float(profile["volume"]) - 6.0,
-					float(profile["pitch"]), minf(0.16, float(profile.get("gate", 0.16))))
+					float(profile["pitch"]), minf(0.16, float(profile.get("gate", 0.16))), 1,
+					StringName("support:shot:" + String(profile["cue"])), 0.20)
 
 
 func _on_wave_end(_wave: int) -> void:

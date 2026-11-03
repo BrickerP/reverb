@@ -7,7 +7,6 @@ const INK := Color("292720")
 const BORDER := INK
 const PLAYER := PAPER
 const DANGER := Color("be5749")
-const MAX_PATH_POINTS := 18
 const PLAYER_ART_SIZE := Vector2(50.0, 58.0)
 const WARDEN_AUTHORED_FORWARD := 3.0 * PI / 4.0
 const ARENA_FLOOR_PATH := "res://assets/presentation/surfaces/arena_floor.png"
@@ -173,34 +172,10 @@ static func victory_flash_alpha(progress: float, reduced: bool) -> float:
 	return 0.0 if reduced else 0.16 * maxf(0.0, 1.0 - clampf(progress, 0.0, 1.0) * 2.4)
 
 
-static func echo_paths(ci: CanvasItem, sim: Sim, paths: Dictionary, reveal: Dictionary,
-		reduced: bool = false) -> void:
-	for actor in sim.echoes:
-		var pts: PackedVector2Array = paths.get(actor, PackedVector2Array())
-		var shown := echo_path_window(actor, pts, float(reveal.get(actor, 1.0)))
-		var tint := paper_echo_color(actor.take.tint())
-		var alpha := 0.14 if reduced else 0.28
-		if sim.echo_silenced > 0.0:
-			alpha *= 0.4
-		for i in range(0, shown.size() - 1, 2):
-			var fade := 0.3 + 0.7 * float(i + 1) / float(maxi(1, shown.size()))
-			ci.draw_line(shown[i], shown[i + 1], Color(tint, alpha * fade), 2.0)
 
 
-# A bounded playback neighbourhood replaces the old full-screen route carpet.
 
 
-static func echo_path_window(actor: EchoActor, points: PackedVector2Array,
-		reveal_progress: float = 1.0) -> PackedVector2Array:
-	if points.size() < 2:
-		return PackedVector2Array()
-	var duration := actor.take.duration()
-	var progress := actor.take.playback_time(actor.t) / duration if duration > 0.0 else 0.0
-	if reveal_progress < 1.0:
-		progress = clampf(reveal_progress, 0.0, 1.0)
-	var head := clampi(roundi(progress * float(points.size() - 1)), 0, points.size() - 1)
-	var end := mini(points.size(), head + 2)
-	return points.slice(maxi(0, end - MAX_PATH_POINTS), end)
 
 
 static func paper_echo_color(identity: Color) -> Color:
@@ -685,8 +660,8 @@ static func boss_tear_edge_geometry(profile: Dictionary) -> Dictionary:
 
 static func combat_feedback(ci: CanvasItem, muzzles: Array[Dictionary], hits: Array[Dictionary],
 		explosions: Array[Dictionary], hurts: Array[Dictionary], weapon_changes: Array[Dictionary],
-		reduced: bool) -> void:
-	WeaponInk.draw_feedback(ci, muzzles, hits, explosions, reduced)
+		reduced: bool, accented: bool = false) -> void:
+	WeaponInk.draw_feedback(ci, muzzles, hits, explosions, reduced, accented)
 	for data in explosions:
 		if WeaponInk.owns_explosion(data):
 			continue

@@ -484,8 +484,8 @@ func step(delta: float, move_dir: Vector2) -> void:
 	_move_player(delta, move_dir)
 	recorder.record(player.pos, delta)
 	EchoSystem.step(self, delta)
+	_step_cleared_cohort(delta)
 	_spawn_enemies(delta)
-	_step_tail_pressure(delta)
 	_step_supply()
 	_move_enemies(delta)
 	_boss_step(delta)
@@ -528,7 +528,18 @@ func step(delta: float, move_dir: Vector2) -> void:
 
 func _encounter_finished() -> bool:
 	if wave_time < wave_duration:
-		return false
+		if _plan_idx < _plan.size() or _threats_remain() or Expedition.is_negotiating(self):
+			return false
+		if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL:
+			return false
+		if active_contract != null and not active_contract.is_complete(self):
+			return false
+		var bureau: Dictionary = expedition.get("bureau", {})
+		if bureau.get("delivery", {}).get("state", &"") == &"carrying":
+			return false
+		for confession: Dictionary in bureau.get("confessions", []):
+			if int(confession["wave"]) == wave and confession["state"] == &"active":
+				return false
 	# The first fight still asks you to walk while someone is left. An empty
 	# field with a finished clock is the shop, not a closed door.
 	if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL and _threats_remain():
@@ -538,6 +549,20 @@ func _encounter_finished() -> bool:
 
 func _threats_remain() -> bool:
 	return not enemies.is_empty() or not pending.is_empty()
+
+
+func encounter_profile() -> Dictionary:
+	if is_boss_wave():
+		return WaveDirector.phase_profile(wave_time, wave_duration)
+	if _plan_idx >= _plan.size():
+		if _threats_remain():
+			return WaveDirector.cohort_profile(2)
+		return {"id": &"complete", "name_key": "wave.phase.complete", "intensity": 0.0}
+	var next := WaveDirector.cohort_index(_plan_idx, _plan.size())
+	var current := WaveDirector.cohort_index(maxi(0, _plan_idx - 1), _plan.size())
+	if next > current:
+		return WaveDirector.cohort_profile(current, not _threats_remain())
+	return WaveDirector.cohort_profile(next)
 
 
 func _fit_echo_cooldowns(actor: EchoActor) -> void:
@@ -997,18 +1022,19 @@ func replay_signature(actor: EchoActor, action: Dictionary) -> bool:
 	return true
 
 
-func _step_tail_pressure(delta: float) -> void:
-	if wave_time < wave_duration * 0.72 or wave_time >= wave_duration - 0.3 or Expedition.is_negotiating(self):
+func _step_cleared_cohort(delta: float) -> void:
+	if is_boss_wave() or _plan_idx <= 0 or _plan_idx >= _plan.size() or _threats_remain() \
+			or WaveDirector.cohort_index(_plan_idx, _plan.size()) == WaveDirector.cohort_index(_plan_idx - 1, _plan.size()):
+		expedition["tail_clock"] = WaveDirector.COHORT_BREATHER
 		return
-	expedition["tail_clock"] = maxf(-1.2, float(expedition.get("tail_clock", 0.0)) - delta)
-	if float(expedition["tail_clock"]) > 0.0 or enemies.size() + pending.size() >= mini(8, 3 + int(wave / 3)):
+	expedition["tail_clock"] = maxf(0.0, float(expedition["tail_clock"]) - delta)
+	if float(expedition["tail_clock"]) > 0.0:
 		return
-	expedition["tail_clock"] = 1.2
-	var arrival := PendingSpawn.new()
-	arrival.def = Content.enemy(&"runner" if wave >= 3 else &"grunt")
-	arrival.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
-	arrival.delay = 0.3
-	queue_spawn(arrival)
+	# Shift only this finite cohort, never the real combat clock, wear or RNG.
+	var advance := maxf(0.0, _plan[_plan_idx].time - wave_time)
+	for index in range(_plan_idx, WaveDirector.cohort_end(_plan_idx, _plan.size())):
+		_plan[index].time -= advance
+	expedition["tail_clock"] = WaveDirector.COHORT_BREATHER
 
 
 func _spawn_enemies(delta: float) -> void:
@@ -1018,7 +1044,7 @@ func _spawn_enemies(delta: float) -> void:
 		ps.elite_kind = _plan[_plan_idx].elite_kind
 		ps.pos = WaveDirector.spawn_position(ARENA, player.pos, rng)
 		ps.delay = SPAWN_TELEGRAPH
-		if not queue_spawn(ps) and ps.def.is_boss:
+		if not queue_spawn(ps):
 			break
 		_plan_idx += 1
 	var keep: Array[PendingSpawn] = []
@@ -1026,7 +1052,7 @@ func _spawn_enemies(delta: float) -> void:
 		ps.delay = maxf(0.0, ps.delay - delta)
 		if ps.delay > 0.0:
 			keep.append(ps)
-		elif not _materialize(ps) and ps.def.is_boss:
+		elif not _materialize(ps):
 			keep.append(ps)
 	pending = keep
 

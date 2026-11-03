@@ -70,6 +70,20 @@ func _json_roundtrip(data: Dictionary) -> Dictionary:
 	return JSON.parse_string(JSON.stringify(data, "", true, true))
 
 
+func _cleared_first_cohort() -> Sim:
+	var sim := Sim.new(2718)
+	sim.start_run()
+	sim.start_wave(2)
+	sim.player.weapons.clear()
+	sim.player.weapon_levels.clear()
+	sim.player.cooldowns.clear()
+	sim._plan_idx = WaveDirector.cohort_end(0, sim._plan.size())
+	sim.wave_time = sim._plan[sim._plan_idx - 1].time + Sim.SPAWN_TELEGRAPH
+	sim.recorder.record(sim.player.pos, sim.wave_time)
+	sim.expedition["tail_clock"] = WaveDirector.COHORT_BREATHER
+	return sim
+
+
 func test_battle_roundtrip_preserves_all_state_aliases_and_int64_rng(c: Check) -> void:
 	var sim := _battle()
 	var before := RunSnapshot.capture(sim)
@@ -99,6 +113,107 @@ func test_battle_roundtrip_preserves_all_state_aliases_and_int64_rng(c: Check) -
 		sim.step(0.016, Vector2.LEFT)
 		restored.step(0.016, Vector2.LEFT)
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "continued battle matches exactly")
+
+
+func test_cleared_cohort_breather_resumes_with_exact_remaining_wait(c: Check) -> void:
+	var sim := _cleared_first_cohort()
+	var deadline := sim.wave_duration
+	var next_arrival := sim._plan[sim._plan_idx].time
+	sim._step_cleared_cohort(0.4)
+	c.eq(sim.encounter_profile()["id"], &"first_breather", "cleared cohort exposes its actual breather")
+	c.near(sim.expedition["tail_clock"], WaveDirector.COHORT_BREATHER - 0.4, 0.000001, "partial breather is real saved state")
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "partially spent cohort breather restores: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "plan, cursor, remaining breather and both RNG streams roundtrip exactly")
+	c.eq(restored._plan_idx, sim._plan_idx, "restoring never reissues the cleared cohort")
+	c.eq(restored.expedition["tail_clock"], sim.expedition["tail_clock"], "resume does not restart the full breather")
+	c.eq(restored.encounter_profile(), sim.encounter_profile(), "resumed HUD follows the saved cohort")
+	for _frame in 15:
+		sim.step(0.1, Vector2.ZERO)
+		restored.step(0.1, Vector2.ZERO)
+	c.ok(restored._plan[WaveDirector.cohort_end(0, restored._plan.size())].time < next_arrival, "resumed breather really accelerates the next cohort")
+	c.eq(restored.wave_duration, deadline, "accelerating arrivals never extends the original deadline")
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "actual post-breather arrivals, telegraphs and RNG continue identically")
+
+
+func test_accelerated_cohort_resumes_pending_arrival_without_retiming_or_reissuing(c: Check) -> void:
+	var sim := _cleared_first_cohort()
+	var boundary := sim._plan_idx
+	var deadline := sim.wave_duration
+	var original_arrival := sim._plan[boundary].time
+	sim._step_cleared_cohort(WaveDirector.COHORT_BREATHER)
+	sim._spawn_enemies(0.0)
+	c.ok(sim._plan[boundary].time < original_arrival, "fixture saves the actual accelerated cohort")
+	c.ok(sim._plan_idx > boundary and not sim.pending.is_empty(), "first accelerated arrival is issued but still telegraphed")
+	c.eq(sim.encounter_profile()["id"], &"second_push", "pending arrival keeps the accelerated push active")
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "accelerated cohort with a live telegraph restores: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "shifted times, issued cursor, pending position/delay and RNG are exact")
+	for index in sim._plan.size():
+		c.eq(restored._plan[index].time, sim._plan[index].time, "planned timestamp %d survives without regeneration" % index)
+	c.eq(restored._plan_idx, sim._plan_idx, "the already issued arrival stays consumed")
+	c.eq(restored.expedition["tail_clock"], sim.expedition["tail_clock"], "next breather budget is retained")
+	c.eq(restored.rng.state, sim.rng.state, "spawn-position RNG is not replayed during restore")
+	c.eq(restored.hazard_rng.state, sim.hazard_rng.state, "hazard RNG remains independent")
+	for _frame in 30:
+		sim.step(0.05, Vector2.ZERO)
+		restored.step(0.05, Vector2.ZERO)
+	c.ok(not restored.enemies.is_empty(), "resumed telegraph really materializes its cohort")
+	c.eq(restored.wave_duration, deadline, "resumed accelerated combat retains the original deadline")
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "pending materialization and later cohort combat continue identically")
+
+
+func test_early_clear_resume_records_actual_length_and_settles_once(c: Check) -> void:
+	var sim := Sim.new(2719)
+	sim.start_run()
+	sim.start_wave(2)
+	# Keep one future scheduled arrival while recording real elapsed combat time.
+	sim._plan_idx = sim._plan.size() - 1
+	for _frame in 20:
+		sim.step(0.1, Vector2.ZERO)
+	sim._plan_idx = sim._plan.size()
+	sim.player.materials = 100
+	sim.wave_start_materials = 100
+	var scrap := Pickup.new()
+	scrap.kind = &"scrap"
+	scrap.pos = sim.player.pos + Vector2(400.0, 0.0)
+	scrap.value = 7
+	sim.pickups.append(scrap)
+	var restored := RunSnapshot.restore(_json_roundtrip(RunSnapshot.capture(sim)))
+	c.ok(restored != null, "cleared finite encounter resumes before settlement: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	var settlements := [0]
+	restored.wave_ended.connect(func(_wave: int) -> void: settlements[0] += 1)
+	for candidate: Sim in [sim, restored]:
+		candidate.step(0.1, Vector2.ZERO)
+	c.eq(restored.phase, Sim.Phase.SHOP, "resumed clear opens the shop before the deadline")
+	c.ok(restored.wave_time < restored.wave_duration, "clearing does not jump the real combat clock to its deadline")
+	c.eq(restored.bank.takes.size(), 1, "early settlement creates exactly one recording")
+	if restored.bank.takes.is_empty():
+		return
+	var take := restored.bank.takes[0]
+	c.near(take.duration(), restored.wave_time, EchoTake.SAMPLE_DT, "recording length uses actual early-clear time")
+	c.eq(restored.last_wave_earned, 7, "uncollected scrap settles once on early clear")
+	c.eq(restored.player.materials, 109, "early settlement pays scrap and one interest award")
+	c.eq(settlements[0], 1, "resumed clear emits one settlement")
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "live and resumed early clears produce the same shop and recording")
+	var shop_before := RunSnapshot.capture(restored)
+	var shop := RunSnapshot.restore(_json_roundtrip(shop_before))
+	c.ok(shop != null, "early-settled shop also resumes: %s" % RunSnapshot.last_error)
+	if shop == null:
+		return
+	var repeated := [0]
+	shop.wave_ended.connect(func(_wave: int) -> void: repeated[0] += 1)
+	shop.step(1.0, Vector2.RIGHT)
+	c.eq(repeated[0], 0, "resuming the shop cannot settle the cleared encounter again")
+	c.eq(RunSnapshot.capture(shop), shop_before, "shop resume preserves funds, stock and actual recording bytes")
 
 
 func test_shop_roundtrip_preserves_locks_contract_alias_and_exact_undo(c: Check) -> void:
@@ -624,7 +739,8 @@ func test_v4_actual_recorded_machine_work_resumes_without_duplicate_execution(c:
 	c.eq(sim.recorder.work_actions.size(), 1, "actual interaction records one key work event")
 	sim._end_wave()
 	sim.start_wave(2)
-	sim._plan.clear()
+	# Keep the last scheduled arrival outstanding while isolating recorded work.
+	sim._plan_idx = sim._plan.size() - 1
 	for _frame in 61:
 		sim.step(0.1, Vector2.ZERO)
 	var before := RunSnapshot.capture(sim)

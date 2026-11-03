@@ -54,19 +54,24 @@ func test_real_phase_threat_attack_and_boss_select_arrangements(c: Check) -> voi
 func test_wave_push_and_breather_contribute_authoritative_pacing(c: Check) -> void:
 	var sim := Sim.new(13)
 	sim.phase = Sim.Phase.WAVE
+	sim.wave = 3
 	sim.wave_duration = 100.0
+	sim._plan = WaveDirector.plan(3, 13)
 	for i in 13:
 		var enemy := EnemyState.new()
 		enemy.pos = sim.player.pos + Vector2(i * 8.0, 0)
 		sim.enemies.append(enemy)
 	sim.wave_time = 80.0
+	c.eq(GameAudio.music_profile(sim)["wave_phase"], &"first_push", "old elapsed time cannot pretend an uncleared first cohort is final")
+	c.eq(GameAudio.music_profile(sim)["mode"], &"battle", "first cohort remains below pressure threshold")
+	sim._plan_idx = sim._plan.size() - 1
 	c.eq(GameAudio.music_profile(sim)["mode"], &"pressure", "final push adds density to real local threats")
 	c.eq(GameAudio.music_profile(sim)["wave_phase"], &"final_push", "mix reads director phase")
-	sim.wave_time = 30.0
-	c.eq(GameAudio.music_profile(sim)["mode"], &"battle", "real breather releases optional pressure entry")
 	sim.enemies.clear()
-	sim.wave_time = 80.0
 	c.eq(GameAudio.music_profile(sim)["mode"], &"battle", "pacing alone cannot invent enemy pressure")
+	sim._plan_idx = WaveDirector.cohort_end(0, sim._plan.size())
+	c.eq(GameAudio.music_profile(sim)["wave_phase"], &"first_breather", "actual cleared cohort owns its breather")
+	c.eq(GameAudio.music_profile(sim)["mode"], &"battle", "real breather releases optional pressure entry")
 
 
 func test_crossfade_pause_mute_stop_and_session_cleanup(c: Check) -> void:

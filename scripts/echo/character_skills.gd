@@ -8,6 +8,11 @@ const HISTORY_SAMPLES := 21
 const REWIND_SECONDS := 2.0
 
 
+static func is_charged(sim: Sim) -> bool:
+	return sim != null and sim.phase == Sim.Phase.WAVE \
+		and sim.character_energy >= ENERGY_COST and sim.character_cooldown <= 0.0
+
+
 static func on_pickup(sim: Sim, value: int) -> void:
 	if sim.phase == Sim.Phase.WAVE and value > 0:
 		sim.character_energy = minf(ENERGY_COST, sim.character_energy + float(mini(value, 5)) * ENERGY_PER_MATERIAL)
