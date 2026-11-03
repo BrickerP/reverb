@@ -180,6 +180,9 @@ func reset(clear_ignore: bool = true) -> void:
 func _process(delta: float) -> void:
 	if not visible:
 		return
+	if get_viewport().gui_is_dragging():
+		reset()
+		return
 	if not is_instance_valid(_source) or not _source.is_visible_in_tree():
 		reset()
 		return

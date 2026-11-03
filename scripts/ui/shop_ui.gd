@@ -458,6 +458,8 @@ func _on_inventory_resized() -> void:
 	if sim == null or not visible or get_viewport_rect().size == _layout_extent:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
+	if inspection != null and inspection.pinned and is_instance_valid(inspection._source):
+		focus = inspection._source
 	if focus == null and is_instance_valid(_last_focus):
 		focus = _last_focus
 	var copy_focus := focus != null and echo_panel.is_ancestor_of(focus)
@@ -1545,8 +1547,8 @@ func _input(event: InputEvent) -> void:
 func _shortcut_input(event: InputEvent) -> void:
 	if not visible or sim == null or workshop.visible or crew.visible or confession.visible:
 		return
-	var inspect_key := event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1
-	var inspect_pad := event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y
+	var inspect_key: bool = event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1
+	var inspect_pad: bool = event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y
 	if not inspect_key and not inspect_pad:
 		return
 	var source := get_viewport().gui_get_focus_owner()
@@ -1560,6 +1562,8 @@ func _shortcut_input(event: InputEvent) -> void:
 
 func _request_inspection(source: Control, pin: bool) -> void:
 	if sim == null or not is_instance_valid(source) or not source.is_inside_tree() or not source.is_visible_in_tree():
+		return
+	if get_viewport().gui_is_dragging():
 		return
 	if inspection.pinned and not pin:
 		return
