@@ -61,6 +61,7 @@ jobs:
           ./tools/checked.sh --headless --path . --check-only --script res://tools/paper_action_probe.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/release_save_compat.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/weapon_ui_probe.gd
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/experience_probe.gd
 
       - name: Smoke test
         shell: bash
@@ -225,6 +226,34 @@ jobs:
             if [ "$capture_status" -ne 0 ]; then
               exit "$capture_status"
             fi
+          done
+
+      - name: Capture audible routes and early-finish experience
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_BUILD_COMMIT: ${{ github.sha }}
+        shell: bash
+        run: |
+          for variant in normal compact reduced; do
+            resolution=1280x720
+            language=en
+            if [ "$variant" = compact ]; then resolution=960x540; language=zh; fi
+            output="$GITHUB_WORKSPACE/shots/paper-actions/experience/$variant"
+            mkdir -p "$output"
+            python3 -c 'from pathlib import Path; import sys; w,h=map(int,sys.argv[1].split("x")); Path("override.cfg").write_text("[display]\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\n" % (w,h,w,h))' "$resolution"
+            REVERB_LANG="$language" xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+              --path . --resolution "$resolution" --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+              --write-movie "$output/experience.avi" --script res://tools/experience_probe.gd -- \
+              --output="$output" --variant="$variant"
+            ffmpeg -hide_banner -loglevel error -i "$output/experience.avi" \
+              -map 0:v:0 -map 0:a:0 -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
+              -c:a aac -b:a 160k -movflags +faststart "$output/experience.mp4"
+            rm "$output/experience.avi"
+            ffprobe -v error -show_streams -of json "$output/experience.mp4" > "$output/video.json"
+            ffmpeg -hide_banner -i "$output/experience.mp4" -af astats=metadata=1:reset=0 \
+              -f null - > /dev/null 2> "$output/audio-analysis.txt"
+            python3 tools/verify_experience_evidence.py "$output" --commit "$GITHUB_SHA" --variant "$variant"
           done
 
       - name: Capture legal eight-Echo pressure

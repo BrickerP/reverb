@@ -36,6 +36,7 @@ func _take() -> EchoTake:
 
 func test_echo_route_previews_future_motion_instead_of_recorded_history(c: Check) -> void:
 	var sim := Sim.new(7)
+	sim.start_run()
 	var actor := EchoActor.new(_take(), 0)
 	actor.t = 2.0
 	actor.pos = actor.take.position_at(actor.t)

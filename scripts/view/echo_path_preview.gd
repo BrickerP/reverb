@@ -105,7 +105,7 @@ static func _route(actor: EchoActor, horizon: float, hold: float, delta: float) 
 			else:
 				# Include every recorded vertex and ping-pong cusp between physics
 				# samples, so the forecast cannot cut across a sharp recorded turn.
-				var vertex := (floor(clock / EchoTake.SAMPLE_DT) + 1.0) * EchoTake.SAMPLE_DT
+				var vertex: float = (floor(clock / EchoTake.SAMPLE_DT) + 1.0) * EchoTake.SAMPLE_DT
 				for _vertex in MAX_ROUTE_POINTS:
 					if vertex > next + EPSILON:
 						break
