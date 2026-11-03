@@ -2,6 +2,9 @@ class_name LocZh
 extends RefCounted
 
 const TABLE := {
+	"shop.loadout": "构筑",
+	"shop.replace_materials": "替换 · %d 材料",
+
 	"inspection.details": "详情",
 	"inspection.close": "关闭",
 	"inspection.upgrade": "升级",
@@ -36,7 +39,6 @@ const TABLE := {
 	"shop.base_output": "基础效果 · %s",
 	"shop.empty_weapon": "空槽 %d",
 	"shop.passive_drop": "道具拖放区",
-	"shop.manage": "管理武器",
 	"shop.build_details": "装备属性",
 	"shop.need_materials": "还差 %d 材料",
 	"shop.full_upgrade": "已满级 · 可选择进化分支",

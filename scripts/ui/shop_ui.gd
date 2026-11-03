@@ -119,8 +119,7 @@ func _ready() -> void:
 	build_panel.upgrade_requested.connect(_on_upgrade_weapon)
 	build_panel.evolve_requested.connect(_on_evolve_weapon)
 	build_panel.selection_changed.connect(_rebuild_focus)
-	build_panel.stats_requested.connect(_open_build_stats)
-	build_panel.passives_requested.connect(_open_build_passives)
+	build_panel.loadout_requested.connect(_open_loadout_menu)
 	build_panel.workshop_requested.connect(_open_weapon_workshop)
 	dossier.add_child(build_panel)
 	echo_panel = EchoPanel.new()
@@ -1719,6 +1718,10 @@ func _on_workshop_closed() -> void:
 	if is_instance_valid(source) and source.is_inside_tree() and source.is_visible_in_tree():
 		_request_inspection(source, true)
 		return
+	if _workshop_origin == &"loadout":
+		_rebuild_focus()
+		build_panel.loadout_button.grab_focus()
+		return
 	if _workshop_origin == &"ledger":
 		_rebuild_focus()
 		debt_button.grab_focus()
@@ -1764,8 +1767,6 @@ func _open_weapon_workshop(index: int) -> void:
 	choices.append({"text": Loc.t("workshop.evolve"), "value": &"evolve", "disabled": sim.shop.evolution_choices(sim, index).is_empty()})
 	var sell := sim.shop.quote(ShopResult.SELL, sim, null, index)
 	choices.append({"text": Loc.t("shop.sell_materials", [absi(sell.cost)]), "value": &"sell", "disabled": not sell.ok, "hint": Loc.t("shop.sell_last_reason") if not sell.ok else Loc.t("shop.sell_hint")})
-	choices.append({"text": Loc.t("shop.core"), "value": &"stats"})
-	choices.append({"text": Loc.t("shop.items"), "value": &"passives"})
 	workshop.show_choices(Loc.weapon_name(weapon.id), build_panel._detail_text_for(weapon, level), choices, _on_weapon_workshop_action.bind(index))
 
 
@@ -1779,8 +1780,21 @@ func _on_weapon_workshop_action(value: Variant, index: int) -> void:
 		&"sell":
 			_on_sell_weapon(index)
 			workshop.close()
-		&"stats": _open_build_stats(index)
-		&"passives": _open_build_passives(index)
+
+
+func _open_loadout_menu(index: int) -> void:
+	if sim == null:
+		return
+	inspection.reset()
+	_workshop_origin = &"loadout"
+	_workshop_slot = index
+	var choices: Array[Dictionary] = [{"text": Loc.t("shop.build_details"), "value": &"stats"},
+		{"text": Loc.t("workshop.passives", [sim.player.items.size()]), "value": &"passives"}]
+	workshop.show_choices(Loc.t("shop.loadout"), "", choices, func(value: Variant) -> void:
+		if StringName(value) == &"stats":
+			_open_build_stats(index)
+		else:
+			_open_build_passives(index))
 
 
 func _open_build_stats(index: int, page: int = 0) -> void:
@@ -1802,7 +1816,7 @@ func _open_build_stats(index: int, page: int = 0) -> void:
 		elif StringName(value) == &"family":
 			_open_family_stats(index)
 		else:
-			_open_weapon_workshop(index))
+			_open_loadout_menu(index))
 
 
 func _open_family_stats(index: int, page: int = 0) -> void:
@@ -1829,7 +1843,7 @@ func _open_family_stats(index: int, page: int = 0) -> void:
 		choices.append({"text": Loc.t("workshop.next"), "value": page + 1})
 	workshop.show_choices(Loc.t("shop.family"), "\n".join(lines.slice(page * 6, (page + 1) * 6)), choices, func(value: Variant) -> void:
 		if int(value) < 0:
-			_open_weapon_workshop(index)
+			_open_loadout_menu(index)
 		else:
 			_open_family_stats(index, int(value)))
 
@@ -1866,7 +1880,7 @@ func _open_passive_page(index: int, lines: Array[String], page: int) -> void:
 		choices.append({"text": Loc.t("workshop.next"), "value": page + 1})
 	workshop.show_choices(Loc.t("shop.items"), "\n".join(lines.slice(page * 3, (page + 1) * 3)), choices, func(value: Variant) -> void:
 		if int(value) < 0:
-			_open_weapon_workshop(index)
+			_open_loadout_menu(index)
 		else:
 			_open_passive_page(index, lines, int(value)))
 
@@ -2014,6 +2028,8 @@ func set_paused(on: bool) -> void:
 
 
 func _process(_delta: float) -> void:
+	if visible and sim != null:
+		build_panel.show_item_drop(get_viewport().gui_is_dragging())
 	# Coalesce rapid refreshes into one restore after container layout settles.
 	if _stock_scroll_frames > 0:
 		_stock_scroll_frames -= 1

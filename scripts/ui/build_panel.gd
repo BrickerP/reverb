@@ -6,8 +6,7 @@ signal upgrade_requested(index: int)
 signal evolve_requested(index: int)
 signal selection_changed
 signal workshop_requested(index: int)
-signal passives_requested(index: int)
-signal stats_requested(index: int)
+signal loadout_requested(index: int)
 var show_heading := false
 var weapons_label: Label
 var replacing: bool = false
@@ -17,15 +16,16 @@ var empty_drop_target: ShopDropTarget
 var items_drop_target: ShopDropTarget
 
 var upgrade_button: Button
-var manage_button: Button
-var stats_button: Button
-var passives_button: Button
+var loadout_button: Button
 var passive_buttons: Array[Button] = []
 
 var _box: VBoxContainer
 var _weapons_row: Control
 var _slot_buttons: Array[Button] = []
 var _replacement_name := ""
+var _drop_label: Label
+var _passive_row: HBoxContainer
+var _drop_active := false
 var _generation := 0
 var _cards: Array[PanelContainer] = []
 var _card_weapons: Array[WeaponDef] = []
@@ -72,30 +72,46 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 	UiTheme.clear(_box)
 	_slot_buttons.clear()
 	upgrade_button = null
-	manage_button = null
-	stats_button = null
-	passives_button = null
+	loadout_button = null
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
 	slot_drop_targets.clear()
 	empty_drop_target = null
 	items_drop_target = null
-	# The page title already identifies the inventory. Keep statistics on the
-	# fixed bottom row instead of spending a second header above six slots.
 	weapons_label = null
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 6)
 	if show_heading:
 		weapons_label = UiTheme.label(Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS]), 17)
-		_box.add_child(weapons_label)
+		weapons_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header.add_child(weapons_label)
+	else:
+		var space := Control.new()
+		space.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		header.add_child(space)
+	_build_upgrade(header)
+	loadout_button = Button.new()
+	loadout_button.text = Loc.t("shop.loadout")
+	loadout_button.pressed.connect(func() -> void: loadout_requested.emit(_selected))
+	header.add_child(loadout_button)
+	if replacing:
+		var cancel := Button.new()
+		cancel.text = Loc.t("shop.cancel")
+		cancel.pressed.connect(replace_cancelled.emit)
+		header.add_child(cancel)
+	_box.add_child(header)
 	_weapons_row = _weapon_chips(sim.player, sim)
 	_box.add_child(_weapons_row)
-	_build_actions()
-	var actions := HBoxContainer.new()
-	actions.add_theme_constant_override("separation", 6)
-	stats_button = Button.new()
-	stats_button.text = Loc.t("shop.build_details")
-	stats_button.pressed.connect(func() -> void: stats_requested.emit(_selected))
-	actions.add_child(stats_button)
+	items_drop_target = ShopDropTarget.new()
+	items_drop_target.configure(&"items", -1, _quote_drop, _apply_drop, _clear_drop)
+	items_drop_target.accessibility_name = Loc.t("shop.passive_drop")
+	items_drop_target.custom_minimum_size.y = 26
+	items_drop_target.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_box.add_child(items_drop_target)
+	_passive_row = HBoxContainer.new()
+	_passive_row.add_theme_constant_override("separation", 4)
+	items_drop_target.add_child(_passive_row)
 	passive_buttons.clear()
 	var limit := 8 if show_heading else 4
 	for id: StringName in sim.player.items.keys().slice(0, limit):
@@ -103,25 +119,17 @@ func refresh(sim: Sim, replace_with: String = "", on_choose: Callable = Callable
 		button.set_meta(&"item_id", id)
 		button.accessibility_name = Loc.item_name(id)
 		button.accessibility_description = Loc.item_desc(Content.item(id), sim)
-		button.custom_minimum_size = Vector2(26, 28)
+		button.custom_minimum_size = Vector2(26, 26)
 		var icon := UiTheme.item_icon(Content.item(id), Vector2(24, 24))
 		button.add_child(icon)
 		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		actions.add_child(button)
+		_passive_row.add_child(button)
 		passive_buttons.append(button)
-	passives_button = Button.new()
-	passives_button.text = Loc.t("workshop.passives", [sim.player.items.size()])
-	passives_button.pressed.connect(func() -> void: passives_requested.emit(_selected))
-	actions.add_child(passives_button)
-	items_drop_target = _empty_target(&"items", Loc.t("shop.passive_drop"))
-	items_drop_target.custom_minimum_size.y = 26.0
-	actions.add_child(items_drop_target)
-	if replacing:
-		var cancel := Button.new()
-		cancel.text = Loc.t("shop.cancel")
-		cancel.pressed.connect(replace_cancelled.emit)
-		actions.add_child(cancel)
-	_box.add_child(actions)
+	_drop_label = UiTheme.label(Loc.t("shop.passive_drop"), 12, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	_drop_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_drop_label.hide()
+	items_drop_target.add_child(_drop_label)
+	_drop_active = false
 	_selected = clampi(selected_before, 0, maxi(0, sim.player.weapons.size() - 1))
 	_select(_selected)
 	for button: Button in find_children("*", "Button", true, false):
@@ -144,9 +152,7 @@ func close_session() -> void:
 	_weapons_row = null
 	_slot_buttons.clear()
 	upgrade_button = null
-	manage_button = null
-	stats_button = null
-	passives_button = null
+	loadout_button = null
 	_cards.clear()
 	_card_weapons.clear()
 	_card_levels.clear()
@@ -189,7 +195,7 @@ func flash_slots(reduced: bool = false) -> void:
 
 
 func flash_items(reduced: bool = false) -> void:
-	_reject_section(passives_button, items_drop_target, reduced)
+	_reject_section(loadout_button, items_drop_target, reduced)
 
 
 func _reject_section(title: Control, contents: Control, reduced: bool) -> void:
@@ -207,7 +213,7 @@ func _reset_section_feedback() -> void:
 	if _section_feedback != null and _section_feedback.is_valid():
 		_section_feedback.kill()
 	_section_feedback = null
-	for control: Control in [weapons_label, passives_button, _weapons_row, items_drop_target]:
+	for control: Control in [weapons_label, loadout_button, _weapons_row, items_drop_target]:
 		if is_instance_valid(control):
 			control.modulate = Color.WHITE
 
@@ -289,13 +295,9 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	return card
 
 
-func _build_actions() -> void:
+func _build_upgrade(header: HBoxContainer) -> void:
 	var generation := _generation
-	var actions := HBoxContainer.new()
-	actions.add_theme_constant_override("separation", 6)
-	_box.add_child(actions)
 	upgrade_button = Button.new()
-	upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	upgrade_button.disabled = true
 	upgrade_button.pressed.connect(func() -> void:
 		if _sim == null or generation != _generation or replacing or upgrade_button.disabled:
@@ -304,12 +306,16 @@ func _build_actions() -> void:
 			evolve_requested.emit(_selected)
 		else:
 			upgrade_requested.emit(_selected))
-	actions.add_child(upgrade_button)
-	manage_button = Button.new()
-	manage_button.text = Loc.t("shop.manage")
-	manage_button.disabled = _cards.is_empty()
-	manage_button.pressed.connect(func() -> void: workshop_requested.emit(_selected))
-	actions.add_child(manage_button)
+	header.add_child(upgrade_button)
+
+
+func show_item_drop(active: bool) -> void:
+	if _sim == null or items_drop_target == null or active == _drop_active:
+		return
+	_drop_active = active
+	_drop_label.visible = active
+	_passive_row.visible = not active
+	items_drop_target.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.PAPER) if active else StyleBoxEmpty.new())
 
 
 func _empty_target(kind: StringName, text: String) -> ShopDropTarget:
@@ -413,7 +419,6 @@ func _select(index: int) -> void:
 		upgrade_button.text = Loc.t("shop.upgrade_materials", [level + 2, cost])
 		upgrade_button.disabled = not _sim.shop.quote(ShopResult.UPGRADE, _sim, null, index).ok
 	upgrade_button.visible = not replacing
-	manage_button.visible = not replacing
 	upgrade_button.accessibility_name = upgrade_button.text
 	upgrade_button.accessibility_description = Loc.weapon_upgrade(w, level)
 	selection_changed.emit()

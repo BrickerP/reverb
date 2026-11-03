@@ -138,7 +138,7 @@ func test_offer_states_keep_lock_boundary_and_full_explanation(c: Check) -> void
 	var full_ui := _open(full)
 	var full_card := _card(full_ui, 0)
 	c.eq(full_card.blocked_reason, &"full", "full-slot weapon exposes replacement state")
-	c.ok(_has_label(full_card, str(full_card.offer.price)),
+	c.ok(full_card.swap_button.text == Loc.t("shop.replace_materials", [full_card.offer.price]),
 			"full-slot offer keeps its actual price visible")
 	c.ok(full_card.swap_button != null, "full-slot offer can be replaced")
 	c.ok(full_card.accessibility_description.contains(Loc.t("shop.full_reason")),

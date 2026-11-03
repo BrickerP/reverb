@@ -95,7 +95,7 @@ func _run() -> void:
 			await _settle()
 			await _capture(ui, extent, "unaffordable-tree")
 			if ui.inventory_overview():
-				ui.build_panel.passives_button.grab_focus()
+				ui.build_panel._slot_buttons.back().grab_focus()
 				await _action(&"ui_right")
 				_check.eq(root.gui_get_focus_owner(), ui.echo_panel.merge_button, "overview navigation reaches the visible bank")
 				await _capture(ui, extent, "echoes")
@@ -244,7 +244,8 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.build_panel._select(0)
 	await _settle()
 	_check.eq(RunSnapshot.capture(sim), before, "trade-in fixture returns to the original shop")
-	ui.build_panel.manage_button.pressed.emit()
+	ui.build_panel._slot_buttons[ui.build_panel._selected].pressed.emit()
+	ui.inspection.details_button.pressed.emit()
 	await _settle()
 	await _capture(ui, extent, "manage-weapon")
 	ui.workshop.choice_buttons[3].pressed.emit()
@@ -268,7 +269,8 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.refresh()
 	await _settle()
 	before = RunSnapshot.capture(sim)
-	ui.build_panel.manage_button.pressed.emit()
+	ui.build_panel._slot_buttons[ui.build_panel._selected].pressed.emit()
+	ui.inspection.details_button.pressed.emit()
 	ui.workshop.choice_buttons[1].pressed.emit()
 	await _settle()
 	ui.workshop.choice_buttons[0].pressed.emit()
@@ -361,9 +363,15 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 		if control.is_visible_in_tree():
 			_check.ok(viewport.encloses(control.get_global_rect()), "%s %s at %s stays in %s" % [control.name, control.get("text") if control is Button else "panel", control.get_global_rect(), extent])
 	for card: OfferCard in ui.offers_box.get_children():
-		var purchase := card.find_child("PurchaseAction", true, false) as Label
+		var purchase := card.find_child("PurchaseAction", true, false) as Control
 		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
 		_check.ok(card._art.size.y >= 50, "primary stock is real merchandise art")
+		var group := card.find_child("MerchandiseInfo", true, false) as Control
+		var name := card.find_child("MerchandiseName", true, false) as Control
+		_check.ok(card._art.get_global_rect().end.x <= group.get_global_rect().position.x + 1,
+				"merchandise illustration leads a single information column")
+		_check.ok(absf(name.global_position.x - card.price_tag.global_position.x) <= 1,
+				"name and price action share one aligned reading axis")
 		_check.eq(card.find_child("AttackBehavior", true, false), null, "stock prose stays off the primary surface")
 		if card.swap_button != null:
 			_check.ok(card.get_global_rect().grow(1).encloses(card.swap_button.get_global_rect()), "replace action stays inside its stock card")
@@ -376,6 +384,11 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 						-1, button.get_theme_font_size("font_size")).x
 					_check.ok(width <= button.size.x - 12.0, "workshop action text is not clipped")
 	if ui.build_panel.visible:
+		var controls := 0
+		for button: Button in ui.build_panel.find_children("*", "Button", true, false):
+			if button.is_visible_in_tree() and not ui.build_panel._slot_buttons.has(button) and not ui.build_panel.passive_buttons.has(button):
+				controls += 1
+		_check.ok(controls <= 2, "primary equipment has at most two deliberate action entries")
 		_check.ok(ui.build_panel.size.y <= ui.build_panel._box.get_combined_minimum_size().y + 16.0, "weapon paper follows its content height")
 		for card: PanelContainer in ui.build_panel._cards:
 			var art := card.find_child("WeaponArt", true, false) as TextureRect

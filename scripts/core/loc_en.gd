@@ -2,6 +2,9 @@ class_name LocEn
 extends RefCounted
 
 const TABLE := {
+	"shop.loadout": "Loadout",
+	"shop.replace_materials": "Replace · %d materials",
+
 	"inspection.details": "Details",
 	"inspection.close": "Close",
 	"inspection.upgrade": "Upgrade",
@@ -36,7 +39,6 @@ const TABLE := {
 	"shop.base_output": "Base output · %s",
 	"shop.empty_weapon": "Empty slot %d",
 	"shop.passive_drop": "Drop passive here",
-	"shop.manage": "Manage weapon",
 	"shop.build_details": "Build stats",
 	"shop.need_materials": "Need %d more materials",
 	"shop.full_upgrade": "Maximum level · evolution available",

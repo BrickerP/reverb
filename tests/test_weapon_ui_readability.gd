@@ -286,3 +286,33 @@ func test_merge_inspection_cannot_discard_its_pending_participants(c: Check) -> 
 	c.eq(ui.inspection.action_buttons.size(), 0, "merge inspection has no competing repair or discard transaction")
 	c.eq(RunSnapshot.capture(sim), before, "opening merge inspection preserves both participants")
 	_release(ui)
+
+
+func test_shop_card_has_one_grouped_price_action_and_no_detached_tag(c: Check) -> void:
+	var sim := _sim()
+	while sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
+		sim.player.add_weapon(Content.weapon(&"pistol"))
+	var ui := _open(sim)
+	var card := ui.offers_box.get_child(0) as OfferCard
+	c.ok(card.find_child("MerchandiseRow", true, false) is HBoxContainer, "art and information form one horizontal reading line")
+	var group := card.find_child("MerchandiseInfo", true, false)
+	c.ok(group.is_ancestor_of(card.price_tag), "price belongs to the identity group")
+	c.eq(card.find_children("PurchaseAction", "", true, false).size(), 1, "each card has one price/action presentation")
+	_release(ui)
+
+
+func test_equipment_global_actions_and_drop_hint_are_converged(c: Check) -> void:
+	var sim := _sim()
+	var ui := _open(sim)
+	c.ok(not ui.build_panel._drop_label.visible, "drop instructions are absent until dragging")
+	ui.build_panel.show_item_drop(true)
+	c.ok(ui.build_panel._drop_label.visible, "dragging reveals the real item drop target")
+	ui.build_panel.show_item_drop(false)
+	c.ok(not ui.build_panel._drop_label.visible, "drop guidance folds away again")
+	ui.build_panel.loadout_button.pressed.emit()
+	c.eq(ui.workshop.choice_buttons.size(), 2, "one loadout entry owns global stats and passives")
+	ui.workshop.cancel_button.pressed.emit()
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui.inspection.details_button.pressed.emit()
+	c.eq(ui.workshop.choice_buttons.size(), 4, "weapon context owns only upgrade, combine, evolve and sell")
+	_release(ui)

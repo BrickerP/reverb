@@ -95,7 +95,8 @@ func test_build_panel_explains_the_active_mastery(c: Check) -> void:
 	var ui := ShopUi.new()
 	_root().add_child(ui)
 	ui.open(s)
-	ui.build_panel.stats_button.pressed.emit()
+	ui.build_panel.loadout_button.pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
 	ui.workshop.choice_buttons[0].pressed.emit()
 	c.ok(_find_label(ui.workshop, Loc.t("shop.family_mastery_sidearm")),
 			"the workbench shows the active family rule")
