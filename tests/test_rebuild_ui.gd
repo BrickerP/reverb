@@ -124,8 +124,8 @@ func test_repair_quotes_and_full_slots_keep_their_actions(c: Check) -> void:
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
 	ui.open(sim)
-	c.eq(ui.echo_panel.repair_buttons.size(), ui.echo_panel.page_size, "visible page exposes bounded repair actions")
-	c.ok(ui.echo_panel.page_next != null, "remaining copies retain a page action")
+	c.eq(ui.echo_panel.copy_buttons.size(), mini(sim.bank.takes.size(), ui.echo_panel.page_size), "visible page exposes bounded repair actions")
+	c.eq(ui.echo_panel.page_next, null, "the legal copy bank is visible at once")
 	var weapon_offer := Offer.new()
 	weapon_offer.weapon = Content.weapon(&"stamp")
 	weapon_offer.price = 30
@@ -237,8 +237,8 @@ func test_reduced_effects_keeps_arrival_status_without_animation(c: Check) -> vo
 	_root().add_child(panel)
 	panel.refresh(sim, true)
 	var new_badges := 0
-	for label: Label in panel.find_children("*", "Label", true, false):
-		if label.text == "[%s]" % Loc.t("shop.new"):
+	for tile: Control in panel._takes_box.get_children():
+		if bool(tile.get_meta(&"new_copy", false)):
 			new_badges += 1
 	c.eq(new_badges, 1, "reduced mode keeps the real arriving copy badge")
 	c.eq(panel._new_row_tween, null, "arrival status does not require a motion tween")

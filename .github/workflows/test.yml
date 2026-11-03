@@ -60,6 +60,7 @@ jobs:
         run: |
           ./tools/checked.sh --headless --path . --check-only --script res://tools/paper_action_probe.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/release_save_compat.gd
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/weapon_ui_probe.gd
 
       - name: Smoke test
         shell: bash
@@ -82,6 +83,46 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: python3 -m unittest discover -s tests -p 'test_*.py'
+
+  weapon-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native capture tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Download Godot
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+      - name: Import capture project
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+        run: ./tools/checked.sh --headless --path . --import
+
+      - name: Verify readable weapons and native shop navigation
+        env:
+          GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          REVERB_BUILD_COMMIT: ${{ github.sha }}
+          REVERB_UI_EVIDENCE_OUTPUT: ${{ github.workspace }}/shots/paper-actions/weapon-ui
+        run: |
+          xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
+            --path . --audio-driver Dummy --fixed-fps 60 --disable-vsync \
+            --script res://tools/weapon_ui_probe.gd
+
+      - name: Upload weapon readability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weapon-ui-evidence-${{ github.sha }}
+          path: shots/paper-actions/weapon-ui/
+          if-no-files-found: warn
+          retention-days: 14
+
 
   paper-feedback:
     needs: test
@@ -378,7 +419,7 @@ jobs:
         run: timeout 60 ./tools/checked.sh --headless --quit-after 60
 
   package-release:
-    needs: [test, paper-feedback, export-preview, export-linux, export-windows]
+    needs: [test, weapon-ui, paper-feedback, export-preview, export-linux, export-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -402,6 +443,12 @@ jobs:
         with:
           name: paper-action-evidence-${{ github.sha }}
           path: ${{ runner.temp }}/release-evidence
+
+      - name: Download this run's weapon UI evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: weapon-ui-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/release-evidence/weapon-ui
 
       - name: Package audited binaries and write exact-run receipts
         env:
@@ -428,7 +475,7 @@ jobs:
 
   publish-release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [package-release, test, paper-feedback, export-preview, export-linux, export-windows]
+    needs: [package-release, test, weapon-ui, paper-feedback, export-preview, export-linux, export-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

@@ -41,8 +41,8 @@ func _has_label(node: Node, text: String, exact: bool = false) -> bool:
 func _open_core(ui: ShopUi) -> void:
 	if ui.workshop.visible:
 		ui.workshop.cancel_button.pressed.emit()
-	ui.build_panel._slot_buttons[0].pressed.emit()
-	ui.workshop.choice_buttons[4].pressed.emit()
+	ui.build_panel.loadout_button.pressed.emit()
+	ui.workshop.choice_buttons[0].pressed.emit()
 
 
 func _open_families(ui: ShopUi) -> void:

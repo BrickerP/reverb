@@ -595,8 +595,8 @@ func _cleanup_case() -> bool:
 			"BuildPanel releases cards, targets and drop callables"):
 		return false
 	if not _require(ui.echo_panel._sim == null and not ui.echo_panel._merge_mode
-			and ui.echo_panel._merge_first == null and ui.echo_panel.last_new_row == null
-			and ui.echo_panel.discard_buttons.is_empty() and ui.echo_panel.merge_button == null
+			and ui.echo_panel._spent_uid == 0 and ui.echo_panel._host_uid == 0 and ui.echo_panel.last_new_row == null
+			and ui.echo_panel.copy_buttons.is_empty() and ui.echo_panel.merge_button == null
 			and ui.echo_panel._box.get_child_count() == 0,
 			"EchoPanel releases run, merge and generated control state"):
 		return false

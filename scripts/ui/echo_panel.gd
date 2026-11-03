@@ -2,13 +2,12 @@ class_name EchoPanel
 extends PanelContainer
 
 signal discard_requested(take: EchoTake)
-signal merge_workbench_requested
 signal detail_requested(take: EchoTake)
 signal repair_requested(take: EchoTake)
 signal staple_requested(host: EchoTake, donor: EchoTake, choice: StringName)
+signal navigation_changed
 
-var discard_buttons: Array[Button] = []
-var repair_buttons: Array[Button] = []
+var copy_buttons: Array[Button] = []
 var merge_button: Button
 var trait_buttons: Array[Button] = []
 var last_new_row: Control
@@ -16,18 +15,17 @@ var last_new_tint: Color = Color.WHITE
 var reduced_effects := false
 
 var _box: VBoxContainer
-var _takes_box: VBoxContainer
+var _takes_box: GridContainer
 var _sim: Sim
 var _animate_new := false
 var _merge_mode := false
 var _spent_uid := 0
 var _host_uid := 0
 var page := 0
-var page_size := 2
+var page_size := 8
 var page_previous: Button
 var page_next: Button
 var _identity_buttons: Dictionary = {}
-var _repair_by_uid: Dictionary = {}
 var _new_row_tween: Tween
 var _animated_strip: Control
 var _animated_info: Control
@@ -68,8 +66,10 @@ func _init() -> void:
 func refresh(sim: Sim, animate_new: bool = false) -> void:
 	_sim = sim
 	_animate_new = animate_new and not reduced_effects
-	page_size = 1 if get_viewport_rect().size.y < 620.0 else 2
+	page_size = maxi(1, page_size)
 	page = clampi(page, 0, maxi(0, ceili(float(sim.bank.takes.size()) / page_size) - 1))
+	if _merge_mode and _host_uid != 0:
+		_show_uid(_host_uid)
 	_render()
 	_animate_new = false
 
@@ -82,10 +82,8 @@ func close_session() -> void:
 	_spent_uid = 0
 	_host_uid = 0
 	trait_buttons.clear()
-	discard_buttons.clear()
-	repair_buttons.clear()
+	copy_buttons.clear()
 	_identity_buttons.clear()
-	_repair_by_uid.clear()
 	merge_button = null
 	last_new_row = null
 	last_new_tint = Color.WHITE
@@ -100,8 +98,12 @@ func set_reduced_effects(on: bool) -> void:
 	reduced_effects = on
 	if on:
 		_finish_new_row_animation()
-		for preview in find_children("*", "PathPreview", true, false):
-			(preview as PathPreview).finish_immediately()
+	for portrait: EchoPortrait in find_children("*", "EchoPortrait", true, false):
+		portrait.reduced_effects = on
+		portrait.set_process(not on)
+		if on:
+			portrait.finish_immediately()
+		portrait.queue_redraw()
 
 
 func cancel_merge() -> bool:
@@ -132,13 +134,17 @@ func trait_button(choice: StringName) -> Button:
 
 
 func _render() -> void:
+	_render_rows()
+	navigation_changed.emit()
+
+
+func _render_rows() -> void:
 	_finish_new_row_animation()
 	UiTheme.clear(_box)
-	discard_buttons.clear()
-	repair_buttons.clear()
+	copy_buttons.clear()
 	_identity_buttons.clear()
-	_repair_by_uid.clear()
 	merge_button = null
+	last_new_row = null
 	trait_buttons.clear()
 	page_previous = null
 	page_next = null
@@ -146,93 +152,134 @@ func _render() -> void:
 		return
 	var sim := _sim
 	var capacity := sim.echo_capacity()
-	var over := sim.bank.overflow(capacity)
-	var heading := Loc.t("shop.echoes", [sim.bank.takes.size(), capacity])
 	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	var title := UiTheme.section_label(heading, 16, UiTheme.WARN if over > 0 else UiTheme.ECHO)
+	head.add_theme_constant_override("separation", 6)
+	var title := UiTheme.section_label(Loc.t("shop.echoes", [sim.bank.takes.size(), capacity]), 16,
+		UiTheme.WARN if sim.bank.overflow(capacity) > 0 else UiTheme.ECHO)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
+	_box.add_child(head)
+	if sim.bank.takes.size() > page_size:
+		page_previous = Button.new()
+		page_previous.text = "‹"
+		page_previous.accessibility_name = Loc.t("workshop.previous")
+		page_previous.disabled = page <= 0
+		page_previous.pressed.connect(func() -> void: _change_page(-1))
+		head.add_child(page_previous)
+		head.add_child(UiTheme.label(Loc.t("workshop.page", [page + 1, ceili(float(sim.bank.takes.size()) / page_size)]), 12))
+		page_next = Button.new()
+		page_next.text = "›"
+		page_next.accessibility_name = Loc.t("workshop.next")
+		page_next.disabled = (page + 1) * page_size >= sim.bank.takes.size()
+		page_next.pressed.connect(func() -> void: _change_page(1))
+		head.add_child(page_next)
 	if capacity > 0 and not sim.bank.takes.is_empty():
 		merge_button = Button.new()
 		merge_button.disabled = not _merge_mode and sim.bank.takes.size() < 2
 		merge_button.text = Loc.t("shop.cancel") if _merge_mode else (Loc.t("shop.merge_need") if merge_button.disabled else Loc.t("shop.merge"))
-		merge_button.tooltip_text = merge_button.text
 		merge_button.accessibility_description = merge_button.text
-		merge_button.custom_minimum_size = Vector2(80.0, 34.0)
-		merge_button.add_theme_font_size_override("font_size", 14)
-		UiTheme.stamp_button(merge_button, UiTheme.ECHO)
 		merge_button.pressed.connect(_on_merge_button)
 		head.add_child(merge_button)
-	_box.add_child(head)
-	if capacity <= 0:
-		var none := UiTheme.label(Loc.t("shop.echo_none_slots"), 16, UiTheme.DIM)
-		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_box.add_child(none)
-		return
-	if sim.bank.takes.is_empty():
-		var hint := UiTheme.label(Loc.t("shop.echo_none"), 16, UiTheme.DIM)
+	if capacity <= 0 or sim.bank.takes.is_empty():
+		var hint := UiTheme.label(Loc.t("shop.echo_none_slots") if capacity <= 0 else Loc.t("shop.echo_none"), 14, UiTheme.DIM)
 		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_box.add_child(hint)
 		return
-	_takes_box = VBoxContainer.new()
+	_takes_box = GridContainer.new()
+	_takes_box.columns = 4
 	_takes_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_takes_box.add_theme_constant_override("separation", 4)
-	_takes_box.gui_input.connect(_cancel_empty)
+	_takes_box.add_theme_constant_override("h_separation", 5)
+	_takes_box.add_theme_constant_override("v_separation", 5)
 	_box.add_child(_takes_box)
-	var newest_first := sim.bank.takes.duplicate()
-	newest_first.reverse()
-	var new_row: Control = null
+	var newest := sim.bank.takes.duplicate()
+	newest.reverse()
 	last_new_row = null
 	last_new_tint = Color.WHITE
-	for take: EchoTake in newest_first.slice(page * page_size, (page + 1) * page_size):
+	for take: EchoTake in newest.slice(page * page_size, (page + 1) * page_size):
 		var is_new: bool = take.wave == sim.wave and take == sim.bank.takes.back()
 		var row := _row(take, sim, is_new)
 		_takes_box.add_child(row)
 		if is_new:
-			new_row = row
 			last_new_row = row
 			last_new_tint = take.tint()
-	if new_row != null and _animate_new:
-		_animate_new_row(new_row)
-	if sim.bank.takes.size() <= page_size:
-		for button: Button in find_children("*", "Button", true, false):
-			WorkshopUi.fit_button(button, 14, 27.0)
-		return
-	var pages := HBoxContainer.new()
-	pages.add_theme_constant_override("separation", 5)
-	page_previous = Button.new()
-	page_previous.text = "‹"
-	page_previous.accessibility_name = Loc.t("workshop.previous")
-	page_previous.disabled = page <= 0
-	page_previous.pressed.connect(func() -> void: _change_page(-1))
-	pages.add_child(page_previous)
-	var count := UiTheme.label(Loc.t("workshop.page", [page + 1, maxi(1, ceili(float(sim.bank.takes.size()) / page_size))]), 13, UiTheme.DIM)
-	count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pages.add_child(count)
-	page_next = Button.new()
-	page_next.text = "›"
-	page_next.accessibility_name = Loc.t("workshop.next")
-	page_next.disabled = (page + 1) * page_size >= sim.bank.takes.size()
-	page_next.pressed.connect(func() -> void: _change_page(1))
-	pages.add_child(page_next)
-	_box.add_child(pages)
-	for button: Button in find_children("*", "Button", true, false):
-		WorkshopUi.fit_button(button, 14, 27.0)
+	if last_new_row != null and _animate_new:
+		_animate_new_row(last_new_row)
+	if _merge_mode:
+		if _host_uid != 0 and _spent_uid != 0:
+			var pairing := UiTheme.label(Loc.t("binding.merge", [_host_uid, _spent_uid, _host_uid]), 13, UiTheme.ECHO)
+			_box.add_child(pairing)
+			var marks := HBoxContainer.new()
+			marks.add_theme_constant_override("separation", 5)
+			_box.add_child(marks)
+			_add_marks(marks, _take_by_uid(_host_uid))
+		else:
+			_box.add_child(UiTheme.label(Loc.t("inspection.choose_donor") if _spent_uid == 0 else Loc.t("inspection.choose_host"), 13, UiTheme.ECHO))
+	for button: Button in [merge_button, page_previous, page_next]:
+		if button != null:
+			WorkshopUi.fit_button(button, 13, 27)
+
+
+func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
+	var row := PanelContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var selected := _merge_mode and take.uid in [_host_uid, _spent_uid]
+	var ink := UiTheme.WARN if take.uid == _spent_uid else UiTheme.ACCENT
+	var style := UiTheme.box(UiTheme.CARD.lerp(take.tint(), 0.09), ink, 3 if selected else (2 if is_new else 0), 16)
+	style.content_margin_left = 3
+	style.content_margin_right = 3
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	row.add_theme_stylebox_override("panel", style)
+	row.set_meta(&"new_copy", is_new)
+	var identity := Button.new()
+	identity.custom_minimum_size = Vector2(0, 104)
+	identity.set_meta(&"echo_uid", take.uid)
+	identity.accessibility_name = Loc.t("echo.identity", [take.uid, take.wave])
+	identity.accessibility_description = Loc.t("echo.condition", [int(ceil(take.condition)),
+		ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))]) 		+ " · " + Loc.echo_profile(EchoSystem.skill_profile(take, sim), true)
+	if is_new:
+		identity.accessibility_description += " · " + Loc.t("shop.new")
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		identity.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	identity.pressed.connect(func() -> void:
+		if _merge_mode:
+			_pick(take))
+	row.add_child(identity)
+	var portrait := EchoPortrait.new()
+	portrait.name = "EchoDoll"
+	portrait.setup(take, sim.character_id, reduced_effects, is_new and _animate_new)
+	identity.add_child(portrait)
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var number := UiTheme.label("#%d" % take.uid, 12, UiTheme.INK)
+	number.position = Vector2(4, 1)
+	identity.add_child(number)
+	var wear := UiTheme.label("%d%%" % ceili(take.condition), 11,
+		UiTheme.WARN if take.condition < 25 else UiTheme.INK, HORIZONTAL_ALIGNMENT_RIGHT)
+	identity.add_child(wear)
+	wear.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	wear.offset_left = -36
+	wear.offset_right = -4
+	wear.offset_top = -19
+	wear.offset_bottom = -2
+	_identity_buttons[take.uid] = identity
+	copy_buttons.append(identity)
+	row.set_meta(&"take_identity", portrait)
+	row.set_meta(&"take_info", wear)
+	return row
 
 
 func _change_page(delta: int) -> void:
 	page = clampi(page + delta, 0, maxi(0, ceili(float(_sim.bank.takes.size()) / page_size) - 1))
 	_render()
-	focus_first_discard()
+	focus_first_copy()
 
 
 
-func focus_first_discard() -> bool:
-	if discard_buttons.is_empty():
+func focus_first_copy() -> bool:
+	if copy_buttons.is_empty():
 		return false
-	discard_buttons[0].grab_focus()
+	copy_buttons[0].grab_focus()
 	return true
 
 
@@ -250,7 +297,7 @@ func newest_tint() -> Color:
 func confirm_merge() -> void:
 	if reduced_effects or _takes_box == null or _takes_box.get_child_count() == 0:
 		return
-	_stamped_row = _takes_box.get_child(0).find_child("StapleMark", true, false) as Control
+	_stamped_row = _takes_box.get_child(0).get_meta(&"take_identity") as Control
 	if _stamped_row == null:
 		return
 	_stamped_row.pivot_offset = _stamped_row.size * 0.5
@@ -258,96 +305,6 @@ func confirm_merge() -> void:
 	_merge_tween = _stamped_row.create_tween().set_parallel(true)
 	_merge_tween.tween_property(_stamped_row, "scale", Vector2.ONE, 0.18) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-
-func _row(take: EchoTake, sim: Sim, is_new: bool) -> Control:
-	var row := PanelContainer.new()
-	var style := UiTheme.box(UiTheme.CARD, Color(UiTheme.EDGE, 0.0), 0, 12)
-	style.content_margin_left = 6.0
-	style.content_margin_right = 6.0
-	style.content_margin_top = 3.0
-	style.content_margin_bottom = 3.0
-	row.add_theme_stylebox_override("panel", style)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var line := HBoxContainer.new()
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	line.add_theme_constant_override("separation", 5)
-	row.add_child(line)
-	var preview := PathPreview.new()
-	preview.custom_minimum_size = Vector2(45.0, 35.0)
-	preview.setup(take, is_new and _animate_new and not reduced_effects)
-	line.add_child(preview)
-	if take.merged:
-		var staple := StapleMark.new()
-		staple.name = "StapleMark"
-		staple.position = Vector2(18.0, 0.0)
-		preview.add_child(staple)
-	var info := VBoxContainer.new()
-	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_theme_constant_override("separation", 0)
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.add_child(info)
-	var identity := Button.new()
-	identity.text = Loc.t("echo.identity", [take.uid, take.wave])
-	identity.add_theme_font_size_override("font_size", 14)
-	identity.clip_text = true
-	identity.pressed.connect(func() -> void:
-		if _merge_mode:
-			_pick(take))
-	var identity_line := HBoxContainer.new()
-	identity_line.add_theme_constant_override("separation", 3)
-	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	identity_line.add_child(identity)
-	if is_new:
-		identity_line.add_child(UiTheme.label("[%s]" % Loc.t("shop.new"), 12, UiTheme.ACCENT))
-	info.add_child(identity_line)
-	_identity_buttons[take.uid] = identity
-	var condition := Loc.t("echo.condition", [int(ceil(take.condition)), ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))])
-	var label := UiTheme.label(condition + " · " + Loc.t("shop.take_dps", [int(round(sim.echo_dps(take)))]), 12, UiTheme.DIM)
-	label.clip_text = true
-	info.add_child(label)
-	var repair := Button.new()
-	var quote := sim.shop.echo_repair_quote(sim, take)
-	repair.text = Loc.t("workshop.repair", [quote.cost])
-	repair.disabled = not quote.ok
-	repair.tooltip_text = Loc.t("shop.repair_full") if take.condition >= 100.0 else (Loc.t("shop.drop_poor") if quote.reason == &"poor" else Loc.t("shop.repair_result", [int(ceil(minf(100.0, take.condition + sim.shop.echo_repair_amount(take))))]))
-	repair.accessibility_description = repair.tooltip_text
-	repair.add_theme_font_size_override("font_size", 12)
-	repair.pressed.connect(_on_repair.bind(take))
-	repair_buttons.append(repair)
-	_repair_by_uid[take.uid] = repair
-	line.add_child(repair)
-	var discard := Button.new()
-	discard.text = Loc.t("shop.discard")
-	discard.add_theme_font_size_override("font_size", 12)
-	discard.pressed.connect(_on_row.bind(take))
-	discard_buttons.append(discard)
-	line.add_child(discard)
-	if _merge_mode and take.uid == _host_uid and _spent_uid != 0:
-		_add_marks(line, take)
-	if _merge_mode and take.uid == _spent_uid:
-		row.modulate = Color(1.0, 0.94, 0.78)
-	row.set_meta(&"take_identity", preview)
-	row.set_meta(&"take_info", info)
-	return row
-
-
-func _cancel_empty(event: InputEvent) -> void:
-	if not _merge_mode or not (event is InputEventMouseButton):
-		return
-	var press := event as InputEventMouseButton
-	if press.pressed and press.button_index == MOUSE_BUTTON_LEFT:
-		cancel_merge()
-		_takes_box.accept_event()
-
-
-func _on_repair(take: EchoTake) -> void:
-	repair_requested.emit(take)
-
-
-func _on_row(take: EchoTake) -> void:
-	if not _merge_mode:
-		discard_requested.emit(take)
 
 
 func _on_merge_button() -> void:
@@ -360,6 +317,8 @@ func _on_merge_button() -> void:
 	_spent_uid = 0
 	_host_uid = 0
 	_render()
+	if not _identity_buttons.is_empty():
+		(_identity_buttons.values()[0] as Button).grab_focus()
 
 
 func _pick(take: EchoTake) -> void:
@@ -373,6 +332,11 @@ func _pick(take: EchoTake) -> void:
 	if _host_uid != 0:
 		_show_uid(_host_uid)
 	_render()
+	for button: Button in trait_buttons:
+		if not button.disabled:
+			button.grab_focus()
+			return
+	focus_take(take.uid)
 
 
 func _show_uid(uid: int) -> void:
@@ -420,7 +384,8 @@ func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
 		var button := Button.new()
 		var action := Loc.t("echo.staple.skill") if choice == &"skill" \
 				else (Loc.t("echo.staple.repair") if choice == &"repair" else Loc.t("echo.staple.power"))
-		button.text = "%s · %d" % [action, quote.cost]
+		button.text = "%s\n%s" % [action, Loc.t("shop.price_materials", [quote.cost])]
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.disabled = not quote.ok
 		button.set_meta(&"trait", choice)
 		button.tooltip_text = Loc.t("workshop.trait_skill_desc") if choice == &"skill" \
@@ -482,22 +447,7 @@ func _finish_new_row_animation() -> void:
 
 
 
-func _loadout(take: EchoTake) -> String:
-	var counts: Dictionary = {}
-	for w in take.weapons:
-		counts[w.id] = int(counts.get(w.id, 0)) + 1
-	var parts := PackedStringArray()
-	for id: StringName in counts:
-		var n: int = counts[id]
-		parts.append("%s ×%d" % [Loc.weapon_name(id), n] if n > 1 else Loc.weapon_name(id))
-	return ", ".join(parts)
-
-
 func focus_take(uid: int) -> bool:
-	var repair := _repair_by_uid.get(uid) as Button
-	if repair != null and not repair.disabled:
-		repair.grab_focus()
-		return true
 	var identity := _identity_buttons.get(uid) as Button
 	if identity != null:
 		identity.grab_focus()

@@ -11,7 +11,7 @@ import zipfile
 from fractions import Fraction
 from pathlib import Path
 
-GATES = {"test", "paper-feedback", "export-preview", "export-linux", "export-windows"}
+GATES = {"test", "weapon-ui", "paper-feedback", "export-preview", "export-linux", "export-windows"}
 PACKAGES = {f"TakeStack-{platform}.zip" for platform in ("macos", "windows", "linux")}
 SOURCE_VERSIONS = ("0.17.0", "0.18.0")
 PRESSURE_CASES = ("96_legal_8echo_12support_standard", "96_legal_8echo_12support_reduced")

@@ -1,18 +1,20 @@
-# Take Stack 0.18.8 · Your route comes back.
+# Take Stack 0.18.9 · Please inspect before signing.
 
-The demo's second wave replays the path you just walked. A purchase is a click on the offer. When a copy stands in the cross, that copy tears and you do not.
+The shop puts the goods up front. The fine print waits until you ask for it.
 
-- **Demo.** Wave 1 is only you. Wave 2 puts that recording on the field and lets it fire. The demo shop closes after that wave. Daily runs do not keep the demo flag.
-- **Shop.** Click the offer card to buy. An empty slot click spends nothing; dropping a card on a slot still installs it. Weapons show I / II / III / IV. An upgrade reads as the next grade and its price. Binding two copies names the action: inherit, repair, or reinforce.
-- **The cross.** A copy inside the cross is spent as a block, not as natural wear. The tear stops on the copy. Your body keeps a closed mark and its hit points.
-- **Keep your shift.** Snapshot v4 is unchanged. A walked first wave is stored. An ungraded shot and an unwalked wave omit those fields, so 0.17 through 0.18.7 saves keep their original bytes.
+- **One offer, one place to look.** Larger artwork sits beside the name, grade and a single price/action. Buying still works by clicking the offer or dragging it into a slot.
+- **A visual loadout.** Weapon tiles show their actual artwork. Eight Echoes fit as paper dolls with carried weapons, route traces and wear bars. A worn copy crumples; a bound copy carries a staple mark.
+- **Inspect in layers.** Hover or focus for short facts. Hover a rule term for its explanation. Click, right-click, F1 or controller Y to pin an inspection; open Details for management. Back closes the deepest layer first and returns focus to its source.
+- **Fewer scattered controls.** Upgrade and Loadout stay in the equipment header. Combining, evolution and selling belong to the selected weapon. Global stats and passives live in Loadout. Wide windows show equipment and Echoes together; compact windows keep their pages.
+- **Keep your place.** Upgrades and Undo preserve the stock's scroll position. Rerolls and new shops return to the start. Inspections stay clear of the footer and close during dragging or a transaction.
 
-试玩第二场回放你刚才走过的路。购买只点商品卡。副本站在十字里时，撕开的是副本，不是你。
+商店先把货摆清楚。小字等你想看时再拿出来。
 
-- **试玩。** 第一场只有你。第二场把这段记录放回场上并让它开火。打完这一场，试玩才停。每日挑战不会带上试玩标记。
-- **商店。** 点商品卡才扣钱。点空槽不扣钱；把卡拖进槽里仍然装配。武器显示 I／II／III／IV。升级写成下一级和价格。两份回响装订时，按钮写明继承、修复或强化。
-- **十字。** 副本挡住这一下，不算自己耗尽。撕裂停在副本身上。你的身体留下挡住的痕迹，生命不动。
-- **存档。** 仍是 Snapshot v4。第一波已经走过的距离会保存。没走过、弹丸没有等级时不写这两个字段，0.17 到 0.18.7 的原文还能原样续读。
+- **一张商品，一个阅读方向。** 左边放大图片，右边集中名称、等级和唯一的价格／操作。仍可点击购买或拖入装备槽。
+- **装备与回响先看图。** 武器用真实外形；八份回响以纸偶展示携带武器、路线和磨损。快报废的纸偶皱缩，装订过的留下钉痕。
+- **按需展开。** 悬停或聚焦看要点；移到规则词上再看解释。点击、右键、F1 或手柄 Y 固定查看，进入详情管理。返回时逐层收起，焦点回到原处。
+- **操作归位。** 装备区顶部保留升级与构筑；合成、进化、出售跟随所选武器。全局属性和被动道具收进构筑。宽窗口同时展示装备与回响，小窗口保留分页。
+- **别把人送回页首。** 升级与撤销保留商品列表位置；刷新或进入新商店才回到开头。悬浮层避开底部按钮，拖拽和交易时收起。
 
 ## Downloads / 下载
 
@@ -26,18 +28,20 @@ Extract the ZIP and run the game. macOS has an audited ad-hoc integrity signatur
 
 ## Saves / 存档
 
-**0.18.8 continues 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, and 0.18.7 suspended runs.** Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run. The public game continues using its existing `TakeStack Preview` data directory.
+**0.18.9 continues 0.17, 0.18, and 0.18.1 through 0.18.8 suspended runs.** Snapshot v4 and the existing `TakeStack Preview` data directory are unchanged. Permanent role unlocks, settings and saved Echo archives remain. Earlier suspended-run formats require a new run.
 
-0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7 的中途存档可直接继续，无需重开；永久解锁、设置和回响档案保留。
+0.17、0.18、0.18.1 至 0.18.8 的中途存档可直接继续；永久解锁、设置和回响档案保留。本次没有修改战斗规则、平衡或存档格式。
 
 ## Build and evidence / 构建与验证
 
 The tag is rebuilt in GitHub Actions. Release gates include Linux, macOS and Windows tests/startup, immutable resource and macOS-signature audits, exact source/package hashes, and actual cross-version wave/shop save restores.
 
-The attached native evidence contains English 1280×720, Chinese 960×540 and Reduced Effects variants: twenty scenes and 95 original-size PNGs per variant, plus normal-speed 60fps silent movies. Every scene proves rendering leaves the full simulation snapshot and both RNG streams unchanged. These are disclosed scripted fixtures, with staged positions and durable targets.
+The shop probe covers English and Chinese at 1280×720 and 960×540, pointer and simulated-controller navigation, nested inspections, live resizing, purchases, replacement, combining, evolution, and exact Undo. Its captures are disclosed scripted fixtures.
+
+The attached native combat evidence contains English 1280×720, Chinese 960×540 and Reduced Effects variants: twenty scenes and 95 original-size PNGs per variant, plus normal-speed 60fps silent movies. Every scene proves rendering leaves the full simulation snapshot and both RNG streams unchanged. These are scripted fixtures with staged positions and durable targets.
 
 Pressure evidence compares this version with public 0.18 using the same probe and runner, retaining 96 enemies, eight Echoes and twelve supports. Software-renderer measurements describe that diagnostic, not target-device FPS.
 
-See `BUILD_INFO.txt`, `AUDIT.json`, `VERIFICATION.json`, `PERFORMANCE.json` and `SHA256SUMS.txt` for the exact source and results. Published downloads are downloaded again and checked against the audited bytes before Latest changes.
+See `BUILD_INFO.txt`, `AUDIT.json`, `VERIFICATION.json`, `PERFORMANCE.json` and `SHA256SUMS.txt` for the exact source and results. Uploaded assets are downloaded again and checked against the audited bytes before Latest changes.
 
-Human play feel, subjective audio and physical-controller testing remain unverified.
+Human play feel, first-time comprehension, subjective audio and physical-controller testing remain unverified.

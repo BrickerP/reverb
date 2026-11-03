@@ -95,8 +95,8 @@ func _run() -> void:
 		return
 	before = _snapshot()
 	_ui.echo_panel.merge_button.pressed.emit()
-	_ui.echo_panel.discard_buttons[0].pressed.emit()
-	_ui.echo_panel.discard_buttons[1].pressed.emit()
+	_ui.echo_panel.copy_buttons[0].pressed.emit()
+	_ui.echo_panel.copy_buttons[1].pressed.emit()
 	if not await _record_action("merged", before):
 		return
 	before = _snapshot()

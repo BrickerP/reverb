@@ -43,12 +43,11 @@ func test_eight_copies_page_without_blocking_nonoverflow(c: Check) -> void:
 	ui.theme = UiTheme.build()
 	_root().add_child(ui)
 	ui.open(sim)
-	c.eq(ui.echo_panel.discard_buttons.size(), ui.echo_panel.page_size, "copy actions are bounded by page size")
+	c.eq(ui.echo_panel.copy_buttons.size(), ui.echo_panel.page_size, "copy actions are bounded by page size")
 	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "no nested copy scrolling")
-	c.ok(ui.echo_panel.page_next != null and not ui.echo_panel.page_next.disabled, "remaining copies have an explicit page action")
+	c.eq(ui.echo_panel.page_next, null, "all eight copies fit the visual board")
 	c.ok(not ui.start_button.disabled, "overflow does not block departure")
-	ui.echo_panel.page_next.pressed.emit()
-	c.eq(ui.echo_panel.page, 1, "paging changes only the visible bank page")
+	c.eq(ui.echo_panel.page, 0, "the complete legal bank needs no paging")
 	c.eq(ShopState.capture(sim).to_dict(), before, "paging never mutates the bank")
 	ui.free()
 
@@ -56,16 +55,14 @@ func test_eight_copies_page_without_blocking_nonoverflow(c: Check) -> void:
 func test_long_lived_copy_still_uses_exact_seconds_and_condition(c: Check) -> void:
 	var sim := _sim_with_takes(1)
 	sim.player.stats.add(Stats.ECHO_DURATION, 280.0)
-	var panel := EchoPanel.new()
-	_root().add_child(panel)
-	panel.refresh(sim)
-	var found := false
-	for label: Label in panel.find_children("*", "Label", true, false):
-		if label.text.contains(Loc.t("echo.condition", [60, 240])):
-			found = true
-	c.ok(found, "long playback is an exact condition and seconds label")
-	c.eq(panel.discard_buttons.size(), 1, "duration never creates extra meter controls")
-	panel.free()
+	var ui := ShopUi.new()
+	_root().add_child(ui)
+	ui.open(sim)
+	ui.show_equipment_page(1)
+	ui.echo_panel.copy_buttons[0].pressed.emit()
+	c.eq(ui.inspection.facts_label.text, Loc.t("inspection.copy_facts", [60, 240]), "hover supplies exact condition and lifetime")
+	c.eq(ui.echo_panel.copy_buttons.size(), 1, "lifetime adds no primary sentence rows")
+	ui.free()
 
 
 func test_arriving_copy_uses_the_actual_arena_transform(c: Check) -> void:

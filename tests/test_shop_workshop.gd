@@ -39,7 +39,8 @@ func test_combine_actual_slot_entry_requires_result_confirmation_and_undo(c: Che
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
 	ui.build_panel._slot_buttons[0].pressed.emit()
-	c.ok(ui.workshop.visible, "slot enters workbench")
+	c.ok(not ui.workshop.visible, "slot inspects without a modal")
+	ui._open_weapon_workshop(0)
 	ui.workshop.choice_buttons[1].pressed.emit()
 	ui.workshop.choice_buttons[0].pressed.emit()
 	c.eq(ShopState.capture(sim).to_dict(), before, "host and donor choices only preview")
@@ -58,12 +59,13 @@ func test_incompatible_combine_and_cancel_leave_inventory_unchanged(c: Check) ->
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
 	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui._open_weapon_workshop(0)
 	c.ok(ui.workshop.choice_buttons[1].disabled, "unmatched host has no combine action")
 	ui.workshop.choice_buttons[1].pressed.emit()
 	c.eq(ShopState.capture(sim).to_dict(), before, "disabled combine cannot mutate even if signaled")
 	ui.workshop.cancel_button.pressed.emit()
 	c.ok(not ui.workshop.visible, "cancel returns to the same equipment view")
-	c.ok(ui.build_panel._upgrade_buttons[0].has_focus(), "cancel restores the selected slot focus")
+	c.ok(ui.build_panel.upgrade_button.has_focus(), "cancel restores the selected slot focus")
 	ui.free()
 
 
@@ -124,7 +126,8 @@ func test_evolution_requires_explicit_branch_and_keeps_slot_selected(c: Check) -
 	sim.player.weapon_levels[1] = WeaponDef.MAX_LEVEL
 	var before := ShopState.capture(sim).to_dict()
 	var ui := _open(sim)
-	ui.build_panel._upgrade_buttons[1].pressed.emit()
+	ui.build_panel._select(1)
+	ui.build_panel.upgrade_button.pressed.emit()
 	c.eq(ui.workshop.choice_buttons.size(), 2, "both final forms are concrete choices")
 	c.eq(ShopState.capture(sim).to_dict(), before, "branch chooser does not auto evolve")
 	var target := sim.shop.evolution_choices(sim, 1)[1]
@@ -180,11 +183,13 @@ func test_native_small_canvas_has_six_slots_and_pages_without_forced_cleanup(c: 
 	ui.set_reduced_effects(true)
 	ui.open(sim)
 	c.eq(ui.build_panel._slot_buttons.size(), 6, "all six equipment slots stay in the core view")
-	c.eq(ui.echo_panel.page_size, 1, "small native canvas pages copies explicitly")
+	c.eq(ui.echo_panel.page_size, 8, "visual bank uses an eight-card board")
 	c.eq(ui.build_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "equipment has no mandatory vertical scroll")
 	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "copies have no mandatory nested scroll")
 	c.ok(not ui.start_button.disabled, "capacity-eight bank requires no forced discard")
-	c.ok((ui.get_child(1) as Control).get_combined_minimum_size().y <= 540.0, "native small canvas minimum height fits without scaling")
+	# Wrapped labels have no settled width in this synchronous runner. The native
+	# weapon_ui_probe checks every actual label/button rectangle after layout.
+	c.eq(ui.get_viewport_rect().size, Vector2(960, 540), "small canvas keeps its real viewport size without scaling")
 	viewport.free()
 
 
@@ -227,7 +232,10 @@ func test_support_offer_explains_utility_before_purchase(c: Check) -> void:
 	for label: Label in card.find_children("*", "Label", true, false):
 		if label.text == Loc.support_short(offer.weapon):
 			role_visible = true
-	c.ok(role_visible, "zero-DPS production weapon explains its actual utility")
+	c.ok(not role_visible, "utility prose stays out of the primary stock card")
+	ui.inspection.pointer_enabled = true
+	card.mouse_entered.emit()
+	c.eq(ui.inspection.summary_label.text, Loc.weapon_desc(offer.weapon.id), "hover explains the real production utility")
 	c.ok(card.accessibility_description.contains(Loc.weapon_desc(offer.weapon.id)), "utility offer describes its real effect before buying")
 	card.pressed.emit()
 	c.eq(sim.player.weapons.back().id, &"paper_seed", "utility card still buys through the canonical transaction")

@@ -291,7 +291,7 @@ func test_upgraded_trade_in_quote_commit_and_undo_use_one_mechanics_value(c: Che
 	c.ok(card.swap_button == null, "an open affordable slot does not put replace on the card")
 	ui._begin_replace(offer)
 	c.ok(ui.is_replacing(), "an upgraded slot can still be traded in")
-	c.ok(ui.build_panel._slot_buttons[0].text.contains("+%d" % resale),
+	c.ok(_label_texts(ui.build_panel._slot_buttons[0]).has(Loc.t("shop.refund_materials", [resale])),
 			"slot displays Shop.resale_total for upgraded weapon")
 	ui._cancel_replace()
 	var materials_before := s.player.materials
@@ -326,7 +326,7 @@ func test_clicking_an_empty_slot_does_not_buy_the_focused_weapon(c: Check) -> vo
 	c.eq(s.player.weapons.size(), 1, "a socket click does not buy the focused offer")
 	c.eq(s.player.materials, 300, "a socket click spends nothing")
 	var card := _card_for(ui, offer)
-	c.eq((card.find_child("GradeMark", true, false) as Label).text, WeaponDef.grade_mark(offer.weapon_level),
+	c.eq((card.find_child("GradeMark", true, false) as Label).text, Loc.t("shop.level", [offer.weapon_level + 1]),
 			"the offer shows the level a same-tier combine needs")
 	card.pressed.emit()
 	c.eq(s.player.weapons.size(), 2, "the offer card is the purchase")
@@ -374,10 +374,11 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 	s.shop.offers.append(offer)
 	var ui := _open(s)
 	var card := ui.offers_box.get_child(0) as OfferCard
-	var plate := card.find_child("OrderPlate", true, false) as Control
-	c.ok(plate != null and plate.get("kind") == AnomalyContract.RECRUIT, "the order card shows the recruit marks")
-	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.objective")), "hovering the marks states the job")
-	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.desc")), "hovering the marks states the rule")
+	c.eq(card.find_child("OrderObjective", true, false), null, "primary work order uses its visual identity")
+	ui.inspection.pointer_enabled = true
+	card.mouse_entered.emit()
+	c.eq(ui.inspection.summary_label.text, Loc.t("order.recruit.objective"), "hover states the actual objective")
+	c.ok(str(ui.inspection._payload["rules"][0]["body"]).contains(Loc.t("order.recruit.desc")), "tertiary terms retain the full rule")
 	ui._arm_lock(offer)
 	c.eq(ui._footer.text, "", "pointing at the order does not open a second copy of the job")
 	ui.free()

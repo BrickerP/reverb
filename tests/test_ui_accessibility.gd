@@ -79,15 +79,15 @@ func test_echo_merge_cancel_and_reduced_paths_return_to_rest(c: Check) -> void:
 	# Match the actual arrival event: the newest recording belongs to this wave.
 	sim.wave = sim.bank.takes.back().wave
 	panel.refresh(sim, true)
-	c.ok(panel.find_children("*", "PathPreview", true, false).any(
-			func(node: Node) -> bool: return (node as PathPreview).is_animating()),
+	c.ok(panel.find_children("*", "EchoPortrait", true, false).any(
+			func(node: Node) -> bool: return (node as EchoPortrait).is_animating()),
 			"normal mode traces the newest path")
-	var previews := panel.find_children("*", "PathPreview", true, false)
-	c.ok((previews[0] as PathPreview)._points.size() >= 2, "new recording has a real drawable route")
-	c.ok(not (previews[1] as PathPreview).is_animating(), "older recording does not replay its arrival trace")
+	var previews := panel.find_children("*", "EchoPortrait", true, false)
+	c.ok((previews[0] as EchoPortrait)._route.size() >= 2, "new recording has a real drawable route")
+	c.ok(not (previews[1] as EchoPortrait).is_animating(), "older recording does not replay its arrival trace")
 	panel.set_reduced_effects(true)
-	for preview in panel.find_children("*", "PathPreview", true, false):
-		c.ok(not (preview as PathPreview).is_animating(), "reduced effects finishes path traces")
+	for preview in panel.find_children("*", "EchoPortrait", true, false):
+		c.ok(not (preview as EchoPortrait).is_animating(), "reduced effects finishes path traces")
 	panel.merge_button.pressed.emit()
 	c.ok(panel.is_merging(), "merge mode starts")
 	c.ok(panel.cancel_merge(), "merge mode can be cancelled")
@@ -114,10 +114,8 @@ func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Chec
 	if ui.echo_panel.merge_button != null:
 		c.ok(viewport.encloses(ui.echo_panel.merge_button.get_global_rect()),
 				"merge action stays in view")
-	for discard in ui.echo_panel.discard_buttons:
-		c.ok(viewport.encloses(discard.get_global_rect()), "discard action stays in view")
-	for refresh in ui.echo_panel.repair_buttons:
-		c.ok(viewport.encloses(refresh.get_global_rect()), "refresh action stays in view")
+	for copy in ui.echo_panel.copy_buttons:
+		c.ok(viewport.encloses(copy.get_global_rect()), "visual copy tile stays in view")
 	ui.close_session()
 	ui.free()
 

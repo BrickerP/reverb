@@ -124,14 +124,14 @@ func test_workbench_shows_every_completed_set_and_actual_core_stats(c: Check) ->
 		ui.theme = UiTheme.build()
 		_root().add_child(ui)
 		ui.open(s)
-		ui.build_panel._slot_buttons[0].pressed.emit()
-		ui.workshop.choice_buttons[5].pressed.emit()
+		ui.build_panel.loadout_button.pressed.emit()
+		ui.workshop.choice_buttons[1].pressed.emit()
 		c.ok(ui.workshop.visible, "actual slot entry opens the passive workbench")
 		ui.workshop.choice_buttons[1].pressed.emit()
 		c.ok(_find_label(ui.workshop, Loc.t("set.%s_bonus" % data.id)), "%s completed bonus is visible on its passive page" % data.id)
 		ui.workshop.cancel_button.pressed.emit()
-		ui.build_panel._slot_buttons[0].pressed.emit()
-		ui.workshop.choice_buttons[4].pressed.emit()
+		ui.build_panel.loadout_button.pressed.emit()
+		ui.workshop.choice_buttons[0].pressed.emit()
 		if data.id == &"echo":
 			c.ok(_find_label(ui.workshop, Loc.t("shop.echo_value", [s.echo_capacity(), int(round(s.echo_power() * 100.0))])), "echo set core uses actual capacity and power")
 		elif data.id == &"gunsmith":

@@ -189,6 +189,17 @@ class ReleaseReceiptTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             RECEIPTS.validate_exports(self.audit_dir, self.audit)
 
+    def test_release_gate_contract_matches_the_actual_workflow(self) -> None:
+        workflow = (ROOT / ".github/workflows/test.yml").read_text()
+        for job, required in (("package-release", RECEIPTS.GATES),
+                              ("publish-release", RECEIPTS.GATES | {"package-release"})):
+            block = re.search(rf"^  {job}:\n(.*?)(?=^  [a-z][\w-]*:|\Z)", workflow, re.M | re.S)
+            self.assertIsNotNone(block, f"workflow defines {job}")
+            needs = re.search(r"^    needs: \[([^\]]+)\]", block.group(1), re.M)
+            self.assertIsNotNone(needs, f"{job} declares its release gates")
+            actual = {name.strip() for name in needs.group(1).split(",")}
+            self.assertEqual(actual, required, f"{job} and release receipt gates must agree")
+
     def test_native_case_contract_matches_the_actual_probe(self) -> None:
         probe = (ROOT / "tools/paper_action_probe.gd").read_text()
         # Read actual literal calls plus the two finite loops that expand cases;
@@ -387,14 +398,16 @@ class ReleaseReceiptTest(unittest.TestCase):
         self.assertEqual(result["ci"]["run_id"], 12345)
         self.assertEqual(result["ci"]["run_attempt"], 2)
         self.assertEqual(result["ci"]["ref"], REF)
+        self.assertEqual(result["gates"]["weapon-ui"], "success")
 
     def test_prepare_refuses_failed_or_missing_current_run_gates_and_invalid_run_identity(self) -> None:
-        for result in ("failure", "cancelled", "skipped"):
-            bad = copy.deepcopy(self.gates)
-            bad["paper-feedback"]["result"] = result
-            put_json(self.needs, bad)
-            with self.subTest(result=result), self.assertRaises(ValueError):
-                RECEIPTS.prepare(self.args)
+        for gate in RECEIPTS.GATES:
+            for result in ("failure", "cancelled", "skipped"):
+                bad = copy.deepcopy(self.gates)
+                bad[gate]["result"] = result
+                put_json(self.needs, bad)
+                with self.subTest(gate=gate, result=result), self.assertRaises(ValueError):
+                    RECEIPTS.prepare(self.args)
         bad = copy.deepcopy(self.gates)
         bad.pop("export-preview")
         put_json(self.needs, bad)

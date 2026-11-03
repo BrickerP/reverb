@@ -199,7 +199,7 @@ func test_close_session_clears_old_run_references_and_callbacks(c: Check) -> voi
 	c.eq(ui.build_panel._box.get_child_count(), 0, "build controls cleared")
 	c.ok(ui.echo_panel._sim == null and ui.echo_panel._box.get_child_count() == 0,
 			"echo controls and simulation reference cleared")
-	c.ok(ui.echo_panel.discard_buttons.is_empty() and ui.echo_panel.last_new_row == null,
+	c.ok(ui.echo_panel.copy_buttons.is_empty() and ui.echo_panel.last_new_row == null,
 			"echo action and arrival references cleared")
 	var old_item := _item_offer(old_sim, &"sharp_edge")
 	c.ok(old_sim.shop.apply(ShopResult.BUY, old_sim, old_item).ok,

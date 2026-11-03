@@ -185,11 +185,11 @@ func _run() -> void:
 	# Upgrade through the real focused control before replacing. The next quote
 	# and slot label must include the mechanics-owned upgraded trade-in value.
 	var before_upgrade := _state()
-	if not _require(not ui.build_panel._upgrade_buttons.is_empty(),
+	if not _require(ui.build_panel.upgrade_button != null,
 			"equipped weapon exposes a focusable upgrade action"):
 		return
 	var upgrade_cost: int = Shop.upgrade_cost(sim.player.weapons[0], sim.player.level_at(0))
-	if not (await _activate(ui.build_panel._upgrade_buttons[0])):
+	if not (await _activate(ui.build_panel.upgrade_button)):
 		return
 	if not _require(sim.player.level_at(0) == 1, "focused upgrade raises the slot one level"):
 		return
