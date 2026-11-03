@@ -1629,7 +1629,7 @@ func _inspection_content(kind: StringName, reference: Variant) -> Dictionary:
 			var mechanics := Loc.weapon_line(offer.weapon, offer.weapon_level) + "\n" + Loc.t("inspection.base_rule")
 			var reason := sim.shop.block_reason(sim, offer)
 			if reason in [&"full", &"poor", &"maxed", &"debt"]:
-				mechanics += "\n" + _drop_reason_text(reason)
+				mechanics += "\n" + (Loc.t("shop.full_reason") if reason == &"full" else _drop_reason_text(reason))
 			return {"title": Loc.weapon_name(offer.id()), "subtitle": Loc.t("shop.level", [offer.weapon_level + 1]),
 				"art": PresentationAssets.weapon_key(offer.weapon), "summary": Loc.weapon_desc(offer.id()),
 				"facts": Loc.weapon_summary(offer.weapon, offer.weapon_level),
