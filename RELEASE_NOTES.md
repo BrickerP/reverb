@@ -34,7 +34,7 @@ The fixed download links are unchanged. Extract the ZIP and run the game. macOS 
 
 ## Build and evidence / 构建与验证
 
-The release tag is rebuilt in GitHub Actions. Gates include Linux/macOS/Windows tests and startup, immutable package and macOS-signature audits, exact source/package hashes, actual old-version wave/shop restores, native shop navigation, and paired legal pressure measurements with 96 enemies, eight Echoes and twelve supports.
+The release tag is rebuilt in GitHub Actions. macOS automation runs on the standard Intel macOS 26 runner; the delivered macOS app remains configured as a universal Intel/Apple Silicon build. Gates include Linux/macOS/Windows tests and startup, immutable package and macOS-signature audits, exact source/package hashes, actual old-version wave/shop restores, native shop navigation, and paired legal pressure measurements with 96 enemies, eight Echoes and twelve supports.
 
 `NATIVE_EVIDENCE.zip` includes three new English/Chinese/Reduced Effects variants. Each contains 812 native frames, fourteen original-size PNGs and an audible 60fps movie. Eight route forecasts are compared with 120 actual future simulation steps. Rendering must preserve the complete model snapshot and both RNG streams; silence and clipping checks validate the real engine mix. Positions, durability, retained arrivals and the final-cohort setup are disclosed scripted fixtures.
 

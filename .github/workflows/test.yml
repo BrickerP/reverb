@@ -23,7 +23,8 @@ jobs:
           - os: ubuntu-latest
             godot_url: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
             godot_bin: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          - os: macos-latest
+          # Pin the standard Intel pool; arm64 capacity can cancel queued releases.
+          - os: macos-26-intel
             godot_url: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_macos.universal.zip
             godot_bin: /tmp/godot/Godot.app/Contents/MacOS/Godot
           - os: windows-latest
@@ -300,7 +301,7 @@ jobs:
 
   export-preview:
     needs: test
-    runs-on: macos-latest
+    runs-on: macos-26-intel
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
