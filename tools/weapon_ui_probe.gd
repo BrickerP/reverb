@@ -59,6 +59,9 @@ func _run() -> void:
 			await _settle()
 			_check.eq(RunSnapshot.capture(sim), before, "native purchase Undo restores complete snapshot and both RNGs")
 			await _exercise_workshop(ui, sim, extent)
+			ui.focus_default()
+			await _settle()
+			_check.ok(root.gui_get_focus_owner() != null, "resize begins with an actual focused control")
 			var resize_before := RunSnapshot.capture(sim)
 			var alternate := Vector2i(960, 540) if extent.x == 1280 else Vector2i(1280, 720)
 			root.size = alternate

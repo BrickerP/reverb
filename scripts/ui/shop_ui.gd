@@ -441,6 +441,8 @@ func _on_inventory_resized() -> void:
 	if sim == null or not visible or get_viewport_rect().size == _layout_extent:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
+	if focus == null and is_instance_valid(_last_focus):
+		focus = _last_focus
 	var copy_focus := focus != null and echo_panel.is_ancestor_of(focus)
 	var weapon_focus := focus != null and build_panel.is_ancestor_of(focus)
 	var stock_focus := -1
