@@ -110,28 +110,8 @@ func setup(o: Offer, sim: Sim, selected: bool = false,
 	var can_swap := slots_full or reason == &"poor" or reason == &"full"
 	clip_contents = true
 	box.add_child(_title_row(o, reason, selected, slots_full))
-	if o.is_weapon():
-		var behavior := UiTheme.label(Loc.weapon_desc(o.weapon.id), 13)
-		behavior.name = "AttackBehavior"
-		behavior.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		behavior.tooltip_text = Loc.weapon_desc(o.weapon.id)
-		box.add_child(behavior)
-		box.add_child(_dps_row(o.weapon, sim, o.weapon_level))
-	elif o.is_contract():
-		var job := Loc.t("order.%s.objective" % o.contract.kind)
-		var objective := UiTheme.label(job, 13)
-		objective.name = "OrderObjective"
-		objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		objective.tooltip_text = job + "\n" + _description(o)
-		box.add_child(objective)
-		tooltip_text = objective.tooltip_text
-	else:
-		var desc := UiTheme.label(_visible_blurb(o).replace("\n", " · "), 15, UiTheme.INK)
-		desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		desc.name = "ItemEffect"
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.tooltip_text = _description(o)
-		box.add_child(desc)
+	_art.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(_art)
 	if reason != &"" and reason != &"sold":
 		custom_minimum_size.y = HEIGHT + 18.0
 		var reason_text := Loc.t("shop.full") if reason == &"full" else _blocked_text(reason)
@@ -254,14 +234,11 @@ func _title_row(o: Offer, reason: StringName, selected: bool, _can_swap: bool) -
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 9)
 	if o.is_weapon():
-		_art = UiTheme.weapon_icon(o.weapon, Vector2(34.0, 30.0))
-		row.add_child(_art)
+		_art = UiTheme.weapon_icon(o.weapon, Vector2(84.0, 56.0))
 	elif o.is_contract():
-		_art = UiTheme.art_icon(&"recording_cartridge", Vector2(34.0, 30.0))
-		row.add_child(_art)
+		_art = UiTheme.art_icon(&"recording_cartridge", Vector2(84.0, 56.0))
 	else:
-		_art = UiTheme.item_icon(o.item, Vector2(34.0, 30.0))
-		row.add_child(_art)
+		_art = UiTheme.item_icon(o.item, Vector2(84.0, 56.0))
 	var identity := VBoxContainer.new()
 	identity.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	identity.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -391,24 +368,6 @@ func _rarity_color(rarity: StringName) -> Color:
 			return UiTheme.DIM
 
 
-func _dps_row(w: WeaponDef, sim: Sim, level: int = 0) -> Control:
-	var row := HBoxContainer.new()
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_theme_constant_override("separation", 10)
-	if w.support_kind != &"":
-		var support := UiTheme.label(Loc.support_short(w, level), 13, UiTheme.ECHO)
-		support.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		support.name = "WeaponOutput"
-		support.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(support)
-		return row
-	var line := UiTheme.label(Loc.t("shop.base_output", [Loc.weapon_line(w, level)]), 12, UiTheme.DIM)
-	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.name = "WeaponOutput"
-	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	line.tooltip_text = line.text
-	row.add_child(line)
-	return row
 
 
 func _price_label(o: Offer, reason: StringName, selected: bool) -> Label:

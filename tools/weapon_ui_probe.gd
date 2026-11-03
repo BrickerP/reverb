@@ -59,6 +59,7 @@ func _run() -> void:
 			await _settle()
 			_check.eq(RunSnapshot.capture(sim), before, "native purchase Undo restores complete snapshot and both RNGs")
 			await _exercise_workshop(ui, sim, extent)
+			await _inspect_layers(ui, sim, extent)
 			ui.focus_default()
 			await _settle()
 			_check.ok(root.gui_get_focus_owner() != null, "resize begins with an actual focused control")
@@ -126,6 +127,54 @@ func _run() -> void:
 	file.close()
 	print("Weapon UI: %d passed, %d failed" % [_check.passed, _check.failed])
 	quit(1 if _check.failed > 0 else 0)
+
+
+func _move_pointer(point: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = point
+	event.global_position = point
+	event.relative = Vector2(2, 0)
+	root.push_input(event, false)
+	await _settle()
+
+
+func _inspect_layers(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
+	ui.show_equipment_page(0)
+	ui.inspection.reset()
+	var before := RunSnapshot.capture(sim)
+	var weapon := ui.build_panel._slot_buttons[0]
+	await _move_pointer(weapon.get_global_rect().get_center())
+	_check.ok(ui.inspection.visible and not ui.inspection.pinned, "pointer hover opens secondary weapon inspection")
+	await _capture(ui, extent, "weapon-hover")
+	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
+	_check.ok(ui.inspection.definition.visible, "hovering an upgrade term opens tertiary detail")
+	await _capture(ui, extent, "weapon-rule")
+	ui.inspection.reset()
+	ui.show_equipment_page(1)
+	await _settle()
+	var copy := ui.echo_panel.copy_buttons[0]
+	await _move_pointer(copy.get_global_rect().get_center())
+	_check.ok(ui.inspection.visible, "copy hover supplies wear and skill context")
+	await _capture(ui, extent, "echo-hover")
+	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
+	_check.ok(ui.inspection.definition.visible, "wear explanation is a tertiary layer")
+	await _capture(ui, extent, "echo-rule")
+	ui.inspection.reset()
+	copy.grab_focus()
+	var key := InputEventJoypadButton.new()
+	key.button_index = JOY_BUTTON_Y
+	key.pressed = true
+	root.push_input(key, false)
+	await _settle()
+	_check.ok(ui.inspection.pinned and ui.inspection.details_button.has_focus(), "controller inspection enters the same pinned sheet")
+	await _capture(ui, extent, "pinned-inspection")
+	ui.inspection.close_inspection()
+	_check.eq(root.gui_get_focus_owner(), copy, "closing inspection restores its source")
+	_check.eq(RunSnapshot.capture(sim), before, "hover layers and controller inspection preserve the whole run")
+	ui.inspection.reset()
+	ui.inspection.focus_enabled = false
+	ui.show_equipment_page(0)
+	await _move_pointer(Vector2(10, 10))
 
 
 func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
@@ -277,7 +326,7 @@ func _fixture() -> Sim:
 	for index in 8:
 		var take := EchoTake.new()
 		take.wave = index + 1
-		take.condition = 60.0
+		take.condition = [100.0, 82.0, 60.0, 35.0, 18.0, 45.0, 70.0, 90.0][index]
 		take.weapons.append(Content.weapon(&"pistol"))
 		take.levels.append(0)
 		take.samples = PackedVector2Array([Vector2(200, 200), Vector2(400, 300), Vector2(600, 220)])
@@ -306,13 +355,10 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 		if control.is_visible_in_tree():
 			_check.ok(viewport.encloses(control.get_global_rect()), "%s %s at %s stays in %s" % [control.name, control.get("text") if control is Button else "panel", control.get_global_rect(), extent])
 	for card: OfferCard in ui.offers_box.get_children():
-		for name: String in ["AttackBehavior", "ItemEffect", "WeaponOutput", "OrderObjective"]:
-			var text := card.find_child(name, true, false) as Label
-			if text != null:
-				_check.eq(text.get_visible_line_count(), text.get_line_count(), "stock explains the complete effect without ellipses")
-				_check.ok(card.get_global_rect().grow(1).encloses(text.get_global_rect()), "stock effect stays inside its card")
 		var purchase := card.find_child("PurchaseAction", true, false) as Label
 		_check.ok(card.get_global_rect().grow(1).encloses(purchase.get_global_rect()), "purchase label stays inside its stock card")
+		_check.ok(card._art.size.y >= 50, "primary stock is real merchandise art")
+		_check.eq(card.find_child("AttackBehavior", true, false), null, "stock prose stays off the primary surface")
 		if card.swap_button != null:
 			_check.ok(card.get_global_rect().grow(1).encloses(card.swap_button.get_global_rect()), "replace action stays inside its stock card")
 	if ui.workshop.visible:
@@ -325,12 +371,9 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 					_check.ok(width <= button.size.x - 12.0, "workshop action text is not clipped")
 	if ui.build_panel.visible:
 		_check.ok(ui.build_panel.size.y <= ui.build_panel._box.get_combined_minimum_size().y + 16.0, "weapon paper follows its content height")
-		for label: Label in [ui.build_panel.detail_title, ui.build_panel.detail_behavior,
-				ui.build_panel.detail_stats, ui.build_panel.detail_upgrade, ui.build_panel.detail_combo,
-				ui.build_panel.detail_reason]:
-			if label.is_visible_in_tree():
-				_check.ok(viewport.encloses(label.get_global_rect()), "selected weapon explanation is entirely visible")
-				_check.eq(label.get_visible_line_count(), label.get_line_count(), "selected explanation has no hidden lines")
+		for card: PanelContainer in ui.build_panel._cards:
+			var art := card.find_child("WeaponArt", true, false) as TextureRect
+			_check.ok(art != null and art.size.y >= 48, "equipped weapon has primary artwork")
 		_check.ok(viewport.encloses(ui.build_panel.upgrade_button.get_global_rect()), "upgrade has a visible native hit area")
 		_check.eq(ui.build_panel._slot_buttons.size(), Content.MAX_WEAPON_SLOTS, "all six weapon slots remain in view")
 		for card: PanelContainer in ui.build_panel._cards:
@@ -341,8 +384,17 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 		_check.ok(ui.build_panel.get_global_rect().end.y <= ui.echo_panel.get_global_rect().position.y + 1.0,
 				"overview papers keep distinct vertical space")
 	if ui.echo_panel.visible:
+		_check.eq(ui.echo_panel.copy_buttons.size(), mini(ui.sim.bank.takes.size(), 8), "legal Echo bank is a visual grid")
+		for copy: Button in ui.echo_panel.copy_buttons:
+			var doll := copy.find_child("EchoDoll", true, false) as EchoPortrait
+			_check.ok(doll != null and doll._texture != null, "Echo is represented by the actual paper doll")
+			_check.ok(viewport.encloses(copy.get_global_rect()), "Echo tile stays inside the native canvas")
 		for button: Button in ui.echo_panel.trait_buttons:
 			_check.ok(viewport.encloses(button.get_global_rect()), "named merge action stays inside the native canvas")
+	if ui.inspection.visible:
+		_check.ok(viewport.encloses(ui.inspection.sheet.get_global_rect()), "secondary inspection stays on screen")
+		if ui.inspection.definition.visible:
+			_check.ok(viewport.encloses(ui.inspection.definition.get_global_rect()), "tertiary explanation stays on screen")
 
 
 func _capture(ui: ShopUi, extent: Vector2i, state: String) -> void:

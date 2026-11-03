@@ -46,6 +46,10 @@ var equipment_button: Button
 var echoes_button: Button
 var _stock_scroll_pending := -1
 var _stock_scroll_frames := 0
+var inspection: InspectionPopover
+var _inspection_kind: StringName = &""
+var _inspection_reference: Variant
+var _inspection_epoch := -1
 var _inventory_tabs: HBoxContainer
 var _layout_extent := Vector2.ZERO
 var _equipment_page := 0
@@ -122,6 +126,7 @@ func _ready() -> void:
 	echo_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	echo_panel.size_flags_stretch_ratio = 1.2
 	echo_panel.discard_requested.connect(_on_discard)
+	echo_panel.detail_requested.connect(_open_echo_details)
 	echo_panel.staple_requested.connect(_on_merge)
 	echo_panel.navigation_changed.connect(_on_echo_navigation_changed)
 	echo_panel.repair_requested.connect(_on_repair_echo)
@@ -151,6 +156,10 @@ func _ready() -> void:
 	add_child(_overlay)
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	resized.connect(_on_inventory_resized)
+	inspection = InspectionPopover.new()
+	inspection.z_index = 9
+	inspection.action_requested.connect(_on_inspection_action)
+	add_child(inspection)
 
 
 func _exit_tree() -> void:
@@ -165,6 +174,8 @@ func open(s: Sim) -> void:
 	binding_ceremony.reset()
 	_workshop_origin = &"weapon"
 	_last_focus = null
+	inspection.focus_enabled = false
+	inspection.pointer_enabled = false
 	sim = s
 	_connected_shop = sim.shop
 	_connected_shop.shop_history_changed.connect(_on_history_changed)
@@ -194,6 +205,8 @@ func open(s: Sim) -> void:
 
 
 func close_session() -> void:
+	if inspection != null:
+		inspection.reset()
 	_stock_scroll_frames = 0
 	_stock_scroll_pending = -1
 	_disconnect_shop()
@@ -229,6 +242,8 @@ func close_session() -> void:
 
 
 func refresh(animate_echo: bool = false) -> void:
+	if inspection != null:
+		inspection.reset()
 	var stock_scroll := _stock_scroll_pending if _stock_scroll_frames > 0 else _offers_scroll.scroll_vertical
 	_refresh_generation += 1
 	if _replacing != null and (not sim.shop.offers.has(_replacing) or _replacing.sold):
@@ -315,7 +330,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_say("")
 	_layout_extent = get_viewport_rect().size
 	build_panel.show_heading = inventory_overview()
-	echo_panel.page_size = 2 if inventory_overview() else 3
+	echo_panel.page_size = 8
 	build_panel.refresh(sim, replace_with, chooser, quote_drop, apply_drop, clear_drop_hint)
 	echo_panel.refresh(sim, animate_echo and not reduced_effects)
 	equipment_button.text = Loc.t("shop.weapons", [sim.player.weapons.size(), Content.MAX_WEAPON_SLOTS])
@@ -434,6 +449,8 @@ func inventory_overview() -> bool:
 
 
 func _on_echo_navigation_changed() -> void:
+	if inspection != null:
+		inspection.reset()
 	show_equipment_page(_equipment_page)
 
 
@@ -456,7 +473,7 @@ func _on_inventory_resized() -> void:
 		_equipment_page = 1
 	refresh()
 	if copy_focus and echo_panel.visible:
-		echo_panel.focus_first_discard()
+		echo_panel.focus_first_copy()
 	elif weapon_focus and build_panel.visible:
 		build_panel.focus_slot(build_panel._selected)
 	elif stock_focus >= 0:
@@ -1281,7 +1298,7 @@ func _on_discard(take: EchoTake) -> void:
 	if sim.can_start_wave():
 		start_button.grab_focus()
 	else:
-		echo_panel.focus_first_discard()
+		echo_panel.focus_first_copy()
 
 
 func _on_repair_echo(take: EchoTake) -> void:
@@ -1292,7 +1309,7 @@ func _on_repair_echo(take: EchoTake) -> void:
 		return
 	refresh()
 	if not echo_panel.focus_take(take.uid):
-		echo_panel.focus_first_discard()
+		echo_panel.focus_first_copy()
 
 
 func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> void:
@@ -1307,7 +1324,7 @@ func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> 
 	if sim.can_start_wave():
 		start_button.grab_focus()
 	else:
-		echo_panel.focus_first_discard()
+		echo_panel.focus_first_copy()
 
 
 func _on_start() -> void:
@@ -1327,6 +1344,8 @@ func _on_start() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if inspection != null and inspection.visible and inspection.pinned:
+		return
 	if confession != null and confession.visible:
 		return
 	if binding_ceremony != null and binding_ceremony.active and event.is_action_pressed(&"ui_cancel"):
@@ -1445,16 +1464,228 @@ func _rebuild_focus() -> void:
 	var active: Array = []
 	for node in find_children("*", "BaseButton", true, false):
 		var button := node as BaseButton
-		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button) and not confession.is_ancestor_of(button) and not binding_ceremony.is_ancestor_of(button):
+		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button) and not confession.is_ancestor_of(button) and not binding_ceremony.is_ancestor_of(button) and (inspection == null or not inspection.is_ancestor_of(button)):
 			active.append(button)
 			var remember := _remember_focus.bind(button)
 			if not button.focus_entered.is_connected(remember):
 				button.focus_entered.connect(remember)
+	if sim != null and inspection != null:
+		for index in build_panel._slot_buttons.size():
+			_bind_inspection(build_panel._slot_buttons[index], &"weapon", index, true)
+		if build_panel.upgrade_button != null:
+			_bind_inspection(build_panel.upgrade_button, &"upgrade", build_panel._selected, false)
+		for button: Button in build_panel.passive_buttons:
+			_bind_inspection(button, &"item", button.get_meta(&"item_id"), true)
+		for button: Button in echo_panel.copy_buttons:
+			_bind_inspection(button, &"echo", int(button.get_meta(&"echo_uid")), true)
+		for card: OfferCard in offers_box.get_children():
+			_bind_inspection(card, &"offer", card.offer, false)
 	UiFocus.cycle(active)
 	for i in active.size():
 		var current := active[i] as Control
 		current.focus_neighbor_left = current.get_path_to(active[(i - 1 + active.size()) % active.size()])
 		current.focus_neighbor_right = current.get_path_to(active[(i + 1) % active.size()])
+
+
+func _bind_inspection(source: Control, kind: StringName, reference: Variant, pin_on_press: bool) -> void:
+	source.set_meta(&"inspect_kind", kind)
+	source.set_meta(&"inspect_reference", reference)
+	source.tooltip_text = ""
+	var hover := _inspection_hover.bind(source)
+	if not source.mouse_entered.is_connected(hover):
+		source.mouse_entered.connect(hover)
+		source.focus_entered.connect(_inspection_focus.bind(source))
+		source.gui_input.connect(_inspection_source_input.bind(source))
+		if pin_on_press and source is Button:
+			(source as Button).pressed.connect(_inspection_primary.bind(source))
+
+
+func _inspection_hover(source: Control) -> void:
+	if get_viewport().gui_is_dragging() or not inspection.pointer_enabled:
+		return
+	_request_inspection(source, false)
+
+
+func _inspection_focus(source: Control) -> void:
+	if inspection.focus_enabled:
+		_request_inspection(source, false)
+
+
+func _inspection_primary(source: Control) -> void:
+	if StringName(source.get_meta(&"inspect_kind")) == &"echo" and echo_panel.is_merging():
+		return
+	if build_panel.replacing:
+		return
+	_request_inspection(source, true)
+
+
+func _inspection_source_input(event: InputEvent, source: Control) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		_request_inspection(source, true)
+		source.accept_event()
+	elif event is InputEventMouseMotion and inspection.pointer_enabled:
+		_request_inspection(source, false)
+
+
+func _input(event: InputEvent) -> void:
+	Controls.note_event(event)
+	if not visible or inspection == null:
+		return
+	if event is InputEventMouseMotion and event.relative.length() > 0.5:
+		inspection.focus_enabled = false
+		inspection.pointer_enabled = true
+	elif event is InputEventAction and event.action in [&"ui_left", &"ui_right", &"ui_up", &"ui_down", &"ui_focus_next", &"ui_focus_prev"]:
+		inspection.focus_enabled = true
+	elif event is InputEventKey and event.pressed and event.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN, KEY_TAB]:
+		inspection.focus_enabled = true
+	elif event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.3):
+		inspection.focus_enabled = true
+
+
+func _shortcut_input(event: InputEvent) -> void:
+	if not visible or sim == null or workshop.visible or crew.visible or confession.visible:
+		return
+	var inspect_key := event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1
+	var inspect_pad := event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y
+	if not inspect_key and not inspect_pad:
+		return
+	var source := get_viewport().gui_get_focus_owner()
+	while source != null and source != self:
+		if source.has_meta(&"inspect_kind"):
+			_request_inspection(source, true)
+			accept_event()
+			return
+		source = source.get_parent() as Control
+
+
+func _request_inspection(source: Control, pin: bool) -> void:
+	if sim == null or not is_instance_valid(source) or not source.is_inside_tree() or not source.is_visible_in_tree():
+		return
+	if inspection.pinned and not pin:
+		return
+	var kind := StringName(source.get_meta(&"inspect_kind", &""))
+	var reference: Variant = source.get_meta(&"inspect_reference")
+	var info := _inspection_content(kind, reference)
+	if info.is_empty():
+		return
+	_inspection_kind = kind
+	_inspection_reference = reference
+	_inspection_epoch = _refresh_generation
+	inspection.present(source, info, pin)
+
+
+func _inspection_content(kind: StringName, reference: Variant) -> Dictionary:
+	if kind in [&"weapon", &"upgrade"]:
+		var index := int(reference)
+		if index < 0 or index >= sim.player.weapons.size():
+			return {}
+		var w := sim.player.weapons[index]
+		var level := sim.player.level_at(index)
+		var upgrade := Loc.weapon_upgrade(w, level)
+		if level >= WeaponDef.MAX_LEVEL and not w.evolution_options.is_empty():
+			upgrade = Loc.t("shop.full_upgrade")
+		if level < WeaponDef.MAX_LEVEL:
+			var cost := Shop.upgrade_cost(w, level)
+			upgrade += "\n" + Loc.t("shop.upgrade_materials", [level + 2, cost])
+			if sim.player.materials < cost:
+				upgrade += "\n" + Loc.t("shop.need_materials", [cost - sim.player.materials])
+		var combo := Loc.weapon_combo(w, sim.player.weapons)
+		return {"title": Loc.weapon_name(w.id), "subtitle": Loc.t("shop.level", [level + 1]),
+			"art": PresentationAssets.weapon_key(w), "summary": Loc.weapon_desc(w.id),
+			"facts": Loc.weapon_summary(w, level) if kind == &"weapon" else upgrade,
+			"rules": [{"title": Loc.t("inspection.upgrade"), "body": upgrade},
+			{"title": Loc.t("inspection.combo" if combo != "" else "inspection.mechanics"), "body": Loc.weapon_line(w, level) + "\n" + Loc.t("inspection.base_rule") + ("\n" + combo if combo != "" else "")}]}
+	if kind == &"echo":
+		var take := _inspection_take(int(reference))
+		if take == null:
+			return {}
+		var profile := EchoSystem.skill_profile(take, sim)
+		var quote := sim.shop.echo_repair_quote(sim, take)
+		var wear_rule := Loc.t("inspection.wear_rule") + "\n"
+		wear_rule += Loc.t("shop.repair_full") if take.condition >= 100 else Loc.t("shop.repair_result", [ceili(minf(100, take.condition + sim.shop.echo_repair_amount(take)))])
+		var seconds := ceili(sim.echo_duration() * take.condition / 100.0 / maxf(0.01, sim.wear_rate_mult))
+		return {"title": Loc.t("echo.identity", [take.uid, take.wave]), "art": PresentationAssets.character_key(sim.character_id),
+			"summary": Loc.t("inspection.copy_summary"), "facts": Loc.t("inspection.copy_facts", [ceili(take.condition), seconds]),
+			"rules": [{"title": Loc.t("inspection.wear"), "body": wear_rule},
+			{"title": Loc.t("inspection.skill"), "body": Loc.echo_profile(profile, true)}],
+			"actions": [{"text": Loc.t("workshop.repair", [quote.cost]), "action": &"repair", "disabled": not quote.ok},
+			{"text": Loc.t("shop.discard"), "action": &"discard"}]}
+	if kind == &"item":
+		var item := Content.item(StringName(reference))
+		if item == null:
+			return {}
+		return {"title": Loc.item_name(item.id), "art": PresentationAssets.item_key(item),
+			"summary": Loc.item_face(item, sim), "facts": Loc.t("inspection.owned", [sim.player.item_count(item.id)]),
+			"rules": [{"title": Loc.t("inspection.effect"), "body": Loc.item_desc(item, sim)}]}
+	if kind == &"offer":
+		var offer := reference as Offer
+		if offer == null or not sim.shop.offers.has(offer):
+			return {}
+		if offer.is_weapon():
+			return {"title": Loc.weapon_name(offer.id()), "subtitle": Loc.t("shop.level", [offer.weapon_level + 1]),
+				"art": PresentationAssets.weapon_key(offer.weapon), "summary": Loc.weapon_desc(offer.id()),
+				"facts": Loc.weapon_summary(offer.weapon, offer.weapon_level),
+				"rules": [{"title": Loc.t("inspection.mechanics"), "body": Loc.weapon_line(offer.weapon, offer.weapon_level) + "\n" + Loc.t("inspection.base_rule")}]}
+		if offer.is_contract():
+			return {"title": Loc.t("order.%s.name" % offer.contract.kind), "art": &"recording_cartridge",
+				"summary": Loc.t("order.%s.objective" % offer.contract.kind),
+				"facts": Loc.t("order.credit_fact") if offer.contract.kind == AnomalyContract.CREDIT else Loc.t("order.payoff", [offer.contract.deposit, offer.contract.reward]),
+				"rules": [{"title": Loc.t("inspection.order"), "body": Loc.t("order.%s.desc" % offer.contract.kind) + "\n" + forecast_description(sim)}]}
+		return _inspection_content(&"item", offer.id())
+	return {}
+
+
+func _inspection_take(uid: int) -> EchoTake:
+	for take: EchoTake in sim.bank.takes:
+		if take.uid == uid:
+			return take
+	return null
+
+
+func _on_inspection_action(action: StringName) -> void:
+	if sim == null or _inspection_epoch != _refresh_generation:
+		return
+	var kind := _inspection_kind
+	var reference: Variant = _inspection_reference
+	inspection.reset()
+	if kind == &"echo":
+		var take := _inspection_take(int(reference))
+		if take == null:
+			return
+		match action:
+			&"repair": _on_repair_echo(take)
+			&"discard": _on_discard(take)
+			&"details": echo_panel.detail_requested.emit(take)
+	elif action == &"details":
+		if kind in [&"weapon", &"upgrade"]:
+			_open_weapon_workshop(int(reference))
+		else:
+			_workshop_origin = &"order" if kind == &"offer" else &"weapon"
+			_workshop_slot = sim.shop.offers.find(reference) if kind == &"offer" else build_panel._selected
+			var info := _inspection_content(kind, reference)
+			var body := str(info.get("summary", "")) + "\n" + str(info.get("facts", ""))
+			for rule: Dictionary in info.get("rules", []):
+				body += "\n" + str(rule["body"])
+			workshop.show_choices(str(info.get("title", "")), body, [], Callable())
+
+
+func _open_echo_details(take: EchoTake) -> void:
+	if sim == null or not sim.bank.takes.has(take):
+		return
+	_workshop_origin = &"echo"
+	var info := _inspection_content(&"echo", take.uid)
+	var lines := PackedStringArray([str(info["facts"]), Loc.echo_profile(EchoSystem.skill_profile(take, sim), true)])
+	for index in take.weapons.size():
+		lines.append(Loc.weapon_name(take.weapons[index].id) + " · " + Loc.t("shop.level", [take.level_at(index) + 1]))
+	var quote := sim.shop.echo_repair_quote(sim, take)
+	var choices: Array[Dictionary] = [{"text": Loc.t("workshop.repair", [quote.cost]), "value": &"repair", "disabled": not quote.ok},
+		{"text": Loc.t("shop.discard"), "value": &"discard"}]
+	workshop.show_choices(str(info["title"]), "\n".join(lines), choices, func(value: Variant) -> void:
+		if StringName(value) == &"repair":
+			_on_repair_echo(take)
+		else:
+			_on_discard(take)
+		workshop.close())
 
 
 func _on_workshop_closed() -> void:

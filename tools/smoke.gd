@@ -133,8 +133,10 @@ func _shop_step() -> void:
 			_purchases += 1
 			return
 	if ui.start_button.disabled:
-		if not ui.echo_panel.discard_buttons.is_empty():
-			ui.echo_panel.discard_buttons[0].pressed.emit()
+		if not ui.echo_panel.copy_buttons.is_empty():
+			ui.show_equipment_page(1)
+			ui.echo_panel.copy_buttons[0].pressed.emit()
+			ui.inspection.action_buttons[1].pressed.emit()
 			_discards += 1
 		return
 	ui.start_button.pressed.emit()

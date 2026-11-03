@@ -275,7 +275,7 @@ func _shop_echo_states() -> bool:
 			shop_viewport.encloses(echo.merge_button.get_global_rect()),
 			"echo merge button is fully visible"):
 		return false
-	for button: Button in echo.discard_buttons:
+	for button: Button in echo.copy_buttons:
 		if not _require(shop_viewport.encloses(button.get_global_rect()),
 				"every echo discard/select button is fully visible"):
 			return false
@@ -319,7 +319,7 @@ func _shop_echo_states() -> bool:
 		return false
 	if not (await _activate(echo.merge_button)):
 		return false
-	if not _require(echo.is_merging() and echo.discard_buttons[0].has_focus(),
+	if not _require(echo.is_merging() and echo.copy_buttons[0].has_focus(),
 			"merge mode starts with first take focused"):
 		return false
 	if not (await _cancel()):
@@ -329,12 +329,12 @@ func _shop_echo_states() -> bool:
 		return false
 	if not (await _activate(echo.merge_button)):
 		return false
-	if not (await _activate(echo.discard_buttons[0])):
+	if not (await _activate(echo.copy_buttons[0])):
 		return false
 	if not _require(echo.is_merging() and echo._merge_first != null,
 			"first take selection keeps merge mode active"):
 		return false
-	if not (await _activate(echo.discard_buttons[1])):
+	if not (await _activate(echo.copy_buttons[1])):
 		return false
 	var merged: int = 0
 	for take: EchoTake in sim.bank.takes:

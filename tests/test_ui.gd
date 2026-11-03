@@ -610,18 +610,18 @@ func test_echo_reveals_stagger_for_readability(c: Check) -> void:
 func test_shop_traces_the_new_take_only_on_open(c: Check) -> void:
 	var s := _shop_sim(100, 3)
 	var ui := _open_shop(s)
-	var previews := ui.echo_panel.find_children("*", "PathPreview", true, false)
-	c.eq(previews.size(), ui.echo_panel.page_size, "one route preview per visible copy")
+	var previews := ui.echo_panel.find_children("*", "EchoPortrait", true, false)
+	c.eq(previews.size(), mini(s.bank.takes.size(), ui.echo_panel.page_size), "one route preview per visible copy")
 	var animating := 0
 	for node in previews:
-		if (node as PathPreview).is_animating():
+		if (node as EchoPortrait).is_animating():
 			animating += 1
 	c.eq(animating, 1, "only the new take traces in")
 	ui.refresh()
-	previews = ui.echo_panel.find_children("*", "PathPreview", true, false)
+	previews = ui.echo_panel.find_children("*", "EchoPortrait", true, false)
 	animating = 0
 	for node in previews:
-		if (node as PathPreview).is_animating():
+		if (node as EchoPortrait).is_animating():
 			animating += 1
 	c.eq(animating, 0, "buying or rerolling does not replay the arrival")
 	ui.free()
@@ -737,15 +737,15 @@ func test_shop_repair_button_spends_and_undoes(c: Check) -> void:
 	var take := s.bank.takes[0]
 	take.condition = 30.0
 	var ui := _open_shop(s)
-	c.eq(ui.echo_panel.repair_buttons.size(), ui.echo_panel.page_size, "one repair action per visible copy")
-	ui.echo_panel.page_next.pressed.emit()
-	var button: Button = ui.echo_panel.repair_buttons[0]
-	c.ok(not button.disabled, "repair is affordable")
+	ui.show_equipment_page(1)
+	(ui.echo_panel._identity_buttons[take.uid] as Button).pressed.emit()
+	var button := ui.inspection.action_buttons[0]
+	c.ok(not button.disabled, "context repair is affordable")
 	var before := s.player.materials
 	var cost := s.shop.echo_repair_cost(take, s)
 	button.pressed.emit()
-	c.near(take.condition, 70.0, 0.001, "repair restores up to forty condition")
-	c.eq(s.player.materials, before - cost, "repair spends materials")
+	c.near(take.condition, 70.0, 0.001, "repair restores forty condition")
+	c.eq(s.player.materials, before - cost, "repair spends the displayed materials")
 	c.ok(not ui.undo_button.disabled, "repair is undoable")
 	ui.undo_button.pressed.emit()
 	c.near(s.bank.takes[0].condition, 30.0, 0.001, "undo restores condition")

@@ -183,7 +183,7 @@ func test_native_small_canvas_has_six_slots_and_pages_without_forced_cleanup(c: 
 	ui.set_reduced_effects(true)
 	ui.open(sim)
 	c.eq(ui.build_panel._slot_buttons.size(), 6, "all six equipment slots stay in the core view")
-	c.eq(ui.echo_panel.page_size, 3, "focused copy page uses its available height")
+	c.eq(ui.echo_panel.page_size, 8, "visual bank uses an eight-card board")
 	c.eq(ui.build_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "equipment has no mandatory vertical scroll")
 	c.eq(ui.echo_panel.find_children("*", "ScrollContainer", true, false).size(), 0, "copies have no mandatory nested scroll")
 	c.ok(not ui.start_button.disabled, "capacity-eight bank requires no forced discard")
@@ -232,7 +232,10 @@ func test_support_offer_explains_utility_before_purchase(c: Check) -> void:
 	for label: Label in card.find_children("*", "Label", true, false):
 		if label.text == Loc.support_short(offer.weapon):
 			role_visible = true
-	c.ok(role_visible, "zero-DPS production weapon explains its actual utility")
+	c.ok(not role_visible, "utility prose stays out of the primary stock card")
+	ui.inspection.pointer_enabled = true
+	card.mouse_entered.emit()
+	c.eq(ui.inspection.summary_label.text, Loc.weapon_desc(offer.weapon.id), "hover explains the real production utility")
 	c.ok(card.accessibility_description.contains(Loc.weapon_desc(offer.weapon.id)), "utility offer describes its real effect before buying")
 	card.pressed.emit()
 	c.eq(sim.player.weapons.back().id, &"paper_seed", "utility card still buys through the canonical transaction")

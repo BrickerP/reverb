@@ -114,10 +114,8 @@ func test_skinned_shop_columns_and_echo_actions_stay_inside_the_viewport(c: Chec
 	if ui.echo_panel.merge_button != null:
 		c.ok(viewport.encloses(ui.echo_panel.merge_button.get_global_rect()),
 				"merge action stays in view")
-	for discard in ui.echo_panel.discard_buttons:
-		c.ok(viewport.encloses(discard.get_global_rect()), "discard action stays in view")
-	for refresh in ui.echo_panel.repair_buttons:
-		c.ok(viewport.encloses(refresh.get_global_rect()), "refresh action stays in view")
+	for copy in ui.echo_panel.copy_buttons:
+		c.ok(viewport.encloses(copy.get_global_rect()), "visual copy tile stays in view")
 	ui.close_session()
 	ui.free()
 

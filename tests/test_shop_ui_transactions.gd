@@ -374,10 +374,11 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 	s.shop.offers.append(offer)
 	var ui := _open(s)
 	var card := ui.offers_box.get_child(0) as OfferCard
-	var plate := card.find_child("OrderObjective", true, false) as Label
-	c.ok(plate != null and plate.text == Loc.t("order.recruit.objective"), "the order card states the recruit objective without decoding marks")
-	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.objective")), "hovering the marks states the job")
-	c.ok(plate.tooltip_text.contains(Loc.t("order.recruit.desc")), "hovering the marks states the rule")
+	c.eq(card.find_child("OrderObjective", true, false), null, "primary work order uses its visual identity")
+	ui.inspection.pointer_enabled = true
+	card.mouse_entered.emit()
+	c.eq(ui.inspection.summary_label.text, Loc.t("order.recruit.objective"), "hover states the actual objective")
+	c.ok(str(ui.inspection._payload["rules"][0]["body"]).contains(Loc.t("order.recruit.desc")), "tertiary terms retain the full rule")
 	ui._arm_lock(offer)
 	c.eq(ui._footer.text, "", "pointing at the order does not open a second copy of the job")
 	ui.free()

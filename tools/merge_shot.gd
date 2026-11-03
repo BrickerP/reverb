@@ -47,13 +47,13 @@ func _process(_delta: float) -> bool:
 		2:
 			if _frame >= 8:
 				_save("shop_merge")
-				_main.shop_ui.echo_panel.discard_buttons[0].pressed.emit()
+				_main.shop_ui.echo_panel.copy_buttons[0].pressed.emit()
 				_frame = 0
 				_step = 3
 		3:
 			if _frame >= 8:
 				_save("shop_merge_selected")
-				_main.shop_ui.echo_panel.discard_buttons[1].pressed.emit()
+				_main.shop_ui.echo_panel.copy_buttons[1].pressed.emit()
 				_frame = 0
 				_step = 4
 		4:
