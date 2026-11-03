@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.18.9**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.19.0**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
@@ -67,7 +67,7 @@ HUD 的手柄标签从当前 InputMap 生成；菜单支持鼠标、键盘和手
 
 ## 30 秒预告片分镜 / Trailer outline
 
-1. **0–8 秒**：`docs/site-assets/cross-tear-zh.mp4` / `cross-tear-en.mp4`。两个身体错开站在十字里，副本被撕掉，玩家还在。无旁白。字幕最多烧副标题「昨天的你是耗材 / Yesterday's you is ammunition.」。
+1. **0–8 秒**：`docs/site-assets/cross-tear-zh.mp4` / `cross-tear-en.mp4`。两个身体错开站在十字里，副本被撕掉，玩家还在。无旁白。字幕最多烧副标题「人没了，班还得上。 / You’re dead. Your shift isn’t.」。
 2. **8–14 秒**：试玩开局，场上已经有一个昨天。一镜。
 3. **14–20 秒**：商店。印章是生命。一镜。
 4. **20–26 秒**：告解的两个选项，或一次报废。一镜。
@@ -99,11 +99,11 @@ macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签
 
 The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
 
-0.18.9 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7 and 0.18.8 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+0.19.0 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7, 0.18.8 and 0.18.9 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
 
 
 ## Paper actions / 纸上见真章
 
-0.18.9 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
+0.19.0 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
 
 The same paper cast now has six material attack gestures, directional target reactions and visible repair, retirement and machine-contact sequences. Actual slot and event identities drive feedback; simulation rules, combat geometry and Snapshot v4 remain authoritative.
