@@ -66,6 +66,15 @@ func test_future_starts_at_real_foot_and_ends_two_seconds_ahead(c: Check) -> voi
 	c.ok(selected["width"] > data["width"], "selected route is wider without an extra command or mode")
 	c.ok((selected["colors"] as PackedColorArray)[0].a > colors[0].a, "selected paper has stronger ink")
 	c.eq(selected["centerline"], line, "selection never alters the predicted movement")
+	c.ok(float(data["width"]) >= 1.4 and float(data["width"]) <= 1.6,
+			"ordinary routes have enough physical stroke width at native scale")
+	c.ok(float(selected["width"]) >= 1.8, "selected cuts remain visibly wider at native scale")
+	for color in colors:
+		c.ok(color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722 < 0.35,
+				"route ink stays charcoal against the light floor instead of disappearing as pale paper")
+	var start_color: Color = data["start_color"]
+	c.ok(start_color.r < 0.35 and start_color.g < 0.35 and start_color.b < 0.35,
+			"the foot origin uses the same dark ink rather than a fluorescent marker")
 
 
 func test_short_ping_pong_route_keeps_corners_and_reversals(c: Check) -> void:
@@ -163,7 +172,8 @@ func test_camera_clip_and_crowded_eight_copy_budgets_are_bounded(c: Check) -> vo
 		for point in segments:
 			c.ok(clip.has_point(point), "all clipped future ink remains inside the world camera rectangle")
 		for color in colors:
-			c.ok(color.a <= (0.34 if index == 0 else 0.14), "eight overlapping routes stay below hazard ink contrast")
+			c.ok(color.a <= (EchoPathPreview.CROWDED_SELECTED_ALPHA if index == 0 else EchoPathPreview.CROWDED_ALPHA),
+					"eight overlapping routes stay within the crowded route ink budget")
 		total += colors.size()
 	c.ok(total <= EchoPathPreview.MAX_ACTORS * EchoPathPreview.MAX_DRAW_SEGMENTS,
 			"eight copies cannot grow an unbounded route carpet")
@@ -210,7 +220,8 @@ func test_short_loop_revisits_cannot_saturate_the_same_floor(c: Check) -> void:
 			var to := segments[index * 2 + 1]
 			if Geometry2D.get_closest_point_to_segment(point, from, to).distance_to(point) < 0.001:
 				summed_alpha += colors[index].a
-		c.ok(summed_alpha <= 0.22, "dozens of coincident passes cannot exceed one ordinary route's opacity")
+		c.ok(summed_alpha <= EchoPathPreview.NORMAL_ALPHA,
+				"dozens of coincident passes cannot exceed one ordinary route's opacity")
 	if colors.size() > 1:
 		c.ok(colors[colors.size() - 1].a < colors[0].a,
 				"late repeat cuts keep their terminal fade instead of accumulating darker end ink")

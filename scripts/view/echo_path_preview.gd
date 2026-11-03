@@ -7,7 +7,14 @@ const MAX_PHYSICS_STEPS := 240
 const MAX_ROUTE_POINTS := 128
 const MAX_DRAW_SEGMENTS := 192
 const MAX_DASHES := 24
-const PAPER := Color("d4cbb3")
+const INK := Color("393a30")
+const NORMAL_ALPHA := 0.30
+const CROWDED_ALPHA := 0.24
+const SELECTED_ALPHA := 0.60
+const CROWDED_SELECTED_ALPHA := 0.52
+const NORMAL_WIDTH := 1.5
+const SELECTED_WIDTH := 1.9
+const IDENTITY_TINT_WEIGHT := 0.10
 const EPSILON := 0.000001
 
 
@@ -46,18 +53,19 @@ static func snapshot(actor: EchoActor, sim: Sim, clip_rect: Rect2,
 	if not bool(route["valid"]):
 		return data
 	var crowded := sim.echoes.size() > 4
-	var alpha := (0.34 if crowded else 0.46) if selected else (0.14 if crowded else 0.22)
+	var alpha := (CROWDED_SELECTED_ALPHA if crowded else SELECTED_ALPHA) if selected \
+			else (CROWDED_ALPHA if crowded else NORMAL_ALPHA)
 	# A short ping-pong tape may revisit the same floor dozens of times in two
 	# seconds. Cap its aggregate ink, rather than letting translucent visits pile
 	# up into an opaque route merely because the recording is short.
 	alpha /= float(route["traversals"])
-	var width := 1.65 if selected else 1.10
-	var color := PAPER.lerp(EchoInk.identity_color(actor.take.tint()), 0.22)
+	var width := SELECTED_WIDTH if selected else NORMAL_WIDTH
+	var color := INK.lerp(EchoInk.identity_color(actor.take.tint()), IDENTITY_TINT_WEIGHT)
 	var safe := clip_rect.grow(-width * 0.5 - 0.35)
 	var dashes := _dashes(route, safe, color, alpha, crowded, actor.take.uid)
 	data.merge({"valid": true, "uid": actor.take.uid, "start": actor.pos,
 		"start_visible": clip_rect.grow(-4.0).has_point(actor.pos),
-		"start_color": Color(color, 0.76 if selected else 0.48),
+		"start_color": Color(color, 0.84 if selected else 0.64),
 		"centerline": route["points"], "times": route["times"], "breaks": route["breaks"],
 		"segments": dashes["segments"], "colors": dashes["colors"],
 		"width": width, "horizon": route["horizon"]}, true)
