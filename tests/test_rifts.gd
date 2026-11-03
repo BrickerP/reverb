@@ -19,7 +19,7 @@ func _run(s: Sim, seconds: float) -> void:
 
 func _keep_late_arrival(s: Sim) -> void:
 	# Keep a real, unissued budget event so an empty field is not an early clear.
-	var late := s._plan.back()
+	var late: SpawnEvent = s._plan.back()
 	s._plan.assign([late])
 	s._plan_idx = 0
 	s.pending.clear()

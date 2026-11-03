@@ -48,7 +48,7 @@ func test_ascension_scales_the_boss(c: Check) -> void:
 func test_ascension_two_opens_rifts_early(c: Check) -> void:
 	var normal := _sim(0)
 	normal.start_wave(5)
-	var normal_late := normal._plan.back()
+	var normal_late: SpawnEvent = normal._plan.back()
 	normal._plan.assign([normal_late])
 	normal._plan_idx = 0
 	normal.pending.clear()
@@ -60,7 +60,7 @@ func test_ascension_two_opens_rifts_early(c: Check) -> void:
 
 	var torn := _sim(2)
 	torn.start_wave(5)
-	var torn_late := torn._plan.back()
+	var torn_late: SpawnEvent = torn._plan.back()
 	torn._plan.assign([torn_late])
 	torn._plan_idx = 0
 	torn.pending.clear()

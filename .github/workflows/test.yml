@@ -256,6 +256,15 @@ jobs:
             python3 tools/verify_experience_evidence.py "$output" --commit "$GITHUB_SHA" --variant "$variant"
           done
 
+      - name: Upload short audible experience evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: experience-evidence-${{ github.sha }}
+          path: shots/paper-actions/experience/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Capture legal eight-Echo pressure
         env:
           GODOT: /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
