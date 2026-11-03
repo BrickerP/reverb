@@ -388,7 +388,8 @@ func _on_world_event(info: Dictionary) -> void:
 	if kind == &"character_skill" and bool(info.get("ok", false)):
 		_offer_moment(&"skill", sim.player.pos, ArenaPainter.PAPER)
 	elif kind in [&"machine_repaired", &"worker_saved"]:
-		_offer_moment(&"repair" if kind == &"machine_repaired" else &"rescue", (info.get("from_pos", info.get("pos", sim.player.pos)) if kind == &"worker_saved" else info.get("pos", sim.player.pos)), Color("91ab80"))
+		var work_pos: Vector2 = info.get("from_pos", sim.player.pos) if kind == &"worker_saved" else info.get("pos", sim.player.pos)
+		_offer_moment(&"repair" if kind == &"machine_repaired" else &"rescue", work_pos, Color("91ab80"))
 	if kind != &"character_relay" and (kind != &"character_skill" or info.get("ability", &"") == &"overloader"):
 		_refresh_world_presentation()
 

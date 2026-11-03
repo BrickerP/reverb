@@ -560,7 +560,7 @@ func _cleanup_case() -> bool:
 			and is_zero_approx(float(motion.get("max_recoil", -1.0))),
 			"ArenaView motion and recoil return to rest"):
 		return false
-	if not _require(view._paths.is_empty() and view._reveal.is_empty() and view._sparks.is_empty()
+	if not _require(view.future_path_profiles().is_empty() and view._moment.snapshot().is_empty() and view._sparks.is_empty()
 			and view.position == Vector2.ZERO and view.character_id == &"looper",
 			"ArenaView paths, sparks, transform and identity reset"):
 		return false

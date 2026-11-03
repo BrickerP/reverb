@@ -56,7 +56,6 @@ func _run() -> void:
 	_main._view.shake_enabled = false
 	_main._view._visual_time = 1.3
 	_main._view._beat_take = null
-	_main._view._paths.clear()
 	_main._view.set_reduced_effects(OS.get_environment("REVERB_PROBE_REDUCED") == "1")
 	var sim: Sim = _main.sim
 	sim.player.pos = Vector2(1240, 680)

@@ -8,7 +8,7 @@ func _sim(role: StringName = &"looper") -> Sim:
 	var sim := Sim.new(20261101)
 	Content.character(role).apply(sim)
 	sim.start_run()
-	sim._plan.clear()
+	_hold_budget(sim)
 	sim.enemies.clear()
 	sim.pending.clear()
 	sim.player.pos = Vector2(1240, 680)
@@ -51,7 +51,7 @@ func _copy(sim: Sim) -> EchoTake:
 		take.samples.append(sim.player.pos + Vector2(180, 20))
 	sim.bank.add(take)
 	sim.start_wave(2)
-	sim._plan.clear()
+	_hold_budget(sim)
 	_quiet_weapons(sim)
 	return take
 
@@ -92,7 +92,7 @@ func test_recorded_machine_replay_reaches_real_lever_and_removed_echo_leaves_no_
 	c.eq(take.work_actions[0]["target_id"], PRESS, "recorded work names the canonical press")
 	sim.bank.add(take)
 	sim.start_wave(2)
-	sim._plan.clear()
+	_hold_budget(sim)
 	_quiet_weapons(sim)
 	sim.player.pos += Vector2(-160, 0)
 	ink.reset()
@@ -215,3 +215,14 @@ func test_real_rescue_keeps_old_and_safe_endpoints_without_keeping_a_worker_aliv
 	for mark: Dictionary in ink.profiles(WorldArena.BOUNDS, false, sim):
 		c.ok(mark["family"] != &"rescue", "removed worker has no visual ghost outside its bounded transition")
 	c.ok(sim.expedition["world"]["workers"].is_empty(), "presentation cannot reinsert a removed worker")
+
+
+func _hold_budget(sim: Sim) -> void:
+	# These long interaction fixtures still have unfinished finite work. A real
+	# late arrival keeps the scene alive without inventing a production bypass.
+	sim._plan.clear()
+	sim._plan_idx = 0
+	var arrival := SpawnEvent.new()
+	arrival.def = Content.enemy(&"grunt")
+	arrival.time = sim.wave_duration
+	sim._plan.append(arrival)

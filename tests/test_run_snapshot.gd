@@ -76,6 +76,7 @@ func _cleared_first_cohort() -> Sim:
 	sim.start_wave(2)
 	sim.player.weapons.clear()
 	sim.player.weapon_levels.clear()
+	sim.player.weapon_investments.clear()
 	sim.player.cooldowns.clear()
 	sim._plan_idx = WaveDirector.cohort_end(0, sim._plan.size())
 	sim.wave_time = sim._plan[sim._plan_idx - 1].time + Sim.SPAWN_TELEGRAPH

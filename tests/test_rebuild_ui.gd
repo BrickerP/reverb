@@ -221,10 +221,13 @@ func test_receipts_stay_optional_and_wave_phases_match_authority(c: Check) -> vo
 	ui.free()
 	var hud := Hud.new()
 	hud.bind(sim)
-	sim.wave_time = sim.wave_duration * 0.3
-	c.eq(hud.wave_phase_profile().id, &"first_breather", "HUD reads the authoritative breather window")
-	sim.wave_time = sim.wave_duration
-	c.eq(hud.wave_phase_profile().id, &"complete", "exact phase boundary is shown without a renderer clock")
+	sim.phase = Sim.Phase.WAVE
+	sim.enemies.clear()
+	sim.pending.clear()
+	sim._plan_idx = WaveDirector.cohort_end(0, sim._plan.size())
+	c.eq(hud.wave_phase_profile().id, &"first_breather", "HUD reads the actual cleared-cohort breather")
+	sim._plan_idx = sim._plan.size()
+	c.eq(hud.wave_phase_profile().id, &"complete", "full clear is shown without waiting for the old clock")
 	hud.free()
 
 
