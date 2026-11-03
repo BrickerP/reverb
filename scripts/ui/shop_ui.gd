@@ -47,6 +47,7 @@ var echoes_button: Button
 var _stock_scroll_pending := -1
 var _stock_scroll_frames := 0
 var inspection: InspectionPopover
+var _inspection_return_source: Control
 var _inspection_kind: StringName = &""
 var _inspection_reference: Variant
 var _inspection_epoch := -1
@@ -205,6 +206,7 @@ func open(s: Sim) -> void:
 
 
 func close_session() -> void:
+	_inspection_return_source = null
 	if inspection != null:
 		inspection.reset()
 	_stock_scroll_frames = 0
@@ -1655,6 +1657,7 @@ func _on_inspection_action(action: StringName) -> void:
 		return
 	var kind := _inspection_kind
 	var reference: Variant = _inspection_reference
+	_inspection_return_source = inspection._source if action == &"details" else null
 	inspection.reset()
 	if kind == &"echo":
 		var take := _inspection_take(int(reference))
@@ -1694,10 +1697,16 @@ func _open_echo_details(take: EchoTake) -> void:
 		else:
 			_on_discard(take)
 		workshop.close())
+	workshop.cancel_button.grab_focus()
 
 
 func _on_workshop_closed() -> void:
 	if sim == null:
+		return
+	var source := _inspection_return_source
+	_inspection_return_source = null
+	if is_instance_valid(source) and source.is_inside_tree() and source.is_visible_in_tree():
+		_request_inspection(source, true)
 		return
 	if _workshop_origin == &"ledger":
 		_rebuild_focus()
