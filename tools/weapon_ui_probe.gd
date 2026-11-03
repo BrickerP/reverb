@@ -393,8 +393,10 @@ func _bounds(ui: ShopUi, extent: Vector2i) -> void:
 			_check.ok(viewport.encloses(button.get_global_rect()), "named merge action stays inside the native canvas")
 	if ui.inspection.visible:
 		_check.ok(viewport.encloses(ui.inspection.sheet.get_global_rect()), "secondary inspection stays on screen")
+		_check.ok(ui.inspection.sheet.get_global_rect().end.y <= float(extent.y) - 52, "secondary sheet leaves the departure tray clear")
 		if ui.inspection.definition.visible:
 			_check.ok(viewport.encloses(ui.inspection.definition.get_global_rect()), "tertiary explanation stays on screen")
+			_check.ok(ui.inspection.definition.get_global_rect().end.y <= float(extent.y) - 52, "tertiary rules leave the departure tray clear")
 
 
 func _capture(ui: ShopUi, extent: Vector2i, state: String) -> void:

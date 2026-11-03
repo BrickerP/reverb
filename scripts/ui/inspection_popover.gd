@@ -2,6 +2,7 @@ class_name InspectionPopover
 extends Control
 
 signal action_requested(action: StringName)
+const FOOTER_CLEARANCE := 56.0
 var focus_enabled := false
 var pointer_enabled := false
 var pinned := false
@@ -219,7 +220,7 @@ func _place() -> void:
 	if x + sheet.size.x > extent.x - 12:
 		x = origin.position.x - sheet.size.x - 8
 	sheet.position = Vector2(clampf(x, 12, maxf(12, extent.x - sheet.size.x - 12)),
-		clampf(origin.position.y, 12, maxf(12, extent.y - sheet.size.y - 12)))
+		clampf(origin.position.y, 12, maxf(12, extent.y - sheet.size.y - FOOTER_CLEARANCE)))
 	if definition.visible:
 		definition.size = Vector2(280, definition.get_combined_minimum_size().y)
 		var next_x := sheet.position.x - definition.size.x - 6
@@ -227,7 +228,7 @@ func _place() -> void:
 			next_x = sheet.position.x + sheet.size.x + 6
 		var y := _term_source.global_position.y if is_instance_valid(_term_source) else sheet.position.y
 		definition.position = Vector2(clampf(next_x, 12, maxf(12, extent.x - definition.size.x - 12)),
-			clampf(y, 12, maxf(12, extent.y - definition.size.y - 12)))
+			clampf(y, 12, maxf(12, extent.y - definition.size.y - FOOTER_CLEARANCE)))
 
 
 static func _text(value: String, font_size: int, color: Color = UiTheme.INK) -> Label:
