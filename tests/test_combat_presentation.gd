@@ -197,27 +197,14 @@ func test_feedback_queues_are_capped_expire_and_clear_on_phase(c: Check) -> void
 	view.free()
 
 
-func test_wave_start_prunes_old_echo_paths_but_preserves_current_reveal(c: Check) -> void:
+func test_wave_start_clears_local_accents_and_uses_current_echoes(c: Check) -> void:
 	var sim := Sim.new(7)
 	var view := _view(sim)
-	var old_take := EchoTake.new()
-	old_take.samples = PackedVector2Array([Vector2.ZERO, Vector2.ONE])
-	var old_actor := EchoActor.new(old_take, 0)
-	var current_take := EchoTake.new()
-	current_take.samples = PackedVector2Array([Vector2(10.0, 10.0), Vector2(20.0, 20.0)])
-	var current_actor := EchoActor.new(current_take, 0)
-	sim.echoes.clear()
-	sim.echoes.append(current_actor)
-	view._paths[old_actor] = old_take.samples
-	view._reveal[old_actor] = 0.5
-	view._paths[current_actor] = current_take.samples
-	view._reveal[current_actor] = -0.12
+	view._moment.offer(&"combo", Vector2(400, 300))
 	view._on_wave_started(2)
-	c.ok(not view._paths.has(old_actor) and not view._reveal.has(old_actor),
-			"previous-wave actor presentation is pruned")
-	c.ok(view._paths.has(current_actor), "current actor path survives wave-start cleanup")
-	c.near(float(view._reveal[current_actor]), -0.12, 0.001,
-			"current reveal staggering survives wave-start cleanup")
+	c.ok(view._moment.snapshot().is_empty(), "old-wave accents cannot follow the next shift")
+	view.unbind()
+	c.ok(view.future_path_profiles().is_empty(), "detached routes never retain a previous actor")
 	view.free()
 
 

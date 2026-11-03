@@ -205,6 +205,54 @@ func test_wave_end_opens_shop_and_records_an_echo(c: Check) -> void:
 	c.eq(s.shop.offers.size(), Shop.OFFER_COUNT, "shop stocked")
 
 
+func test_finite_clear_settles_once_with_actual_drops_recording_and_wear(c: Check) -> void:
+	var s := _sim()
+	var take := EchoTake.new()
+	take.samples = PackedVector2Array([s.player.pos, s.player.pos + Vector2(10.0, 0.0)])
+	s.bank.add(take)
+	s.start_wave(2)
+	s._plan_idx = s._plan.size()
+	var ended := [0]
+	s.wave_ended.connect(func(_wave: int) -> void: ended[0] += 1)
+	var enemy := _spawn(s, s.player.pos + Vector2(150.0, 0.0), 1.0)
+	s.damage_enemy(enemy, 10.0, Vector2.ZERO, false)
+	var earned := s.pickups[0].value
+	var materials := s.player.materials
+	s.step(0.25, Vector2.ZERO)
+	c.eq(s.phase, Sim.Phase.SHOP, "clearing the finite budget closes an ordinary encounter early")
+	c.near(s.wave_time, 0.25, 0.0001, "early completion never jumps to the survival deadline")
+	c.eq(s.last_wave_earned, earned, "only the killed enemy's real drop is paid")
+	c.eq(s.player.materials, materials + earned + s.last_interest, "the unused cash allowance is not granted")
+	c.ok(take.condition < 100.0 and take.condition > 95.0, "existing copies wear only during the quarter-second actually played")
+	c.ok(absf(s.bank.takes.back().duration() - 0.25) <= EchoTake.SAMPLE_DT, "the new copy records actual combat instead of padding to the old deadline")
+	c.eq(ended[0], 1, "early completion settles once")
+	var after := s.player.materials
+	s.step(1.0, Vector2.ZERO)
+	c.eq(s.player.materials, after, "shop frames cannot repeat early settlement")
+	c.eq(ended[0], 1, "shop frames cannot emit another wave completion")
+
+
+func test_early_clear_requires_all_budget_telegraphs_and_opening_movement(c: Check) -> void:
+	var s := _sim()
+	c.ok(not s._encounter_finished(), "an empty opening before the first planned arrival is not a victory")
+	s._plan_idx = s._plan.size()
+	c.ok(not s._encounter_finished(), "the opening teaching movement is still required for an early clear")
+	s.wave_travel = Sim.FIRST_WAVE_TRAVEL
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"grunt")
+	s.pending.append(arrival)
+	c.ok(not s._encounter_finished(), "a spent plan with a remaining telegraph is not cleared")
+	s.pending.clear()
+	c.ok(s._encounter_finished(), "all finite threats and the teaching move complete the opening")
+	s.start_wave(13)
+	s.endless = true
+	s._plan_idx = s._plan.size()
+	c.ok(s._encounter_finished(), "ordinary endless encounters use the same finite-clear rule")
+	_spawn(s, s.player.pos + Vector2(150.0, 0.0))
+	s.wave_time = s.wave_duration
+	c.ok(s._encounter_finished(), "surviving to the original deadline remains sufficient outside the teaching encounter")
+
+
 func test_echo_replays_with_reduced_power(c: Check) -> void:
 	var s := Sim.new(1)
 	var take := EchoTake.new()

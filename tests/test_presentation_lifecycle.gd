@@ -32,8 +32,8 @@ func test_show_select_detaches_every_presentation_consumer(c: Check) -> void:
 	c.ok(not bool(main.audio.binding_state()["sim_bound"]), "audio releases old simulation")
 	c.ok(not bool(main.audio.binding_state()["shop_bound"]), "audio releases old shop")
 	c.eq(main._view.feedback_counts()["muzzles"], 0, "view feedback queues clear on detach")
-	c.eq(main._view._paths.size(), 0, "view echo paths clear on detach")
-	c.eq(main._view._reveal.size(), 0, "view reveals clear on detach")
+	c.eq(main._view.future_path_profiles().size(), 0, "future routes release the old simulation")
+	c.ok(main._view._moment.snapshot().is_empty(), "local accents clear on detach")
 	c.eq(main._view._sparks.size(), 0, "view sparks clear on detach")
 	c.eq(main._view.position, Vector2.ZERO, "view shake position resets on detach")
 	for _i in 3:

@@ -24,7 +24,7 @@
     "fieldTitle": "你，昨天的你，<br>还有更旧的你。",
     "fieldIntro": "武器自动开火。你来决定走向哪里、留下什么，以及何时报废过去。",
     "filmLabel": "实机战斗",
-    "filmCaption": "游戏内画面 · 自动操作 · 无声片段",
+    "filmCaption": "实机场景演示 · 含声音",
     "filmAction": "点击播放，看看副本怎么上班。",
     "loopOneTitle": "留下路线",
     "loopOne": "每场战斗，把你的路线与装备录成一张回响。",
@@ -54,7 +54,7 @@
     "macTitle": "macOS 首次打开",
     "macCopy": "安装包带本地完整性签名，尚未公证。首次打开请按包内 MAC_START_HERE.txt 操作。",
     "otherTitle": "Windows、Linux 与存档",
-    "otherCopy": "Windows 包未签名，可能出现 SmartScreen 提示。Linux 请赋予程序执行权限。0.18.9 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7、0.18.8 的中途存档；更早格式需新开对局，永久解锁、设置与回响档案保留。",
+    "otherCopy": "Windows 包未签名，可能出现 SmartScreen 提示。Linux 请赋予程序执行权限。0.19.0 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7、0.18.8、0.18.9 的中途存档；更早格式需新开对局，永久解锁、设置与回响档案保留。",
     "controlsTitle": "操作很少，决定不少。",
     "controlsCopy": "WASD / 方向键移动；Shift 使用角色技能；E 操作机器；轻点 Space 报废回响，按住选择。菜单支持键鼠和手柄导航。",
     "allDownloads": "打开下载与更新页 ↗",
@@ -64,7 +64,7 @@
     "footerNote": "持续开发中。页面实机素材包含自动操作与脚本化场景；长期平衡和目标设备体验仍在验证。",
     "nav": "主导航",
     "heroAlt": "疲惫的纸偶和过去的副本，站在旧复印设备前",
-    "videoAlt": "摆出来的一击：十字撕掉昨天的副本，人还在",
+    "videoAlt": "实机场景演示：回响路线、战斗重音、救援与提前下班",
     "shopAlt": "商店展示武器、工作单、回响和明确价格",
     "archiveAlt": "副本家谱室展示真实归档角色与下一局数值"
 };
@@ -81,13 +81,13 @@
     document.querySelectorAll('[data-i18n]').forEach(node => { node.innerHTML = zh ? chinese[node.dataset.i18n] : originals.get(node); });
     document.querySelectorAll('[data-i18n-alt]').forEach(node => { node.alt = zh ? chinese[node.dataset.i18nAlt] : originals.get(node).alt; });
     document.querySelectorAll('[data-i18n-aria]').forEach(node => { node.setAttribute('aria-label', zh ? chinese[node.dataset.i18nAria] : originals.get(node).aria); });
-    document.querySelectorAll('[data-image]').forEach(node => { node.src = `site-assets/${node.dataset.image}-${zh ? 'zh' : 'en'}.png?v=0.18.9`; });
-    document.querySelectorAll('[data-image-link]').forEach(node => { node.href = `site-assets/${node.dataset.imageLink}-${zh ? 'zh' : 'en'}.png?v=0.18.9`; });
+    document.querySelectorAll('[data-image]').forEach(node => { node.src = `site-assets/${node.dataset.image}-${zh ? 'zh' : 'en'}.png?v=0.19.0`; });
+    document.querySelectorAll('[data-image-link]').forEach(node => { node.href = `site-assets/${node.dataset.imageLink}-${zh ? 'zh' : 'en'}.png?v=0.19.0`; });
     const video = document.querySelector('.field-film video');
     if (video) {
       const source = video.querySelector('source');
-      const nextSrc = `site-assets/${zh ? 'cross-tear-zh.mp4' : 'cross-tear-en.mp4'}?v=tear`;
-      const nextPoster = `site-assets/${zh ? 'cross-tear-zh.png' : 'cross-tear-en.png'}?v=tear`;
+      const nextSrc = `site-assets/${zh ? 'experience-zh.mp4' : 'experience-en.mp4'}?v=0.19.0`;
+      const nextPoster = `site-assets/${zh ? 'experience-cover-zh.png' : 'experience-cover-en.png'}?v=0.19.0`;
       if (source.getAttribute('src') !== nextSrc) {
         source.setAttribute('src', nextSrc);
         video.poster = nextPoster;

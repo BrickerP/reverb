@@ -339,7 +339,7 @@ func _draw_wave() -> void:
 		if boss_wave:
 			objective = Loc.t("hud.act", [status.act, posmod(sim.wave - 1, 4) + 1]) + " · " + objective
 		else:
-			objective += " · %d" % left
+			objective = Loc.t(str(wave_phase_profile()["name_key"])) + " · " + objective + " · %d" % left
 		_text(objective, Vector2(rect.position.x + 8.0, 53.0), 13, UiTheme.DIM if boss_wave else ArenaPainter.PAPER, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 16.0)
 		_meter(Rect2(rect.position.x + 12.0, 61.0, rect.size.x - 24.0, 3.0), sim.boss_health_ratio() if boss_wave else sim.wave_time / maxf(0.01, sim.wave_duration), color if boss_wave else ink, Color(ink, 0.18), &"boss" if boss_wave else &"wave", 3.0)
 		return
@@ -358,7 +358,7 @@ func _draw_wave() -> void:
 
 
 func wave_phase_profile() -> Dictionary:
-	return WaveDirector.phase_profile(sim.wave_time, sim.wave_duration) if sim != null else WaveDirector.phase_profile(0.0, 0.0)
+	return sim.encounter_profile() if sim != null else WaveDirector.phase_profile(0.0, 0.0)
 
 
 func _draw_wave_phase() -> void:
@@ -372,8 +372,10 @@ func _draw_wave_phase() -> void:
 	var label := Loc.t("order.%s.short" % kind)
 	if int(status.target) > 0:
 		label += "  %d/%d" % [status.progress, status.target]
-	_text(label, Vector2(rect.position.x + 10.0, rect.position.y + 25.0),
-			14, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
+	_text(Loc.t(str(wave_phase_profile()["name_key"])), Vector2(rect.position.x + 10.0, rect.position.y + 14.0),
+			11, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
+	_text(label, Vector2(rect.position.x + 10.0, rect.position.y + 30.0),
+			13, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
 
 
 func _draw_materials() -> void:

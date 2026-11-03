@@ -7,6 +7,7 @@ const ELITE_KINDS := [&"overclocked", &"bulwark", &"volatile", &"splitter"]
 const MIN_SPAWN_DISTANCE := 240.0
 const EDGE_INSET := 24.0
 const COHORT_WINDOWS := [[0.0, 0.24], [0.36, 0.60], [0.72, 1.0]]
+const COHORT_BREATHER := 1.2
 
 
 static func duration_for(wave: int) -> float:
@@ -56,6 +57,21 @@ static func _phase(id: StringName, intensity: float) -> Dictionary:
 	return {"id": id, "name_key": "wave.phase." + String(id), "intensity": intensity}
 
 
+static func cohort_index(plan_index: int, plan_size: int) -> int:
+	return mini(2, int(float(maxi(0, plan_index) * 3) / float(maxi(1, plan_size))))
+
+
+static func cohort_end(plan_index: int, plan_size: int) -> int:
+	return ceili(float((cohort_index(plan_index, plan_size) + 1) * plan_size) / 3.0)
+
+
+static func cohort_profile(cohort: int, breather: bool = false) -> Dictionary:
+	if breather and cohort < 2:
+		return _phase(&"first_breather" if cohort == 0 else &"second_breather", 0.12 if cohort == 0 else 0.18)
+	var index := clampi(cohort, 0, 2)
+	return _phase([&"first_push", &"second_push", &"final_push"][index], [0.45, 0.75, 1.0][index])
+
+
 static func plan(wave: int, run_seed: int, budget_mult: float = 1.0,
 		endless: bool = false, elite_count: int = 1) -> Array[SpawnEvent]:
 	var rng := RandomNumberGenerator.new()
@@ -77,7 +93,7 @@ static func plan(wave: int, run_seed: int, budget_mult: float = 1.0,
 	for i in picked.size():
 		var e := SpawnEvent.new()
 		e.def = picked[i]
-		var cohort := mini(COHORT_WINDOWS.size() - 1, int(float(i * 3) / float(picked.size())))
+		var cohort := cohort_index(i, picked.size())
 		var first := ceili(float(cohort * picked.size()) / 3.0)
 		var end := ceili(float((cohort + 1) * picked.size()) / 3.0)
 		var local_progress := (float(i - first) + rng.randf()) / float(end - first)

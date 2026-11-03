@@ -34,25 +34,18 @@ func _take() -> EchoTake:
 	return take
 
 
-func test_echo_route_is_a_bounded_playback_neighbourhood(c: Check) -> void:
+func test_echo_route_previews_future_motion_instead_of_recorded_history(c: Check) -> void:
+	var sim := Sim.new(7)
+	sim.start_run()
 	var actor := EchoActor.new(_take(), 0)
 	actor.t = 2.0
-	var points := PackedVector2Array()
-	for i in 40:
-		points.append(Vector2(float(i) * 6.0, 200.0))
-	var shown := ArenaPainter.echo_path_window(actor, points)
-	c.ok(shown.size() > 1 and shown.size() <= ArenaPainter.MAX_PATH_POINTS,
-			"long recordings cannot cover the whole arena with route lines")
-	c.ok(shown[shown.size() - 1].distance_to(actor.take.position_at(actor.t)) < 16.0,
-			"the visible route remains close to the current playback head")
-	actor.t = actor.take.duration() + 1.0
-	shown = ArenaPainter.echo_path_window(actor, points)
-	c.ok(shown[shown.size() - 1].distance_to(actor.take.position_at(actor.t)) < 16.0,
-			"rewind uses reflected playback time, not ever-increasing run time")
-	c.eq(ArenaPainter.echo_path_window(actor, PackedVector2Array()).size(), 0,
-			"an empty recording has no unsafe line lookup")
-	c.eq(ArenaPainter.echo_path_window(actor, PackedVector2Array([Vector2.ZERO])).size(), 0,
-			"a single point cannot form a line")
+	actor.pos = actor.take.position_at(actor.t)
+	var before := actor.t
+	var data := EchoPathPreview.snapshot(actor, sim, Rect2(-100, 0, 1200, 600))
+	c.ok(bool(data.get("valid", false)), "a live recorded route has a future preview")
+	c.eq(data["start"], actor.pos, "the cutting line starts at the real body")
+	c.ok((data["centerline"] as PackedVector2Array).size() <= 128, "future sampling remains bounded")
+	c.eq(actor.t, before, "reading a future route never advances its playback")
 
 
 func test_pause_freezes_art_clocks_and_keeps_simulation_untouched(c: Check) -> void:

@@ -181,8 +181,7 @@ func _run() -> void:
 		return
 	_main.sim.bank.add(recorded)
 	_main.sim.start_wave(2)
-	_main.sim._plan.clear()
-	_main.sim._plan_idx = 0
+	_hold_budget(_main.sim)
 	_main.sim.wave_duration = 60.0
 	_main.sim.player.pos += Vector2(-160.0, 0.0)
 	_disable_weapons()
@@ -322,6 +321,7 @@ func _run() -> void:
 		"startup_config_pixels": [int(ProjectSettings.get_setting("display/window/size/viewport_width")),
 			int(ProjectSettings.get_setting("display/window/size/viewport_height"))],
 		"simulation": "one real Sim.step(1/60) per native rendered frame; Main physics suppressed",
+		"finite_plan": "one original final arrival remains unissued while isolated action scenes play; no production early-finish bypass",
 		"visual_clock": "normal native engine clock, including each screenshot frame",
 		"staging": "authored positions, stationary high-HP targets, isolated scripted fixture; repair station separated at player+(100,-50), real spawn@8/damage@18/useful repair/lethal damage@36/remains@44/machine repair@48",
 		"additional_staging": "Echo replays the actual recorded E and readiness wait; role skills activate through Sim; Looper history comes from 60 native movement frames; rescue camera inspects old location then committed safe location at frame 40",
@@ -362,8 +362,7 @@ func _begin_case(weapon_id: StringName, role: StringName = &"looper") -> void:
 	sim.player.cooldowns.clear()
 	sim.player.add_weapon(Content.weapon(weapon_id))
 	sim.wave_duration = 60.0
-	sim._plan.clear()
-	sim._plan_idx = 0
+	_hold_budget(sim)
 	sim.enemies.clear()
 	sim.pending.clear()
 	sim.projectiles.clear()
@@ -432,8 +431,7 @@ func _add_stationary_copy(weapon_id: StringName, condition: float, offset: Vecto
 	_retire_uid = take.uid
 	# The real wave-start path creates/deploys the Echo and notifies the bound view.
 	sim.start_wave(2)
-	sim._plan.clear()
-	sim._plan_idx = 0
+	_hold_budget(sim)
 	sim.wave_duration = 60.0
 
 
@@ -1006,3 +1004,13 @@ func _fail(message: String) -> void:
 			file.store_string(JSON.stringify(_summary, "  ") + "\n")
 			file.close()
 	quit(1)
+
+
+func _hold_budget(sim: Sim) -> void:
+	# A long action fixture retains real unfinished work under finite assaults.
+	# The last original arrival is later than every short recorded action case.
+	if not _require(not sim._plan.is_empty(), "action fixture starts with actual scheduled budget"):
+		return
+	var late: SpawnEvent = sim._plan.back()
+	sim._plan.assign([late])
+	sim._plan_idx = 0

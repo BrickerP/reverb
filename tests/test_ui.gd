@@ -563,47 +563,37 @@ func test_offer_card_compares_weapon_dps(c: Check) -> void:
 	c.ok(OfferCard.total_dps(s.player) > 2.0 * 16.17, "two sidearms activate the family bonus")
 
 
-func test_echo_path_reveals_at_wave_start(c: Check) -> void:
+func test_echo_future_route_is_available_at_wave_start(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()
 	var view := ArenaView.new()
 	view.bind(s)
 	var take := EchoTake.new()
 	take.wave = 1
-	take.samples = PackedVector2Array([
-		Vector2(400.0, 300.0), Vector2(500.0, 320.0), Vector2(600.0, 380.0), Vector2(700.0, 420.0),
-	])
+	take.samples = PackedVector2Array([s.player.pos, s.player.pos + Vector2(80, 0), s.player.pos + Vector2(80, 80)])
 	s.bank.add(take)
 	s.start_wave(2)
 	c.eq(s.echoes.size(), 1, "the take became an echo")
-	var actor: EchoActor = s.echoes[0]
-	c.ok(view._reveal.has(actor), "the view tracks a reveal for it")
-	c.near(float(view._reveal[actor]), 0.0, 0.001, "the route starts hidden")
-	view._process(ArenaView.REVEAL_TIME * 0.5)
-	c.near(float(view._reveal[actor]), 0.5, 0.05, "the route draws in over time")
-	view._process(ArenaView.REVEAL_TIME)
-	c.near(float(view._reveal[actor]), 1.0, 0.001, "and stays revealed")
+	var paths := view.future_path_profiles()
+	c.eq(paths.size(), 1, "the route is immediately readable without a reveal delay")
+	c.eq(paths[0]["start"], s.echoes[0].pos, "future ink begins at the actual actor")
 	view.free()
 
 
-func test_echo_reveals_stagger_for_readability(c: Check) -> void:
+func test_all_echo_future_routes_are_available_together(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()
 	s.player.stats.values[Stats.ECHO_SLOTS] = 3.0
 	var view := ArenaView.new()
 	view.bind(s)
-	for k in 3:
+	for index in 3:
 		var take := EchoTake.new()
-		take.wave = k + 1
-		take.samples = PackedVector2Array([
-			Vector2(300.0 + k * 40.0, 300.0), Vector2(360.0 + k * 40.0, 340.0),
-			Vector2(420.0 + k * 40.0, 400.0),
-		])
+		take.wave = index + 1
+		var origin := s.player.pos + Vector2(index * 40, 30)
+		take.samples = PackedVector2Array([origin, origin + Vector2(60, 40), origin + Vector2(120, 80)])
 		s.bank.add(take)
 	s.start_wave(2)
-	c.eq(s.echoes.size(), 3, "all three takes replay")
-	c.near(float(view._reveal[s.echoes[0]]), -0.24, 0.001, "the oldest route waits its turn")
-	c.near(float(view._reveal[s.echoes[2]]), 0.0, 0.001, "the newest route starts at once")
+	c.eq(view.future_path_profiles().size(), 3, "all copies offer a route instead of taking turns")
 	view.free()
 
 

@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.18.9 contract. Simulation owns rules and mutation. UI,
+This is the current 0.19.0 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -33,9 +33,8 @@ simulation aliases as authority.
 - `Sim.MAX_ENEMIES == 96`; ordinary enemies use at most 94 slots so a mandatory
   boss or split body retains two reserved slots. Pending spawns cap at 24.
   Saturated boss records retry after a real death frees capacity.
-- Cohorts occupy 0–24%, 36–60%, and 72–100%. Tail pressure remains active near
-  the end but respects the same caps. Each materialized spawn has a real
-  0.8-second telegraph.
+- Ordinary encounters have three finite cohorts from the complete ordered spawn plan, including order additions. Their original arrival windows remain the survival schedule. Clearing a cohort starts a 1.2-second breather and brings only the next cohort forward. The actual combat clock never jumps. There are no additional tail-refill enemies; saturated arrivals retry without consuming a budget slot. Each materialized spawn retains its real 0.8-second telegraph.
+- Clearing the complete plan can end an ordinary encounter early. The original survival deadline still applies. Unfinished accepted orders, negotiations, carried deliveries and signed active inspections retain their original window; the first recording still requires actual movement. Bosses still require their real defeat. Cash comes only from actual drops under the same cap, and Echo wear follows actual combat seconds. `Sim.encounter_profile()` is the shared read-only source for HUD and music phases.
 - `Sim.ARENA == Rect2(40, 80, 2400, 1200)`. The standard 1280×720 canvas uses
   a 1200×600 battle rectangle; `WorldArena.display_viewport` derives the native
   rectangle at other sizes. Model positions and attacks remain world
@@ -212,3 +211,11 @@ Family-wall selection and actual entry preview share existing archive rules. The
 
 
 The 0.18.1 event/presentation contract is documented in [paper-action-feedback.md](docs/paper-action-feedback.md). ShotInfo captures the actual weapon slot, PlayerHurtInfo separates absorbed impact and HP loss, and DamageInfo captures the target radius. These are event values rather than saved-run fields; Snapshot v4 remains unchanged.
+
+## Future routes and key moments
+
+`EchoPathPreview.snapshot` samples the next two seconds of the actual recorded playback, including ping-pong turns and known Conductor/Mirror holds. A held swap's eventual discontinuity is never drawn as a walk. Every active Echo has ground-level cutting dashes; selection raises contrast, crowding lowers it, and the native battle rectangle clips all ink. Reduced Effects retains the same static route information. The preview reads no RNG and does not change tape time, condition, work cursors or model state; unissued future skills are not predicted.
+
+`MomentInk` keeps one short local paper accent. Actual combos, charged-role transitions, successful work, full blocks, HP loss, active retirement and Boss tears compete by priority. Routine feedback yields drawing budget during a key moment; hazard ink and the original body keep their existing visibility. It introduces no game-time pause or new player resource. `CharacterSkills.is_charged` supplies the shared phase/energy/cooldown predicate for presentation.
+
+GameAudio routes existing samples through bounded normal/protected voices, separate player/copy merge windows and short music ducking. Combo success and charge-ready edges use real model events/state; bind, resume and new shifts do not invent a ready event. Source clips are reused. `tools/experience_probe.gd` captures disclosed native fixtures with real routed audio, model snapshot/both-RNG rendering invariants and current source identity.

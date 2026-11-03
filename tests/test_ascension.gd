@@ -48,22 +48,26 @@ func test_ascension_scales_the_boss(c: Check) -> void:
 func test_ascension_two_opens_rifts_early(c: Check) -> void:
 	var normal := _sim(0)
 	normal.start_wave(5)
-	normal._plan.clear()
+	var normal_late: SpawnEvent = normal._plan.back()
+	normal._plan.assign([normal_late])
 	normal._plan_idx = 0
 	normal.pending.clear()
 	normal.enemies.clear()
 	for i in 510:
 		normal.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(normal.phase, Sim.Phase.WAVE, "A0 is still fighting with its final scheduled budget unissued")
 	c.eq(normal.rifts.size(), 0, "A0 has no rift on encounter five")
 
 	var torn := _sim(2)
 	torn.start_wave(5)
-	torn._plan.clear()
+	var torn_late: SpawnEvent = torn._plan.back()
+	torn._plan.assign([torn_late])
 	torn._plan_idx = 0
 	torn.pending.clear()
 	torn.enemies.clear()
 	for i in 510:
 		torn.step(1.0 / 60.0, Vector2.ZERO)
+	c.eq(torn.phase, Sim.Phase.WAVE, "A2 rift timing is checked before a legitimate late arrival")
 	c.eq(torn.rifts.size(), 1, "A2 opens a rift on encounter five")
 	c.eq(torn.ascension_rift_interval(), 14.0, "A2 uses the faster rift interval")
 
