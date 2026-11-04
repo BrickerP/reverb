@@ -152,6 +152,11 @@ class ReleaseReceiptTest(unittest.TestCase):
             self.compats[source_version], self.writers[source_version], self.payloads[source_version] = compat, writer, payload
             put_json(folder / "result.json", compat)
             put_json(folder / "writer-result.json", writer)
+        for variant in ("journey", "clinic-en", "clinic-zh", "clinic-reduced"):
+            put_json(self.evidence / "perception" / variant / "verified.json", {
+                "verified": True, "commit": COMMIT, "variant": variant,
+                "catalog_size": 40, "human_understanding_verified": False,
+                "observed_cases": ["01"], "native_frames": 120})
         self.needs = self.root / "needs.json"
         self.gates = {name: {"result": "success"} for name in RECEIPTS.GATES}
         put_json(self.needs, self.gates)

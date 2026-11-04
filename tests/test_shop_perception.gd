@@ -281,3 +281,23 @@ func test_settled_transaction_remains_available_in_existing_hover(c: Check) -> v
 	ui.inspection._payload["change"]["after"][0]["level"] = 99
 	c.eq(RunSnapshot.capture(sim), before, "revisiting proof has no mutable model reference")
 	_release(ui)
+
+
+func test_signature_entry_follows_introduction_but_keeps_existing_receipts_reachable(c: Check) -> void:
+	var sim := _sim()
+	var ui := _open(sim)
+	c.ok(not BureauConfession.profile(sim)["introduced"], "ordinary first shop has no introduced signature")
+	c.ok(not ui.confession_button.visible, "unintroduced signature has no premature entry")
+	ui._open_confession()
+	c.ok(not ui.confession.visible, "direct opening cannot create an empty choices page")
+	StoryLedger.seed_known(sim, [&"carbon"])
+	ui.refresh()
+	c.ok(ui.confession_button.visible, "known carbon introduces the actual entry")
+	ui.confession_button.pressed.emit()
+	c.ok(ui.confession.visible and ui.confession.choice_buttons.size() == 2, "introduced entry has actual choices")
+	ui.confession.choice_buttons[1].pressed.emit()
+	c.ok(not BureauConfession.profile(sim)["available"], "canonical signature consumes this act's choice")
+	ui.confession.close()
+	ui._open_confession()
+	c.ok(ui.confession.visible and ui.confession_button.visible, "existing receipt stays reachable even when new signing is unavailable")
+	_release(ui)

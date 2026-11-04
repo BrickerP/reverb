@@ -1159,7 +1159,8 @@ func _sync_familiar_actions() -> void:
 
 
 func _on_familiarity_confirmed(action: StringName) -> void:
-	if meta != null and meta.remember_action(action):
+	if meta != null:
+		meta.remember_action(action)
 		_sync_familiar_actions()
 
 

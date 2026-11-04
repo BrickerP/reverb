@@ -350,6 +350,9 @@ func refresh(animate_echo: bool = false) -> void:
 	debt_button.accessibility_name = debt_button.text
 	debt_button.accessibility_description = debt_button.tooltip_text
 	confession_button.text = Loc.t("confession.ui.open")
+	confession_button.visible = bool(BureauConfession.profile(sim)["introduced"])
+	if not confession_button.visible and confession.visible:
+		confession.reset()
 	confession_button.tooltip_text = Loc.t("confession.ui.rule")
 	confession_button.accessibility_name = confession_button.text
 	confession_button.accessibility_description = confession_button.tooltip_text
@@ -2074,7 +2077,8 @@ func _remember_focus(control: Control) -> void:
 
 
 func _open_confession() -> void:
-	if sim == null or not visible or workshop.visible or crew.visible:
+	if sim == null or not visible or workshop.visible or crew.visible \
+			or not bool(BureauConfession.profile(sim)["introduced"]):
 		return
 	confession.open_confession(sim)
 
@@ -2084,6 +2088,9 @@ func _on_confession_chosen(id: StringName) -> void:
 		return
 	var result := sim.shop.apply(ShopResult.CONFESS, sim, null, -1, id)
 	refresh()
+	if not bool(BureauConfession.profile(sim)["introduced"]):
+		confession.reset()
+		return
 	confession.open_confession(sim)
 	if not result.ok:
 		confession.show_error(Loc.t("confession.ui.changed"))
@@ -2197,7 +2204,7 @@ func _unmatched_visual_rows(rows: Array[Dictionary], against: Array[Dictionary],
 		var match_index := -1
 		for index in remaining.size():
 			var other: Dictionary = remaining[index]
-			var same := row["uid"] == other["uid"] and row["condition"] == other["condition"] \
+			var same: bool = row["uid"] == other["uid"] and row["condition"] == other["condition"] \
 				and row["levels"] == other["levels"] and row["skill"] == other["skill"] if echo \
 				else row["id"] == other["id"] and row["level"] == other["level"]
 			if same:

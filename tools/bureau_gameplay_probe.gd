@@ -136,6 +136,7 @@ func _battle(id: String, role: StringName = &"looper", stage: int = 1) -> Sim:
 
 func _shop(id: String, role: StringName = &"looper") -> Sim:
 	var sim := _battle(id, role)
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim.recorder.record(sim.player.pos + Vector2(80, 0), 0.1)
 	sim._end_wave()
 	_main._sync_phase()
@@ -146,7 +147,7 @@ func _shop(id: String, role: StringName = &"looper") -> Sim:
 	_check(_main.shop_ui._prep_status.text.begins_with(Loc.t("bureau.delivery.next_short")), "ordinary_shop_announces_the_optional_stamp_before_any_offer_is_opened_" + id)
 	var terms := Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
 	_check(_main.shop_ui.start_button.tooltip_text == terms and _main.shop_ui.start_button.accessibility_description == terms, "departure_describes_the_exact_eight_material_reward_and_no_failure_fee_" + id)
-	_fixture(id + "_budget", "80materials staged after real recorder/end_wave/Main recording beat; actual quotes/transactions/Undo remain authoritative")
+	_fixture(id + "_budget", "Known carbon fact explicitly staged for this recurring delivery forecast;80materials staged after real recorder/end_wave/Main recording beat; actual quotes/transactions/Undo remain authoritative")
 	return sim
 
 
@@ -302,66 +303,89 @@ func _binding() -> void:
 
 
 func _binding_case(trait_index: int) -> void:
-	var label := String(EchoBank.MERGE_TRAITS[trait_index])
-	var sim := _shop("binding_ceremony_" + label)
+	var trait: StringName = EchoBank.MERGE_TRAITS[trait_index]
+	var label := String(trait)
+	var sim := _shop("binding_inventory_" + label)
 	if trait_index == 0:
 		await _ordinary_forecast_surface()
 	var host: EchoTake = sim.bank.takes[0]
 	host.condition = 45.0
 	var donor := _take(sim, &"ink_bottle", 70.0, sim.player.pos)
 	sim.selected_echo_uid = host.uid
-	_main.shop_ui.refresh()
-	var before := RunSnapshot.capture(sim)
 	var ui: ShopUi = _main.shop_ui
+	ui.refresh()
+	ui.show_equipment_page(1)
+	var before := RunSnapshot.capture(sim)
 	await _activate(ui.echo_panel.merge_button)
-	await _activate(ui.workshop.choice_buttons[0])
-	await _activate(ui.workshop.choice_buttons[0])
-	await _activate(ui.workshop.choice_buttons[trait_index])
+	_check(not ui.workshop.visible, "merge_selection_uses_actual_paper_cards_not_a_hidden_modal")
+	await _activate(ui.echo_panel._identity_buttons[donor.uid] as Button)
+	await _activate(ui.echo_panel._identity_buttons[host.uid] as Button)
+	var choice := ui.echo_panel.trait_button(trait)
+	choice.grab_focus()
+	await _settle()
+	var expected := sim.bank.preview_merge(host, donor, trait)
+	var preview := ui.echo_panel._trait_preview.snapshot()
 	_check(RunSnapshot.capture(sim) == before, "merge_preview_leaves_model_rng_funds_and_identities_unchanged")
+	_check(preview["before"].size() == 2 and preview["after"].size() == 1 and preview["after"][0]["uid"] == 0,
+		"preview_compares_two_real_papers_without_allocating_a_fake_result_identity_" + label)
+	_check(preview["after"][0]["condition"] == expected.condition and preview["after"][0]["levels"] == expected.levels
+		and preview["after"][0]["skill"] == expected.inherited_skill, "selected_trait_preview_uses_canonical_read_only_merge_values_" + label)
 	await _shot("binding_merge_terms_" + label)
-	await _activate(ui.workshop.choice_buttons[0])
-	_check(sim.bank.takes.size() == 1 and sim.bank.takes[0].merged and sim.bank.takes[0].merge_trait == EchoBank.MERGE_TRAITS[trait_index], "real_merge_commits_the_selected_trait_and_one_final_body_" + label)
+	await _activate(choice)
+	ui.flush_feedback()
+	_check(sim.bank.takes.size() == 1 and sim.bank.takes[0].merged and sim.bank.takes[0].merge_trait == trait,
+		"real_merge_commits_the_selected_trait_and_one_final_body_" + label)
 	var merged: EchoTake = sim.bank.takes[0]
-	match EchoBank.MERGE_TRAITS[trait_index]:
+	match trait:
 		&"skill": _check(merged.retirement_kind() == donor.retirement_kind() and merged.retirement_kind() != host.retirement_kind(), "skill_binding_actually_changes_pin_to_the_donors_ink_skill")
 		&"repair": _check(merged.condition == 80.0, "repair_binding_actually_patches45_to80_condition")
 		&"power": _check(merged.level_at(0) == 1 and merged.condition == 30.0, "power_binding_actually_raises_grade_and_pays15_condition")
-	ui.binding_ceremony.set_process(false)
+	var visual: WorkshopUi.ChangeVisual = ui._change_visual
+	if not _check(is_instance_valid(visual) and visual.is_visible_in_tree(), "actual_merge_has_visible_inventory_causal_ink_" + label):
+		return
+	visual.set_process(false)
 	var after := RunSnapshot.capture(sim)
-	var effect: Dictionary = ui.binding_ceremony.effect_profile()
-	_check(effect["trait"] == EchoBank.MERGE_TRAITS[trait_index] and not effect["reverse"] and effect["values"]["merged_condition"] == merged.condition and effect["values"]["levels"] == merged.levels, "trait_overlay_reads_the_actual_final_condition_and_weapon_grades_" + label)
-	if label == "skill":
-		_check(effect["values"]["skill"] == &"ink", "transfer_seal_uses_the_actual_inherited_ink_mark")
-	_check(ui.binding_ceremony._detail.text != "" and ui.binding_ceremony._detail.tooltip_text.begins_with(Loc.t(str(BindingCeremonyUi.TRAIT_KEYS[EchoBank.MERGE_TRAITS[trait_index]]))), "binding_receipt_matches_actual_selected_trait_" + label)
-	_check(ui.binding_ceremony.active, "actual_merge_started_the_binding_ceremony")
-	ui.binding_ceremony.elapsed = 0.0
-	ui.binding_ceremony.step(0.001)
-	_check(ui.binding_ceremony._frame == (3 if ui.reduced_effects else 0), "binding_uses_the_actual_preparation_or_reduced_final_pose")
-	_check(ui.binding_ceremony._caption.text.contains(str(host.uid)) and ui.binding_ceremony._caption.text.contains(str(donor.uid)), "binding_receipt_names_the_actual_original_identities")
-	await _shot("binding_actual_preparation_pose_" + label)
-	ui.binding_ceremony.step(BindingCeremonyUi.DURATION * 0.8)
-	_check(ui.binding_ceremony.body_count() == 1, "binding_last_pose_has_one_body")
+	var effect := ui.transaction_profile()
+	_check(effect["before"].size() == 2 and effect["after"].size() == 1 and effect["after"][0]["uid"] == merged.uid,
+		"visible_ink_reads_actual_two_to_one_committed_identity_change_" + label)
+	_check(effect["after"][0]["condition"] == merged.condition and effect["after"][0]["levels"] == merged.levels
+		and effect["after"][0]["skill"] == merged.inherited_skill, "visible_trait_uses_actual_result_values_" + label)
+	_check([effect["before"][0]["uid"], effect["before"][1]["uid"]] == [host.uid, donor.uid], "visible_ink_names_actual_consumed_papers_" + label)
+	_check(visual.size.x >= 12.0 and visual.size.y >= 12.0 and root.get_visible_rect().intersects(visual.get_global_rect()),
+		"causal_ink_has_an_actual_native_draw_footprint_" + label)
+	visual.elapsed = 0.0
+	visual.queue_redraw()
+	await _shot("binding_actual_before_after_" + label)
+	visual.elapsed = visual.duration * 0.8
+	visual.queue_redraw()
+	_check(ui.echo_panel.copy_buttons.size() == 1, "one_live_result_card_remains_after_binding_" + label)
 	await _shot("binding_confirmed_one_body_" + label)
-	_check(RunSnapshot.capture(sim) == after, "binding_visual_step_cannot_apply_the_transaction_again")
+	_check(RunSnapshot.capture(sim) == after, "inventory_ink_cannot_apply_the_transaction_again")
+	visual.step(visual.duration)
+	await _activate(ui.echo_panel._identity_buttons[merged.uid] as Button)
+	_check(ui.inspection._payload.get("change", {}).get("after", [])[0]["uid"] == merged.uid,
+		"settled_merge_is_recoverable_in_existing_hover_" + label)
+	await _shot("binding_settled_result_hover_" + label)
+	await _key(KEY_ESCAPE)
 	await _activate(ui.undo_button, true)
+	ui.flush_feedback()
 	_check(RunSnapshot.capture(sim) == before and sim.bank.find_uid(donor.uid) != null, "actual_main_shop_Undo_restores_exact_two_originals")
-	_check(ui.binding_ceremony.active, "actual_Undo_started_the_unstaple_ceremony")
-	effect = ui.binding_ceremony.effect_profile()
-	var restored_conditions: Array = effect["values"]["restored_conditions"].duplicate()
+	visual = ui._change_visual
+	if not _check(is_instance_valid(visual) and visual.is_visible_in_tree(), "actual_Undo_has_visible_inventory_feedback_" + label):
+		return
+	visual.set_process(false)
+	effect = ui.transaction_profile()
+	var restored_conditions: Array = [effect["after"][0]["condition"], effect["after"][1]["condition"]]
 	restored_conditions.sort()
-	_check(effect["reverse"] and restored_conditions == [45.0, 70.0], "unstaple_receipt_preserves_both_actual_original_conditions_" + label)
-	ui.binding_ceremony.elapsed = 0.0
-	ui.binding_ceremony.step(0.001)
-	_check(ui.binding_ceremony._frame == (7 if ui.reduced_effects else 4), "unstaple_uses_the_actual_initial_or_reduced_final_pose")
-	await _shot("binding_Undo_tool_engages_" + label)
-	ui.binding_ceremony.step(BindingCeremonyUi.DURATION * 0.8)
-	_check(ui.binding_ceremony.body_count() == 2, "unstaple_last_pose_has_two_restored_originals")
-	await _shot("binding_undo_unstaples_originals_" + label)
-	ui.binding_ceremony.skip()
-	_check(RunSnapshot.capture(sim) == before, "skipping_unstaple_changes_only_presentation")
-	ui.binding_ceremony.set_process(true)
-	_check(not ui.start_button.disabled and not ui.reroll_button.disabled, "primary_shop_actions_remain_live_after_both_rituals")
-	_cover("actual_merge_" + label + "_preview_one_body_ceremony_exact_undo_and_skip")
+	_check(effect["action"] == ShopResult.UNDO and effect["before"].size() == 1 and effect["after"].size() == 2
+		and restored_conditions == [45.0, 70.0], "Undo_compares_one_actual_merged_body_with_both_restored_originals_" + label)
+	visual.elapsed = visual.duration * 0.8
+	visual.queue_redraw()
+	await _shot("binding_undo_restores_originals_" + label)
+	visual.step(visual.duration)
+	_check(RunSnapshot.capture(sim) == before, "settling_reverse_ink_changes_only_presentation")
+	_check(not ui.start_button.disabled and not ui.reroll_button.disabled, "primary_shop_actions_remain_live_during_inventory_feedback")
+	_cover("actual_merge_" + label + "_paper_preview_visible_inventory_result_static_revisit_and_exact_undo")
 
 
 func _truth(solo: bool) -> void:

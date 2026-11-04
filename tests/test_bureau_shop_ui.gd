@@ -7,6 +7,7 @@ func _root() -> Window:
 
 func _sim() -> Sim:
 	var sim := Sim.new(1717)
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim.start_run()
 	sim._end_wave()
 	sim.player.materials = 100

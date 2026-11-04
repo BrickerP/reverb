@@ -281,6 +281,7 @@ func test_natural_worker_does_not_block_but_taken_delivery_keeps_its_window(c: C
 
 func test_signed_inspection_keeps_its_window_until_the_actual_terminal_is_used(c: Check) -> void:
 	var sim := _sim()
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim._end_wave()
 	c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "a real shop signature accepts the upcoming inspection")
 	sim.start_wave(2)

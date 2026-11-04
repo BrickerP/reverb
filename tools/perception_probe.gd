@@ -14,6 +14,8 @@ var _main: Node
 var _mode := "journey"
 var _language := "en"
 var _reduced := false
+var _compact := false
+var _canvas := Vector2i(1280, 720)
 var _output := ""
 var _frame := 0
 var _started := Time.get_ticks_msec()
@@ -61,6 +63,8 @@ func _initialize() -> void:
 			_language = argument.trim_prefix("--lang=")
 		elif argument == "--reduced":
 			_reduced = true
+		elif argument == "--compact":
+			_compact = true
 	if _output.is_empty():
 		_output = ProjectSettings.globalize_path("res://shots/perception_" + _mode)
 	if not _require(_mode in ["journey", "clinic"], "known perception evidence mode"):
@@ -76,14 +80,16 @@ func _initialize() -> void:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 	OS.set_environment("REVERB_RUN_SOURCE", "fixture")
-	if not _require(_language in ["en", "zh"] and (_mode == "clinic" or (_language == "en" and not _reduced)),
+	if not _require(_language in ["en", "zh"] and (_mode == "clinic" or (_language == "en" and not _reduced and not _compact)),
 			"journey uses one standard English native canvas; clinic supports Chinese/reduced"):
 		return
+	if _compact:
+		_canvas = Vector2i(960, 540)
 	OS.set_environment("REVERB_LANG", _language)
 	Loc.lang = _language
-	root.size = Vector2i(1280, 720)
-	root.content_scale_size = Vector2i(1280, 720)
-	DisplayServer.window_set_size(Vector2i(1280, 720))
+	root.size = _canvas
+	root.content_scale_size = _canvas
+	DisplayServer.window_set_size(_canvas)
 	AudioServer.set_bus_mute(0, false)
 	var catalog: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tools/perception_cases.json"))
 	if not _require(typeof(catalog) == TYPE_DICTIONARY and catalog.get("cases", []).size() == 40,
@@ -447,7 +453,27 @@ func _clinic_rescue_closure() -> bool:
 	if not _require(saw_closure and _main.shop_ui.visible and Expedition._worker(sim, worker_id)["state"] == &"safe",
 			"last real rescue completes and its readable closure precedes shop"):
 		return false
-	return await _clinic_frames(3)
+	if not (await _clinic_frames(4)):
+		return false
+	var ui: ShopUi = _main.shop_ui
+	if not _require(not _main.meta.familiar_actions.has(&"first_echo") and sim.bank.takes.size() == 1,
+			"this actual first generated copy has not yet been marked familiar"):
+		return false
+	var take: EchoTake = sim.bank.takes.back()
+	var identity := ui.echo_panel._identity_buttons.get(take.uid) as Control
+	if not _require(identity != null and identity.is_visible_in_tree() and ui.echo_panel.is_visible_in_tree(),
+			"actual first copy is exposed in the visible native panel"):
+		return false
+	var bounds := identity.get_global_rect()
+	if not _require(root.get_visible_rect().encloses(bounds), "first copy's actual native row is inside the requested canvas"):
+		return false
+	_summary["first_echo_native"] = {"uid": take.uid, "familiar_before": false,
+		"identity_visible": true, "panel_visible": true, "inside_viewport": true,
+		"row_rect": [_point(bounds.position), _point(bounds.size)],
+		"canvas": [_canvas.x, _canvas.y], "native_frame": _frame}
+	_queue_capture("first_echo_native_handoff", ["03"],
+		"fresh actual generated copy is shown before familiarity is confirmed; original native canvas")
+	return await _clinic_frames(1)
 
 
 func _clinic_shop_actions() -> bool:
@@ -762,7 +788,7 @@ func _present_queued() -> void:
 		_checks.append({"native_frame": _frame, "strict_roundtrip": true,
 			"full_snapshot_unchanged": true, "rng_unchanged": true, "hazard_rng_unchanged": true})
 	var image := root.get_texture().get_image()
-	if not _require(image != null and image.get_size() == Vector2i(1280, 720), "checkpoint pixels are original1280x720"):
+	if not _require(image != null and image.get_size() == _canvas, "checkpoint pixels match the original requested native canvas"):
 		return
 	for queued: Dictionary in _queued:
 		var label: String = queued["label"]
@@ -770,6 +796,7 @@ func _present_queued() -> void:
 		if not _require(image.save_png(_output.path_join(filename)) == OK, "native checkpoint saves"):
 			return
 		var row := {"file": filename, "native_frame": _frame, "seconds": float(_frame) / 60.0,
+			"width": image.get_width(), "height": image.get_height(),
 			"case_ids": queued["case_ids"], "reason": queued["reason"], "profiles": _profiles()}
 		_screenshots[label] = row
 		for id: String in queued["case_ids"]:
@@ -872,8 +899,8 @@ func _finish() -> void:
 	for cue: StringName in GameAudio.ALL_NAMES:
 		audio_counts[String(cue)] = _main.audio.play_count(cue)
 	_summary.merge({"success": true, "failed": false, "commit": commit, "mode": _mode,
-		"language": _language, "reduced": _reduced, "audio_play_counts": audio_counts,
-		"native_frames": _frame, "fps": 60, "canvas": [1280, 720], "uncut": true,
+		"language": _language, "reduced": _reduced, "compact": _compact, "audio_play_counts": audio_counts,
+		"native_frames": _frame, "fps": 60, "canvas": [_canvas.x, _canvas.y], "uncut": true,
 		"audio": "real unmuted GameAudio master mix", "case_coverage": _cases,
 		"screenshots": _screenshots, "timeline": _timeline, "read_only_checks": _checks,
 		"inputs": _inputs, "event_counts": _event_counts, "highest_wave": _highest_wave,

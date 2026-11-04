@@ -93,6 +93,8 @@ func test_merge_preview_keeps_uid_and_host_route_until_confirmation(c: Check) ->
 
 func test_work_order_cards_buy_replace_confirm_and_undo(c: Check) -> void:
 	var sim := _sim()
+	StoryLedger.seed_known(sim, [&"order_repair", &"order_rescue"])
+	sim.shop.roll(sim)
 	var ui := _open(sim)
 	var orders: Array[int] = []
 	for index in sim.shop.offers.size():

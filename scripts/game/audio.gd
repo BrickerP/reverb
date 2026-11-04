@@ -649,8 +649,8 @@ func _emphasize(kind: StringName, copy: bool = false) -> bool:
 	if _paused or not EMPHASIS_PROFILES.has(kind):
 		return false
 	var profile: Dictionary = EMPHASIS_PROFILES[kind]
-	var combo := kind in [&"combo_pin_press", &"combo_ink_arc"]
-	var familiar := combo and _familiar(kind)
+	var combo: bool = kind in [&"combo_pin_press", &"combo_ink_arc"]
+	var familiar: bool = combo and _familiar(kind)
 	var gate := minf(0.12, float(profile["gate"])) if familiar else float(profile["gate"])
 	var priority := mini(12, int(profile["priority"])) if familiar else int(profile["priority"])
 	var accepted := play(profile["cue"], float(profile["volume"]) - (5.0 if copy else 0.0) - (3.0 if familiar else 0.0),
@@ -716,7 +716,7 @@ func _observe_warnings() -> void:
 		return
 	# This is an entrance tick for the existing lock, not a countdown or a new
 	# hazard. Busy, offscreen and already-late warnings are never queued.
-	var dash := chosen["kind"] == &"dash"
+	var dash: bool = chosen["kind"] == &"dash"
 	play(&"weapon_longbow" if dash else &"shield_block", -4.0 if dash else -6.0,
 		0.92 if dash else 1.08, 0.10, 34, &"warn:attack", 0.35)
 

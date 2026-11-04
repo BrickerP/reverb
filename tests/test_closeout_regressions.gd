@@ -4,6 +4,7 @@ extends RefCounted
 func test_credit_debt_does_not_remove_real_work_order_alternatives(c: Check) -> void:
 	for seed_value in 32:
 		var sim := Sim.new(seed_value)
+		StoryLedger.seed_known(sim, [&"order_repair", &"order_rescue"])
 		sim.start_run()
 		sim.phase = Sim.Phase.SHOP
 		sim.player.materials = 1000
