@@ -303,7 +303,7 @@ jobs:
   perception:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Install native capture tools
@@ -335,17 +335,21 @@ jobs:
             output="$GITHUB_WORKSPACE/shots/perception/$variant"
             mkdir -p "$output"
             python3 -c 'from pathlib import Path; import sys; w,h=map(int,sys.argv[1].split("x")); Path("override.cfg").write_text("[display]\nwindow/size/viewport_width=%d\nwindow/size/viewport_height=%d\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\n" % (w,h,w,h))' "$resolution"
+            capture_status=0
             xvfb-run -a -s '-screen 0 1280x720x24' ./tools/checked.sh \
               --path . --resolution "$resolution" --audio-driver Dummy --fixed-fps 60 --disable-vsync \
               --write-movie "$output/perception.avi" --script res://tools/perception_probe.gd -- \
-              --output="$output" "${arguments[@]}"
-            ffmpeg -hide_banner -loglevel error -i "$output/perception.avi" \
+              --output="$output" "${arguments[@]}" || capture_status=$?
+            if [ -s "$output/perception.avi" ]; then
+              ffmpeg -hide_banner -loglevel error -i "$output/perception.avi" \
               -map 0:v:0 -map 0:a:0 -c:v libx264 -preset fast -crf 19 -pix_fmt yuv420p \
               -c:a aac -b:a 160k -movflags +faststart "$output/perception.mp4"
             rm "$output/perception.avi"
             ffprobe -v error -show_streams -of json "$output/perception.mp4" > "$output/video.json"
             ffmpeg -hide_banner -i "$output/perception.mp4" -af astats=metadata=1:reset=0 \
               -f null - > /dev/null 2> "$output/audio-analysis.txt"
+            fi
+            if [ "$capture_status" -ne 0 ]; then exit "$capture_status"; fi
             python3 tools/verify_perception_evidence.py "$output" --commit "$GITHUB_SHA" --variant "$variant"
           done
       - name: Upload perception journey and clinics
@@ -353,7 +357,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: perception-evidence-${{ github.sha }}
-          path: shots/perception/
+          path: |
+            shots/perception/**/*.png
+            shots/perception/**/*.mp4
+            shots/perception/**/*.json
+            shots/perception/**/*.txt
           if-no-files-found: warn
           retention-days: 30
 

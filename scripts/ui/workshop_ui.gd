@@ -25,7 +25,7 @@ class ChangeVisual:
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		custom_minimum_size = Vector2(0, 88)
+		custom_minimum_size = Vector2(0, 168)
 		clip_contents = true
 
 	func setup(data: Dictionary, as_preview: bool = true, familiar: bool = false, reduced_motion: bool = false) -> void:
@@ -61,6 +61,9 @@ class ChangeVisual:
 			return
 		var before: Array = proof.get("before", [])
 		var after: Array = proof.get("after", [])
+		if preview and size.y >= 140.0 and size.x >= 420.0:
+			_draw_large_diagram(before, after)
+			return
 		var vertical := size.x < 100.0
 		var middle := size * 0.5
 		var first := Vector2(middle.x, size.y * 0.20) if vertical else Vector2(size.x * 0.25, middle.y - 8)
@@ -84,16 +87,35 @@ class ChangeVisual:
 		draw_polyline(PackedVector2Array([middle + direction * 3.0 + side * 4.0,
 			middle + direction * 8.0, middle + direction * 3.0 - side * 4.0]), color, 1.8, true)
 
-	func _group(rows: Array, center: Vector2, extent: float, alpha: float) -> void:
+	func _draw_large_diagram(before: Array, after: Array) -> void:
+		var vacancy: int = 1 if before.size() == 2 and after.size() == 1 and (after[0] as Dictionary).has("level") else 0
+		var first_count: int = maxi(1, mini(2, before.size()))
+		var last_count: int = maxi(1, mini(2, after.size() + vacancy))
+		var extent: float = minf(96.0, minf(size.y - 52.0,
+			(size.x - 64.0 - float(first_count + last_count - 2) * 12.0) / float(first_count + last_count)))
+		var first_width: float = float(first_count) * extent + float(first_count - 1) * 12.0
+		var last_width: float = float(last_count) * extent + float(last_count - 1) * 12.0
+		var arrow := Vector2(size.x * 0.5 + (first_width - last_width) * 0.5, size.y * 0.5 - 6.0)
+		_group(before, arrow - Vector2(first_width * 0.5 + 32.0, 0), extent, 1.0, 0, true)
+		_group(after, arrow + Vector2(last_width * 0.5 + 32.0, 0), extent, 1.0, vacancy, true)
+		draw_line(arrow - Vector2(22, 0), arrow + Vector2(20, 0), UiTheme.INK, 2.2, true)
+		draw_polyline(PackedVector2Array([arrow + Vector2(12, -7), arrow + Vector2(20, 0),
+			arrow + Vector2(12, 7)]), UiTheme.INK, 2.2, true)
+
+	func _group(rows: Array, center: Vector2, extent: float, alpha: float, empty_slots: int = 0, large: bool = false) -> void:
 		if alpha <= 0.01:
 			return
 		if rows.is_empty():
 			draw_rect(Rect2(center - Vector2.ONE * extent * 0.26, Vector2.ONE * extent * 0.52), Color(UiTheme.DIM, alpha * 0.55), false, 1.0)
 			return
-		var width := minf(extent, size.x / float(maxi(1, rows.size())) * 0.44)
-		for index in mini(2, rows.size()):
-			var at := center + Vector2((float(index) - float(mini(2, rows.size()) - 1) * 0.5) * (width + 5.0), 0)
-			_token(rows[index], at, width, alpha)
+		var count: int = mini(2, rows.size() + empty_slots)
+		var width: float = extent if large else minf(extent, size.x / float(maxi(1, rows.size())) * 0.44)
+		for index in count:
+			var at := center + Vector2((float(index) - float(count - 1) * 0.5) * (width + (12.0 if large else 5.0)), 0)
+			if index < rows.size():
+				_token(rows[index], at, width, alpha)
+			else:
+				draw_rect(Rect2(at - Vector2.ONE * width * 0.4, Vector2.ONE * width * 0.8), Color(UiTheme.DIM, 0.5), false, 1.5)
 
 	func _token(row: Dictionary, center: Vector2, extent: float, alpha: float) -> void:
 		var key := StringName(row.get("art", &""))
@@ -105,6 +127,8 @@ class ChangeVisual:
 		var label := ""
 		if row.has("uid"):
 			label = "#%d" % int(row["uid"]) if int(row["uid"]) > 0 else ""
+			if extent >= 70.0:
+				label += (" · " if label != "" else "") + "%d%%" % ceili(float(row.get("condition", 0)))
 			var bar := Rect2(center + Vector2(-extent * 0.5, extent * 0.5 + 3), Vector2(extent, 4))
 			draw_rect(bar, Color(UiTheme.INK, alpha * 0.18))
 			draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(row.get("condition", 0)) / 100.0, 0, 1), 4)), Color(UiTheme.ACCENT, alpha))
@@ -114,14 +138,14 @@ class ChangeVisual:
 					draw_circle(center + Vector2(-extent * 0.5 + float(index) * 5.0, -extent * 0.5 - 5.0 - float(grade) * 2.0), 0.8, Color(UiTheme.INK, alpha))
 			var skill := StringName(row.get("skill", &""))
 			if skill != &"":
-				EchoPortrait.draw_skill(self, center + Vector2(extent * 0.5, -extent * 0.25), skill, Color(UiTheme.ACCENT, alpha), 0.55)
+				EchoPortrait.draw_skill(self, center + Vector2(extent * 0.5, -extent * 0.25), skill, Color(UiTheme.ACCENT, alpha), 1.1 if extent >= 70.0 else 0.55)
 		elif row.has("level"):
 			label = Loc.t("shop.level", [int(row["level"]) + 1])
 		elif row.has("count"):
 			label = "×%d" % int(row["count"])
 		if label != "" and extent >= 16.0:
 			draw_string(UiTheme.font(), center + Vector2(-extent, extent * 0.5 + 16), label,
-				HORIZONTAL_ALIGNMENT_CENTER, extent * 2.0, 10, Color(UiTheme.INK, alpha))
+				HORIZONTAL_ALIGNMENT_CENTER, extent * 2.0, 15 if extent >= 70.0 else 10, Color(UiTheme.INK, alpha))
 
 
 func _ready() -> void:
@@ -280,6 +304,10 @@ func add_result_visual(control: Control) -> void:
 func show_choice_preview(data: Dictionary) -> void:
 	if not is_instance_valid(choice_preview):
 		choice_preview = ChangeVisual.new()
+		# Many donor choices retain their compact list; final confirmations own the
+		# larger diagram without pushing the existing Cancel control off a 540p sheet.
+		if choice_buttons.size() > 2:
+			choice_preview.custom_minimum_size.y = 88.0
 		add_result_visual(choice_preview)
 	choice_preview.setup(data, true)
 

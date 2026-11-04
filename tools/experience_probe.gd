@@ -286,6 +286,9 @@ func _combo_case() -> bool:
 	sim.character_energy = 96.0
 	_disable_weapons()
 	var first := _native_frames
+	var combo_frame := -1
+	var charged_frame := -1
+	var release_frame := -1
 	for frame in 180:
 		_frame = frame
 		if frame == 12:
@@ -304,23 +307,37 @@ func _combo_case() -> bool:
 			if not _require(sim.collect_pickup(pickup) and CharacterSkills.is_charged(sim),
 					"actual scrap collection charges the skill from96 to100"):
 				return false
-		elif frame == 124:
+		elif charged_frame >= 0 and release_frame < 0 and frame >= charged_frame + 12:
 			if not _require(sim.activate_character_skill(), "the newly charged real skill activates once"):
 				return false
+			release_frame = frame
 		var label := "pin_status" if frame == 28 else ""
-		if frame == 62:
+		var moment: Dictionary = _main._view._moment.snapshot()
+		if combo_frame < 0 and moment.get("kind", &"") == &"combo":
+			combo_frame = frame
 			label = "combo_contact"
-		elif frame == 84:
+		elif frame > 82 and charged_frame < 0 and moment.get("kind", &"") == &"ready":
+			# Charge can be deferred while the real combo owns the accent.
+			# Capture its actual admitted window before consuming the skill;
+			# no fixed wall-clock sample or synthetic ready signal stands in.
+			charged_frame = frame
 			label = "skill_charged"
-		elif frame == 130:
+		elif release_frame >= 0 and frame == release_frame + 6:
 			label = "charged_skill_release"
 		if not (await _native_step(label)):
 			return false
 	if not _require(int(_counts.get("combo", 0)) > 0 and int(_counts.get("pickup", 0)) > 0
-			and int(_counts.get("skill", 0)) == 1, "real combo, pickup and skill events all occurred"):
+			and int(_counts.get("skill", 0)) == 1 and combo_frame >= 0 and charged_frame > 82
+			and release_frame >= charged_frame + 12
+			and _screenshots.has(_case + "/skill_charged")
+			and _screenshots.has(_case + "/charged_skill_release"),
+			"real combo and pickup lead to a visible ready window before exactly one skill activation"):
 		return false
 	return _finish_case(first, {"energy_staging": 96.0, "pickup_value": 1,
-		"combo": "real auto-fire stapler then stamp; staged cooldown offsets12/35"})
+		"combo": "real auto-fire stapler then stamp; staged cooldown offsets12/35",
+		"combo_moment_frame": combo_frame, "ready_moment_frame": charged_frame,
+		"skill_activation_frame": release_frame,
+		"ready_sampling": "actual admitted Moment followed by12 native frames before real skill activation"})
 
 
 func _rescue_case() -> bool:

@@ -6,7 +6,8 @@ extends SceneTree
 
 const DT := 1.0 / 60.0
 const JOURNEY_FRAMES := 240 * 60
-const WALL_DEADLINE_MSEC := 33 * 60 * 1000
+const JOURNEY_WALL_DEADLINE_MSEC := 25 * 60 * 1000
+const CLINIC_WALL_DEADLINE_MSEC := 6 * 60 * 1000
 const SEED := 20261022
 const FIRST_BOSS_WAVE := 4
 
@@ -105,7 +106,8 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	_frame += 1
-	if not _failed and not _finished and Time.get_ticks_msec() - _started > WALL_DEADLINE_MSEC:
+	var deadline := JOURNEY_WALL_DEADLINE_MSEC if _mode == "journey" else CLINIC_WALL_DEADLINE_MSEC
+	if not _failed and not _finished and Time.get_ticks_msec() - _started > deadline:
 		_fail("perception native capture exceeded its wall-clock deadline")
 	return false
 
@@ -137,7 +139,9 @@ func _journey() -> bool:
 		"preseeded_knowledge": false, "preseeded_gear": false, "invulnerability": false,
 		"skip_waves": false, "simulation_time_jumps": false, "manual_sim_step": false,
 		"input_driver": "existing defensive Bot.move_dir; actual keyboard events and focused UI buttons",
-		"seed": SEED, "max_game_seconds": 240.0,
+		"visible_warning_driver": "twelve input directions queried against visible EnemyBrain.attack_profile and pure WorldArena.move_body at0.325/0.65seconds; no model changes",
+		"shop_driver": "actual affordable marginal weaponDPS/price and upgrade quotes, with existing Bot item preferences; no grants or extra rolls",
+		"seed": SEED, "max_game_seconds": 240.0, "wall_clock_limit_seconds": JOURNEY_WALL_DEADLINE_MSEC / 1000,
 		"shop_reading_seconds": "five seconds first shop, three seconds later; automation reading dwell, not comprehension",
 		"scope": "uncut automated first-run visibility and event timing through first boss; no human-learning claim"}
 	_main.character_select.seed_edit.text = str(SEED)
@@ -219,7 +223,7 @@ func _drive_journey(sim: Sim) -> void:
 	if _main.paused or sim.phase != Sim.Phase.WAVE:
 		_drive(Vector2.ZERO)
 		return
-	var direction := _bot.move_dir(sim)
+	var direction := _journey_direction(sim)
 	_moving = direction.length() > 0.1
 	_drive(direction)
 	if _frame >= _next_ui:
@@ -227,12 +231,91 @@ func _drive_journey(sim: Sim) -> void:
 		if not choice.is_empty() and bool(choice.get("available", false)) \
 				and choice.get("kind", &"") in [&"repair", &"rescue", &"recycler"]:
 			_press_key(KEY_E, "nearby_available_interaction")
-		elif CharacterSkills.is_charged(sim) and sim.enemies.size() >= 3:
+		elif CharacterSkills.is_charged(sim) and _journey_skill_needed(sim):
 			_press_key(KEY_SHIFT, "real_charged_skill")
 		elif sim.can_retire_echo():
 			var actor := EchoSystem.selected_actor(sim)
 			if actor != null and actor.take.condition < 22.0 and not sim.enemies.is_empty():
 				_press_key(KEY_SPACE, "worn_selected_copy_retirement")
+
+
+func _journey_direction(sim: Sim) -> Vector2:
+	var baseline := _bot.move_dir(sim)
+	var warnings: Array[Dictionary] = []
+	for enemy: EnemyState in sim.enemies:
+		if enemy.dead:
+			continue
+		var attack := EnemyBrain.attack_profile(enemy)
+		if bool(attack.get("visible", false)):
+			warnings.append(attack)
+	for zone: EnemyZone in sim.enemy_zones:
+		if zone.active > 0.0:
+			warnings.append({"kind": &"press", "target": zone.pos, "radius": zone.radius})
+	if warnings.is_empty():
+		return baseline
+	var candidates := PackedVector2Array([baseline.normalized() if baseline.length_squared() > 0.01 else Vector2.RIGHT])
+	for index in 12:
+		candidates.append(Vector2.from_angle(TAU * float(index) / 12.0))
+	var speed := sim.player.stats.get_stat(Stats.MOVE_SPEED)
+	var chosen := baseline
+	var best := -INF
+	for direction: Vector2 in candidates:
+		var future := WorldArena.move_body(sim.player.pos, direction * speed * 0.65, PlayerState.RADIUS)
+		var middle := WorldArena.move_body(sim.player.pos, direction * speed * 0.325, PlayerState.RADIUS)
+		var score := direction.dot(baseline) * 12.0 + future.distance_to(sim.player.pos) * 0.08
+		score -= _warning_cost(future, warnings) + _warning_cost(middle, warnings) * 0.25
+		for enemy: EnemyState in sim.enemies:
+			if not enemy.dead:
+				score -= maxf(0.0, enemy.radius + PlayerState.RADIUS + 65.0 - future.distance_to(enemy.pos)) * 4.0
+		if score > best:
+			best = score
+			chosen = direction
+	if _frame % 60 == 0:
+		_note("pilot_visible_warning", {"wave": sim.wave, "pos": _point(sim.player.pos),
+			"input": _point(chosen), "warning_count": warnings.size(),
+			"current_cost": _warning_cost(sim.player.pos, warnings), "chosen_score": best})
+	return chosen
+
+
+func _warning_cost(point: Vector2, warnings: Array[Dictionary]) -> float:
+	var total := 0.0
+	var padding := PlayerState.RADIUS + 32.0
+	for attack: Dictionary in warnings:
+		var gap := 0.0
+		match StringName(attack["kind"]):
+			&"press":
+				gap = point.distance_to(attack["target"]) - float(attack["radius"]) - padding
+			&"cross":
+				var offset := (point - (attack["target"] as Vector2)).abs()
+				gap = minf(maxf(offset.x - 34.0 - padding, offset.y - float(attack["reach"]) - padding),
+					maxf(offset.y - 34.0 - padding, offset.x - float(attack["reach"]) - padding))
+			&"dash":
+				var origin: Vector2 = attack["origin"]
+				var segment: Vector2 = (attack["direction"] as Vector2) * float(attack["reach"])
+				var fraction := clampf((point - origin).dot(segment) / maxf(0.001, segment.length_squared()), 0.0, 1.0)
+				gap = point.distance_to(origin + segment * fraction) - float(attack["radius"]) - padding
+			&"slam":
+				# A conservative circle around the actual sector avoids crossing
+				# its locked front while the ordinary body bot is fleeing.
+				gap = point.distance_to(attack["origin"]) - float(attack["reach"]) - padding
+			_:
+				continue
+		total += 1000.0 - gap * 12.0 if gap < 0.0 else -minf(64.0, gap)
+	return total
+
+
+func _journey_skill_needed(sim: Sim) -> bool:
+	if sim.boss != null and not sim.boss.dead:
+		var attack := EnemyBrain.attack_profile(sim.boss)
+		if bool(attack.get("visible", false)) and sim.boss.brain_time <= 0.35 \
+				and _warning_cost(sim.player.pos, [attack]) > 0.0:
+			return true
+		return sim.player.hp < sim.player.max_hp() * 0.45 and sim.enemies.size() >= 2
+	# Preserve legitimately earned charge for the next mandatory boss when
+	# ordinary movement is keeping the preceding encounter safe.
+	if sim.is_boss_wave(sim.wave + 1):
+		return sim.player.hp < sim.player.max_hp() * 0.45 and sim.enemies.size() >= 3
+	return sim.enemies.size() >= 3
 
 
 func _drive_shop(sim: Sim) -> void:
@@ -243,6 +326,7 @@ func _drive_shop(sim: Sim) -> void:
 		_shop_rerolls = 0
 		_workshop_attempts = 0
 		_workshop_since = -1
+		_note("actual_shop_arrival", _shop_state(sim))
 		_queue_capture("shop_%d_arrival" % sim.wave, ["03"] if sim.wave == 1 else [], "actual shop arrival before any buying input")
 		if sim.wave == 1:
 			for offer: Offer in sim.shop.offers:
@@ -277,10 +361,29 @@ func _drive_shop(sim: Sim) -> void:
 	for card: OfferCard in ui.offers_box.get_children():
 		if card.disabled or card.blocked_reason != &"" or card.offer.is_contract():
 			continue
-		var candidate := _bot._score(card.offer, sim)
+		var candidate := _journey_offer_score(card.offer, sim)
 		if candidate > score:
 			best = card
 			score = candidate
+	var upgrade := -1
+	for index in sim.player.weapons.size():
+		var quote := sim.shop.quote(ShopResult.UPGRADE, sim, null, index)
+		if not quote.ok:
+			continue
+		var weapon: WeaponDef = sim.player.weapons[index]
+		var old_dps := OfferCard.weapon_dps(weapon, sim.player.stats, sim.player.level_at(index),
+			Combat.family_damage_mult(sim.player.weapons, weapon.family), Combat.family_cooldown_mult(sim.player.weapons, weapon.family))
+		var new_dps := OfferCard.weapon_dps(weapon, sim.player.stats, sim.player.level_at(index) + 1,
+			Combat.family_damage_mult(sim.player.weapons, weapon.family), Combat.family_cooldown_mult(sim.player.weapons, weapon.family))
+		var candidate := (new_dps - old_dps) * 12.0 / float(maxi(1, quote.cost))
+		if candidate > score:
+			upgrade = index
+			score = candidate
+	if upgrade >= 0:
+		ui.show_equipment_page(0)
+		if ui.build_panel.focus_upgrade(upgrade):
+			_press_button(ui.build_panel.upgrade_button, "actual_efficient_weapon_upgrade")
+			return
 	if best != null:
 		_press_button(best, "actual_offer_purchase")
 		return
@@ -303,11 +406,33 @@ func _drive_shop(sim: Sim) -> void:
 			_overflow_inspection = true
 			_press_button(ui.echo_panel.copy_buttons[0], "inspect_overflow_copy")
 		return
+	_note("actual_shop_departure", _shop_state(sim))
 	_press_button(ui.start_button, "actual_next_encounter")
+
+
+func _journey_offer_score(offer: Offer, sim: Sim) -> float:
+	if offer.is_weapon():
+		var extra := maxf(0.0, OfferCard.dps_with_added(sim.player, offer.weapon, offer.weapon_level) - OfferCard.total_dps(sim.player))
+		return extra * 12.0 / float(maxi(1, offer.price)) + 1.0
+	return _bot._score(offer, sim) * 0.4 / float(maxi(1, offer.price))
+
+
+func _shop_state(sim: Sim) -> Dictionary:
+	var weapons: Array[Dictionary] = []
+	var offers: Array[Dictionary] = []
+	for index in sim.player.weapons.size():
+		var weapon: WeaponDef = sim.player.weapons[index]
+		var upgrade := sim.shop.quote(ShopResult.UPGRADE, sim, null, index)
+		weapons.append({"id": String(weapon.id), "level": sim.player.level_at(index),
+			"upgrade_cost": upgrade.cost, "upgrade_reason": String(upgrade.reason), "upgrade_ok": upgrade.ok})
+	for offer: Offer in sim.shop.offers:
+		offers.append({"id": String(offer.id()), "price": offer.price, "blocked": String(sim.shop.block_reason(sim, offer))})
+	return {"wave": sim.wave, "materials": sim.player.materials, "weapons": weapons, "offers": offers}
 
 
 func _clinic() -> bool:
 	_summary["policy"] = {"fresh_run": false, "mode": "disclosed staged clinic",
+		"wall_clock_limit_seconds": CLINIC_WALL_DEADLINE_MSEC / 1000,
 		"native_main_physics": "engine callback disabled; same Main._physics_process(1/60) called once per native frame",
 		"staging": "high-HP immobile harmless combo target; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; shop800materials/four pistol grades0,0,3,3/two copies; ordinary real UI commits and Undo",
 		"scope": "timing and native pixels for controlled cases; not a fresh campaign or human-learning proof"}

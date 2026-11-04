@@ -498,6 +498,7 @@ func inventory_overview() -> bool:
 
 
 func _on_echo_navigation_changed() -> void:
+	_cancel_hover()
 	if inspection != null:
 		inspection.reset()
 	show_equipment_page(_equipment_page)
@@ -1637,6 +1638,8 @@ func _request_inspection(source: Control, pin: bool) -> void:
 		return
 	_cancel_hover()
 	var kind := StringName(source.get_meta(&"inspect_kind", &""))
+	if kind == &"echo" and echo_panel.is_merging() and not pin:
+		return
 	var reference: Variant = source.get_meta(&"inspect_reference")
 	var info := _inspection_content(kind, reference)
 	if info.is_empty():

@@ -3,163 +3,203 @@
   "cases": [
     {
       "id": "01",
-      "name": "first_move"
+      "name": "first_move",
+      "expected": "Movement discovery follows actual walking and yields after completed input."
     },
     {
       "id": "02",
-      "name": "first_interaction"
+      "name": "first_interaction",
+      "expected": "Only the nearest actionable object receives a stable contextual key and actual result."
     },
     {
       "id": "03",
-      "name": "first_echo_handoff"
+      "name": "first_echo_handoff",
+      "expected": "The first new Echo lands on its actual visible identity and remains findable after animation."
     },
     {
       "id": "04",
-      "name": "second_encounter_exposure"
+      "name": "second_encounter_exposure",
+      "expected": "Fresh encounter two primarily introduces Echo; later work is staged through known facts."
     },
     {
       "id": "05",
-      "name": "first_complex_order"
+      "name": "first_complex_order",
+      "expected": "Advanced orders require familiar threats; daily mode does not depend on account knowledge."
     },
     {
       "id": "06",
-      "name": "retirement_discovery"
+      "name": "retirement_discovery",
+      "expected": "Retirement is discoverable before the first boss and retreats after actual use."
     },
     {
       "id": "07",
-      "name": "move_and_autofire"
+      "name": "move_and_autofire",
+      "expected": "Walking gait follows distance and is not restarted by each light shot."
     },
     {
       "id": "08",
-      "name": "weapon_identity"
+      "name": "weapon_identity",
+      "expected": "Weapon material and trajectory remain recognizable without indiscriminate full-body reactions."
     },
     {
       "id": "09",
-      "name": "enemy_hit_and_death"
+      "name": "enemy_hit_and_death",
+      "expected": "Brief hits and bounded form-specific death reactions do not obscure live threats."
     },
     {
       "id": "10",
-      "name": "hurt_vs_block"
+      "name": "hurt_vs_block",
+      "expected": "Full absorption remains visually and audibly distinct from actual HP loss."
     },
     {
       "id": "11",
-      "name": "charged_while_busy"
+      "name": "charged_while_busy",
+      "expected": "A still-charged cue retries after a rejected accent; consumed state cancels the stale cue."
     },
     {
       "id": "12",
-      "name": "ability_success_or_rejection"
+      "name": "ability_success_or_rejection",
+      "expected": "Accepted abilities show their actual result; rejected actions spend nothing and make no success pose."
     },
     {
       "id": "13",
-      "name": "combo_first_and_repeat"
+      "name": "combo_first_and_repeat",
+      "expected": "First combo recognition has a readable interval; repeated same-type hits do not renew a permanent label."
     },
     {
       "id": "14",
-      "name": "spawn_and_boss_warning"
+      "name": "spawn_and_boss_warning",
+      "expected": "Spawn and boss warnings use locked authoritative geometry and remain above decorative ink."
     },
     {
       "id": "15",
-      "name": "boss_phase_tear"
+      "name": "boss_phase_tear",
+      "expected": "Boss tension, seam break and release remain ordered and consistent with the actual phase."
     },
     {
       "id": "16",
-      "name": "support_lifecycle"
+      "name": "support_lifecycle",
+      "expected": "Support spawn/work/damage/expiry are readable while finite HP and charges remain truthful."
     },
     {
       "id": "17",
-      "name": "manual_pickup_vs_settlement"
+      "name": "manual_pickup_vs_settlement",
+      "expected": "Manual pickup energy and automatic cash settlement keep distinct consequences and feedback."
     },
     {
       "id": "18",
-      "name": "concurrent_and_offscreen_feedback"
+      "name": "concurrent_and_offscreen_feedback",
+      "expected": "Concurrent and offscreen routine events cannot displace the visible important result."
     },
     {
       "id": "19",
-      "name": "future_echo_routes"
+      "name": "future_echo_routes",
+      "expected": "Two-second future routes remain stable through holds, reflected tape time and reduced effects."
     },
     {
       "id": "20",
-      "name": "persistent_echo_wear"
+      "name": "persistent_echo_wear",
+      "expected": "Wear, silence and near-expiry remain static visible states instead of periodic flashing."
     },
     {
       "id": "21",
-      "name": "active_vs_natural_retirement"
+      "name": "active_vs_natural_retirement",
+      "expected": "Active retirement and natural exhaustion keep different causes and selected UID immediately follows a live body."
     },
     {
       "id": "22",
-      "name": "held_echo_selection"
+      "name": "held_echo_selection",
+      "expected": "Held selection pauses indefinitely; release selects only and cancellation restores the run."
     },
     {
       "id": "23",
-      "name": "cleared_cohort_breather"
+      "name": "cleared_cohort_breather",
+      "expected": "A cleared cohort gets one real breather and one next-cohort transition."
     },
     {
       "id": "24",
-      "name": "unfinished_work_after_clear"
+      "name": "unfinished_work_after_clear",
+      "expected": "Empty combat with unfinished accepted work identifies the real remaining objective."
     },
     {
       "id": "25",
-      "name": "critical_result_before_transition"
+      "name": "critical_result_before_transition",
+      "expected": "A first critical rescue/repair/ability closure gets a bounded window before a shop or reward covers it."
     },
     {
       "id": "26",
-      "name": "pending_negotiation"
+      "name": "pending_negotiation",
+      "expected": "Pending negotiation remains explicit and does not replay an introduction on reopen."
     },
     {
       "id": "27",
-      "name": "deliberate_inspection"
+      "name": "deliberate_inspection",
+      "expected": "Mouse sweeps do not open inspection; deliberate dwell and controller focus remain useful."
     },
     {
       "id": "28",
-      "name": "nested_reading"
+      "name": "nested_reading",
+      "expected": "Nested rules never expire while being read and return focus through the hierarchy."
     },
     {
       "id": "29",
-      "name": "purchase_and_upgrade"
+      "name": "purchase_and_upgrade",
+      "expected": "Purchases and upgrades commit immediately while actual slot/cost/grade results remain inspectable."
     },
     {
       "id": "30",
-      "name": "repeated_blocked_purchase"
+      "name": "repeated_blocked_purchase",
+      "expected": "Repeated identical refusal merges flavor reactions but continues identifying the real shortage."
     },
     {
       "id": "31",
-      "name": "full_inventory_replacement"
+      "name": "full_inventory_replacement",
+      "expected": "Full inventory replacement shows what leaves, enters and the actual net quote before commit."
     },
     {
       "id": "32",
-      "name": "weapon_assembly"
+      "name": "weapon_assembly",
+      "expected": "Assembly shows two actual inputs becoming the retained upgraded host and freed slot."
     },
     {
       "id": "33",
-      "name": "weapon_evolution"
+      "name": "weapon_evolution",
+      "expected": "Evolution compares actual old/new shape and attack role without a second confirmation layer."
     },
     {
       "id": "34",
-      "name": "rapid_undo"
+      "name": "rapid_undo",
+      "expected": "Undo restores immediately and suppresses obsolete same-slot transaction effects."
     },
     {
       "id": "35",
-      "name": "echo_binding_traits"
+      "name": "echo_binding_traits",
+      "expected": "Each Echo binding trait previews and confirms only its real condition/skill/grade change."
     },
     {
       "id": "36",
-      "name": "reroll_latest_state"
+      "name": "reroll_latest_state",
+      "expected": "Rapid reroll shows only the current authoritative goods and prices without stale tooltips."
     },
     {
       "id": "37",
-      "name": "player_death_closure"
+      "name": "player_death_closure",
+      "expected": "Player death keeps its finite paper fall before the summary without a coaching feature."
     },
     {
       "id": "38",
-      "name": "exit_choice_and_victory"
+      "name": "exit_choice_and_victory",
+      "expected": "Exit previews and committed outcomes use only actual retained copies, survivors and staff UID."
     },
     {
       "id": "39",
-      "name": "archive_candidate_and_replace"
+      "name": "archive_candidate_and_replace",
+      "expected": "Archive reading has no timeout; novice focus is read-only and existing records default to preservation."
     },
     {
       "id": "40",
-      "name": "familiar_restart_and_resume"
+      "name": "familiar_restart_and_resume",
+      "expected": "Restart and resume retain completed familiarity without replaying obsolete transient events."
     }
   ]
 }
