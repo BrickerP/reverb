@@ -198,11 +198,8 @@ func show_choices(title: String, body: String, choices: Array[Dictionary], selec
 		button.accessibility_description = hint if hint != "" else button.text
 		button.disabled = bool(choice.get("disabled", false))
 		var multiline_hint: bool = button.disabled and hint.contains("\n")
-		if multiline_hint:
-			# Full branch mechanics remain available on hover. The sheet's body
-			# already names the blocking condition; duplicating all terms in both
-			# disabled buttons can consume the entire 540p action area.
-			_preview_limit = 88.0
+		# Full branch mechanics remain available on hover. The sheet's body
+		# names the blocker, so both disabled buttons need no duplicate essay.
 		if button.disabled and hint != "" and not multiline_hint:
 			button.text += "\n" + hint
 			button.clip_text = false

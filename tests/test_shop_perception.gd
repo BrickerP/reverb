@@ -324,7 +324,7 @@ func test_960_blocked_evolution_preserves_cancel_and_read_only_details(c: Check)
 			ui.workshop.choice_buttons[2].pressed.emit()
 			ui.workshop._fit_preview_budget()
 			c.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "both canonical branches expose the real blocking condition")
-			c.eq(ui.workshop._preview_limit, 88.0, "blocked diagrams select the compact budget before layout")
+			c.eq(ui.workshop._preview_limit, 168.0, "two blocked branches retain a readable diagram subject to the actual layout budget")
 			c.ok(ui.workshop.choice_preview.preview, "blocked branch proof stays read-only")
 			# This suite is synchronous; native weapon_ui_probe verifies the settled
 			# 540p bounds after real container frames, including both blocked cases.

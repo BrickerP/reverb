@@ -363,6 +363,7 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	await _settle()
 	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "ordinary low-grade evolution keeps both actual branches blocked")
 	_check.eq(RunSnapshot.capture(sim), before, "reading blocked grade branches leaves the run unchanged")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0, "blocked grade branches retain readable result art within the native action budget")
 	await _capture(ui, extent, "evolution-blocked-grade")
 	ui.workshop.cancel_button.pressed.emit()
 	sim.player.weapons[2] = Content.weapon(&"pistol")
@@ -377,6 +378,7 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	await _settle()
 	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "maximum-grade evolution still blocks unaffordable branches")
 	_check.eq(RunSnapshot.capture(sim), poor_before, "unaffordable branch inspection cannot spend or evolve")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0, "unaffordable branches retain readable result art within the native action budget")
 	await _capture(ui, extent, "evolution-blocked-funds")
 	ui.workshop.cancel_button.pressed.emit()
 	sim.player.materials = evolution_cash
