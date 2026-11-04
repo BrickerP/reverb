@@ -4,14 +4,17 @@ const Probe := preload("res://tools/expedition_balance_probe.gd")
 
 
 func test_stage_budgets_leave_real_choices_without_funding_the_entire_equipment_shelf(c: Check) -> void:
+	# This is the familiar-order economy group; novice opening 3+3 stock is tested separately.
+	var known_clues: Array[StringName] = [&"order_salvage", &"order_audit", &"order_repair",
+		&"order_rescue", &"order_recruit", &"order_credit"]
 	for stage in [1, 5, 10]:
 		var grade := 0 if stage == 1 else (1 if stage == 5 else 2)
 		for seed_value in [11, 29, 47, 83, 101, 149, 211, 311]:
-			var sample := Probe.funding_sample(stage, seed_value, grade)
+			var sample := Probe.funding_sample(stage, seed_value, grade, &"looper", known_clues)
 			c.eq(sample["wallet"], WaveDirector.cash_budget(stage) + Probe.MARKET_RESERVE, "budget envelope never uses a fixture rich wallet")
 			c.ok(int(sample["affordable_gear_count"]) > 0, "ordinary income envelope can afford useful goods")
 			c.ok(not sample["all_four_gear_affordable"], "one encounter cannot fund all four equipment offers")
-			c.ok(sample["gear_plus_paid_order_affordable"], "a gear purchase and one paid order fit the normal budget")
+			c.ok(sample["gear_plus_paid_order_affordable"], "a gear purchase and one paid familiar order fit the normal budget")
 			c.ok(sample["paired_matches"], "same-grade donors are genuinely available at the modeled progression point")
 			c.ok(sample["assembly_from_purchased_pair_affordable"], "buying and assembling the offered donor fits the budget")
 			c.ok(int(sample["cash_refit_cost"]) > int(sample["paired_plus_combine_cost"]), "deterministic refit pays for avoiding a donor trade")

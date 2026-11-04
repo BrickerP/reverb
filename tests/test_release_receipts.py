@@ -164,6 +164,18 @@ class ReleaseReceiptTest(unittest.TestCase):
                                        out=self.out, needs=self.needs, commit=COMMIT, ref=REF,
                                        run_id="12345", run_attempt="2", repository="BrickerP/reverb")
 
+    def test_perception_receipts_bind_source_and_never_claim_human_comprehension(self) -> None:
+        receipts = RECEIPTS.validate_perception(self.evidence, COMMIT)
+        self.assertEqual(set(receipts), {"journey", "clinic-en", "clinic-zh", "clinic-reduced"})
+        path = self.evidence / "perception/clinic-zh/verified.json"
+        original = json.loads(path.read_text())
+        for field, value in (("commit", BASELINE), ("human_understanding_verified", True), ("verified", False)):
+            with self.subTest(field=field):
+                put_json(path, {**original, field: value})
+                with self.assertRaises(ValueError):
+                    RECEIPTS.validate_perception(self.evidence, COMMIT)
+        put_json(path, original)
+
     def test_identity_binds_version_tag_full_sha_and_public_directory(self) -> None:
         RECEIPTS.validate_identity(VERSION, COMMIT, REF, self.audit, self.info)
         cases = [("version", "0.17.0"), ("commit", "abc123"), ("ref", "refs/tags/v0.17.0")]

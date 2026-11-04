@@ -653,8 +653,13 @@ func _sync_phase() -> void:
 		Sim.Phase.SHOP:
 			# Hold on the arena for a beat: the wave is being recorded, then the shop opens.
 			hud.visible = true
-			_shop_delay = maxf(RECORD_BEAT, _view.transition_hold())
-			_view.play_record_beat(sim)
+			var closure := _view.transition_hold()
+			if not sim.pending_boons.is_empty() and closure <= 0.0:
+				_shop_delay = 0.0
+				_show_boon()
+			else:
+				_shop_delay = maxf(RECORD_BEAT, closure)
+				_view.play_record_beat(sim)
 		Sim.Phase.LOST:
 			hud.visible = true
 			_record_run()

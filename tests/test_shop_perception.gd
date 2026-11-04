@@ -155,8 +155,11 @@ func test_completed_buy_is_familiar_and_repeated_failure_is_not(c: Check) -> voi
 	c.eq(learned, [&"buy"], "completed visible inventory change confirms the action")
 	ui._on_undo()
 	ui.flush_feedback()
-	ui.apply_drop(ui.drag_payload_for(offer), &"empty_weapon")
+	c.eq(ui.drag_payload_for(offer), null, "Undo invalidates the old offer object rather than accepting a stale transaction")
+	var restored_offer: Offer = (ui.offers_box.get_child(0) as OfferCard).offer
+	c.ok(ui.apply_drop(ui.drag_payload_for(restored_offer), &"empty_weapon").ok, "the current restored stock is bought again")
 	ui.flush_feedback()
+	c.eq(ui.transaction_profile()["action"], ShopResult.BUY, "familiarity is measured on the new purchase, not the preceding Undo")
 	c.near(ui._change_visual.duration, 0.12, 0.0001, "familiar reduced feedback is a brief static confirmation")
 	ui._change_visual.size = Vector2(120, 80)
 	ui._change_visual.step(1.0)

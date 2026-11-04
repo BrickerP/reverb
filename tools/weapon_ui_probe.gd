@@ -130,11 +130,22 @@ func _run() -> void:
 
 
 func _move_pointer(point: Vector2) -> void:
+	_push_pointer(point)
+	await _settle()
+
+
+func _push_pointer(point: Vector2) -> void:
 	var event := InputEventMouseMotion.new()
 	event.position = point
 	event.global_position = point
 	event.relative = Vector2(2, 0)
 	root.push_input(event, false)
+
+
+func _deliberate_hover(point: Vector2) -> void:
+	await _move_pointer(point)
+	# Wait for this interaction's actual intent threshold, not every animation.
+	await create_timer(ShopUi.HOVER_INTENT + 0.04).timeout
 	await _settle()
 
 
@@ -143,18 +154,32 @@ func _inspect_layers(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.inspection.reset()
 	var before := RunSnapshot.capture(sim)
 	var weapon := ui.build_panel._slot_buttons[0]
-	await _move_pointer(weapon.get_global_rect().get_center())
-	_check.ok(ui.inspection.visible and not ui.inspection.pinned, "pointer hover opens secondary weapon inspection")
+	await _move_pointer(Vector2(10, 10))
+	_push_pointer(weapon.get_global_rect().get_center())
+	_push_pointer(ui.build_panel._slot_buttons[1].get_global_rect().get_center())
+	_push_pointer(Vector2(10, 10))
+	await process_frame
+	_check.ok(not ui.inspection.visible, "sweeping across stock before intent does not open prose")
+	await _deliberate_hover(weapon.get_global_rect().get_center())
+	_check.ok(ui.inspection.visible and not ui.inspection.pinned, "stable pointer intent opens secondary weapon inspection")
+	if not ui.inspection.visible or ui.inspection.rule_buttons.is_empty():
+		return
 	await _capture(ui, extent, "weapon-hover")
 	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
 	_check.ok(ui.inspection.definition.visible, "hovering an upgrade term opens tertiary detail")
+	if ui.inspection.definition.visible:
+		await _move_pointer(ui.inspection.definition.get_global_rect().get_center())
+		await create_timer(0.3).timeout
+		_check.ok(ui.inspection.definition.visible and ui.inspection.visible, "tertiary reading remains open beyond the leave grace while the pointer reads it")
 	await _capture(ui, extent, "weapon-rule")
 	ui.inspection.reset()
 	ui.show_equipment_page(1)
 	await _settle()
 	var copy := ui.echo_panel.copy_buttons[0]
-	await _move_pointer(copy.get_global_rect().get_center())
+	await _deliberate_hover(copy.get_global_rect().get_center())
 	_check.ok(ui.inspection.visible, "copy hover supplies wear and skill context")
+	if not ui.inspection.visible or ui.inspection.rule_buttons.is_empty():
+		return
 	await _capture(ui, extent, "echo-hover")
 	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
 	_check.ok(ui.inspection.definition.visible, "wear explanation is a tertiary layer")
