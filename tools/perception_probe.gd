@@ -436,11 +436,12 @@ func _shop_state(sim: Sim) -> Dictionary:
 func _clinic() -> bool:
 	_summary["policy"] = {"fresh_run": false, "mode": "disclosed staged clinic",
 		"wall_clock_limit_seconds": CLINIC_WALL_DEADLINE_MSEC / 1000,
-		"native_seconds_limit": 90, "busy_case_frame_bounds": [180, 600], "first_evolve_reading_frames": 60,
+		"native_seconds_limit": 90, "busy_case_frame_bounds": [180, 600],
+		"first_evolve_reading_frames": 60, "merge_result_reading_frames": 60,
 		"native_main_physics": "engine callback disabled; same Main._physics_process(1/60) called once per native frame",
 		"key_input_route": "Input.parse_input_event for both press and release; real GUI then Main unhandled input, no direct interaction call",
 		"rescue_stance": "initial player placement worker+(50,0), outside the live conveyor push; real out-and-back movement and exact nearest available worker check before E",
-		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; after the fresh first-copy checkpoint, shop800materials/four pistol grades0,0,3,3/host condition50 and donor60; actual donor and confirmation inputs; first evolved result deliberately remains visible for60frames before Undo; ordinary real UI commits and Undo",
+		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; after the fresh first-copy checkpoint, shop800materials/four pistol grades0,0,3,3/host condition50 and donor60; actual donor and confirmation inputs; first evolved and each binding result deliberately remain visible for60frames before Undo; combine retains rapid Undo; ordinary real UI commits and Undo",
 		"scope": "timing and native pixels for controlled cases; not a fresh campaign or human-learning proof"}
 	if not (await _clinic_busy_ready()):
 		return false
@@ -718,10 +719,12 @@ func _clinic_shop_actions() -> bool:
 	if not _require(not combine_before.is_empty(), "strict pre-confirmation assembly snapshot exists"):
 		return false
 	_press_first_enabled(ui.workshop.choice_buttons, "real_combine_confirmation")
-	_queue_capture("combine_real_commit", ["32"], "actual donor and confirmation inputs commit the assembly before Undo")
 	if not (await _clinic_frames(2)):
 		return false
 	if not _require(sim.player.weapons.size() == 3, "assembly consumed exactly one actual donor slot"):
+		return false
+	_queue_capture("combine_real_commit", ["32"], "actual donor and confirmation inputs committed the verified assembly before Undo")
+	if not (await _clinic_frames(1)):
 		return false
 	if not (await _clinic_undo(ui, "combine", 4, combine_before, 0)):
 		return false
@@ -736,10 +739,12 @@ func _clinic_shop_actions() -> bool:
 		return false
 	var evolve_input_frame := _frame
 	_press_first_enabled(ui.workshop.choice_buttons, "real_evolution_choice")
-	_queue_capture("evolve_real_commit", ["33"], "actual target choice commits the quoted final weapon before Undo")
 	if not (await _clinic_frames(2)):
 		return false
 	if not _require(sim.player.weapons[2].id != &"pistol", "evolution changes the actual selected weapon"):
+		return false
+	_queue_capture("evolve_real_commit", ["33"], "actual target choice committed the verified final weapon before Undo")
+	if not (await _clinic_frames(1)):
 		return false
 	if not (await _clinic_frames(60)):
 		return false
@@ -785,10 +790,29 @@ func _clinic_shop_actions() -> bool:
 		if not _require(not merge_before.is_empty(), "strict selected-trait pre-commit snapshot exists"):
 			return false
 		_press_button(trait_button, "real_merge_trait_" + String(trait_name))
-		_queue_capture("merge_" + String(trait_name) + "_commit", ["35"], "actual selected binding trait and source identities before Undo")
 		if not (await _clinic_frames(2)):
 			return false
 		if not _require(sim.bank.takes.size() == 1, "real binding consumes its one donor"):
+			return false
+		_queue_capture("merge_" + String(trait_name) + "_commit", ["35"], "actual selected binding trait committed one verified result before Undo")
+		if not (await _clinic_frames(1)):
+			return false
+		if not (await _clinic_frames(60)):
+			return false
+		var merged: EchoTake = sim.bank.takes[0]
+		var result_row := ui.echo_panel._identity_buttons.get(merged.uid) as Control
+		if not _require(_main.meta.familiar_actions.has(StringName("merge_" + String(trait_name)))
+				and sim.bank.takes.size() == 1 and ui.echo_panel.copy_buttons.size() == 1
+				and ui.echo_panel._identity_buttons.size() == 1
+				and result_row != null and result_row.is_visible_in_tree(),
+				"completed visible binding result confirms its real familiar trait and unique new UID"):
+			return false
+		_note("clinic_merge_visible_completion", {"trait": String(trait_name),
+			"uid": merged.uid, "condition": merged.condition, "deliberate_dwell_frames": 60,
+			"visible_rows": ui.echo_panel.copy_buttons.size(), "familiar": true})
+		_queue_capture("merge_" + String(trait_name) + "_visible_settled", ["35"],
+			"completed visible binding result: one actual new UID with confirmed familiar trait, before Undo")
+		if not (await _clinic_frames(1)):
 			return false
 		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4, merge_before, -1)):
 			return false
