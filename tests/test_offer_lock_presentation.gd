@@ -144,7 +144,9 @@ func test_offer_states_keep_lock_boundary_and_full_explanation(c: Check) -> void
 	c.ok(full_card.accessibility_description.contains(Loc.t("shop.full_reason")),
 			"full-slot accessible description explains replacement")
 	full_ui.inspection.pointer_enabled = true
+	full_card.size = Vector2(250, 90)
 	full_card.mouse_entered.emit()
+	full_ui._step_hover(0.17, full_card.get_global_rect().get_center())
 	c.ok(str(full_ui.inspection._payload["rules"][0]["body"]).contains(Loc.t("shop.full_reason")),
 			"tertiary inspection carries the complete replacement reason")
 	c.eq(full_card._get_drag_data(_nested_center(full_card, full_card.swap_button)), null,

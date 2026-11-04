@@ -24,6 +24,7 @@ var story_clues: Array[StringName] = []
 var echo_archives: Dictionary = {}
 var inherit_echo: bool = true
 var bureau_reports: Array[Dictionary] = []
+var familiar_actions: Array[StringName] = []
 
 
 func _init(save_path: String = DEFAULT_PATH) -> void:
@@ -49,6 +50,7 @@ func _defaults() -> void:
 	echo_archives.clear()
 	inherit_echo = true
 	bureau_reports.clear()
+	familiar_actions.clear()
 	for def: CharacterDef in Content.characters().values():
 		unlocked[def.id] = def.unlock_wave <= 0 and def.unlock_wins <= 0
 
@@ -78,6 +80,7 @@ func _load() -> void:
 	daily_last_win_seed = int(data.get("daily_last_win_seed", 0))
 	ascension = clampi(int(data.get("ascension", 0)), 0, max_ascension())
 	inherit_echo = bool(data.get("inherit_echo", true))
+	familiar_actions = ExperienceHints.normalize(data.get("familiar_actions", []))
 	var saved_archives: Variant = data.get("echo_archives", {})
 	if typeof(saved_archives) == TYPE_DICTIONARY:
 		for key: Variant in saved_archives:
@@ -140,6 +143,7 @@ func save() -> bool:
 		"echo_archives": echo_archives,
 		"inherit_echo": inherit_echo,
 		"bureau_reports": bureau_reports,
+		"familiar_actions": familiar_actions,
 	}, "\t"))
 	file.flush()
 	var error := file.get_error()
@@ -157,6 +161,18 @@ func save() -> bool:
 
 func is_unlocked(id: StringName) -> bool:
 	return bool(unlocked.get(id, false))
+
+
+func remember_action(action: StringName) -> bool:
+	if not ExperienceHints.ALL.has(action):
+		return false
+	if familiar_actions.has(action):
+		return true
+	familiar_actions.append(action)
+	if save():
+		return true
+	familiar_actions.erase(action)
+	return false
 
 
 func max_ascension() -> int:

@@ -9,6 +9,8 @@ const OLD_INK := Color("77755f")
 const MAX_SLOTS := 8
 const MAX_CREASES := 3
 const MAX_TEARS := 2
+const SELECTION_WIDTH := 1.65
+const SELECTION_ALPHA := 0.78
 
 
 static func identity_color(identity: Color) -> Color:
@@ -18,6 +20,7 @@ static func identity_color(identity: Color) -> Color:
 static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		reduced: bool = false) -> Dictionary:
 	var result := {"valid": false, "visible": false, "duration": 120.0, "remaining": 0.0,
+		"uid": 0, "selected": false,
 		"condition": 0.0, "wear_ratio": 1.0, "expiring": false, "expired": true,
 		"merged": false, "muted": false, "rewinding": false, "slot": 0,
 		"identity_pattern": 0, "tint": PAPER, "body_tint": PAPER,
@@ -26,13 +29,16 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		"paper_scale": Vector2.ONE,
 		"crease_count": 0, "tear_count": 0, "staple_count": 0,
 		"crowded": false, "reduced": reduced}
-	if actor == null or actor.take == null or sim == null or not actor.pos.is_finite():
+	if actor == null or actor.take == null or sim == null or not actor.pos.is_finite() \
+			or not is_finite(actor.take.condition):
 		return result
 	var duration := sim.echo_duration()
 	var condition := clampf(actor.take.condition, 0.0, 100.0)
 	var left := duration * condition / 100.0 / maxf(0.001, sim.wear_rate_mult)
 	var wear := 1.0 - condition / 100.0
 	var expired := condition <= 0.0
+	var selected := not expired and actor.take.uid > 0 \
+			and actor.take.uid == sim.selected_echo_uid and sim.echoes.has(actor)
 	var expiring := condition > 0.0 and condition <= EchoSystem.LOW_CONDITION
 	var muted := sim.echo_silenced > 0.0 or EnemyBrain.echo_is_sealed(sim, actor.pos)
 	var crowded := sim.echoes.size() > 4
@@ -64,6 +70,7 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 		tears = mini(1, tears)
 	var slot := clampi(actor.index, 0, MAX_SLOTS - 1)
 	result.merge({"valid": true, "visible": not expired, "duration": duration,
+		"uid": actor.take.uid, "selected": selected,
 		"remaining": left, "condition": condition, "wear_ratio": wear, "expiring": expiring,
 		"expired": expired, "merged": actor.take.merged, "muted": muted,
 		"rewinding": actor.rewinding, "slot": slot, "identity_pattern": posmod(actor.take.tint_index, MAX_SLOTS),
@@ -81,7 +88,7 @@ static func profile(actor: EchoActor, sim: Sim, _clock: float = 0.0,
 static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 	var result := {"creases": [], "tears": [], "staples": [], "punctures": [],
 		"identity": [], "mute": [], "mute_contour": PackedVector2Array(),
-		"rewind": [], "expiry": PackedVector2Array()}
+		"rewind": [], "expiry": PackedVector2Array(), "selection": []}
 	if not bool(data.get("visible", false)) or not _valid_bounds(bounds):
 		return result
 	var creases: Array[PackedVector2Array] = []
@@ -130,9 +137,17 @@ static func mark_geometry(bounds: Rect2, data: Dictionary) -> Dictionary:
 		expiry = _map(PackedVector2Array([Vector2(0.08, 0.77), Vector2(0.13, 0.95),
 			Vector2(0.27, 0.78), Vector2(0.40, 0.96), Vector2(0.54, 0.77),
 			Vector2(0.69, 0.95), Vector2(0.81, 0.78), Vector2(0.92, 0.91)]), bounds)
+	# Quiet side brackets identify the current saved UID continuously. Their
+	# middle-side placement leaves the binding at the top and torn edge below.
+	var selection: Array[PackedVector2Array] = []
+	if bool(data.get("selected", false)):
+		selection.append(_map(PackedVector2Array([Vector2(0.14, 0.42), Vector2(0.025, 0.42),
+			Vector2(0.025, 0.72), Vector2(0.14, 0.72)]), bounds))
+		selection.append(_map(PackedVector2Array([Vector2(0.86, 0.42), Vector2(0.975, 0.42),
+			Vector2(0.975, 0.72), Vector2(0.86, 0.72)]), bounds))
 	result.merge({"creases": creases, "tears": tears, "staples": staples,
 		"punctures": punctures, "identity": identity, "mute": mute, "mute_contour": mute_contour,
-		"rewind": rewind, "expiry": expiry}, true)
+		"rewind": rewind, "expiry": expiry, "selection": selection}, true)
 	return result
 
 
@@ -175,6 +190,11 @@ static func draw_marks(ci: CanvasItem, _actor: EchoActor, art_bounds: Rect2,
 	if not expiry.is_empty():
 		ci.draw_polyline(expiry, Color(PAPER, 0.83), 5.7, true)
 		ci.draw_polyline(expiry, Color(INK, 0.93), 2.9, true)
+	# Keep the narrow side ink readable even beside the silence seal's paper
+	# under-stroke. It never covers the central seal, binding or lower tear.
+	for line: PackedVector2Array in geometry["selection"]:
+		ci.draw_polyline(line, Color(PAPER, SELECTION_ALPHA), SELECTION_WIDTH + 2.0, true)
+		ci.draw_polyline(line, Color(INK, SELECTION_ALPHA), SELECTION_WIDTH, true)
 
 
 static func _valid_bounds(bounds: Rect2) -> bool:

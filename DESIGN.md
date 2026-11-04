@@ -8,6 +8,8 @@ Exact runtime rules and ownership live in [INTERFACES.md](INTERFACES.md). That c
 
 Each Echo follows its actual recording and responds to current enemies with its recorded build. Its next two seconds appear as cutting dashes on the floor. These show upcoming turns and known pauses, giving the player enough information to arrange crossfire, approach support, or exploit a useful old position. Selection improves contrast without hiding the other bodies' routes.
 
+A recording retains the most recent minute of the encounter. Short encounters remain complete; longer Boss fights replace the oldest route and work events with the newest, retaining their relative timing. Recording, replay, saving and permanent archives share the same bounded tape.
+
 The route is information, not another command system. Roles retain their own rewind, swap, anchor and sacrifice mechanics. Active retirement spends the actual copy; natural wear remains a separate outcome. Merge retains the host's route and equipment while transferring one explicit donor contribution. Permanent archives use the same bounded opening normalization as deployment.
 
 ## Good play can finish the work early
@@ -35,3 +37,9 @@ Primary shop views are visual. Real weapon art and Echo paper dolls carry names,
 Repair and rescue address people and faults that already exist. Credit creates explicit debt; ordinary failure creates no surprise loan. Final departure is an explicit choice involving actual surviving workers and retained recordings. Debt, clearance and exit choice are separate facts.
 
 Suspended runs preserve the exact simulation, RNG, pending decisions and transaction history. Visual and audio feedback are read-only. Automated tests and disclosed native fixtures validate rules and rendering; human playtesting remains necessary to judge strategic interest, pressure, sound and feel.
+
+## Recognition over repeated attention
+
+First encounters stage Echo, ordinary work and advanced threats through existing known discoveries. Completed interactions retreat from novice emphasis. Persistent object state carries an outcome after its short animation: repaired equipment stays repaired, rescued people stay safe, a purchased item occupies its real slot, and a bound copy keeps its actual changes. Reading remains player-timed.
+
+The first encounter with a meaningful result gets enough visible closure before the next decision. Familiar repeated hits and combinations remain compact; obsolete cues do not replay after the associated state has ended. A clear arena with unfinished work continues to identify the remaining action.

@@ -32,6 +32,7 @@ func test_actual_inheritance_print_is_read_only_pauses_and_detaches(c: Check) ->
 func test_pending_confession_main_save_undo_and_departure_commit(c: Check) -> void:
 	var fixture := Fixture.new()
 	var main := fixture._main()
+	main.meta.story_clues.append(&"carbon")
 	fixture._shop_after_recording(main)
 	var take: EchoTake = main.sim.bank.takes[0]
 	take.condition = 70.0
@@ -97,6 +98,7 @@ func test_early_inherited_retirement_persists_one_report_and_nested_memory_focus
 func test_real_delivery_input_has_one_confirmation_and_preserves_old_machine_cue(c: Check) -> void:
 	var fixture := Fixture.new()
 	var main := fixture._main()
+	main.meta.story_clues.append(&"carbon")
 	main.new_run(17006, &"solo")
 	main.sim.start_wave(2)
 	main.sim._plan.clear()

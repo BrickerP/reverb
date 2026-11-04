@@ -53,6 +53,10 @@ var _box: VBoxContainer
 var _report: Label
 var _echo_row: HBoxContainer
 var _archive_box: VBoxContainer
+var _familiar_actions: Array[StringName] = []
+var _saved_take: EchoTake
+var _comparison_take: EchoTake
+var _outcome: ExitOutcomePortrait
 
 
 func _ready() -> void:
@@ -96,7 +100,15 @@ func _ready() -> void:
 	box.add_child(_title)
 	_afterword = UiTheme.label("", 17, UiTheme.INK, HORIZONTAL_ALIGNMENT_CENTER)
 	_afterword.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_afterword)
+	_afterword.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var result_row := HBoxContainer.new()
+	result_row.add_theme_constant_override("separation", 8)
+	_outcome = ExitOutcomePortrait.new()
+	_outcome.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_outcome.visible = false
+	result_row.add_child(_outcome)
+	result_row.add_child(_afterword)
+	box.add_child(result_row)
 	_stats = UiTheme.label("", 17, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stats.custom_minimum_size = Vector2(790.0, 0.0)
@@ -108,7 +120,7 @@ func _ready() -> void:
 	previous_button = _small_action()
 	previous_button.custom_minimum_size.x = 100.0
 	previous_button.text = Loc.t("archive.previous")
-	previous_button.pressed.connect(func() -> void: select_candidate(posmod(candidate_index - 1, _candidates.size())))
+	previous_button.pressed.connect(func() -> void: _step_candidate(-1))
 	paging.add_child(previous_button)
 	_candidate_count = UiTheme.label("", 14, UiTheme.ECHO, HORIZONTAL_ALIGNMENT_CENTER)
 	_candidate_count.custom_minimum_size.x = 160.0
@@ -116,7 +128,7 @@ func _ready() -> void:
 	next_button = _small_action()
 	next_button.custom_minimum_size.x = 100.0
 	next_button.text = Loc.t("archive.next")
-	next_button.pressed.connect(func() -> void: select_candidate(posmod(candidate_index + 1, _candidates.size())))
+	next_button.pressed.connect(func() -> void: _step_candidate(1))
 	paging.add_child(next_button)
 	_candidate_row.add_child(paging)
 	_candidate_ui = ArchiveCandidateUi.new()
@@ -208,6 +220,11 @@ func _small_action() -> Button:
 func show_result(sim: Sim, unlocked_text: String = "", profile: Meta = null) -> void:
 	_sim = sim
 	_meta = profile
+	_saved_take = null
+	_comparison_take = null
+	_candidate_ui.reset_reader()
+	for row: ArchiveCandidateUi in _confirmation_rows:
+		row.reset_reader()
 	_entry_sim = Sim.new(1)
 	Content.character(sim.character_id).apply(_entry_sim)
 	replacement_pending = false
@@ -234,20 +251,18 @@ func show_result(sim: Sim, unlocked_text: String = "", profile: Meta = null) -> 
 	_seed.text = Loc.t("end.seed", [sim.run_seed])
 	_unlock.text = unlocked_text
 	_unlock.visible = unlocked_text != ""
-	_archive_note.text = Loc.t("archive.choice_note")
-	if sim.daily_modifier != &"" or not EchoArchive.eligible(sim.character_id):
-		_archive_note.text = Loc.t("archive.unavailable")
-	if int(sim.expedition.get("debt", 0)) > 0:
-		_archive_note.text = Loc.t("archive.debt")
 	var report := Expedition.status(sim)
 	_afterword.text = Loc.t(report.ending) if won else Loc.t("end.loss_note")
-	if won and not str(report.get("outcome_key", "")).is_empty():
-		_afterword.text += "\n" + Loc.t(report.outcome_key)
+	var outcome := ExitOutcomePortrait.profile(sim, &"", true) if won else {}
+	_outcome.setup(outcome)
+	if not outcome.is_empty():
+		_afterword.text += "\n" + ExitOutcomePortrait.describe(outcome)
 	_candidate_row.visible = not _candidates.is_empty()
 	_no_echo.visible = _candidates.is_empty()
 	previous_button.disabled = _candidates.size() < 2
 	next_button.disabled = _candidates.size() < 2
 	select_candidate(0)
+	_refresh_archive_note()
 	restart_button.text = Loc.t("end.restart")
 	character_button.text = Loc.t("end.change")
 	endless_button.text = Loc.t("end.endless_continue")
@@ -269,6 +284,32 @@ func set_reduced_effects(on: bool) -> void:
 		UiTheme.animate_open(self, true)
 
 
+func set_familiar_actions(actions: Array[StringName]) -> void:
+	_familiar_actions = ExperienceHints.normalize(actions)
+	if _archive_note != null and visible:
+		_refresh_archive_note()
+
+
+func reset() -> void:
+	visible = false
+	replacement_pending = false
+	_comparison_take = null
+	_saved_take = null
+	candidate_take = null
+	candidate_index = -1
+	_candidates.clear()
+	_sim = null
+	_entry_sim = null
+	_meta = null
+	if _confirmation != null:
+		_confirmation.visible = false
+		_candidate_ui.reset_reader()
+		for row: ArchiveCandidateUi in _confirmation_rows:
+			row.reset_reader()
+		_outcome.clear()
+		UiTheme.animate_open(self, true)
+
+
 
 func set_feedback_available(available: bool) -> void:
 	feedback_available = available
@@ -285,6 +326,9 @@ func focus_default() -> void:
 	if replacement_pending:
 		cancel_button.grab_focus()
 		return
+	if not _familiar_actions.has(&"archive") and _can_archive() and _candidate_ui.detail_button.visible:
+		_candidate_ui.detail_button.grab_focus()
+		return
 	if restart_button != null:
 		restart_button.grab_focus()
 
@@ -298,20 +342,28 @@ func _rebuild_focus_cycle() -> void:
 
 
 func _on_retry_seed() -> void:
+	if not visible or replacement_pending:
+		return
 	seed_retry_requested.emit(_seed_value)
 
 
 func _on_restart() -> void:
+	if not visible or replacement_pending:
+		return
 	restart_requested.emit()
 
 
 func _on_character() -> void:
+	if not visible or replacement_pending:
+		return
 	character_requested.emit()
 
 
 func set_archive_result(ok: bool, error: String = "") -> void:
+	if ok:
+		_saved_take = candidate_take
 	_archive_note.text = Loc.t("archive.saved") if ok else Loc.t(error if error != "" else "archive.save_failed")
-	archive_button.disabled = ok
+	archive_button.disabled = ok or not _can_archive()
 	_rebuild_focus_cycle()
 	if ok:
 		restart_button.grab_focus()
@@ -371,6 +423,11 @@ func candidate_count() -> int:
 	return _candidates.size()
 
 
+func _step_candidate(direction: int) -> void:
+	if visible and not replacement_pending and not _candidates.is_empty():
+		select_candidate(posmod(candidate_index + direction, _candidates.size()))
+
+
 func select_candidate(index: int) -> bool:
 	if replacement_pending or index < 0 or index >= _candidates.size():
 		archive_button.disabled = candidate_take == null or not _can_archive()
@@ -381,9 +438,21 @@ func select_candidate(index: int) -> bool:
 	_candidate_ui.setup(candidate_take, EchoArchive.preview(candidate_take, _entry_sim), _compact())
 	previous_button.disabled = _candidates.size() < 2
 	next_button.disabled = _candidates.size() < 2
-	archive_button.disabled = not _can_archive()
+	archive_button.disabled = candidate_take == _saved_take or not _can_archive()
+	_refresh_archive_note()
 	_rebuild_focus_cycle()
 	return true
+
+
+func _refresh_archive_note() -> void:
+	var key := "archive.choice_note" if _familiar_actions.has(&"archive") else "archive.first_choice_note"
+	if candidate_take != null and candidate_take == _saved_take:
+		key = "archive.saved"
+	elif _sim == null or _sim.daily_modifier != &"" or not EchoArchive.eligible(_sim.character_id) or candidate_take == null:
+		key = "archive.unavailable"
+	elif int(_sim.expedition.get("debt", 0)) > 0:
+		key = "archive.debt"
+	_archive_note.text = Loc.t(key)
 
 
 func _can_archive() -> bool:
@@ -393,9 +462,12 @@ func _can_archive() -> bool:
 
 
 func request_archive() -> void:
-	if not _can_archive():
+	if replacement_pending or not _can_archive() or candidate_take == _saved_take:
 		return
 	if _meta != null and EchoArchive.has(_meta, _sim.character_id):
+		_comparison_take = EchoArchive.peek(_meta, _sim.character_id)
+		for row: ArchiveCandidateUi in _confirmation_rows:
+			row.reset_reader()
 		replacement_pending = true
 		_refresh_confirmation()
 		_confirmation.visible = true
@@ -410,6 +482,7 @@ func confirm_archive() -> void:
 		cancel_archive()
 		return
 	replacement_pending = false
+	_comparison_take = null
 	_confirmation.visible = false
 	_rebuild_focus_cycle()
 	archive_requested.emit(candidate_take)
@@ -417,6 +490,7 @@ func confirm_archive() -> void:
 
 func cancel_archive() -> void:
 	replacement_pending = false
+	_comparison_take = null
 	_confirmation.visible = false
 	_rebuild_focus_cycle()
 	archive_button.grab_focus()
@@ -473,9 +547,9 @@ func _build_confirmation() -> void:
 
 
 func _refresh_confirmation() -> void:
-	var existing := EchoArchive.peek(_meta, _sim.character_id)
+	var existing := _comparison_take
 	if existing == null:
 		cancel_archive()
 		return
-	_confirmation_rows[0].setup(existing, EchoArchive.entry_preview(_meta, _sim.character_id, _entry_sim), _compact())
+	_confirmation_rows[0].setup(existing, EchoArchive.preview(existing, _entry_sim), _compact())
 	_confirmation_rows[1].setup(candidate_take, EchoArchive.preview(candidate_take, _entry_sim), _compact())

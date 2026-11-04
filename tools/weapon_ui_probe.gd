@@ -5,6 +5,9 @@ var _output := ""
 var _check := Check.new()
 var _shots: Array[Dictionary] = []
 var _frames := 0
+var _hover_evidence: Array[Dictionary] = []
+var _original_pointer := Vector2.ZERO
+var _pointer_saved := false
 
 
 func _initialize() -> void:
@@ -19,6 +22,7 @@ func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames > 6000:
 		printerr("FAILED: weapon UI evidence exceeded its frame deadline")
+		_restore_pointer()
 		quit(1)
 	return false
 
@@ -119,42 +123,110 @@ func _run() -> void:
 	var file := FileAccess.open(_output.path_join("summary.json"), FileAccess.WRITE)
 	if file == null:
 		printerr("FAILED: cannot write weapon UI evidence summary")
+		_restore_pointer()
 		quit(1)
 		return
 	file.store_string(JSON.stringify({"commit": OS.get_environment("REVERB_BUILD_COMMIT"),
 		"source": "native fixture", "physical_controller_tested": false,
-		"passed": _check.passed, "failed": _check.failed, "screenshots": _shots}, "  "))
+		"passed": _check.passed, "failed": _check.failed, "screenshots": _shots, "hover_evidence": _hover_evidence}, "  "))
 	file.close()
+	_restore_pointer()
 	print("Weapon UI: %d passed, %d failed" % [_check.passed, _check.failed])
 	quit(1 if _check.failed > 0 else 0)
 
 
 func _move_pointer(point: Vector2) -> void:
+	_push_pointer(point)
+	await _settle()
+
+
+func _push_pointer(point: Vector2) -> void:
+	if not _pointer_saved:
+		_original_pointer = root.get_mouse_position()
+		_pointer_saved = true
+	# Per-frame hover reads the native pointer, not only a forwarded event's point.
+	# Match the existing carbon/perception probes so the OS refresh cannot cancel intent.
+	root.warp_mouse(point)
 	var event := InputEventMouseMotion.new()
 	event.position = point
 	event.global_position = point
 	event.relative = Vector2(2, 0)
-	root.push_input(event, false)
+	root.notify_mouse_entered()
+	root.push_input(event, true)
+
+
+func _deliberate_hover(ui: ShopUi, source: Control) -> void:
+	var source_id: int = source.get_instance_id()
+	var source_kind: String = String(source.get_meta(&"inspect_kind", &""))
+	var initial_rect: Rect2 = source.get_global_rect()
+	var generation: int = ui._refresh_generation
+	var started: int = Time.get_ticks_usec()
+	_push_pointer(source.get_global_rect().get_center())
+	await create_timer(ShopUi.HOVER_INTENT * 0.45).timeout
+	var early_elapsed: float = float(Time.get_ticks_usec() - started) / 1000000.0
+	var early_visible: bool = ui.inspection.visible
+	var pointer: Vector2 = ui.get_global_mouse_position()
+	var early_live: bool = is_instance_valid(source) and source.is_inside_tree()
+	_check.ok(early_live and source.get_global_rect().has_point(pointer), "native pointer remains inside the intended current control")
+	_check.ok(not early_visible, "stable hover has no secondary sheet before the intent window")
+	var early_pending_id: int = ui._hover_source.get_instance_id() if is_instance_valid(ui._hover_source) else 0
+	# Cross the real threshold without manually advancing ShopUi or changing its timer.
+	await create_timer(ShopUi.HOVER_INTENT * 0.75).timeout
 	await _settle()
+	var live: bool = is_instance_valid(source) and source.is_inside_tree()
+	_hover_evidence.append({"language": Loc.lang, "canvas": [root.size.x, root.size.y],
+		"kind": source_kind, "source_id": source_id, "early_pending_id": early_pending_id,
+		"same_live_source": live and source.get_instance_id() == source_id,
+		"refresh_before": generation, "refresh_after": ui._refresh_generation,
+		"initial_rect": str(initial_rect), "source_rect": str(source.get_global_rect()) if live else "removed",
+		"early_native_pointer": str(pointer), "native_pointer": str(ui.get_global_mouse_position()),
+		"intent_seconds": ShopUi.HOVER_INTENT, "early_elapsed": early_elapsed, "early_visible": early_visible,
+		"settled_elapsed": float(Time.get_ticks_usec() - started) / 1000000.0,
+		"settled_visible": ui.inspection.visible, "pinned": ui.inspection.pinned,
+		"pending_left": ui._hover_left, "pointer_enabled": ui.inspection.pointer_enabled,
+		"modal_open": ui._opaque_modal_open(), "shop_paused": ui._shop_paused})
+	_check.ok(generation == ui._refresh_generation and live,
+		"hover intent observes the same live control and layout generation")
+
+
+func _restore_pointer() -> void:
+	if _pointer_saved:
+		root.warp_mouse(_original_pointer)
+		_pointer_saved = false
 
 
 func _inspect_layers(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.show_equipment_page(0)
 	ui.inspection.reset()
 	var before := RunSnapshot.capture(sim)
+	await _move_pointer(Vector2(10, 10))
 	var weapon := ui.build_panel._slot_buttons[0]
-	await _move_pointer(weapon.get_global_rect().get_center())
-	_check.ok(ui.inspection.visible and not ui.inspection.pinned, "pointer hover opens secondary weapon inspection")
+	_push_pointer(weapon.get_global_rect().get_center())
+	_push_pointer(ui.build_panel._slot_buttons[1].get_global_rect().get_center())
+	_push_pointer(Vector2(10, 10))
+	await process_frame
+	_check.ok(not ui.inspection.visible, "sweeping across stock before intent does not open prose")
+	weapon = ui.build_panel._slot_buttons[0]
+	await _deliberate_hover(ui, weapon)
+	_check.ok(ui.inspection.visible and not ui.inspection.pinned, "stable pointer intent opens secondary weapon inspection")
+	if not ui.inspection.visible or ui.inspection.rule_buttons.is_empty():
+		return
 	await _capture(ui, extent, "weapon-hover")
 	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
 	_check.ok(ui.inspection.definition.visible, "hovering an upgrade term opens tertiary detail")
+	if ui.inspection.definition.visible:
+		await _move_pointer(ui.inspection.definition.get_global_rect().get_center())
+		await create_timer(0.3).timeout
+		_check.ok(ui.inspection.definition.visible and ui.inspection.visible, "tertiary reading remains open beyond the leave grace while the pointer reads it")
 	await _capture(ui, extent, "weapon-rule")
 	ui.inspection.reset()
 	ui.show_equipment_page(1)
 	await _settle()
 	var copy := ui.echo_panel.copy_buttons[0]
-	await _move_pointer(copy.get_global_rect().get_center())
+	await _deliberate_hover(ui, copy)
 	_check.ok(ui.inspection.visible, "copy hover supplies wear and skill context")
+	if not ui.inspection.visible or ui.inspection.rule_buttons.is_empty():
+		return
 	await _capture(ui, extent, "echo-hover")
 	await _move_pointer(ui.inspection.rule_buttons[0].get_global_rect().get_center())
 	_check.ok(ui.inspection.definition.visible, "wear explanation is a tertiary layer")
@@ -283,13 +355,40 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.undo_button.pressed.emit()
 	await _settle()
 	_check.eq(RunSnapshot.capture(sim), before, "combine Undo restores the exact host and donor")
+	# The actual Manage entry offers canonical branches even before their grade
+	# gate is met. Keep this disabled, multiline boundary in native 540p coverage.
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui.inspection.details_button.pressed.emit()
+	ui.workshop.choice_buttons[2].pressed.emit()
+	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "ordinary low-grade evolution keeps both actual branches blocked")
+	_check.eq(RunSnapshot.capture(sim), before, "reading blocked grade branches leaves the run unchanged")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0, "blocked grade branches retain readable result art within the native action budget")
+	await _capture(ui, extent, "evolution-blocked-grade")
+	ui.workshop.cancel_button.pressed.emit()
 	sim.player.weapons[2] = Content.weapon(&"pistol")
 	sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	var evolution_cash: int = sim.player.materials
+	sim.player.materials = 0
+	ui.refresh()
+	await _settle()
+	var poor_before := RunSnapshot.capture(sim)
+	ui.build_panel._select(0)
+	ui.build_panel.upgrade_button.pressed.emit()
+	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "maximum-grade evolution still blocks unaffordable branches")
+	_check.eq(RunSnapshot.capture(sim), poor_before, "unaffordable branch inspection cannot spend or evolve")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0, "unaffordable branches retain readable result art within the native action budget")
+	await _capture(ui, extent, "evolution-blocked-funds")
+	ui.workshop.cancel_button.pressed.emit()
+	sim.player.materials = evolution_cash
 	ui.refresh()
 	await _settle()
 	before = RunSnapshot.capture(sim)
 	ui.build_panel.upgrade_button.pressed.emit()
 	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return not button.disabled), "restored funds expose the actual affordable branches")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0 and ui.workshop.choice_preview.custom_minimum_size.y <= 180.0, "affordable evolution restores the dominant result diagram after blocked entries")
 	await _capture(ui, extent, "evolution-choice")
 	ui.workshop.choice_buttons[0].pressed.emit()
 	await _settle()

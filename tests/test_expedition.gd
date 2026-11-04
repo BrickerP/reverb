@@ -23,6 +23,136 @@ func _order(sim: Sim, kind: StringName) -> AnomalyContract:
 	return order
 
 
+func _failed_rescue(c: Check, additional_work: StringName = &"") -> Sim:
+	var sim := Sim.new(137)
+	StoryLedger.seed_known(sim, [&"order_rescue"])
+	if additional_work != &"":
+		StoryLedger.seed_known(sim, [&"carbon"])
+	sim.start_run()
+	sim._end_wave()
+	# Stage only funding and the durable final threat; this is not an income/playthrough fixture.
+	sim.player.materials = 200
+	if additional_work == &"inspection":
+		c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "fixture signs a real inspection before accepting rescue work")
+	var offer: Offer
+	for candidate: Offer in sim.shop.offers:
+		if candidate.is_contract() and candidate.contract.kind == &"rescue":
+			offer = candidate
+	c.ok(offer != null and sim.shop.buy(sim, offer), "fixture purchases the actual known rescue order")
+	if sim.active_contract == null:
+		return null
+	sim.start_next_wave()
+	# Isolate the last real threat after the rest of the finite budget has cleared.
+	sim._plan_idx = sim._plan.size()
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"grunt")
+	for item: Dictionary in sim.interactables:
+		if item["kind"] == &"rescue":
+			arrival.pos = item["pos"]
+	c.ok(sim._materialize(arrival), "the real allocator creates the final threatening body")
+	var attacker: EnemyState = sim.enemies.back()
+	attacker.damage = 50.0
+	attacker.max_hp = 10000.0
+	attacker.hp = attacker.max_hp
+	sim.step(1.0, Vector2.ZERO)
+	c.eq(sim.expedition["mission"]["state"], &"failed", "actual lethal enemy contact destroys the rescue objective")
+	return sim
+
+
+func test_actual_failed_rescue_releases_finite_clear_without_reward_or_impossible_hud_goal(c: Check) -> void:
+	var sim := _failed_rescue(c)
+	if sim == null:
+		return
+	var hud := Hud.new()
+	hud.bind(sim)
+	var previous_language := Loc.lang
+	for language: String in ["en", "zh"]:
+		Loc.lang = language
+		c.eq(hud.objective_text(), Loc.t("order.survive.short"), "a lost objective falls back to survival without impossible progress")
+	Loc.lang = previous_language
+	hud.free()
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(before)
+	c.ok(restored != null, "the existing failed-order snapshot remains valid: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "the semantic fix never migrates or removes failed-order state")
+	c.ok(Expedition.unfinished_work(restored).is_empty(), "terminal rescue failure is not actionable remaining work")
+	restored.damage_enemy(restored.enemies[0], 100000.0, Vector2.ZERO, false)
+	restored.step(0.01, Vector2.ZERO)
+	c.eq(restored.phase, Sim.Phase.SHOP, "clearing the last real threat can end the failed encounter early")
+	c.ok(restored.wave_time < restored.wave_duration, "failure does not force idle waiting to the original clock")
+	c.eq(restored.contracts_failed, 1, "the failed rescue settles once as a failure")
+	c.eq(restored.contracts_completed, 0, "early closing cannot turn the destroyed objective into a success")
+	c.eq(restored.last_contract_reward, 0, "failed rescue pays no completion reward")
+	c.ok(restored.expedition["failed_orders"].has(&"rescue"), "the actual failed rescue remains in world history")
+
+
+func test_failed_rescue_still_reports_real_delivery_or_inspection(c: Check) -> void:
+	for kind: StringName in [&"delivery", &"inspection"]:
+		var sim := _failed_rescue(c, kind)
+		if sim == null:
+			return
+		if kind == &"delivery":
+			sim.player.pos = BureauEvents.PICKUP
+			c.ok(sim.interact(), "the real delivery document is picked up despite the separate failed order")
+		sim.damage_enemy(sim.enemies[0], 100000.0, Vector2.ZERO, false)
+		sim.step(0.01, Vector2.ZERO)
+		c.eq(Expedition.unfinished_work(sim)["kind"], kind, "terminal order failure falls through to real unfinished work")
+		c.eq(sim.phase, Sim.Phase.WAVE, "remaining actionable work retains its original window")
+		c.eq(sim.encounter_profile()["id"], &"work", "only actual remaining work keeps the work phase")
+		sim.player.pos = BureauEvents.INBOX if kind == &"delivery" else BureauConfession.TERMINAL_POS
+		c.ok(sim.interact(), "the remaining delivery or inspection completes through its real E target")
+		c.ok(Expedition.unfinished_work(sim).is_empty(), "finished side work removes the last actionable blocker")
+		sim.step(0.01, Vector2.ZERO)
+		c.eq(sim.phase, Sim.Phase.SHOP, "finishing the remaining side work releases finite clear")
+		c.ok(not sim.last_contract_success and sim.last_contract_reward == 0, "side-work completion does not redeem the failed rescue reward")
+
+
+func test_order_pool_follows_completed_natural_encounters(c: Check) -> void:
+	var stages := [1, 2, 3, 4, 8]
+	var pools := [[], [&"repair", &"rescue"], [&"salvage", &"repair", &"rescue"],
+		[&"salvage", &"repair", &"rescue", &"recruit"], Expedition.ORDER_IDS]
+	for index in stages.size():
+		var sim := _sim(stages[index])
+		c.eq(Expedition.offer_ids(sim), pools[index], "orders for the next encounter follow already completed natural threat stages")
+
+
+func test_known_orders_open_early_without_fabricating_current_world_progress(c: Check) -> void:
+	for kind: StringName in Expedition.ORDER_IDS:
+		var sim := _sim()
+		sim.story_progress["clues"] = ["order_" + String(kind)]
+		var before := RunSnapshot.capture(sim)
+		c.eq(Expedition.offer_ids(sim), [kind], "a previously learned order is available in the opening shop")
+		c.eq(RunSnapshot.capture(sim), before, "reading known history never creates progress, changes money or consumes RNG")
+		c.ok(sim.expedition["completed_orders"].is_empty() and sim.active_contract == null, "known facts cannot complete work in this run")
+	var experienced := _sim()
+	experienced.story_progress["clues"] = ["handwriting", "signature", "audit"]
+	c.eq(Expedition.offer_ids(experienced), [&"salvage", &"audit", &"recruit", &"credit"], "natural stage knowledge permits its familiar advanced work")
+	for machine: Dictionary in experienced.expedition["world"]["machines"]:
+		machine["status"] = &"repaired"
+	experienced.story_progress["clues"] = ["order_repair"]
+	c.ok(not Expedition.offer_ids(experienced).has(&"repair"), "knowledge never overrides the actual absence of a repair target")
+
+
+func test_empty_budget_with_accepted_work_reports_work_until_real_completion(c: Check) -> void:
+	var sim := _sim()
+	var order := _order(sim, &"repair")
+	var before := RunSnapshot.capture(sim)
+	var work := Expedition.unfinished_work(sim)
+	c.eq(work["kind"], &"repair", "the remaining task is the actual accepted order")
+	c.eq(work["progress"], 0, "the displayed progress comes from its live mission")
+	c.eq(work["target"], order.target, "the displayed target comes from the accepted order")
+	c.eq(sim.encounter_profile()["id"], &"work", "an empty finite budget cannot falsely announce completion")
+	c.eq(sim.encounter_profile()["work"], work, "the phase and early-clear condition share one authoritative task")
+	c.ok(not sim._encounter_finished(), "unfinished accepted work retains its original window")
+	c.eq(RunSnapshot.capture(sim), before, "work profiles are read-only")
+	sim.expedition["mission"]["progress"] = order.target
+	c.ok(Expedition.unfinished_work(sim).is_empty(), "real objective completion removes its work state")
+	c.eq(sim.encounter_profile()["id"], &"complete", "completion is announced only after the work is actually complete")
+	c.ok(sim._encounter_finished(), "the same completion releases early settlement")
+
+
 func test_twelve_encounters_have_three_distinct_mandatory_bosses(c: Check) -> void:
 	var sim := _sim()
 	c.eq(WaveDirector.FINAL_WAVE, 12, "campaign contains three acts of four encounters")
@@ -166,10 +296,12 @@ func test_negotiation_pauses_until_explicit_decline_releases_protection(c: Check
 	sim._materialize(spawn)
 	sim.damage_enemy(sim.boss, 100000.0, Vector2.ZERO, false)
 	var time := sim.wave_time
+	c.eq(Expedition.unfinished_work(sim)["kind"], &"negotiation", "the real pending boss choice takes precedence over its unfinished recruit order")
 	sim.step(Expedition.NEGOTIATION_TIME + 0.1, Vector2.ZERO)
 	c.eq(sim.wave_time, time, "pending explicit choice freezes the simulation clock")
 	c.ok(sim.choose_negotiation(&"decline"), "decline explicitly resolves the protected choice")
 	c.ok(not Expedition.is_negotiating(sim), "decline ends protection")
+	c.ok(Expedition.unfinished_work(sim).get("kind", &"") != &"negotiation", "an explicitly resolved choice no longer reports pending negotiation")
 	c.ok(sim.boss.dead, "declining resolves the defeated boss")
 	c.ok(not Expedition.order_complete(sim, order), "letting the recruit leave does not earn the recruit reward")
 	c.eq(sim.support_units.size(), 0, "decline creates no free companion")
@@ -210,6 +342,9 @@ func test_accepted_work_keeps_its_original_window_until_complete(c: Check) -> vo
 
 func test_natural_worker_does_not_block_but_taken_delivery_keeps_its_window(c: Check) -> void:
 	var sim := _sim(2)
+	sim.story_progress["clues"] = ["carbon"]
+	sim.start_wave(2)
+	sim._plan.clear()
 	c.ok(sim._encounter_finished(), "an automatically appearing endangered worker is optional")
 	var delivery: Dictionary = sim.expedition["bureau"]["delivery"]
 	c.eq(delivery.get("state"), &"waiting", "the ordinary delivery exists before the player accepts it")
@@ -218,6 +353,8 @@ func test_natural_worker_does_not_block_but_taken_delivery_keeps_its_window(c: C
 			sim.player.pos = item["pos"]
 			c.ok(BureauEvents.interact(sim, item), "taking a real document accepts the delivery")
 	c.ok(not sim._encounter_finished(), "taking the document preserves the remaining delivery window")
+	c.eq(Expedition.unfinished_work(sim)["kind"], &"delivery", "carrying reports the actual remaining delivery")
+	c.eq(sim.encounter_profile()["id"], &"work", "a carried document does not produce a false completed phase")
 	sim.wave_time = sim.wave_duration
 	c.ok(sim._encounter_finished(), "the delivery keeps the original deadline rather than blocking indefinitely")
 	sim.wave_time = 0.0
@@ -230,11 +367,13 @@ func test_natural_worker_does_not_block_but_taken_delivery_keeps_its_window(c: C
 
 func test_signed_inspection_keeps_its_window_until_the_actual_terminal_is_used(c: Check) -> void:
 	var sim := _sim()
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim._end_wave()
 	c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "a real shop signature accepts the upcoming inspection")
 	sim.start_wave(2)
 	sim._plan.clear()
 	c.ok(not sim._encounter_finished(), "an accepted inspection cannot be failed by an early empty-field close")
+	c.eq(Expedition.unfinished_work(sim)["kind"], &"inspection", "a signed unfinished inspection remains visible work")
 	sim.wave_time = sim.wave_duration
 	c.ok(sim._encounter_finished(), "the inspection still has the original finite deadline")
 	sim.wave_time = 0.0

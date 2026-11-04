@@ -669,20 +669,26 @@ func _fill(sim: Sim, keep: Offer = null) -> void:
 	var weapons := 1 if keep != null and keep.is_weapon() else 0
 	var orders := 1 if keep != null and keep.is_contract() else 0
 	var passives := 1 if keep != null and not keep.is_weapon() and not keep.is_contract() else 0
-	while weapons < CATEGORY_COUNT:
+	var order_ids := Expedition.offer_ids(sim)
+	var available_orders := order_ids.size()
+	if keep != null and keep.is_contract() and not order_ids.has(keep.contract.kind):
+		available_orders += 1
+	var order_target := mini(CATEGORY_COUNT, available_orders)
+	var weapon_target := CATEGORY_COUNT + ceili(float(CATEGORY_COUNT - order_target) / 2.0)
+	var passive_target := OFFER_COUNT - order_target - weapon_target
+	while weapons < weapon_target:
 		var offer := _weapon_offer(sim, weapons == 0, rng)
 		if offer == null:
 			break
 		offers.append(offer)
 		weapons += 1
-	while passives < CATEGORY_COUNT:
+	while passives < passive_target:
 		var offer := _item_offer(sim, rng)
 		if offer == null:
 			break
 		offers.append(offer)
 		passives += 1
-	var order_ids := Expedition.offer_ids(sim)
-	while orders < CATEGORY_COUNT:
+	while orders < order_target:
 		var choices: Array[StringName] = []
 		for id: StringName in order_ids:
 			if AnomalyContract.KINDS.has(id) and not _has(StringName("order_" + String(id))):

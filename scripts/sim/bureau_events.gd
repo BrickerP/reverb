@@ -26,8 +26,10 @@ static func initialize(sim: Sim) -> void:
 	sim.expedition["bureau"] = {"delivery": {}, "confessions": [], "retired": [], "work": []}
 
 
-static func forecast(stage: int, endless: bool = false) -> bool:
-	return not endless and DELIVERY_STAGES.has(stage)
+static func forecast(sim: Sim, stage: int) -> bool:
+	if sim.endless or not DELIVERY_STAGES.has(stage):
+		return false
+	return stage != 2 or sim.daily_modifier != &"" or Expedition.knows(sim, &"carbon")
 
 
 static func begin_wave(sim: Sim) -> void:
@@ -38,7 +40,7 @@ static func begin_wave(sim: Sim) -> void:
 		if sim.bank.find_uid(int(row["uid"])) != null:
 			retained.append(row)
 	bureau["work"] = retained
-	if forecast(sim.wave, sim.endless):
+	if forecast(sim, sim.wave):
 		bureau["delivery"] = {"stage": sim.wave, "state": &"waiting", "pickup": PICKUP,
 			"switch": SWITCH, "stamp": STAMP, "inbox": INBOX, "clock": 0.0,
 			"safe_left": 0.0, "strikes": 0, "rewarded": false}

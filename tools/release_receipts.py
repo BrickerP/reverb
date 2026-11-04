@@ -11,7 +11,7 @@ import zipfile
 from fractions import Fraction
 from pathlib import Path
 
-GATES = {"test", "weapon-ui", "paper-feedback", "export-preview", "export-linux", "export-windows"}
+GATES = {"test", "weapon-ui", "paper-feedback", "perception", "export-preview", "export-linux", "export-windows"}
 PACKAGES = {f"TakeStack-{platform}.zip" for platform in ("macos", "windows", "linux")}
 SOURCE_VERSIONS = ("0.17.0", "0.18.0")
 PRESSURE_CASES = ("96_legal_8echo_12support_standard", "96_legal_8echo_12support_reduced")
@@ -283,6 +283,20 @@ def validate_packaged(output: Path, audit_dir: Path) -> None:
                         "packaged Linux binary lost its executable permissions")
 
 
+def validate_perception(evidence: Path, commit: str) -> dict:
+    result = {}
+    for variant in ("journey", "clinic-en", "clinic-zh", "clinic-reduced"):
+        receipt = read_json(evidence / "perception" / variant / "verified.json")
+        require(receipt.get("verified") is True and receipt.get("commit") == commit,
+                "perception evidence source mismatch/failure")
+        require(receipt.get("variant") == variant and receipt.get("catalog_size") == 40,
+                "perception variant/case inventory mismatch")
+        require(receipt.get("human_understanding_verified") is False,
+                "automation cannot certify human comprehension")
+        result[variant] = receipt
+    return result
+
+
 def prepare(args: argparse.Namespace) -> None:
     version = project_version(args.repo)
     audit = read_json(args.audit_dir / "result.json")
@@ -293,6 +307,7 @@ def prepare(args: argparse.Namespace) -> None:
     require(set(gates) == GATES and all(gates[name]["result"] == "success" for name in GATES), "release CI gate failed/missing")
     require(args.run_id.isdigit() and args.run_attempt.isdigit() and re.fullmatch(r"[\w.-]+/[\w.-]+", args.repository), "invalid CI run identity")
     variants = validate_native(args.evidence_dir, args.commit)
+    perception = validate_perception(args.evidence_dir, args.commit)
     perf = validate_performance(args.evidence_dir, args.commit, digest(args.repo / "tools/presentation_stress_probe.gd"))
     compat = validate_save_compat(args.evidence_dir, args.commit, version, digest(args.repo / "tools/release_save_compat.gd"))
     require(compat["0.18.0"]["source_game_commit"] == perf["baseline"]["game_commit"],
@@ -301,7 +316,7 @@ def prepare(args: argparse.Namespace) -> None:
            "url": f"https://github.com/{args.repository}/actions/runs/{args.run_id}/attempts/{args.run_attempt}",
            "source_commit": args.commit, "ref": args.ref, "version": version}
     verification = {"ci": run, "gates": {key: gates[key]["result"] for key in sorted(GATES)},
-                    "native": variants, "save_compatibility": compat, "scope": "automated fixtures and export startup checks; not human playtesting"}
+                    "native": variants, "perception": perception, "save_compatibility": compat, "scope": "automated fixtures and export startup checks; not human playtesting"}
     for name, value in (("AUDIT.json", audit), ("VERIFICATION.json", verification), ("PERFORMANCE.json", {"ci": run, **perf})):
         (args.out / name).write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     shutil.copyfile(args.evidence_dir / "normal/paper_action.mp4", args.out / "TakeStack-Paper-Actions-Demo.mp4")

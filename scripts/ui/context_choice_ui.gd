@@ -18,6 +18,8 @@ var _error: Label
 var _rows: VBoxContainer
 var _scroll: ScrollContainer
 var _last_focus: Button
+var outcome_previews: Array[ExitOutcomePortrait] = []
+var _source: Sim
 
 
 func _ready() -> void:
@@ -74,7 +76,8 @@ func _ready() -> void:
 	visible = false
 
 
-func open_context(title_key: String, body_key: String, choices: Array[Dictionary], allow_save: bool) -> void:
+func open_context(title_key: String, body_key: String, choices: Array[Dictionary], allow_save: bool, source: Sim = null) -> void:
+	_source = source
 	_title.text = Loc.t(title_key)
 	_title.add_theme_font_override("font", UiTheme.title_font(_title.text))
 	_body.text = Loc.t(body_key)
@@ -82,7 +85,9 @@ func open_context(title_key: String, body_key: String, choices: Array[Dictionary
 	_error.visible = false
 	UiTheme.clear(_rows)
 	choice_buttons.clear()
+	outcome_previews.clear()
 	_last_focus = null
+	_scroll.scroll_vertical = 0
 	for index in mini(MAX_CHOICES, choices.size()):
 		_add_choice(choices[index])
 	save_button.text = Loc.t("context.save")
@@ -112,11 +117,24 @@ func _add_choice(row: Dictionary) -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiTheme.paper_panel(UiTheme.CARD))
 	_rows.add_child(panel)
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 12)
+	panel.add_child(line)
+	var outcome := ExitOutcomePortrait.profile(_source, StringName(row.get("id", &"")))
+	if not outcome.is_empty():
+		var portrait := ExitOutcomePortrait.new()
+		portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		portrait.setup(outcome)
+		line.add_child(portrait)
+		outcome_previews.append(portrait)
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 3)
-	panel.add_child(content)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(content)
 	var name_text := Loc.t(str(row.get("name_key", "")))
 	var description := Loc.t(str(row.get("description_key", "")))
+	if not outcome.is_empty():
+		description = ExitOutcomePortrait.describe(outcome)
 	var cost := Loc.t("context.cost", [maxi(0, int(row.get("cost", 0)))])
 	var reason_key := str(row.get("reason_key", ""))
 	var reason := Loc.t(reason_key) if not reason_key.is_empty() else Loc.t("context.available")
@@ -129,7 +147,9 @@ func _add_choice(row: Dictionary) -> void:
 	button.accessibility_name = name_text
 	button.accessibility_description = " · ".join([description, cost, reason])
 	button.tooltip_text = button.accessibility_description
-	button.pressed.connect(func() -> void: chosen.emit(StringName(row.get("id", &""))))
+	button.pressed.connect(func() -> void:
+		if visible and not button.disabled and choice_buttons.has(button):
+			chosen.emit(StringName(row.get("id", &""))))
 	button.focus_entered.connect(func() -> void: _last_focus = button)
 	content.add_child(button)
 	choice_buttons.append(button)
@@ -155,6 +175,12 @@ func focus_default() -> void:
 func reset() -> void:
 	visible = false
 	_last_focus = null
+	_source = null
+	_error.text = ""
+	_error.visible = false
+	for portrait: ExitOutcomePortrait in outcome_previews:
+		portrait.clear()
+	outcome_previews.clear()
 
 
 func close() -> void:

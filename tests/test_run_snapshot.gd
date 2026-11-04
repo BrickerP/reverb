@@ -116,6 +116,108 @@ func test_battle_roundtrip_preserves_all_state_aliases_and_int64_rng(c: Check) -
 	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "continued battle matches exactly")
 
 
+func test_long_boss_recording_resumes_rolling_window_and_replays_after_settlement(c: Check) -> void:
+	var sim := Sim.new(972)
+	sim.start_run()
+	sim.start_wave(4)
+	sim._plan_idx = sim._plan.size()
+	# A canonical weapon without knockback keeps automatic shots in range throughout the fight.
+	sim.player.weapons[0] = Content.weapon(&"ink_bottle")
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"foreman")
+	arrival.pos = sim.player.pos + Vector2(180.0, 0.0)
+	c.ok(sim._materialize(arrival), "long recording uses an actual admitted campaign boss")
+	if sim.boss == null:
+		return
+	sim.boss.hp = 1000000.0
+	sim.boss.max_hp = 1000000.0
+	sim.boss.damage = 0.0
+	sim.boss.speed = 0.0
+	var boss_position := sim.boss.pos
+	var recording_start := sim.player.pos
+	var window_start := recording_start
+	var dt := 1.0 / 30.0
+	var directions: Array[Vector2] = [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]
+	for frame in 2700:
+		sim.step(dt, directions[floori(float(frame) / 17.0) % directions.size()])
+		if frame == 899:
+			window_start = sim.player.pos
+	c.eq(sim.phase, Sim.Phase.WAVE, "living boss keeps actual combat running beyond the timed encounter")
+	c.near(sim.wave_time, 90.0, 0.000001, "regression runs past the observed 86-second failure")
+	c.eq(sim.recorder.samples.size(), EchoTake.MAX_SAMPLES, "live long-fight recording retains one bounded window")
+	c.eq(sim.recorder.samples[0], window_start, "retained route starts at the actual position sixty seconds ago")
+	c.ok(window_start.distance_to(recording_start) > 1.0, "rolling window discards a visibly different opening route")
+	c.ok(not sim.recorder.work_actions.is_empty(), "automatic weapon signatures remain in the rolling recording")
+	c.ok(EchoWork.validate_actions(sim.recorder.work_actions, sim.recorder.get("_elapsed")), "rolling signature times satisfy the production action rules")
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(_json_roundtrip(before))
+	c.ok(restored != null, "ninety-second live recording strictly restores: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "rolled samples, actions, fractional clock and actual combat state restore exactly")
+	var previous_start := restored.recorder.samples[0]
+	for frame in 120:
+		var direction := directions[floori(float(2700 + frame) / 17.0) % directions.size()]
+		sim.step(dt, direction)
+		restored.step(dt, direction)
+	c.eq(restored.recorder.samples.size(), EchoTake.MAX_SAMPLES, "continued recording remains bounded after load")
+	c.ok(restored.recorder.samples[0].distance_to(previous_start) > 1.0, "loaded recorder continues advancing its retained route")
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "continued long-boss combat and recording match without resetting either clock")
+	for candidate: Sim in [sim, restored]:
+		candidate.damage_enemy(candidate.boss, candidate.boss.hp + 1.0, Vector2.ZERO, false)
+		candidate.step(dt, Vector2.ZERO)
+	c.eq(restored.phase, Sim.Phase.SHOP, "actual boss death settles the long encounter through the production path")
+	c.eq(restored.bank.takes.size(), 1, "long encounter produces one stored recording")
+	if restored.bank.takes.is_empty():
+		return
+	var take := restored.bank.takes[0]
+	c.eq(take.samples.size(), EchoTake.MAX_SAMPLES, "finished bank copy obeys the same route bound")
+	c.near(take.duration(), 60.0, 0.000001, "finished copy replays the most recent sixty seconds")
+	c.ok(not take.work_actions.is_empty() and EchoWork.validate_actions(take.work_actions, take.duration()), "finished rolling signatures remain valid for actual playback")
+	c.eq(RunSnapshot.capture(restored), RunSnapshot.capture(sim), "live and resumed boss death produce identical bank, shop and settlement state")
+	var shop_before := RunSnapshot.capture(restored)
+	var loaded := RunSnapshot.restore(_json_roundtrip(shop_before))
+	c.ok(loaded != null, "long-fight bank and shop strictly restore: %s" % RunSnapshot.last_error)
+	if loaded == null:
+		return
+	c.eq(RunSnapshot.capture(loaded), shop_before, "shop reload preserves the entire rolling copy without truncating it again")
+	for candidate: Sim in [sim, loaded]:
+		candidate.start_wave(5)
+		candidate._plan_idx = candidate._plan.size()
+		var target := PendingSpawn.new()
+		target.def = Content.enemy(&"foreman")
+		target.pos = boss_position
+		c.ok(candidate._materialize(target), "replay encounter retains a real target for the recorded signature")
+		if candidate.boss == null:
+			return
+		candidate.boss.hp = 1000000.0
+		candidate.boss.max_hp = 1000000.0
+		candidate.boss.damage = 0.0
+		candidate.boss.speed = 0.0
+	c.eq(loaded.echoes.size(), 1, "restored rolling copy deploys through the normal next-wave path")
+	if loaded.echoes.is_empty() or loaded.bank.takes[0].work_actions.is_empty():
+		return
+	c.ok(loaded.echoes[0].take == loaded.bank.takes[0], "replaying actor uses the restored bank copy itself")
+	var first_work := float(loaded.bank.takes[0].work_actions[0]["time"])
+	c.ok(first_work < loaded.wave_duration, "retained signature can execute in the actual next encounter")
+	var replay_events: Array[Dictionary] = []
+	loaded.echo_work_performed.connect(func(info: Dictionary) -> void: replay_events.append(info.duplicate(true)))
+	for frame in ceili((first_work + 0.2) / dt):
+		var direction := directions[floori(float(frame) / 17.0) % directions.size()]
+		sim.step(dt, direction)
+		loaded.step(dt, direction)
+	c.ok(not replay_events.is_empty(), "rolled signature actually crosses its rebased playback time")
+	if not replay_events.is_empty():
+		c.ok(replay_events[0]["success"], "rebased signature executes against the actual encounter target")
+	c.ok(not loaded.echoes.is_empty() and loaded.echoes[0].work_cursor > 0, "normal playback advances the restored copy's work cursor")
+	c.eq(RunSnapshot.capture(loaded), RunSnapshot.capture(sim), "restored route, work cursor, wear and next-encounter combat continue identically")
+	var replay_before := RunSnapshot.capture(loaded)
+	var replay_restored := RunSnapshot.restore(_json_roundtrip(replay_before))
+	c.ok(replay_restored != null, "consumed rolling work and new live recording strictly restore: %s" % RunSnapshot.last_error)
+	if replay_restored != null:
+		c.eq(RunSnapshot.capture(replay_restored), replay_before, "post-playback save retains the exact consumed cursor and current combat")
+
+
 func test_cleared_cohort_breather_resumes_with_exact_remaining_wait(c: Check) -> void:
 	var sim := _cleared_first_cohort()
 	var deadline := sim.wave_duration

@@ -17,7 +17,7 @@ Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your 
 - **Read the terms before signing.** Build from 35 weapons, matching-weapon assembly, family evolution branches and work orders. Repaired machines and rescued workers carry forward through the expedition.
 - **Sign your own last page.** Three acts, twelve encounters and three distinct bosses. Leave alone, leave with your colleagues, or take over the bureau. Debt does not choose the ending for you.
 
-0.19.0 draws each Echo’s next steps as cutting dashes on the floor. Clear the finite assault to clock out early, with distinct sound and paper reactions for key combat events.
+0.19.1 gives unfamiliar results time to land, then quiets familiar repeats and introduces advanced work when its terms matter. Assembly, evolution and Echo binding show real changes while Undo remains immediate; long Boss recordings retain the latest 60 seconds, while failed work and duplicate-weapon Undo resolve against the actual state.
 
 [Explore the game](https://brickerp.github.io/reverb/) · [Release notes and in-game footage](https://github.com/BrickerP/reverb/releases/latest)
 
@@ -31,25 +31,25 @@ Take Stack is a hand-drawn, auto-firing roguelite about fighting alongside your 
 
 Download the ZIP for your platform, extract it, and run the game. The macOS build is ad-hoc signed and is not notarized; follow the included `MAC_START_HERE.txt` on first launch. Windows builds are unsigned and may show a system prompt.
 
-Version 0.19.0 can continue 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7, 0.18.8 and 0.18.9 suspended runs. Earlier suspended-run formats require a new run; permanent role unlocks, settings and saved Echo archives remain.
+Version 0.19.1 can continue 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7, 0.18.8, 0.18.9 and 0.19.0 suspended runs. Earlier suspended-run formats require a new run; permanent role unlocks, settings and saved Echo archives remain.
 
 </details>
 
 <details>
 <summary>Run from source</summary>
 
-Use **Godot 4.7.2**. These commands check out the source corresponding to the public 0.19.0 release:
+Use **Godot 4.7.2**. These commands check out the source corresponding to the public 0.19.1 release:
 
 ```bash
-git clone --branch v0.19.0 https://github.com/BrickerP/reverb.git
+git clone --branch v0.19.1 https://github.com/BrickerP/reverb.git
 cd reverb
 make run
 ```
 
 You can also open `project.godot` in Godot and press F5. Use `make run-zh` for Chinese.
 
-[Gameplay interfaces](https://github.com/BrickerP/reverb/blob/v0.19.0/INTERFACES.md) · [Art direction](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/art-direction.md) · [Validation scope](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/closeout-acceptance.md)
+[Gameplay interfaces](https://github.com/BrickerP/reverb/blob/v0.19.1/INTERFACES.md) · [Art direction](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/art-direction.md) · [Validation scope](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/closeout-acceptance.md)
 
 </details>
 
-Code and docs are [MIT licensed](LICENSE). See the [art direction](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/art-direction.md) and [third-party notices](THIRD_PARTY.md) for artwork provenance, audio sources and bundled font licenses.
+Code and docs are [MIT licensed](LICENSE). See the [art direction](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/art-direction.md) and [third-party notices](THIRD_PARTY.md) for artwork provenance, audio sources and bundled font licenses.

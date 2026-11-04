@@ -91,6 +91,7 @@ func test_evolution_requires_explicit_authored_branch_and_undoes_exactly(c: Chec
 
 func test_six_offer_mix_guarantees_real_equipment_and_two_distinct_orders_at_full_capacity(c: Check) -> void:
 	var sim := _sim()
+	StoryLedger.seed_known(sim, [&"order_salvage", &"order_audit", &"order_repair", &"order_rescue", &"order_recruit", &"order_credit"])
 	while sim.player.weapons.size() < Content.MAX_WEAPON_SLOTS:
 		sim.player.add_weapon(Content.weapon(&"pistol"))
 	for wave in [1, 5, 10, 11]:

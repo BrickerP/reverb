@@ -1,6 +1,8 @@
 class_name Hud
 extends Control
 
+signal familiarity_confirmed(action: StringName)
+
 const WIDTH := 1280.0
 const BAR_H := 72.0
 const SLOT_Y := 688.0
@@ -24,9 +26,13 @@ var _prev_cd: Array[float] = []
 var _flash: Array[float] = []
 var _prev_materials := 0
 var _mat_pulse := 0.0
-var _hint_time := 0.0
 var _last_combo: StringName = &""
 var _combo_left := 0.0
+var _combo_gate := 0.0
+var _combo_read_left := 0.0
+var _combo_pending: StringName = &""
+var _seen_combos: Dictionary = {}
+var _familiar_actions: Array[StringName] = []
 var _safe_workers := 0
 var _faults := 0
 var _causal_status := ""
@@ -58,9 +64,12 @@ func bind(s: Sim) -> void:
 		_flash.append(0.0)
 	_prev_materials = s.player.materials
 	_mat_pulse = 0.0
-	_hint_time = 0.0
 	_last_combo = &""
 	_combo_left = 0.0
+	_combo_gate = 0.0
+	_combo_read_left = 0.0
+	_combo_pending = &""
+	_seen_combos.clear()
 	_visual_time = 0.0
 
 
@@ -75,9 +84,12 @@ func unbind() -> void:
 	_flash.clear()
 	_prev_materials = 0
 	_mat_pulse = 0.0
-	_hint_time = 0.0
 	_last_combo = &""
 	_combo_left = 0.0
+	_combo_gate = 0.0
+	_combo_read_left = 0.0
+	_combo_pending = &""
+	_seen_combos.clear()
 	_visual_time = 0.0
 	queue_redraw()
 
@@ -129,17 +141,18 @@ func echo_remaining(take: EchoTake) -> int:
 
 
 # First minutes of a run; fades out on its own so it never becomes UI noise.
-func hint_alpha() -> float:
-	if sim == null or sim.wave != 1 or sim.phase != Sim.Phase.WAVE:
-		return 0.0
-	return clampf(1.0 - maxf(0.0, _hint_time - 4.0) / 1.5, 0.0, 1.0)
-
-
 func _process(delta: float) -> void:
 	if sim == null or paused:
 		return
 	_visual_time += delta
 	_combo_left = maxf(0.0, _combo_left - delta)
+	_combo_gate = maxf(0.0, _combo_gate - delta)
+	if _combo_pending != &"" and _combo_left > 0.0:
+		_combo_read_left = maxf(0.0, _combo_read_left - delta)
+		if _combo_read_left <= 0.0:
+			var confirmed := _combo_pending
+			_combo_pending = &""
+			familiarity_confirmed.emit(confirmed)
 	var ratio := clampf(sim.player.hp / maxf(1.0, sim.player.max_hp()), 0.0, 1.0)
 	if ratio < 0.3 and ratio < _last_health_ratio and not reduced_effects:
 		_critical_poke = 1.0
@@ -153,8 +166,6 @@ func _process(delta: float) -> void:
 		_mat_pulse = 1.0
 	_prev_materials = sim.player.materials
 	_mat_pulse = maxf(0.0, _mat_pulse - delta * 2.5)
-	if sim.wave == 1 and sim.phase == Sim.Phase.WAVE:
-		_hint_time += delta
 	while _prev_cd.size() < sim.player.weapons.size():
 		_prev_cd.append(0.0)
 		_flash.append(0.0)
@@ -186,7 +197,6 @@ func _draw() -> void:
 	_draw_weapons()
 	_draw_controls()
 	_draw_expedition()
-	_draw_onboarding()
 	if debug:
 		_draw_debug()
 
@@ -333,9 +343,7 @@ func _draw_wave() -> void:
 	if is_compact():
 		var mission: Dictionary = sim.expedition.get("mission", {})
 		var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
-		var objective := Loc.t("order.%s.short" % kind)
-		if int(status.target) > 0:
-			objective += " %d/%d" % [status.progress, status.target]
+		var objective := objective_text()
 		if boss_wave:
 			objective = Loc.t("hud.act", [status.act, posmod(sim.wave - 1, 4) + 1]) + " · " + objective
 		else:
@@ -369,9 +377,7 @@ func _draw_wave_phase() -> void:
 	_stock(&"phase_tag", UiTheme.PAPER, InkStyleBox.Shape.TAG, 9).draw(get_canvas_item(), rect)
 	var mission: Dictionary = sim.expedition.get("mission", {})
 	var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
-	var label := Loc.t("order.%s.short" % kind)
-	if int(status.target) > 0:
-		label += "  %d/%d" % [status.progress, status.target]
+	var label := objective_text()
 	_text(Loc.t(str(wave_phase_profile()["name_key"])), Vector2(rect.position.x + 10.0, rect.position.y + 14.0),
 			11, UiTheme.DIM, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 20.0)
 	_text(label, Vector2(rect.position.x + 10.0, rect.position.y + 30.0),
@@ -471,10 +477,18 @@ func _input(event: InputEvent) -> void:
 
 
 func set_combo_feedback(info: ComboInfo) -> void:
-	if info == null:
+	if info == null or info.affected <= 0:
 		return
+	var action := StringName("combo_" + String(info.id))
+	var familiar := _familiar_actions.has(action) or _seen_combos.has(info.id)
+	if familiar and _combo_gate > 0.0:
+		return
+	_seen_combos[info.id] = true
 	_last_combo = info.id
-	_combo_left = 2.5
+	_combo_left = 0.85 if familiar else 2.0
+	_combo_gate = 8.0
+	_combo_pending = &"" if familiar else action
+	_combo_read_left = 0.70 if not familiar else 0.0
 	queue_redraw()
 
 
@@ -507,7 +521,7 @@ func _draw_controls() -> void:
 		_stock(&"retirement_hint", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 2).draw(get_canvas_item(), stock)
 		var status := Loc.t("echo.route", [profile.seconds])
 		var action := Loc.t("echo.selected", [profile.uid, int(ceil(profile.condition))])
-		if float(profile.condition) < 40.0 and sim.can_retire_echo():
+		if (float(profile.condition) < 40.0 or retirement_discovery()) and sim.can_retire_echo():
 			action = Loc.t("echo.compact_input", [Controls.retire_label()])
 		elif not sim.can_retire_echo():
 			action = Loc.t("echo.cooldown", [maxf(0.0, sim.retire_cooldown)])
@@ -538,30 +552,7 @@ func _draw_controls() -> void:
 		_text(Loc.t("hud.pause"), controls.position + Vector2(16.0 + _keycap_width(key, 14), 21.0), 14, UiTheme.DIM, HORIZONTAL_ALIGNMENT_LEFT, controls.size.x - _keycap_width(key, 14) - 24.0)
 
 
-func _draw_onboarding() -> void:
-	return
-	var alpha := hint_alpha()
-	if alpha <= 0.0:
-		return
-	var extent := canvas_size()
-	var panel := Rect2((extent.x - 380.0) * 0.5, WorldArena.display_viewport(extent).end.y - (96.0 if is_compact() else 144.0), 380.0, 48.0)
-	var stock := _stock(&"onboarding", ArenaPainter.PAPER, InkStyleBox.Shape.TAG, 3)
-	stock.bg_color = Color(ArenaPainter.PAPER, alpha)
-	stock.border_color = Color(ArenaPainter.INK, alpha)
-	stock.draw(get_canvas_item(), panel)
-	var size := 16
-	var x := panel.position.x + 18.0
-	_keycap(Controls.move_label(), Vector2(x, panel.position.y + 14.0), size, alpha)
-	x += _keycap_width(Controls.move_label(), size) + 8.0
-	_text(Loc.t("hud.move"), Vector2(x, panel.position.y + 29.0), size, Color(UiTheme.DIM, alpha))
-	x += UiTheme.font().get_string_size(Loc.t("hud.move"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, size).x + 22.0
-	# A small burst glyph reads as "this happens by itself".
-	var c := Vector2(x + 8.0, panel.position.y + 24.0)
-	for k in 6:
-		var dir := Vector2.from_angle(TAU * float(k) / 6.0)
-		draw_line(c + dir * 4.0, c + dir * 9.0, Color(UiTheme.COIN, alpha), 2.0)
-	draw_circle(c, 3.0, Color(UiTheme.COIN, alpha))
-	_text(Loc.t("hud.auto_fire"), Vector2(x + 24.0, panel.position.y + 29.0), size, Color(UiTheme.INK, alpha))
+
 
 
 func _draw_debug() -> void:
@@ -673,7 +664,9 @@ func _draw_expedition() -> void:
 		return
 	var skill_rect: Rect2 = layout_regions().ability
 	if sim.wave > 1 or sim.endless:
-		_stock(&"ability_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6).draw(get_canvas_item(), skill_rect)
+		var ability_stock := _stock(&"ability_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 6)
+		ability_stock.border_color = UiTheme.ACCENT if skill_discovery() and CharacterSkills.is_charged(sim) else UiTheme.INK
+		ability_stock.draw(get_canvas_item(), skill_rect)
 		var skill_name := Loc.t("ability.%s.name" % sim.character_id)
 		var skill_text := Loc.t("hud.skill", [Controls.skill_label(), skill_name, roundi(sim.character_energy)])
 		if sim.character_cooldown > 0.0:
@@ -687,7 +680,7 @@ func _draw_expedition() -> void:
 	var holding_result := sim.action_notice_key != &"" and sim.wave_time < sim.action_notice_until
 	if holding_result:
 		interaction = {}
-	var teach_move := sim.wave == 1 and sim.wave_travel < 140.0 and interaction.is_empty()
+	var teach_move := movement_discovery()
 	if is_compact() or selected_echo_profile().is_empty() or not interaction.is_empty() or holding_result or teach_move:
 		var hint_rect: Rect2 = layout_regions().interaction
 		_stock(&"interaction_stock", UiTheme.PAPER, InkStyleBox.Shape.TAG, 8).draw(get_canvas_item(), hint_rect)
@@ -721,3 +714,47 @@ func _draw_expedition() -> void:
 			_text(condition, hint_rect.position + Vector2(10.0, 29.0), 12, UiTheme.WARN, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
 		else:
 			_text(hint, hint_rect.position + Vector2(10.0, 23.0), 13, UiTheme.INK, HORIZONTAL_ALIGNMENT_LEFT, hint_rect.size.x - 20.0)
+
+
+func set_familiar_actions(actions: Array[StringName]) -> void:
+	_familiar_actions = ExperienceHints.normalize(actions)
+
+
+func retirement_discovery() -> bool:
+	return sim != null and sim.phase == Sim.Phase.WAVE and sim.wave >= 3 \
+		and sim.retirements == 0 and not _familiar_actions.has(&"retire") \
+		and EchoSystem.selected_actor(sim) != null
+
+
+func skill_discovery() -> bool:
+	return sim != null and sim.phase == Sim.Phase.WAVE and sim.wave >= 2 \
+		and not _familiar_actions.has(StringName("skill_" + String(sim.character_id)))
+
+
+func objective_text() -> String:
+	if sim == null:
+		return ""
+	var work := Expedition.unfinished_work(sim)
+	if not work.is_empty():
+		var label := Loc.t(str(work["name_key"]))
+		if int(work.get("target", 0)) > 0:
+			label += " %d/%d" % [work.get("progress", 0), work["target"]]
+		return label
+	var status := Expedition.status(sim)
+	var mission: Dictionary = sim.expedition.get("mission", {})
+	var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
+	var label := Loc.t("order.%s.short" % kind)
+	if kind != "survive" and int(status.target) > 0:
+		label += " %d/%d" % [status.progress, status.target]
+	return label
+
+
+func perception_profile() -> Dictionary:
+	return {"combo": _last_combo, "combo_left": _combo_left, "combo_gate": _combo_gate,
+		"combo_pending": _combo_pending, "skill_discovery": skill_discovery(),
+		"retirement_discovery": retirement_discovery(), "objective": objective_text()}
+
+
+func movement_discovery() -> bool:
+	return sim != null and sim.phase == Sim.Phase.WAVE and sim.wave == 1 \
+		and sim.wave_travel < 140.0 and not StoryLedger.discovered(sim).has(&"carbon")

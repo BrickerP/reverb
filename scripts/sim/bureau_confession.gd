@@ -29,7 +29,10 @@ static func profile(sim: Sim) -> Dictionary:
 			chosen = row["choice"]
 			signed = row
 	var take := _truth_take(sim)
-	var result := {"act": act, "available": sim.phase == Sim.Phase.SHOP and not sim.endless and act <= 3 and chosen == &"",
+	var familiar := sim.daily_modifier != &"" or Expedition.knows(sim, &"carbon") \
+		or Expedition.knows(sim, &"confession_truth") or Expedition.knows(sim, &"confession_polish")
+	var result := {"act": act, "introduced": familiar or not _rows(sim).is_empty(),
+		"available": familiar and sim.phase == Sim.Phase.SHOP and not sim.endless and act <= 3 and chosen == &"",
 		"chosen": chosen, "truth_kind": &"echo" if take != null else &"health",
 		"truth_uid": take.uid if take != null else 0,
 		"truth_amount": minf(REPAIR, 100.0 - take.condition) if take != null else minf(HEAL, maxf(0.0, sim.player.max_hp() - sim.player.hp)),
@@ -46,6 +49,8 @@ static func profile(sim: Sim) -> Dictionary:
 
 static func options(sim: Sim) -> Array[Dictionary]:
 	var p := profile(sim)
+	if not p["introduced"]:
+		return []
 	var reason := "" if p["available"] else ("confession.reason.used" if p["chosen"] != &"" else "confession.reason.unavailable")
 	var result: Array[Dictionary] = []
 	for choice: StringName in CHOICES:

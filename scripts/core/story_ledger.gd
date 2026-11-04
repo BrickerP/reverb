@@ -16,6 +16,19 @@ const ALL: Array[StringName] = [
 const WAVES := {2: &"carbon", 4: &"handwriting", 6: &"duplicate", 8: &"audit", 10: &"tomorrow"}
 
 
+static func seed_known(sim: Sim, known: Array[StringName]) -> void:
+	if sim == null:
+		return
+	# Known discoveries carry between shifts. Receipts, current choices and
+	# world outcomes do not: a past rescue is never a living worker in this run.
+	var clues: Array = sim.story_progress.get("clues", [])
+	for id: StringName in known:
+		if ALL.has(id) and not clues.has(id) and not clues.has(String(id)):
+			clues.append(String(id))
+	if not clues.is_empty():
+		sim.story_progress["clues"] = clues
+
+
 static func on_wave(sim: Sim) -> void:
 	var progress := _progress(sim)
 	var wave_key := "wave_%d" % sim.wave

@@ -259,6 +259,7 @@ func test_modal_blocks_new_battle_inputs_and_restores_pause_focus(c: Check) -> v
 
 func test_main_ui_save_and_continue_retain_new_role_support_order_and_debt_state(c: Check) -> void:
 	var main := _main()
+	main.meta.story_clues.append(&"order_credit")
 	_shop_after_recording(main, &"mender")
 	main.sim.player.materials = 500
 	main.shop_ui.refresh()

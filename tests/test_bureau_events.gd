@@ -3,6 +3,8 @@ extends RefCounted
 
 func _sim(stage: int = 2, role: StringName = &"looper") -> Sim:
 	var sim := Sim.new(17017)
+	# These apparatus fixtures exercise a route the player already knows.
+	sim.story_progress["clues"] = ["carbon"]
 	Content.character(role).apply(sim)
 	sim.start_run()
 	if stage != 1:
@@ -65,7 +67,7 @@ func test_scheduled_optional_delivery_has_body_clear_targets_and_pure_profile(c:
 		c.eq(not sim.expedition["bureau"]["delivery"].is_empty(), expected, "one declared event on the second encounter of each act")
 		var before := RunSnapshot.capture(sim)
 		BureauEvents.profile(sim)
-		BureauEvents.forecast(stage)
+		BureauEvents.forecast(sim, stage)
 		c.eq(RunSnapshot.capture(sim), before, "read-only forecast and art cannot alter the world or RNG")
 		c.ok(Expedition.validate_state(sim), "current event graph validates at stage%d" % stage)
 	for point in [BureauEvents.PICKUP, BureauEvents.SWITCH, BureauEvents.STAMP, BureauEvents.INBOX]:
@@ -75,6 +77,44 @@ func test_scheduled_optional_delivery_has_body_clear_targets_and_pure_profile(c:
 	endless.choose_exit(&"takeover")
 	endless.begin_endless()
 	c.ok(endless.expedition["bureau"]["delivery"].is_empty(), "endless does not accumulate delivery apparatus")
+
+
+func test_first_echo_encounter_defers_new_delivery_but_known_and_daily_routes_remain(c: Check) -> void:
+	var fresh := Sim.new(17017)
+	fresh.start_run()
+	fresh.start_wave(2)
+	c.ok(not BureauEvents.forecast(fresh, 2), "a first encounter with Echo does not also introduce delivery")
+	c.ok(fresh.expedition["bureau"]["delivery"].is_empty(), "the quiet opening forecast controls actual apparatus creation")
+	for item: Dictionary in fresh.interactables:
+		c.ok(not BureauEvents.TARGETS.has(item["id"]), "a deferred route leaves no orphan pickup or inbox")
+	fresh.start_wave(6)
+	c.ok(not fresh.expedition["bureau"]["delivery"].is_empty(), "the first unfamiliar delivery still appears on the later natural schedule")
+	var known := _sim(2)
+	c.ok(BureauEvents.forecast(known, 2), "a player who already knows Echo keeps the opening route")
+	var daily := Sim.new(17017)
+	daily.daily_modifier = DailyAnomaly.FORTUNE
+	daily.start_run()
+	daily.start_wave(2)
+	var before := RunSnapshot.capture(daily)
+	c.ok(BureauEvents.forecast(daily, 2), "Daily opening delivery never depends on account knowledge")
+	c.eq(RunSnapshot.capture(daily), before, "the Daily forecast does not mutate the world or either RNG")
+	c.ok(not daily.expedition["bureau"]["delivery"].is_empty(), "the Daily forecast and actual route agree")
+
+
+func test_existing_opening_delivery_remains_valid_without_known_clues(c: Check) -> void:
+	var sim := _sim(2)
+	c.ok(_at(sim, BureauEvents.PICKUP_ID), "a real opening delivery is already in progress")
+	sim.story_progress["clues"] = []
+	c.ok(not BureauEvents.forecast(sim, 2), "a fresh forecast would now defer its creation")
+	c.ok(Expedition.validate_state(sim), "new exposure rules never invalidate an existing route")
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(before)
+	c.ok(restored != null, "an existing 0.19 opening delivery still restores: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "resume preserves the original carried document and exact state")
+	c.ok(_at(restored, BureauEvents.INBOX_ID), "the restored document can finish through its real inbox")
+	c.ok(Expedition.unfinished_work(restored).is_empty(), "successful delivery clears the shared work state")
 
 
 func test_actual_pickup_and_delivery_reward_exactly_once_without_requiring_order(c: Check) -> void:

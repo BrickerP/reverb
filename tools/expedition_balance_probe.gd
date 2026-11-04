@@ -76,8 +76,9 @@ static func branch_tradeoffs() -> Array[Dictionary]:
 
 
 static func funding_sample(stage: int, seed_value: int, held_grade: int = 0,
-		role: StringName = &"looper") -> Dictionary:
+		role: StringName = &"looper", known_clues: Array[StringName] = []) -> Dictionary:
 	var sim := Sim.new(seed_value)
+	StoryLedger.seed_known(sim, known_clues)
 	Content.character(role).apply(sim)
 	sim.daily_modifier = &""
 	sim.start_run()

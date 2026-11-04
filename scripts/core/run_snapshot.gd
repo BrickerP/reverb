@@ -514,7 +514,7 @@ func _validate_objects() -> bool:
 					or object.weapons.is_empty() or object.samples.is_empty() \
 					or not _loadout_valid(object.weapons, object.levels, true) \
 					or not _echo_metadata_valid(object.inherited_skill, object.merge_trait) \
-					or object.samples.size() > EchoArchive.MAX_SAMPLES \
+					or object.samples.size() > EchoTake.MAX_SAMPLES \
 					or not EchoWork.validate_actions(object.work_actions, object.duration()):
 				return false
 		if object is PlayerState:
@@ -552,8 +552,8 @@ func _recorder_valid(recorder: EchoRecorder) -> bool:
 	var accumulator: float = recorder.get("_acc")
 	var elapsed: float = recorder.get("_elapsed")
 	if not _bounded_number(accumulator, 0.0, EchoTake.SAMPLE_DT) or accumulator >= EchoTake.SAMPLE_DT \
-			or not _bounded_number(elapsed, 0.0, float(EchoArchive.MAX_SAMPLES) * EchoTake.SAMPLE_DT) \
-			or recorder.samples.size() > EchoArchive.MAX_SAMPLES \
+			or not _bounded_number(elapsed, 0.0, float(EchoTake.MAX_SAMPLES) * EchoTake.SAMPLE_DT) \
+			or recorder.samples.size() > EchoTake.MAX_SAMPLES \
 			or not EchoWork.validate_actions(recorder.work_actions, elapsed):
 		return false
 	if recorder.samples.is_empty():
@@ -700,7 +700,7 @@ func _undo_valid(state: ShopState) -> bool:
 		if entry.uid <= 0 or echo_ids.has(entry.uid) or state.next_echo_uid <= entry.uid \
 				or entry.condition < 0.0 or entry.condition > 100.0 or entry.tint < 0 or state.tint_counter <= entry.tint \
 				or (not entry.levels.is_empty() and entry.weapons.size() != entry.levels.size()) \
-				or entry.weapons.size() > Content.MAX_WEAPON_SLOTS or entry.samples.size() > EchoArchive.MAX_SAMPLES \
+				or entry.weapons.size() > Content.MAX_WEAPON_SLOTS or entry.samples.size() > EchoTake.MAX_SAMPLES \
 				or not _stats_valid(entry.stats) or not _echo_metadata_valid(entry.inherited_skill, entry.merge_trait) \
 				or not EchoWork.validate_actions(entry.work_actions, maxf(0.0, float(entry.samples.size() - 1) * EchoTake.SAMPLE_DT)):
 			return false

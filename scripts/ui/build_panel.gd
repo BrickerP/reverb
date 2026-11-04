@@ -248,6 +248,7 @@ func _weapon_card(w: WeaponDef, level: int, index: int, _pl: PlayerState, sim: S
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		select.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var face := VBoxContainer.new()
+	face.name = "WeaponFace"
 	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_theme_constant_override("separation", 2)
 	var art_row := HBoxContainer.new()

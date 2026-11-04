@@ -93,6 +93,8 @@ func test_merge_preview_keeps_uid_and_host_route_until_confirmation(c: Check) ->
 
 func test_work_order_cards_buy_replace_confirm_and_undo(c: Check) -> void:
 	var sim := _sim()
+	StoryLedger.seed_known(sim, [&"order_repair", &"order_rescue"])
+	sim.shop.roll(sim)
 	var ui := _open(sim)
 	var orders: Array[int] = []
 	for index in sim.shop.offers.size():
@@ -131,7 +133,7 @@ func test_evolution_requires_explicit_branch_and_keeps_slot_selected(c: Check) -
 	c.eq(ui.workshop.choice_buttons.size(), 2, "both final forms are concrete choices")
 	c.eq(ShopState.capture(sim).to_dict(), before, "branch chooser does not auto evolve")
 	var target := sim.shop.evolution_choices(sim, 1)[1]
-	var preview_text := ui.workshop.choice_buttons[1].text
+	var preview_text := ui.workshop.choice_buttons[1].accessibility_description
 	ui.workshop.choice_buttons[1].pressed.emit()
 	c.eq(sim.player.level_at(1), WeaponDef.MAX_LEVEL, "evolution preserves the advertised maximum grade")
 	c.ok(preview_text.contains(Loc.t("shop.take_dps", [int(round(OfferCard.total_dps(sim.player)))])), "branch preview equals actual evolved build DPS")
@@ -234,7 +236,9 @@ func test_support_offer_explains_utility_before_purchase(c: Check) -> void:
 			role_visible = true
 	c.ok(not role_visible, "utility prose stays out of the primary stock card")
 	ui.inspection.pointer_enabled = true
+	card.size = Vector2(250, 90)
 	card.mouse_entered.emit()
+	ui._step_hover(0.17, card.get_global_rect().get_center())
 	c.eq(ui.inspection.summary_label.text, Loc.weapon_desc(offer.weapon.id), "hover explains the real production utility")
 	c.ok(card.accessibility_description.contains(Loc.weapon_desc(offer.weapon.id)), "utility offer describes its real effect before buying")
 	card.pressed.emit()

@@ -2,6 +2,7 @@ class_name EchoTake
 extends RefCounted
 
 const SAMPLE_DT := 1.0 / 30.0
+const MAX_SAMPLES := 1801
 const PALETTE: Array[Color] = [
 	Color(0.35, 0.85, 1.0),
 	Color(1.0, 0.45, 0.85),

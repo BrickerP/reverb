@@ -65,6 +65,65 @@ func test_recorder_records_actual_elapsed_and_bounds_signature_cadence(c: Check)
 	c.eq(recorder.get("_elapsed"), 0.0, "new recording resets own clock")
 
 
+func test_rolling_work_keeps_boundary_actions_and_discards_older_work(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	var pos := Sim.ARENA.get_center()
+	recorder.begin(pos)
+	recorder.record(pos, 10.0)
+	c.ok(recorder.record_work(&"press", &"machine_0", pos), "record a real operation at the future left boundary")
+	recorder.record(pos, 10.0)
+	c.ok(recorder.record_work(&"conveyor", &"machine_1", pos), "record later retained work")
+	recorder.record(pos, 50.0)
+	c.eq(recorder.work_actions.size(), 2, "work exactly at the retained boundary still belongs to the route")
+	c.near(recorder.work_actions[0].time, 0.0, 0.000001, "the left-boundary action is rebased to zero")
+	c.near(recorder.work_actions[1].time, 10.0, 0.000001, "retained work keeps its authored offset from the route start")
+	recorder.record(pos, EchoTake.SAMPLE_DT)
+	c.eq(recorder.work_actions.size(), 1, "only work strictly before the next retained window is removed")
+	c.eq(recorder.work_actions[0].target_id, &"machine_1", "the retained operation keeps its original machine identity")
+	c.near(recorder.work_actions[0].time, 10.0 - EchoTake.SAMPLE_DT, 0.000001, "rolling shifts surviving work by the same sample offset as positions")
+	c.ok(EchoWork.validate_actions(recorder.work_actions, recorder.get("_elapsed")), "the bounded writer produces strictly valid work")
+
+
+func test_rebased_signature_spacing_keeps_authored_times_and_real_cadence(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	var pos := Sim.ARENA.get_center()
+	recorder.begin(pos)
+	recorder.record(pos, 13.082331474938215)
+	c.ok(recorder.record_work(&"signature", &"", pos, &"pistol", Vector2.RIGHT), "the first representative attack is authored")
+	recorder.record(pos, 8.0)
+	c.ok(recorder.record_work(&"signature", &"", pos, &"pistol", Vector2.RIGHT), "an exact eight-second interval is valid")
+	var first: float = recorder.work_actions[0].time
+	var second: float = recorder.work_actions[1].time
+	recorder.record(pos, 63.6001 - float(recorder.get("_elapsed")))
+	c.near(recorder.work_actions[0].time, first - 3.6, 0.000001, "rebasing does not nudge the first actual event")
+	c.near(recorder.work_actions[1].time, second - 3.6, 0.000001, "rebasing does not nudge the second actual event")
+	c.ok(EchoWork.validate_actions(recorder.work_actions, recorder.get("_elapsed")), "sub-ulp cancellation cannot invalidate an authored eight-second gap")
+	var too_soon: Array[Dictionary] = recorder.work_actions.duplicate(true)
+	too_soon[1]["time"] = float(too_soon[0].time) + 7.9999999
+	c.ok(not EchoWork.validate_actions(too_soon, recorder.get("_elapsed")), "a real interval below eight seconds is still rejected")
+	recorder.record(pos, 60.0)
+	c.ok(recorder.work_actions.is_empty(), "both old representatives eventually leave the recent window")
+	c.ok(recorder.record_work(&"signature", &"", pos, &"pistol", Vector2.RIGHT), "new representative attacks remain recordable after a long fight")
+
+
+func test_full_window_final_sub_sample_work_finishes_without_exceeding_bound(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	var pos := Sim.ARENA.get_center()
+	recorder.begin(pos)
+	for _tick in 1800:
+		recorder.record(pos, EchoTake.SAMPLE_DT)
+	recorder.record(pos, 0.016)
+	c.ok(recorder.record_work(&"signature", &"", pos, &"pistol", Vector2.RIGHT), "a real final action may occur between sample positions")
+	var before := recorder.work_actions.duplicate(true)
+	var take := recorder.finish(4, [Content.weapon(&"pistol")], Stats.new(), [0])
+	c.eq(take.samples.size(), EchoTake.MAX_SAMPLES, "a held final endpoint replaces an oldest sample instead of growing the tape")
+	c.eq(take.work_actions.size(), 1, "the terminal actual work remains in the finished route")
+	c.near(take.work_actions[0].time, float(before[0].time) - EchoTake.SAMPLE_DT, 0.000001, "only the removed start sample rebases the terminal event")
+	c.ok(EchoWork.validate_actions(take.work_actions, take.duration()), "finished endpoint padding respects the unchanged strict action bounds")
+	c.eq(recorder.work_actions, before, "finishing a take never rewrites the live recorder's authored events")
+	c.ok(EchoWork.validate_actions(recorder.work_actions, recorder.get("_elapsed")), "the live recorder also remains strictly valid")
+
+
 func test_final_sub_sample_work_survives_finish_copy_and_merge(c: Check) -> void:
 	var recorder := EchoRecorder.new()
 	var pos := Sim.ARENA.get_center()

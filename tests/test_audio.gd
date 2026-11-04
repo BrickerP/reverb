@@ -398,6 +398,8 @@ func test_actual_echo_safety_switch_has_only_its_canonical_lever_cue(c: Check) -
 	var audio := _audio()
 	var sim := Sim.new(17017)
 	sim.start_run()
+	# This fixture exercises the existing delivery lever for a player who knows Echo.
+	sim.story_progress["clues"] = ["carbon"]
 	sim.start_wave(2)
 	sim._plan.clear()
 	var take := EchoTake.new()

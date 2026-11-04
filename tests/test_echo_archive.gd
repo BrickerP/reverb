@@ -10,6 +10,27 @@ func _clean() -> void:
 		DirAccess.remove_absolute(_path())
 
 
+func test_rolling_recording_uses_the_same_strict_archive_bound(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	var pos := Sim.ARENA.get_center()
+	recorder.begin(pos)
+	recorder.record(pos + Vector2(20.0, 10.0), 90.0)
+	var take := recorder.finish(4, [Content.weapon(&"pistol")], Stats.new(), [0])
+	var encoded := EchoArchive.encode(take)
+	c.ok(not encoded.is_empty(), "a real long recording finishes inside the existing strict archive budget")
+	if encoded.is_empty():
+		return
+	var decoded := EchoArchive.decode(encoded)
+	c.ok(decoded != null, "the canonical bounded tape decodes without a format change")
+	if decoded != null:
+		c.eq(decoded.samples.size(), EchoTake.MAX_SAMPLES, "archive and recorder share the single canonical sample limit")
+		c.near(decoded.duration(), 60.0, 0.000001, "archiving preserves the recent sixty-second tape")
+	take.samples.append(pos)
+	c.ok(EchoArchive.encode(take).is_empty(), "an actually oversized take is still rejected")
+	encoded["samples"].append([pos.x, pos.y])
+	c.eq(EchoArchive.decode(encoded), null, "an oversized saved array is also rejected at the unchanged limit")
+
+
 func _take() -> EchoTake:
 	var take := EchoTake.new()
 	take.samples = PackedVector2Array([Vector2(200, 300), Vector2(240, 340)])

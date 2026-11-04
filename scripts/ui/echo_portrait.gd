@@ -4,6 +4,7 @@ extends Control
 const EXTENT := Vector2(88, 102)
 var condition := 1.0
 var merged := false
+var inherited_skill: StringName = &""
 var reduced_effects := false
 var _texture: Texture2D
 var _region := Rect2()
@@ -26,6 +27,7 @@ func setup(take: EchoTake, character: StringName, reduced: bool = false, arrivin
 	_intro = 0.0 if arriving and not reduced else 1.0
 	condition = clampf(take.condition / 100.0, 0.0, 1.0)
 	merged = take.merged
+	inherited_skill = take.inherited_skill
 	reduced_effects = reduced
 	_tint = take.tint()
 	_phase = float(take.uid % 7)
@@ -37,7 +39,7 @@ func setup(take: EchoTake, character: StringName, reduced: bool = false, arrivin
 	for weapon: WeaponDef in take.weapons.slice(0, 3):
 		var weapon_key := PresentationAssets.weapon_key(weapon)
 		_weapons.append({"texture": PresentationAssets.texture(weapon_key),
-			"region": PresentationAssets.idle_region(weapon_key)})
+				"region": PresentationAssets.idle_region(weapon_key), "level": take.level_at(_weapons.size())})
 	set_process(not reduced)
 	queue_redraw()
 
@@ -82,6 +84,8 @@ func _draw() -> void:
 				Vector2(37, 53), Vector2(51, 60)]), UiTheme.WARN, 2.0, true)
 		if merged:
 			_draw_staple(Vector2(54, 28))
+		if inherited_skill != &"":
+			draw_skill(self, Vector2(68, 54), inherited_skill, UiTheme.ACCENT, 0.7)
 	for i in _weapons.size():
 		var row: Dictionary = _weapons[i]
 		var region: Rect2 = row["region"]
@@ -91,6 +95,8 @@ func _draw() -> void:
 			var k := minf(cell.size.x / region.size.x, cell.size.y / region.size.y)
 			var extent := region.size * k
 			draw_texture_rect_region(texture, Rect2(cell.get_center() - extent * 0.5, extent), region)
+			for grade in int(row["level"]) + 1:
+				draw_circle(Vector2(cell.position.x + 3 + float(grade) * 4, cell.end.y + 1), 1.1, UiTheme.INK)
 	var meter := Rect2(4, 89, 80, 10)
 	draw_style_box(_meter_stock, meter)
 	if condition > 0.0:
@@ -105,6 +111,26 @@ func _draw() -> void:
 func _draw_staple(at: Vector2) -> void:
 	draw_polyline(PackedVector2Array([at + Vector2(0, 5), at, at + Vector2(13, -2),
 		at + Vector2(13, 3)]), UiTheme.INK, 2.0, true)
+
+
+static func draw_skill(ci: CanvasItem, at: Vector2, kind: StringName, color: Color, scale: float = 1.0) -> void:
+	var points := PackedVector2Array()
+	match kind:
+		&"pin": points = PackedVector2Array([Vector2(-5, -5), Vector2(5, -5), Vector2(0, -5), Vector2(0, 6)])
+		&"stamp": points = PackedVector2Array([Vector2(-6, -5), Vector2(6, -5), Vector2(6, 5), Vector2(-6, 5), Vector2(-6, -5)])
+		&"cut": points = PackedVector2Array([Vector2(-6, 5), Vector2(5, -6), Vector2(2, 3)])
+		&"arc": points = PackedVector2Array([Vector2(4, -6), Vector2(-3, 0), Vector2(3, 0), Vector2(-4, 6)])
+		&"return":
+			ci.draw_arc(at, 6.0 * scale, -PI * 0.8, PI * 0.65, 12, color, 1.8, true)
+			return
+		&"ink":
+			ci.draw_circle(at, 4.5 * scale, color)
+			return
+	if points.size() < 2:
+		return
+	for index in points.size():
+		points[index] = at + points[index] * scale
+	ci.draw_polyline(points, color, 1.8, true)
 
 
 static func _fit_route(samples: PackedVector2Array) -> PackedVector2Array:

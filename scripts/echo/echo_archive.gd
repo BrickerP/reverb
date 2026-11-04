@@ -2,7 +2,6 @@ class_name EchoArchive
 extends RefCounted
 
 const VERSION := 1
-const MAX_SAMPLES := 1801
 const MAX_STAT_VALUE := 1000.0
 const INHERITED_CONDITION := 60.0
 const SKILLS: Array[StringName] = [&"", &"pin", &"stamp", &"cut", &"ink", &"return", &"arc"]
@@ -144,7 +143,7 @@ static func route_distance(take: EchoTake) -> float:
 
 
 static func encode(take: EchoTake) -> Dictionary:
-	if take == null or take.stats == null or take.samples.is_empty() or take.samples.size() > MAX_SAMPLES \
+	if take == null or take.stats == null or take.samples.is_empty() or take.samples.size() > EchoTake.MAX_SAMPLES \
 			or take.weapons.size() > Content.MAX_WEAPON_SLOTS:
 		return {}
 	var points: Array = []
@@ -187,7 +186,7 @@ static func decode(value: Variant) -> EchoTake:
 	for field: String in ["samples", "weapons", "levels"]:
 		if typeof(entry.get(field)) != TYPE_ARRAY:
 			return null
-	if entry.samples.is_empty() or entry.samples.size() > MAX_SAMPLES or entry.weapons.is_empty() \
+	if entry.samples.is_empty() or entry.samples.size() > EchoTake.MAX_SAMPLES or entry.weapons.is_empty() \
 			or entry.weapons.size() > Content.MAX_WEAPON_SLOTS or entry.levels.size() != entry.weapons.size():
 		return null
 	if typeof(entry.get("stats")) != TYPE_DICTIONARY or entry.stats.size() != Stats.ORDER.size():
@@ -252,7 +251,7 @@ static func _encode_work(actions: Array[Dictionary]) -> Array:
 	var out: Array = []
 	for action: Dictionary in actions:
 		# Validate before indexing: caller data is not trusted merely because it is typed.
-		if not EchoWork.validate_actions([action], MAX_SAMPLES * EchoTake.SAMPLE_DT):
+		if not EchoWork.validate_actions([action], EchoTake.MAX_SAMPLES * EchoTake.SAMPLE_DT):
 			return [null]
 		var pos: Vector2 = action.pos
 		var aim: Vector2 = action.aim

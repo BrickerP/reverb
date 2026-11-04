@@ -3,8 +3,10 @@ extends RefCounted
 const PROFILE := "user://test_bureau_reports.json"
 
 
-func _shop(role: StringName = &"looper") -> Sim:
+func _shop(role: StringName = &"looper", familiar: bool = true) -> Sim:
 	var sim := Sim.new(1717)
+	if familiar:
+		StoryLedger.seed_known(sim, [&"carbon"])
 	Content.character(role).apply(sim)
 	sim.start_run()
 	sim._end_wave()
@@ -28,6 +30,77 @@ func _take(sim: Sim, condition: float = 94.0) -> EchoTake:
 func _clean_profile() -> void:
 	if FileAccess.file_exists(PROFILE):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PROFILE))
+
+
+func test_first_echo_preparation_defers_new_signature_until_carbon_is_known(c: Check) -> void:
+	var sim := _shop(&"looper", false)
+	var before := RunSnapshot.capture(sim)
+	c.ok(not BureauConfession.profile(sim)["introduced"], "the unfamiliar first shop does not introduce signing")
+	c.ok(BureauConfession.options(sim).is_empty(), "there are no unexplained signing alternatives in first Echo preparation")
+	for choice: StringName in BureauConfession.CHOICES:
+		c.ok(not sim.shop.quote(ShopResult.CONFESS, sim, null, -1, choice).ok, "a hidden new signature cannot be quoted")
+		c.ok(not sim.shop.apply(ShopResult.CONFESS, sim, null, -1, choice).ok, "a stale control cannot create the deferred signature")
+	c.eq(RunSnapshot.capture(sim), before, "deferred signing never changes funds, Undo, story or RNG")
+	sim.start_next_wave()
+	sim._end_wave()
+	c.ok(Expedition.knows(sim, &"carbon"), "finishing the real second encounter provides the existing Echo fact")
+	c.ok(BureauConfession.profile(sim)["introduced"] and BureauConfession.profile(sim)["available"], "the next shop can introduce signing after Echo familiarity")
+	c.eq(BureauConfession.options(sim).size(), 2, "the same two existing choices are now available")
+	c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "newly introduced signing uses the canonical transaction")
+
+
+func test_known_signature_facts_and_daily_allow_signing_but_endless_does_not(c: Check) -> void:
+	for clue: StringName in [&"carbon", &"confession_truth", &"confession_polish"]:
+		var sim := _shop(&"looper", false)
+		StoryLedger.seed_known(sim, [clue])
+		c.ok(BureauConfession.profile(sim)["available"], "an already known signing prerequisite permits the opening choice")
+		c.ok(sim.shop.quote(ShopResult.CONFESS, sim, null, -1, &"truth").ok, "the visible familiar choice has the same authoritative quote")
+	var daily := _shop(&"looper", false)
+	daily.daily_modifier = DailyAnomaly.FORTUNE
+	var before := RunSnapshot.capture(daily)
+	c.ok(BureauConfession.profile(daily)["available"], "Daily signing is independent of account knowledge")
+	c.eq(BureauConfession.options(daily).size(), 2, "Daily retains both established alternatives")
+	c.eq(RunSnapshot.capture(daily), before, "challenge exposure queries do not alter its seeded state")
+	daily.daily_modifier = &""
+	StoryLedger.seed_known(daily, [&"carbon"])
+	daily.endless = true
+	c.ok(not BureauConfession.profile(daily)["available"], "Endless still forbids new signatures even with knowledge")
+	c.ok(not daily.shop.quote(ShopResult.CONFESS, daily, null, -1, &"truth").ok, "a familiar Endless control cannot bypass the existing phase rule")
+
+
+func test_existing_unfamiliar_pending_signature_restores_displays_and_undoes(c: Check) -> void:
+	var sim := _shop()
+	c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "fixture creates a real pending signature and Undo anchor")
+	# A 0.19 signature and its pre-signature history can both lack known carbon.
+	sim.story_progress["clues"] = []
+	var history: Array = sim.shop.get("_undo_stack")
+	for state: ShopState in history:
+		state.story_progress["clues"] = []
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(before)
+	c.ok(restored != null, "an existing unfamiliar pending signature remains a valid old save: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "restoring old signing never migrates or revokes the record")
+	var profile := BureauConfession.profile(restored)
+	c.ok(profile["introduced"] and profile["pending"], "the existing pending receipt remains reachable for display")
+	c.eq(profile["chosen"], &"polish", "old signing keeps its actual choice")
+	c.eq(BureauConfession.options(restored).size(), 2, "existing signing retains its original explanatory alternatives")
+	c.ok(not restored.shop.quote(ShopResult.CONFESS, restored, null, -1, &"truth").ok, "showing an old signature never permits a second choice")
+	c.ok(restored.shop.undo(restored).ok, "the original Undo anchor still reverses the old signing")
+	c.ok(restored.expedition["bureau"]["confessions"].is_empty(), "Undo removes the actual old pending record")
+	c.ok(not BureauConfession.profile(restored)["introduced"], "Undo returns to the genuinely unfamiliar unsigned state")
+	c.ok(BureauConfession.options(restored).is_empty(), "Undo does not accidentally introduce a new signature")
+	var committed := RunSnapshot.restore(before)
+	if committed == null:
+		return
+	committed.start_next_wave()
+	committed.story_progress["clues"] = []
+	var signed := BureauConfession.profile(committed)
+	c.ok(signed["introduced"] and not signed["pending"], "an old committed receipt remains introduced without learned clues")
+	c.eq(signed["chosen"], &"polish", "departure retains the old committed choice")
+	c.ok(not signed["available"], "history visibility never authorizes another unfamiliar signature")
+	c.ok(RunSnapshot.restore(RunSnapshot.capture(committed)) != null, "a committed old signature and real inspection also remain resumable")
 
 
 func test_truth_quote_actual_benefit_commit_and_exact_undo(c: Check) -> void:

@@ -53,6 +53,43 @@ func test_recorder_samples_at_30hz(c: Check) -> void:
 	c.eq(r.samples[0], Vector2(5, 5), "first sample is the start position")
 
 
+func test_long_recorder_retains_the_recent_sixty_second_route(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	recorder.begin(Vector2(200.0, 300.0))
+	for index in range(1, 2701):
+		recorder.record(Vector2(200.0 + float(index) * 0.1, 300.0), EchoTake.SAMPLE_DT)
+	c.eq(recorder.samples.size(), EchoTake.MAX_SAMPLES, "ninety seconds never grows beyond the canonical route bound")
+	c.near(recorder.samples[0].x, 290.0, 0.001, "the beginning is the real position from thirty seconds into the recording")
+	c.near(recorder.samples[recorder.samples.size() - 1].x, 470.0, 0.001, "the latest position is retained")
+	var take := recorder.finish(4, [Content.weapon(&"pistol")], Stats.new(), [0])
+	c.near(take.duration(), 60.0, 0.000001, "the recorded copy keeps sixty seconds at the original thirty-hertz rate")
+	c.near(recorder.get("_elapsed"), 60.0, 0.000001, "the local recorder clock describes the retained route")
+
+
+func test_huge_record_delta_is_bounded_and_invalid_inputs_do_not_mutate(c: Check) -> void:
+	var recorder := EchoRecorder.new()
+	var pos := Sim.ARENA.get_center()
+	recorder.begin(pos)
+	c.ok(recorder.record_work(&"press", &"machine_0", pos), "the previous window can contain real work")
+	var latest := pos + Vector2(40.0, 20.0)
+	recorder.record(latest, 1.0e300)
+	c.eq(recorder.samples.size(), EchoTake.MAX_SAMPLES, "a huge finite frame allocates only the retained window")
+	c.eq(recorder.samples[0], latest, "a whole-window frame evicts every old position")
+	c.eq(recorder.samples[recorder.samples.size() - 1], latest, "the whole replacement window holds the new position")
+	c.ok(recorder.work_actions.is_empty(), "work outside the retained window is discarded")
+	var elapsed: float = recorder.get("_elapsed")
+	var accumulator: float = recorder.get("_acc")
+	c.ok(is_finite(elapsed) and elapsed >= 60.0 and elapsed <= float(EchoTake.MAX_SAMPLES) * EchoTake.SAMPLE_DT, "the huge frame retains a finite bounded local clock")
+	c.ok(accumulator >= 0.0 and accumulator < EchoTake.SAMPLE_DT, "the fractional clock remains strictly within a sample")
+	var samples := recorder.samples.duplicate()
+	for delta: float in [0.0, -1.0, NAN, INF]:
+		recorder.record(pos, delta)
+	recorder.record(Vector2(NAN, 0.0), 0.1)
+	c.eq(recorder.samples, samples, "invalid time or position cannot alter a bounded recording")
+	c.eq(recorder.get("_elapsed"), elapsed, "invalid input cannot advance the local clock")
+	c.eq(recorder.get("_acc"), accumulator, "invalid input cannot alter the fractional clock")
+
+
 func test_recorder_finish_snapshots(c: Check) -> void:
 	var r := EchoRecorder.new()
 	r.begin(Vector2.ZERO)

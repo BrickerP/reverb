@@ -12,6 +12,7 @@ func _initialize() -> void:
 			root.size = extent
 			root.content_scale_size = extent
 			var sim := Sim.new(1718)
+			StoryLedger.seed_known(sim, [&"carbon"])
 			sim.start_run()
 			sim._end_wave()
 			sim.player.materials = 100

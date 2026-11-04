@@ -7,6 +7,11 @@ const PROTECTED_POOL := 5
 const SUPPORT_PRIORITY := 10
 const PROTECTED_PRIORITY := 20
 const PLAYER_SHOT_PRIORITY := 6
+const COMBO_DUCK_INTERVAL := 1.2
+const FAMILIAR_ACTION_IDS: Array[StringName] = [
+	&"combo_pin_press", &"combo_ink_arc", &"retire",
+	&"skill_looper", &"skill_solo", &"skill_mirror", &"skill_conductor", &"skill_mender", &"skill_overloader",
+]
 const PRESENTATION_DIR := "res://audio/presentation"
 const MUSIC_DB := -9.0
 const MUSIC_DIR := "res://audio/music"
@@ -208,6 +213,11 @@ var _duck_remaining := 0.0
 var _charged := false
 var _encounter_phase: StringName = &""
 var _last_feedback: Dictionary = {}
+var _familiar_actions: Dictionary = {}
+var _recognized_actions: Dictionary = {}
+var _combo_duck_left := 0.0
+var _warning_live: Dictionary = {}
+var _announced_pushes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -240,8 +250,11 @@ func _process(delta: float) -> void:
 	if _paused:
 		return
 	_duck_remaining = maxf(0.0, _duck_remaining - delta)
+	_combo_duck_left = maxf(0.0, _combo_duck_left - delta)
 	_update_effect_envelopes(delta)
 	if _music_enabled:
+		_observe_charge()
+		_observe_warnings()
 		_music_cursor = fposmod(_music_cursor + delta, MUSIC_SECONDS)
 		_music_hold = maxf(0.0, _music_hold - delta)
 		_music_poll -= delta
@@ -491,6 +504,10 @@ func _reset_session_state() -> void:
 	_charged = false
 	_encounter_phase = &""
 	_last_feedback.clear()
+	_recognized_actions.clear()
+	_warning_live.clear()
+	_announced_pushes.clear()
+	_combo_duck_left = 0.0
 	_voice_left.clear()
 	_voice_base_db.clear()
 	_music_cursor = 0.0
@@ -612,22 +629,54 @@ static func is_copy_source(source: int, token: int) -> bool:
 	return source >= 0 or (token != -1 and token != 0)
 
 
+func set_familiar_actions(actions: Array[StringName]) -> void:
+	_familiar_actions.clear()
+	for action in actions:
+		if FAMILIAR_ACTION_IDS.has(action):
+			_familiar_actions[action] = true
+
+
+func _familiar(action: StringName) -> bool:
+	return _familiar_actions.has(action) or _recognized_actions.has(action)
+
+
+func _copy_in_view(source: int, token: int, origin: Vector2) -> bool:
+	return not is_copy_source(source, token) or _bound == null \
+		or WorldArena.camera_rect(_bound.player.pos).has_point(origin)
+
+
 func _emphasize(kind: StringName, copy: bool = false) -> bool:
 	if _paused or not EMPHASIS_PROFILES.has(kind):
 		return false
 	var profile: Dictionary = EMPHASIS_PROFILES[kind]
-	var accepted := play(profile["cue"], float(profile["volume"]) - (5.0 if copy else 0.0),
-		float(profile["pitch"]), float(profile["gate"]), mini(26, int(profile["priority"])) if copy else int(profile["priority"]),
+	var combo: bool = kind in [&"combo_pin_press", &"combo_ink_arc"]
+	var familiar: bool = combo and _familiar(kind)
+	var gate := minf(0.12, float(profile["gate"])) if familiar else float(profile["gate"])
+	var priority := mini(12, int(profile["priority"])) if familiar else int(profile["priority"])
+	var accepted := play(profile["cue"], float(profile["volume"]) - (5.0 if copy else 0.0) - (3.0 if familiar else 0.0),
+		float(profile["pitch"]), gate, mini(26, priority) if copy else priority,
 		StringName(("echo:" if copy else "accent:") + String(kind)),
-		maxf(0.50, float(profile["window"])) if copy else float(profile["window"]))
-	if accepted and not copy and float(profile["duck"]) > 0.0:
-		_duck_room(float(profile["duck"]))
+		maxf(0.50, float(profile["window"])) if copy else maxf(0.32 if familiar else 0.0, float(profile["window"])))
+	if accepted and combo and not copy:
+		_recognized_actions[kind] = true
+	if accepted and not copy and not familiar and float(profile["duck"]) > 0.0:
+		if not combo or _combo_duck_left <= 0.0:
+			_duck_room(float(profile["duck"]))
+			if combo:
+				_combo_duck_left = COMBO_DUCK_INTERVAL
 	return accepted
 
 
 func _seed_emphasis() -> void:
 	_charged = _bound != null and CharacterSkills.is_charged(_bound)
 	_encounter_phase = StringName(_bound.encounter_profile()["id"]) if _bound != null else &""
+	if _encounter_phase in [&"second_push", &"final_push"]:
+		_announced_pushes[_encounter_phase] = true
+	_warning_live.clear()
+	if _bound != null:
+		for enemy in _bound.enemies:
+			if not enemy.dead and enemy.brain_state == &"warn":
+				_warning_live[enemy.uid] = true
 
 
 func _observe_charge() -> void:
@@ -635,18 +684,51 @@ func _observe_charge() -> void:
 		return
 	var charged := _bound != null and CharacterSkills.is_charged(_bound)
 	if charged and not _charged:
-		_emphasize(&"charged")
-	_charged = charged
+		_charged = _emphasize(&"charged")
+	elif not charged:
+		_charged = false
+
+
+func _observe_warnings() -> void:
+	if _paused or _bound == null or _bound.phase != Sim.Phase.WAVE:
+		return
+	var live: Dictionary = {}
+	var chosen: Dictionary = {}
+	var nearest := INF
+	var view := WorldArena.camera_rect(_bound.player.pos)
+	for enemy in _bound.enemies:
+		if enemy.dead or enemy.def == null or enemy.brain_state != &"warn" or enemy.uid <= 0:
+			continue
+		live[enemy.uid] = true
+		if _warning_live.has(enemy.uid) or enemy.stun_left > 0.0 or not view.has_point(enemy.pos):
+			continue
+		var attack := EnemyBrain.attack_profile(enemy)
+		if not bool(attack.get("visible", false)) or not bool(attack.get("warning", false)) \
+				or float(attack.get("progress", 1.0)) > 0.25 \
+				or attack.get("kind", &"") not in [&"dash", &"slam", &"press"]:
+			continue
+		var distance := enemy.pos.distance_squared_to(_bound.player.pos)
+		if distance < nearest:
+			nearest = distance
+			chosen = attack
+	_warning_live = live
+	if chosen.is_empty():
+		return
+	# This is an entrance tick for the existing lock, not a countdown or a new
+	# hazard. Busy, offscreen and already-late warnings are never queued.
+	var dash: bool = chosen["kind"] == &"dash"
+	play(&"weapon_longbow" if dash else &"shield_block", -4.0 if dash else -6.0,
+		0.92 if dash else 1.08, 0.10, 34, &"warn:attack", 0.35)
 
 
 func _observe_emphasis(state: Dictionary) -> void:
-	_observe_charge()
 	if _bound == null or _bound.phase != Sim.Phase.WAVE:
 		_encounter_phase = &""
 		return
 	var phase := StringName(state.get("wave_phase", &""))
 	if phase != _encounter_phase and _encounter_phase != &"" and state["mode"] != &"boss" \
-			and phase in [&"second_push", &"final_push"]:
+			and phase in [&"second_push", &"final_push"] and not _announced_pushes.has(phase):
+		_announced_pushes[phase] = true
 		_emphasize(phase)
 	_encounter_phase = phase
 
@@ -711,6 +793,8 @@ static func voice_index(active: Array[bool], priorities: Array[int], serials: Ar
 
 
 func _on_shot_info(info: ShotInfo) -> void:
+	if not _copy_in_view(info.source, info.actor_token, info.origin):
+		return
 	var copy := is_copy_source(info.source, info.actor_token)
 	var profile := weapon_profile(info.weapon_id)
 	if profile.is_empty():
@@ -727,6 +811,8 @@ func _on_shot_info(info: ShotInfo) -> void:
 
 
 func _on_damage_info(info: DamageInfo) -> void:
+	if not _copy_in_view(info.source, info.actor_token, info.pos):
+		return
 	var copy := is_copy_source(info.source, info.actor_token)
 	var cue := &"hit"
 	var pitch := 1.0
@@ -737,7 +823,7 @@ func _on_damage_info(info: DamageInfo) -> void:
 		cue = &"hit_crit"
 		pitch = 1.04
 	play(cue, -6.0 if copy else 0.0, pitch, 0.14, 0 if copy else 8,
-		StringName(("echo:hit:" if copy else "player:hit:") + String(cue)), 0.14 if copy else -1.0)
+		StringName(("echo:hit:" if copy else "player:hit:") + String(cue)), 0.14 if copy else maxf(0.06, float(COOLDOWNS.get(cue, 0.0))))
 
 
 func _on_combo(info: ComboInfo) -> void:
@@ -770,9 +856,13 @@ func _on_hurt_info(info: PlayerHurtInfo) -> void:
 
 
 func _on_kill(info: EnemyDeathInfo) -> void:
+	if not _copy_in_view(info.source, info.actor_token, info.pos):
+		return
 	var profile := death_profile(info.enemy_id)
-	play(&"kill", float(profile["volume"]) + (-1.0 if info.source >= 0 else 0.0),
-			float(profile["pitch"]) * (0.96 if info.source >= 0 else 1.0))
+	var copy := is_copy_source(info.source, info.actor_token)
+	play(&"kill", float(profile["volume"]) - (5.0 if copy else 0.0),
+		float(profile["pitch"]) * (0.96 if copy else 1.0), 0.18, 0 if copy else 4,
+		&"echo:kill" if copy else &"player:kill", 0.20 if copy else 0.09)
 
 
 static func death_profile(enemy_id: StringName) -> Dictionary:
@@ -788,7 +878,7 @@ static func death_profile(enemy_id: StringName) -> Dictionary:
 
 
 func _on_pickup(amount: int) -> void:
-	if amount <= 0:
+	if amount <= 0 or (_bound != null and _bound.phase != Sim.Phase.WAVE):
 		return
 	play(&"pickup", 0.0, 1.0 + minf(0.2, float(amount) * 0.02), 0.10, 3, &"player:pickup", 0.10)
 	_observe_charge()
@@ -818,8 +908,12 @@ func _on_echo_retired(info: EchoRetirementInfo) -> void:
 		&"arc": cue = &"weapon_nova_core"; pitch = 0.76
 	# Accepted player sacrifices have one independent event window. Simultaneous
 	# overload retirements form one accent, never eight competing weapon voices.
-	if play(cue, 1.0, pitch, 0.32, 44, &"player:retirement", 0.08):
-		_duck_room(0.32)
+	var familiar := _familiar(&"retire")
+	if play(cue, -2.0 if familiar else 1.0, pitch, 0.18 if familiar else 0.32,
+			24 if familiar else 44, &"player:retirement", 0.08):
+		_recognized_actions[&"retire"] = true
+		if not familiar:
+			_duck_room(0.32)
 
 
 func _on_echo_work(info: Dictionary) -> void:
@@ -836,6 +930,7 @@ func _on_echo_work(info: Dictionary) -> void:
 
 func _on_wave_start(_wave: int) -> void:
 	play(&"wave_start")
+	_announced_pushes.clear()
 	_seed_emphasis()
 
 
@@ -859,16 +954,31 @@ func _on_world_event(info: Dictionary) -> void:
 				&"conveyor": play(&"click", -4.0, 0.83, 0.12, 16, &"world:conveyor", 0.18)
 		&"character_skill":
 			if not bool(info.get("ok", false)):
+				play(&"click", -7.0, 0.66, 0.06, 1, &"player:skill_rejected", 0.30)
 				return
 			_charged = false
-			match info.get("ability", &""):
-				&"looper": play(&"echo", -1.0, 0.72, 0.24, 40, &"player:character_skill", 0.08)
-				&"mirror": play(&"echo", -1.0, 1.12, 0.24, 40, &"player:character_skill", 0.08)
-				&"solo": play(&"weapon_longbow", -1.0, 0.64, 0.20, 40, &"player:character_skill", 0.08)
-				&"conductor": play(&"weapon_nova_core", -2.0, 0.86, 0.22, 40, &"player:character_skill", 0.08)
-				# Mender's real support spawn and Overloader's real retirement own
-				# their sounds; a successful key press cannot play those twice.
-			_duck_room(0.18)
+			var ability := StringName(info.get("ability", &""))
+			var action := StringName("skill_" + String(ability))
+			var familiar := _familiar(action)
+			var cue: StringName = &""
+			var pitch := 1.0
+			var volume := -1.0
+			var gate := 0.24
+			match ability:
+				&"looper": cue = &"echo"; pitch = 0.72
+				&"mirror": cue = &"echo"; pitch = 1.12
+				&"solo": cue = &"weapon_longbow"; pitch = 0.64; gate = 0.20
+				&"conductor": cue = &"weapon_nova_core"; pitch = 0.86; gate = 0.22; volume = -2.0
+			if cue != &"":
+				if play(cue, volume - (3.0 if familiar else 0.0), pitch, minf(gate, 0.13) if familiar else gate,
+						16 if familiar else 40, &"player:character_skill", 0.08):
+					_recognized_actions[action] = true
+					if not familiar:
+						_duck_room(0.18)
+			elif ability in [&"mender", &"overloader"]:
+				# The real support spawn or accepted retirement already owns this
+				# action's sound. A role key cannot duplicate its physical outcome.
+				_recognized_actions[action] = true
 		&"companion_signed": play(&"equipment_apply", -2.0, 0.78, 0.24, 32, &"world:companion", 0.20)
 		&"seal_stamp": play(&"click", -1.0, 0.58, 0.12, 4, &"world:seal", 0.16)
 

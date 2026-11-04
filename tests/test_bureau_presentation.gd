@@ -20,6 +20,7 @@ func test_actual_atlases_and_closed_frames_are_registered(c: Check) -> void:
 
 func test_stamp_view_and_offscreen_goal_read_exact_model_without_mutation(c: Check) -> void:
 	var sim := Sim.new(1704)
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim.start_run()
 	sim.start_wave(2)
 	sim._plan.clear()
@@ -65,6 +66,7 @@ func test_cleanup_uses_actual_survivor_and_retirement_counts(c: Check) -> void:
 
 func test_delivery_state_and_phase_labels_follow_actual_model(c: Check) -> void:
 	var sim := Sim.new(1706)
+	StoryLedger.seed_known(sim, [&"carbon"])
 	sim.start_run()
 	sim.start_wave(2)
 	sim._plan.clear()

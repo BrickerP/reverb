@@ -36,7 +36,8 @@ static func validate_actions(actions: Variant, max_time: float) -> bool:
 		last_time = float(action.time)
 		if action.kind == &"signature":
 			signature_count += 1
-			if signature_count > MAX_SIGNATURES or last_time - last_signature < SIGNATURE_INTERVAL \
+			# A shared rebase can round an authored eight-second gap below the boundary.
+			if signature_count > MAX_SIGNATURES or last_time - last_signature + 0.000000001 < SIGNATURE_INTERVAL \
 					or action.target_id != &"" or Content.weapon(action.weapon_id) == null \
 					or action.aim.length_squared() < 0.000001 or action.aim.length_squared() > 1.001:
 				return false

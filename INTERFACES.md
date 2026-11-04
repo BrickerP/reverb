@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current 0.19.0 contract. Simulation owns rules and mutation. UI,
+This is the current 0.19.1 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -69,8 +69,7 @@ Modal screens block both actions and restore focus when closed.
 `recruit`, and `credit`. Orders are ordinary `Offer.contract` values. There is
 no separate wager panel or parallel accept API.
 
-`Shop._fill` produces six offers: two weapons, two passives, and two distinct
-orders. The active order aliases the purchased offer contract. Buying a second
+`Shop._fill` produces six offers. A fresh first shop has three weapons and three passives. With one eligible work order it has three weapons, two passives and one order; familiar ordinary stock uses two weapons, two passives and two distinct orders. The active order aliases the purchased offer contract. Buying a second
 order requires `ShopResult.REPLACE_ORDER`; the previous deposit is credited in
 the quoted difference. One `ShopState` undo restores funds, offers, accepted
 aliases, mission state, debt and counters atomically.
@@ -151,7 +150,7 @@ route and loadout.
 | `repair` | 50% of donor condition repairs the host, capped at 100 |
 | `power` | One strongest eligible host weapon level; lower condition minus 15 |
 
-Echo recordings retain the route, wave-end build, retirement skill and up to six key work events. `EchoRecorder.record_work` records successful player press/conveyor operations and at most two representative attacks, spaced eight seconds apart. Normal automatic fire adapts to current enemies. `EchoWork.step` performs eligible work only forward, consumes unavailable/muted events without backlog, and charges four condition only on success. Looper rewind retains a consumed-event high-water cursor; it cannot duplicate free work. View/audio consume `echo_work_performed` without model mutation.
+Echo recordings retain the latest 60 seconds of the route, wave-end build, retirement skill and up to six key work events. `EchoTake.MAX_SAMPLES` is the shared bound of 1801 positions for the 30Hz recorder, replay, snapshots and permanent archives. Long encounters roll the window: older positions/events leave, retained work timestamps are rebased, and a large delta allocates bounded storage. Short recordings keep their complete route. `EchoRecorder.record_work` records successful player press/conveyor operations and at most two representative attacks, spaced eight seconds apart. Normal automatic fire adapts to current enemies. `EchoWork.step` performs eligible work only forward, consumes unavailable/muted events without backlog, and charges four condition only on success. Looper rewind retains a consumed-event high-water cursor; it cannot duplicate free work. View/audio consume `echo_work_performed` without model mutation.
 
 Archive records are permanent Meta data. EndUi selects any retained candidate; raw DPS never decides replacement. An existing file requires an explicit comparison and confirmation, including lower-output and utility-only choices. Solo, Daily, debt, invalid gear/routes/stats and missing capacity are rejected. `EchoArchive.normalize` is the shared pure load/preview path: a real slot, at most60 condition, grade0 at opening, combat budget no more than0.75 of starter DPS and matching normalized utility stats. The stored original keeps its identity/grade. Conductor opening copy synergy and Mirror starter gear are included in actual-entry previews. Old permanent records may omit `work_actions`, decoded as an empty list in the same closed decoder.
 
@@ -219,3 +218,17 @@ The 0.18.1 event/presentation contract is documented in [paper-action-feedback.m
 `MomentInk` keeps one short local paper accent. Actual combos, charged-role transitions, successful work, full blocks, HP loss, active retirement and Boss tears compete by priority. Routine feedback yields drawing budget during a key moment; hazard ink and the original body keep their existing visibility. It introduces no game-time pause or new player resource. `CharacterSkills.is_charged` supplies the shared phase/energy/cooldown predicate for presentation.
 
 GameAudio routes existing samples through bounded normal/protected voices, separate player/copy merge windows and short music ducking. Combo success and charge-ready edges use real model events/state; bind, resume and new shifts do not invent a ready event. Source clips are reused. `tools/experience_probe.gd` captures disclosed native fixtures with real routed audio, model snapshot/both-RNG rendering invariants and current source identity.
+
+## Perceptual cadence and knowledge
+
+`Meta.familiar_actions` is a bounded set of completed interactions from `ExperienceHints.ALL`. Reading, drawing or replaying an animation does not itself earn familiarity. `StoryLedger.seed_known` carries discovered lore IDs into a new run while keeping current receipts, counters, choices, workers and outcomes independent. Restores keep the saved run's actual knowledge; Daily offer/dispatch rules do not depend on account history.
+
+Orders and signatures use their canonical introduced/available queries, so advanced paperwork is exposed only after its relevant world facts or prior knowledge exist. Previously saved accepted work remains valid. `Expedition.unfinished_work` is shared by early completion and the actual HUD objective; a clear field with actionable work shows that work rather than completion, while a terminally failed order remains history and cannot hold the field open.
+
+A still-valid charged state may retry a rejected accent. Familiar combo confirmations are shorter and do not continually renew a HUD label or music duck. Existing control/status surfaces remain readable until an unused action is completed. New result marks hold briefly before fading; transient events are never queued for stale replay.
+
+`ArenaView.transition_hold` captures first successful skill/work closure before familiarity is updated, with a bounded maximum. Main preserves that necessary window before a shop or reward; starting rewards with no outstanding result remain immediate. Death and victory retain their existing finite beats.
+
+Shop before/after drawings consume detached real `ShopState` values. Assembly, evolution and each binding trait keep the committed result visible before first-time familiarity is recorded; completed results remain available in the existing inspection layer. Rapid actions, Undo, reroll, departure and rebind discard obsolete visual callbacks. Undo resolves the changed physical slot and detached identities, so duplicate weapon IDs cannot redirect its reverse feedback. Hidden BindingCeremony and onboarding overlay code is removed. Final-exit imagery reads real quotes and committed outcomes; archive comparison remains player-timed and default preservation stays safe.
+
+The forty behavioral scenarios are defined in `tools/perception_cases.json`. A required `perception` gate records one uncut fresh Main journey and focused EN/ZH-compact/Reduced clinics, including original-size frames, actual audio, exact source and model/RNG rendering proofs. Automation reports observed and unexercised scenarios separately; human understanding, listening and fun are not certified by those receipts.

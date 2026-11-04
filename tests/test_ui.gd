@@ -532,19 +532,19 @@ func test_hud_echo_chips_count_remaining_seconds(c: Check) -> void:
 	h.free()
 
 
-func test_hud_first_run_hint_fades(c: Check) -> void:
+func test_hud_movement_discovery_follows_actual_progress(c: Check) -> void:
 	var s := Sim.new(3)
 	s.start_run()
 	var h := Hud.new()
 	h.bind(s)
-	c.near(h.hint_alpha(), 1.0, 0.001, "controls are visible at the start")
-	h._hint_time = 4.75
-	c.near(h.hint_alpha(), 0.5, 0.05, "the hint fades out")
-	h._hint_time = 6.0
-	c.near(h.hint_alpha(), 0.0, 0.001, "and is gone")
-	h._hint_time = 0.0
+	c.ok(h.movement_discovery(), "first movement has a stable contextual hint")
+	h._process(6.0)
+	c.ok(h.movement_discovery(), "time alone does not consume unseen movement guidance")
+	s.wave_travel = 140.0
+	c.ok(not h.movement_discovery(), "actual walking retires the basic instruction")
+	s.wave_travel = 0.0
 	s.wave = 2
-	c.near(h.hint_alpha(), 0.0, 0.001, "only the first wave gets the hint")
+	c.ok(not h.movement_discovery(), "later encounters do not replay walking instruction")
 	h.free()
 
 
