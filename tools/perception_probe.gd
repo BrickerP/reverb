@@ -440,7 +440,7 @@ func _clinic() -> bool:
 		"native_main_physics": "engine callback disabled; same Main._physics_process(1/60) called once per native frame",
 		"key_input_route": "Input.parse_input_event for both press and release; real GUI then Main unhandled input, no direct interaction call",
 		"rescue_stance": "initial player placement worker+(50,0), outside the live conveyor push; real out-and-back movement and exact nearest available worker check before E",
-		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; shop800materials/four pistol grades0,0,3,3/two copies; actual donor and confirmation inputs; first evolved result deliberately remains visible for60frames before Undo; ordinary real UI commits and Undo",
+		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; after the fresh first-copy checkpoint, shop800materials/four pistol grades0,0,3,3/host condition50 and donor60; actual donor and confirmation inputs; first evolved result deliberately remains visible for60frames before Undo; ordinary real UI commits and Undo",
 		"scope": "timing and native pixels for controlled cases; not a fresh campaign or human-learning proof"}
 	if not (await _clinic_busy_ready()):
 		return false
@@ -659,6 +659,10 @@ func _clinic_shop_actions() -> bool:
 	var sim: Sim = _main.sim
 	var ui: ShopUi = _main.shop_ui
 	# Explicit shop clinic inventory, separate from the unmodified journey.
+	if not _require(sim.bank.takes.size() == 1, "fresh first-copy checkpoint precedes the two-copy shop fixture"):
+		return false
+	var host: EchoTake = sim.bank.takes[0]
+	host.condition = 50.0
 	sim.player.materials = 800
 	sim.player.weapons.clear()
 	sim.player.weapon_levels.clear()
@@ -675,9 +679,30 @@ func _clinic_shop_actions() -> bool:
 	donor.levels.append(0)
 	donor.samples = PackedVector2Array([sim.player.pos, sim.player.pos + Vector2(30.0, 0.0)])
 	sim.bank.add(donor)
+	var preflight_before := RunSnapshot.capture(sim)
+	if not _require(not preflight_before.is_empty(), "staged binding inventory has a strict source snapshot"):
+		return false
+	var preflight_quotes: Array[Dictionary] = []
+	var all_traits_available := true
+	for trait_name: StringName in [&"skill", &"repair", &"power"]:
+		var quote := sim.shop.echo_merge_quote(sim, host, donor, trait_name)
+		preflight_quotes.append({"trait": String(trait_name), "ok": quote.ok,
+			"reason": String(quote.reason), "cost": quote.cost})
+		all_traits_available = all_traits_available and quote.ok
+	var preflight := {"host_uid": host.uid, "donor_uid": donor.uid,
+		"host_condition": host.condition, "donor_condition": donor.condition,
+		"host_weapon": String(host.weapons[0].id), "host_grade": host.level_at(0),
+		"host_skill": String(host.retirement_kind()), "donor_skill": String(donor.retirement_kind()),
+		"quotes": preflight_quotes, "snapshot_unchanged": RunSnapshot.capture(sim) == preflight_before}
+	_summary["merge_preflight"] = preflight
+	_note("clinic_merge_preflight", preflight)
+	if not _require(all_traits_available and bool(preflight["snapshot_unchanged"]),
+			"all three actual binding quotes are eligible and preflight is strictly read-only"):
+		return false
 	ui.refresh()
 	ui.show_equipment_page(0)
-	_note("clinic_shop_staging", {"materials": 800, "weapons": "four pistols at grades0,0,3,3", "donor_uid": donor.uid})
+	_note("clinic_shop_staging", {"materials": 800, "weapons": "four pistols at grades0,0,3,3",
+		"host_uid": host.uid, "host_condition": host.condition, "donor_uid": donor.uid, "donor_condition": donor.condition})
 	if not (await _clinic_frames(3)):
 		return false
 	ui._open_combine_donors(0)
@@ -742,6 +767,14 @@ func _clinic_shop_actions() -> bool:
 		_press_button(take_button, "real_merge_donor")
 		if not (await _clinic_frames(2)):
 			return false
+		var pair := _merge_quote_state(sim, ui.echo_panel, trait_name)
+		if not _summary.has("merge_clinic"):
+			_summary["merge_clinic"] = []
+		_summary["merge_clinic"].append(pair)
+		_note("clinic_merge_quote", pair)
+		if not _require(int(pair["host_uid"]) == host.uid and int(pair["donor_uid"]) == donor.uid,
+				"real merge UI selects the intended host and donor identities"):
+			return false
 		var trait_button: Button
 		for button: Button in ui.echo_panel.trait_buttons:
 			if button.get_meta(&"trait", &"") == trait_name:
@@ -764,6 +797,24 @@ func _clinic_shop_actions() -> bool:
 			return false
 	ui.show_equipment_page(0)
 	return await _clinic_hover(ui)
+
+
+func _merge_quote_state(sim: Sim, panel: EchoPanel, requested: StringName) -> Dictionary:
+	var host := sim.bank.find_uid(panel._host_uid)
+	var donor := sim.bank.find_uid(panel._spent_uid)
+	var quotes: Array[Dictionary] = []
+	for trait_name: StringName in [&"skill", &"repair", &"power"]:
+		var quote := sim.shop.echo_merge_quote(sim, host, donor, trait_name)
+		quotes.append({"trait": String(trait_name), "ok": quote.ok,
+			"reason": String(quote.reason), "cost": quote.cost})
+	var buttons: Array[Dictionary] = []
+	for button: Button in panel.trait_buttons:
+		buttons.append({"trait": String(button.get_meta(&"trait", &"")), "disabled": button.disabled})
+	return {"requested_trait": String(requested), "native_frame": _frame,
+		"host_uid": panel._host_uid, "donor_uid": panel._spent_uid,
+		"host_condition": host.condition if host != null else -1.0,
+		"donor_condition": donor.condition if donor != null else -1.0,
+		"quotes": quotes, "buttons": buttons}
 
 
 func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int, expected_before: Dictionary) -> bool:
