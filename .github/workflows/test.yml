@@ -63,6 +63,7 @@ jobs:
           ./tools/checked.sh --headless --path . --check-only --script res://tools/release_save_compat.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/weapon_ui_probe.gd
           ./tools/checked.sh --headless --path . --check-only --script res://tools/experience_probe.gd
+          ./tools/checked.sh --headless --path . --check-only --script res://tools/perception_probe.gd
 
       - name: Smoke test
         shell: bash

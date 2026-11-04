@@ -31,6 +31,8 @@ func _init() -> void:
 	detail_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	detail_button.add_theme_font_size_override("font_size", 13)
 	detail_button.pressed.connect(func() -> void:
+		if _pages.is_empty():
+			return
 		_page = posmod(_page + 1, _pages.size())
 		_show_page())
 	info.add_child(detail_button)
@@ -41,6 +43,7 @@ func setup(take: EchoTake, entry: Dictionary, compact: bool = false) -> void:
 		_page = 0
 	_source = take
 	preview = entry
+	route.visible = true
 	route.setup(take, Vector2(150.0, 90.0) if compact else Vector2(190.0, 110.0))
 	details.add_theme_font_size_override("font_size", 13 if compact else 15)
 	_pages.clear()
@@ -56,9 +59,21 @@ func setup(take: EchoTake, entry: Dictionary, compact: bool = false) -> void:
 		for j in range(i, mini(i + 2, extra.size())):
 			text += "\n" + extra[j]
 		_pages.append(text)
+	if not entry.is_empty():
+		_pages.append(Loc.t("archive.read_rule") + "\n" + Loc.t("archive.read_navigation"))
 	_page = mini(_page, _pages.size() - 1)
 	detail_button.visible = _pages.size() > 1
 	_show_page()
+
+
+func reset_reader() -> void:
+	_source = null
+	_page = 0
+	_pages.clear()
+	preview.clear()
+	details.text = ""
+	detail_button.visible = false
+	route.visible = false
 
 
 static func work_target_name(id: StringName) -> String:

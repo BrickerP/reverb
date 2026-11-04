@@ -80,7 +80,10 @@ static func _has_fault(sim: Sim) -> bool:
 
 
 static func offer_ids(sim: Sim) -> Array[StringName]:
-	var eligible := ORDER_IDS.duplicate()
+	var eligible: Array[StringName] = []
+	for kind: StringName in ORDER_IDS:
+		if _order_familiar(sim, kind):
+			eligible.append(kind)
 	var future := forecast(sim, sim.next_wave_number())
 	if not future["repair_available"]:
 		eligible.erase(&"repair")
@@ -89,6 +92,30 @@ static func offer_ids(sim: Sim) -> Array[StringName]:
 	if int(sim.expedition.get("debt", 0)) > 0:
 		eligible.erase(&"credit")
 	return eligible
+
+
+static func knows(sim: Sim, clue: StringName) -> bool:
+	var clues: Array = sim.story_progress.get("clues", [])
+	return clues.has(clue) or clues.has(String(clue))
+
+
+static func _order_familiar(sim: Sim, kind: StringName) -> bool:
+	# Challenge stock depends only on the run, never the account's story history.
+	if sim.endless or sim.daily_modifier != &"":
+		return true
+	if knows(sim, StringName("order_" + String(kind))):
+		return true
+	match kind:
+		&"repair", &"rescue":
+			return sim.next_wave_number() >= 3
+		&"salvage":
+			return sim.wave >= Content.enemy(&"runner").min_wave or knows(sim, &"handwriting")
+		&"recruit":
+			return sim.wave >= 4 or knows(sim, &"signature")
+		&"audit", &"credit":
+			var threat := &"warden" if kind == &"audit" else &"silencer"
+			return sim.wave >= Content.enemy(threat).min_wave or knows(sim, &"audit")
+	return false
 
 
 static func boss_id(sim: Sim) -> StringName:
@@ -192,6 +219,26 @@ static func order_complete(sim: Sim, contract: AnomalyContract) -> bool:
 	var mission: Dictionary = sim.expedition.get("mission", {})
 	return mission.get("kind", &"") == contract.kind and mission.get("state", &"") != &"failed" \
 		and int(mission.get("progress", 0)) >= int(mission.get("target", 1))
+
+
+static func unfinished_work(sim: Sim) -> Dictionary:
+	if is_negotiating(sim):
+		return {"kind": &"negotiation", "name_key": "context.negotiation.title",
+			"progress": 0, "target": 1, "state": &"pending"}
+	if sim.active_contract != null and not sim.active_contract.is_complete(sim):
+		var mission: Dictionary = sim.expedition.get("mission", {})
+		return {"kind": sim.active_contract.kind, "name_key": "order." + String(sim.active_contract.kind) + ".short",
+			"progress": int(mission.get("progress", 0)), "target": int(mission.get("target", sim.active_contract.target)),
+			"state": mission.get("state", &"pending")}
+	var bureau: Dictionary = sim.expedition.get("bureau", {})
+	if bureau.get("delivery", {}).get("state", &"") == &"carrying":
+		return {"kind": &"delivery", "name_key": "bureau.delivery.carrying",
+			"progress": 0, "target": 1, "state": &"carrying"}
+	for confession: Dictionary in bureau.get("confessions", []):
+		if int(confession["wave"]) == sim.wave and confession["state"] == &"active":
+			return {"kind": &"inspection", "name_key": "interaction.bureau_inspection",
+				"progress": 0, "target": 1, "state": &"active"}
+	return {}
 
 
 static func status(sim: Sim) -> Dictionary:

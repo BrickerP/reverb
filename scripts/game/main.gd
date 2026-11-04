@@ -45,6 +45,7 @@ var vending_ui: VendingReceiptUi
 var _context_kind: StringName = &""
 var _replace_dialog: ConfirmationDialog
 var _pending_start: Dictionary = {}
+var _recent_work_result: Dictionary = {}
 var _retire_pressed := false
 var _retire_hold := 0.0
 var _story_restore_pause := false
@@ -134,6 +135,8 @@ func _ready() -> void:
 	_replace_dialog.confirmed.connect(_confirm_new_run)
 	add_child(_replace_dialog)
 	shop_ui.start_requested.connect(_on_start_requested)
+	shop_ui.familiarity_confirmed.connect(_on_familiarity_confirmed)
+	hud.familiarity_confirmed.connect(_on_familiarity_confirmed)
 	end_ui.restart_requested.connect(new_run)
 	end_ui.character_requested.connect(show_select)
 	end_ui.seed_retry_requested.connect(_retry_seed)
@@ -204,6 +207,9 @@ func new_run(seed_value: int = -1, char_id: StringName = &"", ascension_value: i
 		character_id = char_id
 	_daily_run = false
 	sim = Sim.new(seed_value if seed_value >= 0 else randi())
+	if meta != null and not demo:
+		StoryLedger.seed_known(sim, meta.story_clues)
+	_sync_familiar_actions()
 	if ascension_value >= 0:
 		sim.ascension = clampi(ascension_value, 0, 3)
 	elif meta != null:
@@ -457,11 +463,14 @@ func show_select() -> void:
 func _detach_presentation_session() -> void:
 	_retire_pressed = false
 	_retire_hold = 0.0
+	_recent_work_result.clear()
 	_context_kind = &""
 	if context_ui != null:
 		context_ui.reset()
 	if vending_ui != null:
 		vending_ui.reset()
+	if end_ui != null:
+		end_ui.reset()
 	if echo_archive_ui != null:
 		echo_archive_ui.close()
 	if echo_wheel != null:
@@ -477,6 +486,8 @@ func _detach_presentation_session() -> void:
 			sim.combo_triggered.disconnect(_on_combo)
 		if sim.wave_ended.is_connected(_on_story_wave):
 			sim.wave_ended.disconnect(_on_story_wave)
+		if sim.world_event.is_connected(_on_familiar_world):
+			sim.world_event.disconnect(_on_familiar_world)
 	if _view != null:
 		_view.unbind()
 	if hud != null:
@@ -510,6 +521,8 @@ func _physics_process(delta: float) -> void:
 		if _shop_delay <= 0.0:
 			if sim.phase == Sim.Phase.RESOLUTION:
 				_open_pending_context()
+			elif not sim.pending_boons.is_empty():
+				_show_boon()
 			else:
 				_open_shop()
 	if _end_delay > 0.0:
@@ -640,12 +653,8 @@ func _sync_phase() -> void:
 		Sim.Phase.SHOP:
 			# Hold on the arena for a beat: the wave is being recorded, then the shop opens.
 			hud.visible = true
-			if sim.pending_boons.size() > 0:
-				_shop_delay = 0.0
-				_show_boon()
-			else:
-				_shop_delay = RECORD_BEAT
-				_view.play_record_beat(sim)
+			_shop_delay = maxf(RECORD_BEAT, _view.transition_hold())
+			_view.play_record_beat(sim)
 		Sim.Phase.LOST:
 			hud.visible = true
 			_record_run()
@@ -654,7 +663,7 @@ func _sync_phase() -> void:
 		Sim.Phase.RESOLUTION:
 			hud.visible = true
 			shop_ui.visible = false
-			_shop_delay = RECORD_BEAT
+			_shop_delay = maxf(RECORD_BEAT, _view.transition_hold())
 			_view.play_record_beat(sim)
 		Sim.Phase.WON:
 			# Let the boss death land before the summary covers it.
@@ -703,7 +712,9 @@ func _open_shop() -> void:
 	_shop_delay = 0.0
 	hud.visible = false
 	shop_ui.demo_closed = demo_run
+	shop_ui.set_recent_work_result(_recent_work_result)
 	shop_ui.open(sim)
+	_recent_work_result.clear()
 	_persist_story()
 
 
@@ -760,7 +771,7 @@ func _open_pending_context() -> void:
 	var choices := Expedition.exit_options(sim) if kind == &"exit" else Expedition.negotiation_options(sim)
 	var title := "context.exit.title" if kind == &"exit" else "context.negotiation.title"
 	var body := "context.exit.body" if kind == &"exit" else "context.negotiation.body"
-	context_ui.open_context(title, body, choices, true)
+	context_ui.open_context(title, body, choices, true, sim)
 
 
 func _on_context_chosen(id: StringName) -> void:
@@ -857,6 +868,7 @@ func _connect_run_events() -> void:
 	sim.echo_retired.connect(_on_retirement)
 	sim.combo_triggered.connect(_on_combo)
 	sim.wave_ended.connect(_on_story_wave)
+	sim.world_event.connect(_on_familiar_world)
 
 
 func _on_retirement(info: EchoRetirementInfo) -> void:
@@ -955,6 +967,7 @@ func continue_run(restore_pause: bool = false) -> bool:
 	_unlock_text = str(envelope.get("unlock_text", ""))
 	_settings_restore_pause = bool(envelope.get("settings_restore_pause", false))
 	_phase = sim.phase
+	_sync_familiar_actions()
 	_view.bind(sim, character_id)
 	hud.bind(sim)
 	audio.bind(sim)
@@ -1036,7 +1049,8 @@ func _input(event: InputEvent) -> void:
 				sim.select_echo(selected)
 			_set_paused(false)
 		elif held < RETIRE_HOLD_TIME and sim != null and not paused:
-			sim.retire_selected_echo()
+			if sim.retire_selected_echo():
+				_on_familiarity_confirmed(&"retire")
 		get_viewport().set_input_as_handled()
 
 
@@ -1116,6 +1130,8 @@ func _on_archive_echo(take: EchoTake) -> void:
 		return
 	var saved := EchoArchive.store(meta, character_id, take)
 	end_ui.set_archive_result(saved, meta.last_error)
+	if saved:
+		_on_familiarity_confirmed(&"archive")
 
 
 func _resize_battlefield() -> void:
@@ -1131,3 +1147,36 @@ func _resize_battlefield() -> void:
 	_arena_clip.position = rect.position
 	_arena_clip.size = rect.size
 	_view.set_display_rect(rect)
+
+
+func _sync_familiar_actions() -> void:
+	var actions: Array[StringName] = []
+	if meta != null:
+		actions = meta.familiar_actions.duplicate()
+	for consumer in [_view, hud, audio, shop_ui, end_ui]:
+		if consumer != null:
+			consumer.set_familiar_actions(actions)
+
+
+func _on_familiarity_confirmed(action: StringName) -> void:
+	if meta != null and meta.remember_action(action):
+		_sync_familiar_actions()
+
+
+func _on_familiar_world(info: Dictionary) -> void:
+	var kind := StringName(info.get("kind", &""))
+	if kind == &"character_skill" and bool(info.get("ok", false)):
+		_on_familiarity_confirmed(StringName("skill_" + String(info.get("ability", &""))))
+	elif kind in [&"worker_saved", &"machine_repaired"]:
+		_recent_work_result = info.duplicate(true)
+		_on_familiarity_confirmed(&"rescue" if kind == &"worker_saved" else &"repair")
+
+
+func transition_profile() -> Dictionary:
+	var target: StringName = &"none"
+	if sim != null and _shop_delay > 0.0:
+		target = &"resolution" if sim.phase == Sim.Phase.RESOLUTION else (&"boon" if not sim.pending_boons.is_empty() else &"shop")
+	elif _end_delay > 0.0:
+		target = &"end"
+	return {"target": target, "remaining": maxf(_shop_delay, _end_delay),
+		"paused": paused, "phase": sim.phase if sim != null else -1}

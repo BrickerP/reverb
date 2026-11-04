@@ -50,6 +50,10 @@ var _moment := MomentInk.new()
 var _was_charged := false
 var _charge_phase := -1
 var _charge_wave := -1
+var _pending_charge := false
+var _critical_left := 0.0
+var _familiar_actions: Array[StringName] = []
+var _seen_combos: Dictionary = {}
 var _interaction_ink := InteractionInk.new()
 
 
@@ -85,6 +89,9 @@ func bind(s: Sim, id: StringName = &"looper") -> void:
 	_interaction_ink.reset()
 	_director.clear()
 	_moment.clear()
+	_pending_charge = false
+	_critical_left = 0.0
+	_seen_combos.clear()
 	_was_charged = CharacterSkills.is_charged(sim)
 	_charge_phase = int(sim.phase) if sim != null else -1
 	_charge_wave = sim.wave if sim != null else -1
@@ -126,6 +133,9 @@ func unbind() -> void:
 	_interaction_ink.reset()
 	_director.clear()
 	_moment.clear()
+	_pending_charge = false
+	_critical_left = 0.0
+	_seen_combos.clear()
 	_was_charged = CharacterSkills.is_charged(sim)
 	_charge_phase = int(sim.phase) if sim != null else -1
 	_charge_wave = sim.wave if sim != null else -1
@@ -254,6 +264,7 @@ func _process(delta: float) -> void:
 	if sim == null or _paused:
 		return
 	_interaction_ink.step(delta)
+	_critical_left = maxf(0.0, _critical_left - delta)
 	_moment.step(delta)
 	_observe_charge()
 	var running := sim.phase == Sim.Phase.WAVE
@@ -386,10 +397,17 @@ func _on_world_event(info: Dictionary) -> void:
 				_reset_shift_sample(int(anchor["uid"]), anchor["to_pos"])
 	var kind := StringName(info.get("kind", &""))
 	if kind == &"character_skill" and bool(info.get("ok", false)):
-		_offer_moment(&"skill", sim.player.pos, ArenaPainter.PAPER)
+		var familiar := _familiar_actions.has(StringName("skill_" + String(info.get("ability", &""))))
+		if not familiar:
+			_critical_left = maxf(_critical_left, InteractionInk.SKILL_TIME)
+		_offer_moment(&"skill", sim.player.pos, ArenaPainter.PAPER, familiar)
 	elif kind in [&"machine_repaired", &"worker_saved"]:
 		var work_pos: Vector2 = info.get("from_pos", sim.player.pos) if kind == &"worker_saved" else info.get("pos", sim.player.pos)
-		_offer_moment(&"repair" if kind == &"machine_repaired" else &"rescue", work_pos, Color("91ab80"))
+		var action: StringName = &"repair" if kind == &"machine_repaired" else &"rescue"
+		var familiar := _familiar_actions.has(action)
+		if not familiar and WorldArena.camera_rect(sim.player.pos, _display_rect).has_point(work_pos):
+			_critical_left = maxf(_critical_left, 0.80 if action == &"repair" else InteractionInk.RESCUE_TIME)
+		_offer_moment(action, work_pos, Color("91ab80"), familiar)
 	if kind != &"character_relay" and (kind != &"character_skill" or info.get("ability", &"") == &"overloader"):
 		_refresh_world_presentation()
 
@@ -782,7 +800,7 @@ func _expire_feedback(queue: Array[Dictionary], delta: float) -> void:
 	queue.resize(keep)
 
 
-func _clear_feedback() -> void:
+func _clear_feedback(keep_moment: bool = false) -> void:
 	_muzzles.clear()
 	_hits.clear()
 	_explosions.clear()
@@ -792,11 +810,12 @@ func _clear_feedback() -> void:
 	_retirement_note.clear()
 	_retirement_note_time = 0.0
 	_last_event.clear()
-	_moment.clear()
+	if not keep_moment:
+		_moment.clear()
 
 
 func _on_wave_phase(_wave: int) -> void:
-	_clear_feedback()
+	_clear_feedback(_critical_left > 0.0)
 	_refresh_world_presentation()
 	_director.end_actions()
 	_sparks.clear()
@@ -808,6 +827,9 @@ func _on_wave_started(_wave: int) -> void:
 	_refresh_world_presentation()
 	_director.clear()
 	_moment.clear()
+	_pending_charge = false
+	_critical_left = 0.0
+	_seen_combos.clear()
 	_was_charged = CharacterSkills.is_charged(sim)
 	_charge_phase = int(sim.phase) if sim != null else -1
 	_charge_wave = sim.wave if sim != null else -1
@@ -875,15 +897,25 @@ func future_path_profiles() -> Array[Dictionary]:
 
 
 func _on_combo(info: ComboInfo) -> void:
-	if info != null and info.affected > 0:
-		_offer_moment(&"combo", info.pos, info.source_tint if info.source >= 0 else ArenaPainter.PAPER)
+	if info == null or info.affected <= 0:
+		return
+	var action := StringName("combo_" + String(info.id))
+	if _familiar_actions.has(action) or _seen_combos.has(info.id):
+		return
+	if _offer_moment(&"combo", info.pos, info.source_tint if info.source >= 0 else ArenaPainter.PAPER):
+		_seen_combos[info.id] = true
 
 
 func _observe_charge() -> void:
 	var charged := CharacterSkills.is_charged(sim)
 	var same_wave := _charge_phase == int(sim.phase) and _charge_wave == sim.wave
-	if same_wave and charged and not _was_charged:
-		_offer_moment(&"ready", sim.player.pos, Color("91ab80"))
+	if not same_wave or not charged:
+		_pending_charge = false
+	elif not _was_charged:
+		_pending_charge = true
+	if _pending_charge and charged:
+		if _offer_moment(&"ready", sim.player.pos, Color("91ab80"), _familiar_actions.has(StringName("skill_" + String(sim.character_id)))):
+			_pending_charge = false
 	_was_charged = charged
 	_charge_phase = int(sim.phase)
 	_charge_wave = sim.wave
@@ -895,9 +927,22 @@ func moment_visible() -> bool:
 		and WorldArena.camera_rect(sim.player.pos, _display_rect).has_point(data["pos"])
 
 
-func _offer_moment(kind: StringName, pos: Vector2, tint: Color = ArenaPainter.PAPER) -> bool:
+func _offer_moment(kind: StringName, pos: Vector2, tint: Color = ArenaPainter.PAPER, familiar: bool = false) -> bool:
 	if sim == null or not WorldArena.camera_rect(sim.player.pos, _display_rect).has_point(pos):
 		return false
 	if not moment_visible():
 		_moment.clear()
-	return _moment.offer(kind, pos, tint)
+	return _moment.offer(kind, pos, tint, familiar)
+
+
+func set_familiar_actions(actions: Array[StringName]) -> void:
+	_familiar_actions = ExperienceHints.normalize(actions)
+
+
+func transition_hold() -> float:
+	return clampf(_critical_left, 0.0, 1.0)
+
+
+func perception_profile() -> Dictionary:
+	return {"pending_ready": _pending_charge, "moment": _moment.snapshot(),
+		"closure_remaining": transition_hold(), "familiar_actions": _familiar_actions.duplicate()}

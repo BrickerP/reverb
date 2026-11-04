@@ -528,18 +528,10 @@ func step(delta: float, move_dir: Vector2) -> void:
 
 func _encounter_finished() -> bool:
 	if wave_time < wave_duration:
-		if _plan_idx < _plan.size() or _threats_remain() or Expedition.is_negotiating(self):
+		if _plan_idx < _plan.size() or _threats_remain() or not Expedition.unfinished_work(self).is_empty():
 			return false
 		if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL:
 			return false
-		if active_contract != null and not active_contract.is_complete(self):
-			return false
-		var bureau: Dictionary = expedition.get("bureau", {})
-		if bureau.get("delivery", {}).get("state", &"") == &"carrying":
-			return false
-		for confession: Dictionary in bureau.get("confessions", []):
-			if int(confession["wave"]) == wave and confession["state"] == &"active":
-				return false
 	# The first fight still asks you to walk while someone is left. An empty
 	# field with a finished clock is the shop, not a closed door.
 	if wave == 1 and not endless and wave_travel < FIRST_WAVE_TRAVEL and _threats_remain():
@@ -557,6 +549,9 @@ func encounter_profile() -> Dictionary:
 	if _plan_idx >= _plan.size():
 		if _threats_remain():
 			return WaveDirector.cohort_profile(2)
+		var work := Expedition.unfinished_work(self)
+		if not work.is_empty():
+			return {"id": &"work", "name_key": "wave.phase.work", "intensity": 0.0, "work": work}
 		return {"id": &"complete", "name_key": "wave.phase.complete", "intensity": 0.0}
 	var next := WaveDirector.cohort_index(_plan_idx, _plan.size())
 	var current := WaveDirector.cohort_index(maxi(0, _plan_idx - 1), _plan.size())

@@ -1,5 +1,16 @@
 extends RefCounted
 
+class BusyReadyAudio extends GameAudio:
+	var reject_ready := true
+	var ready_attempts := 0
+
+	func _emphasize(kind: StringName, copy: bool = false) -> bool:
+		if kind == &"charged":
+			ready_attempts += 1
+			if reject_ready:
+				return false
+		return super._emphasize(kind, copy)
+
 
 func _audio(sim: Sim = null) -> GameAudio:
 	var audio := GameAudio.new()
@@ -214,7 +225,160 @@ func test_pacing_accents_observed_entries_without_startup_or_boss_false_tear(c: 
 	c.eq(audio.play_count(&"wave_start"), 1, "new finite second cohort has one restrained pulse")
 	audio._observe_emphasis({"mode": &"battle", "wave_phase": &"second_push"})
 	c.eq(audio.play_count(&"wave_start"), 1, "held push cannot repeat")
+	audio._observe_emphasis({"mode": &"battle", "wave_phase": &"second_breather"})
+	audio._last.erase(&"accent:second_push")
+	audio._observe_emphasis({"mode": &"battle", "wave_phase": &"second_push"})
+	c.eq(audio.play_count(&"wave_start"), 1, "a real cohort is acknowledged once even if observation briefly returns to its held phase")
 	audio._observe_emphasis({"mode": &"boss", "wave_phase": &"final_push"})
 	c.eq(audio.play_count(&"wave_start"), 1, "boss pacing cannot masquerade as a new ordinary cohort")
 	c.eq(audio.play_count(&"boss"), 0, "ordinary phase never fabricates the Boss seam sound")
+	audio.free()
+
+
+func test_busy_ready_retries_only_while_the_same_charge_is_still_real(c: Check) -> void:
+	var sim := Sim.new(227)
+	sim.start_run()
+	sim.character_energy = 0.0
+	var audio := BusyReadyAudio.new()
+	(Engine.get_main_loop() as SceneTree).root.add_child(audio)
+	audio.bind(sim)
+	sim.character_energy = CharacterSkills.ENERGY_COST
+	audio._observe_charge()
+	c.eq(audio.ready_attempts, 1, "real ready edge attempts its cue")
+	c.ok(not audio._charged, "busy voice rejection does not consume the edge")
+	audio.reject_ready = false
+	audio._observe_charge()
+	c.eq(audio.play_count(&"click"), 1, "sustained real charge speaks in the next available gap")
+	audio._observe_charge()
+	c.eq(audio.ready_attempts, 2, "accepted readiness does not poll another cue")
+	sim.character_energy = 0.0
+	audio._observe_charge()
+	audio.reject_ready = true
+	sim.character_energy = CharacterSkills.ENERGY_COST
+	audio._observe_charge()
+	sim.character_energy = 0.0
+	audio.reject_ready = false
+	audio._observe_charge()
+	c.eq(audio.play_count(&"click"), 1, "charge consumed while busy cannot replay a stale success")
+	audio.free()
+
+
+func test_familiar_combo_is_a_short_confirmation_and_never_continuous_duck(c: Check) -> void:
+	var audio := _audio()
+	c.ok(audio._emphasize(&"combo_pin_press"), "first successful material recognition has its accent")
+	var first := audio.feedback_last_data()
+	audio._process(0.2)
+	c.eq(audio._duck_remaining, 0.0, "first accent releases the music")
+	c.ok(audio._emphasize(&"combo_ink_arc"), "another real combo can confirm without a queued transient")
+	c.eq(audio._duck_remaining, 0.0, "different combo types cannot alternate into constant ducking")
+	audio._last.erase(&"accent:combo_pin_press")
+	c.ok(audio._emphasize(&"combo_pin_press"), "next real repetition keeps a dry confirmation")
+	var repeat := audio.feedback_last_data()
+	c.ok(repeat["volume_db"] < first["volume_db"] and repeat["gate"] < first["gate"], "recognition and habit have distinct perceptual weight")
+	c.ok(repeat["priority"] < first["priority"], "habitual success leaves protected space to danger")
+	c.eq(audio._duck_remaining, 0.0, "repetition cannot pump the score")
+	var known: Array[StringName] = [&"combo_pin_press"]
+	audio.set_familiar_actions(known)
+	known.clear()
+	audio.bind(null)
+	audio._emphasize(&"combo_pin_press")
+	c.ok(audio.feedback_last_data()["priority"] < first["priority"], "read-only familiarity snapshot survives session reset without retaining caller array")
+	c.eq(audio._duck_remaining, 0.0, "existing experience never repeats the introductory duck")
+	audio.free()
+
+
+func test_skill_failure_and_familiar_success_cannot_claim_first_recognition(c: Check) -> void:
+	var audio := _audio()
+	var known: Array[StringName] = [&"skill_mirror", &"retire"]
+	audio.set_familiar_actions(known)
+	audio._on_world_event({"kind": &"character_skill", "ability": &"mirror", "ok": false})
+	c.eq(audio.play_count(&"echo"), 0, "rejected role action has no success body")
+	c.eq(audio._duck_remaining, 0.0, "rejection cannot create a dramatic mix beat")
+	audio._on_world_event({"kind": &"character_skill", "ability": &"mirror", "ok": true})
+	c.eq(audio.play_count(&"echo"), 1, "actual familiar success remains audible")
+	c.ok(audio.feedback_last_data()["priority"] < 40, "familiar role use leaves priority for actual danger")
+	c.eq(audio._duck_remaining, 0.0, "familiar skill does not repeat first-time emphasis")
+	var retired := EchoRetirementInfo.new()
+	retired.kind = &"stamp"
+	audio._on_echo_retired(retired)
+	c.eq(audio.play_count(&"weapon_rail_spike"), 1, "actual familiar sacrifice retains its recorded material")
+	c.eq(audio._duck_remaining, 0.0, "familiar sacrifice has no tutorial-like mix dip")
+	audio.free()
+
+
+func _warning(sim: Sim, uid: int, position: Vector2) -> EnemyState:
+	var enemy := EnemyState.new()
+	enemy.def = Content.enemy(&"runner")
+	enemy.uid = uid
+	enemy.pos = position
+	enemy.radius = enemy.def.radius
+	enemy.brain_state = &"warn"
+	enemy.brain_time = EnemyBrain.RUNNER_WARN
+	enemy.attack_target = sim.player.pos
+	enemy.attack_direction = Vector2.LEFT
+	return enemy
+
+
+func test_warning_uses_locked_phase_once_and_never_replays_late_or_offscreen(c: Check) -> void:
+	var sim := Sim.new(228)
+	sim.start_run()
+	var audio := _audio(sim)
+	var enemy := _warning(sim, 725, sim.player.pos + Vector2(100, 0))
+	sim.enemies.append(enemy)
+	var target := enemy.attack_target
+	var direction := enemy.attack_direction
+	var rng_before := sim.rng.state
+	audio._observe_warnings()
+	c.eq(audio.play_count(&"weapon_longbow"), 1, "new locked dash warning owns one short dry cue")
+	audio._observe_warnings()
+	c.eq(audio.play_count(&"weapon_longbow"), 1, "held warning cannot become a repeated alarm")
+	c.eq(enemy.attack_target, target, "hearing a warning cannot retarget the lock")
+	c.eq(enemy.attack_direction, direction, "audio does not independently recompute direction")
+	var late := _warning(sim, 726, sim.player.pos + Vector2(150, 0))
+	late.brain_time = 0.04
+	sim.enemies.append(late)
+	var far := _warning(sim, 727, WorldArena.camera_rect(sim.player.pos).end + Vector2(200, 200))
+	sim.enemies.append(far)
+	audio._last.erase(&"warn:attack")
+	audio._observe_warnings()
+	c.eq(audio.play_count(&"weapon_longbow"), 1, "late and offscreen warnings are discarded, not queued")
+	enemy.brain_state = &"dash"
+	late.dead = true
+	far.dead = true
+	audio._observe_warnings()
+	enemy.brain_state = &"warn"
+	enemy.brain_time = EnemyBrain.RUNNER_WARN
+	audio._observe_warnings()
+	c.eq(audio.play_count(&"weapon_longbow"), 2, "a fresh real warning cycle may speak again")
+	c.eq(sim.rng.state, rng_before, "warning observation consumes no gameplay randomness")
+	audio.set_paused(true)
+	sim.enemies.append(_warning(sim, 728, sim.player.pos + Vector2(90, 0)))
+	audio.set_paused(false)
+	audio._last.erase(&"warn:attack")
+	audio._observe_warnings()
+	c.eq(audio.play_count(&"weapon_longbow"), 2, "resume seeds existing warning state without a stale entrance cue")
+	audio.free()
+
+
+func test_offscreen_copy_churn_and_automatic_collection_do_not_claim_player_attention(c: Check) -> void:
+	var sim := Sim.new(229)
+	sim.start_run()
+	var audio := _audio(sim)
+	var shot := _shot(0, 42)
+	shot.origin = WorldArena.camera_rect(sim.player.pos).end + Vector2(400, 0)
+	for i in 8:
+		audio._on_shot_info(shot)
+	c.eq(audio.play_count(&"weapon_pistol"), 0, "offscreen routine copies cannot crowd critical voices")
+	var kill := EnemyDeathInfo.new()
+	kill.source = 0
+	kill.actor_token = 42
+	kill.pos = shot.origin
+	audio._on_kill(kill)
+	c.eq(audio.play_count(&"kill"), 0, "offscreen copy cleanup is not another foreground event")
+	sim.phase = Sim.Phase.SHOP
+	audio._on_pickup(20)
+	c.eq(audio.play_count(&"pickup"), 0, "automatic end collection cannot sound like physical scavenging")
+	sim.phase = Sim.Phase.WAVE
+	audio._on_pickup(1)
+	c.eq(audio.play_count(&"pickup"), 1, "real manual collection keeps its crisp material cue")
 	audio.free()

@@ -17,6 +17,88 @@ func _item_offer(s: Sim, id: StringName, price: int) -> Offer:
 	return o
 
 
+func _shelf(sim: Sim) -> Array:
+	var out: Array = []
+	for offer: Offer in sim.shop.offers:
+		out.append([String(offer.id()), offer.price, offer.weapon_level])
+	return out
+
+
+func test_unfamiliar_opening_shop_fills_six_existing_gear_offers(c: Check) -> void:
+	var sim := _shop_sim()
+	sim.shop.roll(sim)
+	var weapons := 0
+	var items := 0
+	var seen := {}
+	for offer: Offer in sim.shop.offers:
+		c.ok(not offer.is_contract(), "the first Echo preparation does not also introduce a work order")
+		c.ok(not seen.has(offer.id()), "the larger existing gear shelf still has unique offers")
+		seen[offer.id()] = true
+		weapons += 1 if offer.is_weapon() else 0
+		items += 1 if offer.item != null else 0
+	c.eq(sim.shop.offers.size(), Shop.OFFER_COUNT, "deferred order slots never leave an empty opening shelf")
+	c.eq(weapons, 3, "the opening uses three already supported weapons")
+	c.eq(items, 3, "the opening uses three already supported passive items")
+	var original := _shelf(sim)
+	var restored := RunSnapshot.restore(RunSnapshot.capture(sim))
+	c.ok(restored != null, "the opening gear shelf resumes without a new snapshot format: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(_shelf(restored), original, "resume never rerolls the prepared gear shelf")
+	var before := ShopState.capture(restored).to_dict()
+	c.ok(restored.shop.buy(restored, restored.shop.offers[0]), "the unfamiliar shelf still supports the real purchase flow")
+	c.ok(restored.shop.undo(restored).ok, "a gear purchase remains a single undoable transaction")
+	c.eq(ShopState.capture(restored).to_dict(), before, "Undo restores the shelf, funds and existing knowledge exactly")
+
+
+func test_known_single_order_and_held_old_order_preserve_complete_stock(c: Check) -> void:
+	var sim := _shop_sim()
+	sim.story_progress["clues"] = ["order_rescue"]
+	sim.shop.roll(sim)
+	c.eq(sim.shop.offers.size(), Shop.OFFER_COUNT, "one familiar order leaves five useful gear slots")
+	var orders := 0
+	for offer: Offer in sim.shop.offers:
+		if offer.is_contract():
+			orders += 1
+			c.eq(offer.contract.kind, &"rescue", "only the known opening work is introduced")
+	c.eq(orders, 1, "a familiar order is not duplicated to fill both category slots")
+	sim.story_progress["clues"] = []
+	var held := Offer.new()
+	held.contract = AnomalyContract.create(&"audit", sim.next_wave_number())
+	held.price = held.contract.deposit
+	sim.shop.offers[5] = held
+	sim.shop.toggle_lock(sim, held)
+	c.ok(sim.shop.reroll(sim), "a previously offered unfamiliar order can remain explicitly held")
+	c.eq(sim.shop.offers.size(), Shop.OFFER_COUNT, "retained old stock and new gear still fill six slots")
+	c.ok(sim.shop.offers[5] == held, "refresh preserves the actual held offer and shelf position")
+	c.ok(sim.shop.quote(ShopResult.BUY, sim, held).ok, "new exposure rules never revoke a saved or held order")
+	var before := ShopState.capture(sim).to_dict()
+	c.ok(sim.shop.buy(sim, held), "the held order still purchases through the authoritative world checks")
+	c.ok(sim.shop.undo(sim).ok, "the held-order purchase remains undoable")
+	c.eq(ShopState.capture(sim).to_dict(), before, "Undo does not erase known facts or the original held stock")
+
+
+func test_daily_and_endless_stock_ignore_account_knowledge(c: Check) -> void:
+	for endless: bool in [false, true]:
+		var fresh := _shop_sim()
+		var known := _shop_sim()
+		known.story_progress["clues"] = ["carbon", "order_rescue", "order_audit", "signature", "audit"]
+		for sim: Sim in [fresh, known]:
+			if endless:
+				sim.wave = WaveDirector.FINAL_WAVE
+				sim.phase = Sim.Phase.WON
+				c.ok(sim.begin_endless(), "the stock fixture enters Endless through its actual continuation")
+			else:
+				sim.daily_modifier = DailyAnomaly.FORTUNE
+			var rng_before := sim.rng.state
+			var hazards_before := sim.hazard_rng.state
+			sim.shop.roll(sim)
+			c.eq(sim.rng.state, rng_before, "challenge stock never changes the combat RNG")
+			c.eq(sim.hazard_rng.state, hazards_before, "challenge stock never changes the hazard RNG")
+		c.eq(_shelf(known), _shelf(fresh), "the same challenge seed produces the same shelf with or without account history")
+		c.eq(Expedition.offer_ids(known), Expedition.offer_ids(fresh), "challenge eligibility is also independent of account history")
+
+
 func test_debt_repayment_quotes_partial_cost_and_undo_restores_funds_and_debt(c: Check) -> void:
 	var sim := _shop_sim(13)
 	sim.expedition["debt"] = 40

@@ -3,6 +3,7 @@ extends Control
 
 signal start_requested
 signal receipt_requested
+signal familiarity_confirmed(action: StringName)
 
 const MAX_PENDING_FEEDBACK := 8
 const FEEDBACK_EXPIRY_MSEC := 800
@@ -20,7 +21,6 @@ var crew_button: Button
 var debt_button: Button
 var confession_button: Button
 var confession: ConfessionUi
-var binding_ceremony: BindingCeremonyUi
 var crew: CrewUi
 var echo_panel: EchoPanel
 var build_panel: BuildPanel
@@ -69,6 +69,25 @@ var _vendor_tween: Tween
 var _vendor_receipt: Control
 var vendor_feedback_runs := 0
 var last_vendor_reaction: StringName = &"idle"
+const FAMILIAR_ACTIONS: Array[StringName] = [&"buy", &"upgrade", &"replace", &"combine", &"evolve", &"merge_skill", &"merge_repair", &"merge_power", &"first_echo"]
+const HOVER_INTENT := 0.16
+var _familiar_actions: Array[StringName] = []
+var _pending_change: Dictionary = {}
+var _last_change: Dictionary = {}
+var _change_visual: WorkshopUi.ChangeVisual
+var _change_underlay: Control
+var _shop_paused := false
+var _hover_source: Control
+var _hover_left := 0.0
+var _last_block := ""
+var _vendor_line_left := 0.0
+var _first_echo_uid := 0
+var _first_echo_seen := 0.0
+var _arrival_uid := 0
+var _recent_work: Dictionary = {}
+var _work_left := 0.0
+var _work_header := ""
+var _work_tooltip := ""
 
 
 func _ready() -> void:
@@ -148,9 +167,6 @@ func _ready() -> void:
 	add_child(confession)
 	confession.chosen.connect(_on_confession_chosen)
 	confession.closed.connect(_on_confession_closed)
-	binding_ceremony = BindingCeremonyUi.new()
-	binding_ceremony.z_index = 9
-	add_child(binding_ceremony)
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
@@ -171,7 +187,11 @@ func open(s: Sim) -> void:
 	workshop.reset()
 	crew.reset()
 	confession.reset()
-	binding_ceremony.reset()
+	_clear_change()
+	_cancel_hover()
+	_last_block = ""
+	_first_echo_uid = 0
+	_first_echo_seen = 0.0
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	inspection.focus_enabled = false
@@ -187,6 +207,8 @@ func open(s: Sim) -> void:
 	last_vendor_reaction = &"idle"
 	_vendor_line.text = ""
 	_vendor_line.visible = false
+	_vendor_line_left = 0.0
+	_shop_paused = false
 	_vendor_line.add_theme_color_override("font_color", ON_DARK)
 	last_feedback.clear()
 	visible = true
@@ -198,10 +220,18 @@ func open(s: Sim) -> void:
 	_stock_scroll_frames = 0
 	_stock_scroll_pending = -1
 	_offers_scroll.scroll_vertical = 0
-	_unread_copy = sim.bank.takes.any(func(take: EchoTake) -> bool: return take.wave == sim.wave)
+	_unread_copy = not sim.bank.takes.is_empty() and sim.bank.takes.back().wave == sim.wave
+	_arrival_uid = sim.bank.takes.back().uid if _unread_copy else 0
+	if _unread_copy and not _familiar_actions.has(&"first_echo"):
+		_first_echo_uid = sim.bank.takes.back().uid
+		_equipment_page = 1
 	refresh(true)
+	_show_recent_work()
 	_fly_take_token()
-	_focus_card(0)
+	if _first_echo_uid > 0:
+		echo_panel.focus_take(_first_echo_uid)
+	else:
+		_focus_card(0)
 
 
 func close_session() -> void:
@@ -218,8 +248,13 @@ func close_session() -> void:
 		crew.reset()
 	if confession != null:
 		confession.reset()
-	if binding_ceremony != null:
-		binding_ceremony.reset()
+	_clear_change()
+	_cancel_hover()
+	_recent_work.clear()
+	_work_left = 0.0
+	_first_echo_uid = 0
+	_first_echo_seen = 0.0
+	_arrival_uid = 0
 	_workshop_origin = &"weapon"
 	_last_focus = null
 	sim = null
@@ -243,6 +278,9 @@ func close_session() -> void:
 
 
 func refresh(animate_echo: bool = false) -> void:
+	_clear_visible_change()
+	_cancel_hover()
+	_work_left = 0.0
 	if inspection != null:
 		inspection.reset()
 	var stock_scroll := _stock_scroll_pending if _stock_scroll_frames > 0 else _offers_scroll.scroll_vertical
@@ -257,7 +295,7 @@ func refresh(animate_echo: bool = false) -> void:
 	_interest.accessibility_description = _interest.text
 	_materials.tooltip_text = ""
 	var expedition := Expedition.status(sim)
-	var next_delivery := BureauEvents.forecast(sim.next_wave_number(), sim.endless)
+	var next_delivery := BureauEvents.forecast(sim, sim.next_wave_number())
 	var objective_key := str(expedition.objective)
 	var headline := PackedStringArray()
 	if next_delivery:
@@ -298,6 +336,13 @@ func refresh(animate_echo: bool = false) -> void:
 	undo_button.tooltip_text = Loc.t("shop.undo_blocked") if undo_button.disabled else Loc.t("shop.undo_hint")
 	undo_button.accessibility_description = undo_button.tooltip_text
 	crew_button.text = Loc.t("crew.open")
+	var safe_workers := 0
+	for worker: Dictionary in sim.expedition.get("world", {}).get("workers", []):
+		if worker["state"] == &"safe":
+			safe_workers += 1
+	if safe_workers > 0:
+		crew_button.text += " · %d" % safe_workers
+	crew_button.add_theme_color_override("font_color", UiTheme.INK)
 	crew_button.accessibility_name = crew_button.text
 	crew_button.tooltip_text = Loc.t("crew.summary")
 	debt_button.text = Loc.t("debt.open", [int(expedition.debt)])
@@ -721,6 +766,7 @@ func _on_replace_slot(index: int) -> void:
 			workshop.close()
 		else:
 			_flash_block(result.reason))
+	workshop.add_result_visual(_weapon_preview([_weapon_row(sim.player.weapons[index], sim.player.level_at(index))], [_weapon_row(offer.weapon, offer.weapon_level)]))
 
 
 func _on_upgrade_weapon(index: int) -> void:
@@ -752,8 +798,10 @@ func _on_evolve_weapon(index: int) -> void:
 		weapons[index] = final_weapon
 		levels[index] = WeaponDef.MAX_LEVEL
 		var dps := int(round(OfferCard.list_dps(weapons, levels, sim.player.stats)))
-		choices.append({"text": "%s · %s · %s\n%s\n%s\n%s" % [Loc.weapon_name(target), Loc.t("role." + String(final_weapon.role)), Loc.t("shop.price_materials", [quote.cost]), Loc.weapon_desc(target), Loc.t("shop.base_output", [Loc.weapon_summary(final_weapon, WeaponDef.MAX_LEVEL)]), Loc.t("shop.take_dps", [dps])], "value": target,
-			"disabled": not quote.ok, "hint": Loc.weapon_desc(target) + " · " + Loc.t("workshop.evolve_staple") + ((" · " + _drop_reason_text(quote.reason)) if not quote.ok else "")})
+		var terms := "%s · %s\n%s\n%s" % [Loc.t("role." + String(final_weapon.role)), Loc.weapon_desc(target), Loc.t("shop.base_output", [Loc.weapon_summary(final_weapon, WeaponDef.MAX_LEVEL)]), Loc.t("shop.take_dps", [dps])]
+		choices.append({"text": Loc.weapon_name(target) + " · " + Loc.t("shop.price_materials", [quote.cost]), "value": target,
+			"disabled": not quote.ok, "hint": terms + " · " + Loc.t("workshop.evolve_staple") + ((" · " + _drop_reason_text(quote.reason)) if not quote.ok else ""),
+			"preview": {"before": [_weapon_row(sim.player.weapons[index], sim.player.level_at(index))], "after": [_weapon_row(final_weapon, WeaponDef.MAX_LEVEL)]}})
 	var weapon := sim.player.weapons[index]
 	var body := Loc.t("shop.level", [sim.player.level_at(index) + 1]) + " / %d · %s %d/%d" % [WeaponDef.MAX_LEVEL + 1, Loc.weapon_family(weapon.family), Combat.family_count(sim.player.weapons, weapon.family), Shop.EVOLVE_FAMILY_COUNT]
 	body += "\n" + Loc.t("workshop.evolve_staple")
@@ -784,9 +832,13 @@ func _on_sell_weapon(index: int) -> void:
 
 # Blocked clicks point at the resource that is missing, instead of only reading "can't buy".
 func _flash_block(reason: StringName) -> void:
+	var signature := "%s:%d:%d:%d" % [reason, sim.player.materials, sim.player.weapons.size(), sim.player.items.size()]
+	var repeated := signature == _last_block
+	_last_block = signature
 	match reason:
 		&"poor":
-			_react_vendor(&"poor")
+			if not repeated:
+				_react_vendor(&"poor")
 			_say(Loc.t("shop.drop_poor"))
 			_reject_materials()
 		&"full":
@@ -852,8 +904,8 @@ func set_reduced_effects(on: bool) -> void:
 					card._release_paper()
 	if echo_panel != null:
 		echo_panel.set_reduced_effects(on)
-	if on and binding_ceremony != null:
-		binding_ceremony.skip()
+	if is_instance_valid(_change_visual):
+		_change_visual.reduced = on
 	if on:
 		UiTheme.animate_open(self, true)
 		reset_feedback()
@@ -887,8 +939,7 @@ func _on_weapon_changed(info: WeaponChangeInfo) -> void:
 	if info == null or not info.ok:
 		return
 	var removed := info.before_id != &"" and info.after_id == &""
-	var key := StringName("removed_%d" % info.index) if removed \
-			else StringName("slot_%d" % info.index)
+	var key := StringName("slot_%d" % info.index)
 	_queue_feedback(key, {
 		"kind": &"weapon_removed" if removed else &"weapon", "index": info.index,
 		"reverse": info.reason == ShopResult.UNDO, "action": info.reason,
@@ -901,8 +952,11 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 		return
 	# This is the committed transaction signal, never a pointer-down or drag preview.
 	if visible and sim != null and sim == _connected_sim:
-		if binding_ceremony.present(result, reduced_effects):
-			_update_binding_rect()
+		_clear_change()
+		_last_block = ""
+		if result.action == ShopResult.REROLL:
+			_pending_feedback.clear()
+		_pending_change = _change_proof(result)
 	if visible and sim != null and sim == _connected_sim:
 		match result.action:
 			ShopResult.REROLL: _react_vendor(&"reroll", result)
@@ -939,9 +993,15 @@ func _on_shop_action_resolved(result: ShopResult) -> void:
 func _react_vendor(kind: StringName, result: ShopResult = null) -> void:
 	if not visible or sim == null or _vendor_line == null:
 		return
+	var repeat := last_vendor_reaction == kind and _vendor_line_left > 0.0
 	_reset_vendor_motion()
 	last_vendor_reaction = kind
+	if repeat:
+		if result != null and result.ok and not reduced_effects:
+			_fly_receipt(result)
+		return
 	vendor_feedback_runs += 1
+	_vendor_line_left = 2.0
 	_vendor_line.text = _vendor_text(kind)
 	_vendor_line.visible = true
 	_vendor_line.add_theme_color_override("font_color", ERROR_ON_DARK if kind == &"poor" else ON_DARK)
@@ -1119,6 +1179,7 @@ func _flush_feedback_deferred(epoch: int, generation: int) -> void:
 				build_panel.pulse_items(bool(data.get("reverse", false)), reduced_effects)
 			&"materials":
 				_pulse_materials(bool(data.get("reverse", false)))
+	_flush_change()
 
 
 func _pulse_materials(reverse: bool) -> void:
@@ -1324,10 +1385,7 @@ func _on_merge(a: EchoTake, b: EchoTake, merge_trait: StringName = &"skill") -> 
 	echo_panel.end_staple()
 	refresh()
 	echo_panel.confirm_merge()
-	if sim.can_start_wave():
-		start_button.grab_focus()
-	else:
-		echo_panel.focus_first_copy()
+	echo_panel.focus_take(sim.bank.takes.back().uid)
 
 
 func _on_start() -> void:
@@ -1340,6 +1398,10 @@ func _on_start() -> void:
 	if workshop != null and workshop.visible:
 		return
 	if sim.can_start_wave():
+		_clear_change()
+		reset_feedback()
+		_cancel_hover()
+		_reset_vendor_motion()
 		_replacing = null
 		_replacing_index = -1
 		visible = false
@@ -1350,10 +1412,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if inspection != null and inspection.visible and inspection.pinned:
 		return
 	if confession != null and confession.visible:
-		return
-	if binding_ceremony != null and binding_ceremony.active and event.is_action_pressed(&"ui_cancel"):
-		binding_ceremony.skip()
-		accept_event()
 		return
 	if crew != null and crew.visible:
 		return
@@ -1400,7 +1458,7 @@ func focus_default() -> void:
 # A small token flies from the arena centre into the newly recorded take's row: the wave
 # is visibly "collected" rather than just appearing in a list.
 func _fly_take_token() -> void:
-	if reduced_effects or not is_inside_tree() or _overlay == null:
+	if _arrival_uid <= 0 or reduced_effects or not is_inside_tree() or _overlay == null:
 		return
 	_fly_take_token_after_layout(_feedback_epoch, 2)
 
@@ -1415,7 +1473,7 @@ func _fly_take_token_after_layout(session_epoch: int, frames: int) -> void:
 			get_tree().process_frame.connect(next_frame, CONNECT_ONE_SHOT)
 		return
 	var arrival := echo_panel.arrival_point() if echo_panel.visible else echoes_button.get_global_rect().get_center()
-	if sim.bank.takes.is_empty():
+	if sim.bank.find_uid(_arrival_uid) == null:
 		return
 	if arrival == Vector2.ZERO:
 		return
@@ -1467,7 +1525,7 @@ func _rebuild_focus() -> void:
 	var active: Array = []
 	for node in find_children("*", "BaseButton", true, false):
 		var button := node as BaseButton
-		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button) and not confession.is_ancestor_of(button) and not binding_ceremony.is_ancestor_of(button) and (inspection == null or not inspection.is_ancestor_of(button)):
+		if button.is_visible_in_tree() and not button.disabled and not workshop.is_ancestor_of(button) and not crew.is_ancestor_of(button) and not confession.is_ancestor_of(button) and (inspection == null or not inspection.is_ancestor_of(button)):
 			active.append(button)
 			var remember := _remember_focus.bind(button)
 			if not button.focus_entered.is_connected(remember):
@@ -1508,11 +1566,15 @@ func _bind_inspection(source: Control, kind: StringName, reference: Variant, pin
 func _inspection_hover(source: Control) -> void:
 	if get_viewport().gui_is_dragging() or not inspection.pointer_enabled:
 		return
-	_request_inspection(source, false)
+	if inspection.pinned or _hover_source == source or (inspection.visible and inspection._source == source):
+		return
+	_hover_source = source
+	_hover_left = HOVER_INTENT
 
 
 func _inspection_focus(source: Control) -> void:
 	if inspection.focus_enabled:
+		_cancel_hover()
 		_request_inspection(source, false)
 
 
@@ -1529,7 +1591,7 @@ func _inspection_source_input(event: InputEvent, source: Control) -> void:
 		_request_inspection(source, true)
 		source.accept_event()
 	elif event is InputEventMouseMotion and inspection.pointer_enabled:
-		_request_inspection(source, false)
+		_inspection_hover(source)
 
 
 func _input(event: InputEvent) -> void:
@@ -1570,11 +1632,20 @@ func _request_inspection(source: Control, pin: bool) -> void:
 		return
 	if inspection.pinned and not pin:
 		return
+	_cancel_hover()
 	var kind := StringName(source.get_meta(&"inspect_kind", &""))
 	var reference: Variant = source.get_meta(&"inspect_reference")
 	var info := _inspection_content(kind, reference)
 	if info.is_empty():
 		return
+	var same_change := false
+	if not _last_change.is_empty():
+		match kind:
+			&"weapon", &"upgrade": same_change = _last_change["kind"] == &"weapon" and int(reference) == int(_last_change["index"])
+			&"echo": same_change = _last_change["kind"] == &"echo" and int(reference) == int(_last_change.get("uid", 0))
+			&"item": same_change = _last_change["kind"] == &"item" and reference == _last_change.get("item_id", &"")
+	if same_change:
+		info["change"] = _last_change.duplicate(true)
 	_inspection_kind = kind
 	_inspection_reference = reference
 	_inspection_epoch = _refresh_generation
@@ -1891,7 +1962,7 @@ func _open_combine_donors(host: int) -> void:
 		if donor == host:
 			continue
 		var quote := sim.shop.combine_quote(sim, host, donor)
-		choices.append({"text": Loc.t("workshop.donor_weapon", [donor + 1, Loc.weapon_name(sim.player.weapons[donor].id), sim.player.level_at(donor) + 1, quote.cost]), "value": donor, "disabled": not quote.ok, "hint": _drop_reason_text(quote.reason) if not quote.ok else Loc.t("workshop.combine")})
+		choices.append({"text": Loc.t("workshop.donor_weapon", [donor + 1, Loc.weapon_name(sim.player.weapons[donor].id), sim.player.level_at(donor) + 1, quote.cost]), "value": donor, "disabled": not quote.ok, "hint": _drop_reason_text(quote.reason) if not quote.ok else Loc.t("workshop.combine"), "preview": _combine_preview(host, donor) if quote.ok or quote.reason == &"poor" else {}})
 	workshop.show_choices(Loc.t("workshop.combine"), Loc.t("workshop.combine_hint", [host + 1, Loc.weapon_name(sim.player.weapons[host].id)]), choices, func(value: Variant) -> void:
 		var donor := int(value)
 		var quote := sim.shop.combine_quote(sim, host, donor)
@@ -1903,7 +1974,9 @@ func _open_combine_donors(host: int) -> void:
 				refresh()
 				workshop.close()
 			else:
-				_flash_block(result.reason)))
+				_flash_block(result.reason))
+		var preview := _combine_preview(host, donor)
+		workshop.add_result_visual(_weapon_preview(preview["before"], preview["after"])))
 
 
 func _confirm_order_replace(offer: Offer) -> void:
@@ -1940,7 +2013,7 @@ static func forecast_description(s: Sim) -> String:
 	var facts := Loc.t("shop.forecast", [forecast["stage"], Loc.t(str(forecast["act_key"]))])
 	facts += " · " + Loc.t("shop.forecast_fault" if forecast["repair_available"] else "shop.forecast_repaired")
 	facts += " · " + Loc.t("shop.forecast_worker" if forecast["worker_available"] else "shop.forecast_no_worker")
-	if BureauEvents.forecast(s.next_wave_number(), s.endless):
+	if BureauEvents.forecast(s, s.next_wave_number()):
 		facts += "\n" + Loc.t("bureau.delivery.forecast", [BureauEvents.REWARD])
 	return facts + "\n" + Loc.t("shop.order_responsibility")
 
@@ -2023,26 +2096,278 @@ func _on_confession_closed() -> void:
 
 
 func set_paused(on: bool) -> void:
-	if binding_ceremony != null:
-		binding_ceremony.paused = on
+	_shop_paused = on
+	if is_instance_valid(_change_visual):
+		_change_visual.paused = on
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if visible and sim != null:
 		build_panel.show_item_drop(get_viewport().gui_is_dragging())
+		if is_instance_valid(_change_visual):
+			_change_visual.paused = _shop_paused or _opaque_modal_open()
+		if not _shop_paused:
+			_step_hover(delta, get_global_mouse_position())
+			_vendor_line_left = maxf(0.0, _vendor_line_left - delta)
+			if _vendor_line_left <= 0.0:
+				_vendor_line.visible = false
+			_step_first_echo(delta)
+			if _work_left > 0.0:
+				_work_left = maxf(0.0, _work_left - delta)
+				if _work_left <= 0.0:
+					_prep_status.text = _work_header
+					_prep_status.visible = not _work_header.is_empty()
+					_prep_status.tooltip_text = _work_tooltip
+					_prep_status.accessibility_description = _work_tooltip
+					crew_button.add_theme_color_override("font_color", UiTheme.INK)
 	# Coalesce rapid refreshes into one restore after container layout settles.
 	if _stock_scroll_frames > 0:
 		_stock_scroll_frames -= 1
 		if _stock_scroll_frames == 0 and visible and sim != null:
 			_offers_scroll.scroll_vertical = _stock_scroll_pending
-	if binding_ceremony != null and binding_ceremony.active:
-		_update_binding_rect()
 
 
-func _update_binding_rect() -> void:
-	if echo_panel == null or binding_ceremony == null:
+func set_familiar_actions(actions: Array[StringName]) -> void:
+	_familiar_actions.clear()
+	for action: StringName in actions:
+		if action in FAMILIAR_ACTIONS and not _familiar_actions.has(action):
+			_familiar_actions.append(action)
+
+
+func _confirm_familiar(action: StringName) -> void:
+	if action not in FAMILIAR_ACTIONS or _familiar_actions.has(action):
 		return
-	var rect := echo_panel.get_global_rect()
-	var extent := Vector2(minf(270.0, maxf(0.0, rect.size.x - 12.0)), minf(142.0, maxf(0.0, rect.size.y - 12.0)))
-	binding_ceremony.size = extent
-	binding_ceremony.position = get_global_transform().affine_inverse() * (rect.get_center() - extent * 0.5)
+	_familiar_actions.append(action)
+	familiarity_confirmed.emit(action)
+
+
+func _step_first_echo(delta: float) -> void:
+	if _first_echo_uid <= 0 or not echo_panel.visible or _opaque_modal_open() or delta <= 0.0 or not is_finite(delta):
+		return
+	var source := echo_panel._identity_buttons.get(_first_echo_uid) as Control
+	if not is_instance_valid(source) or not source.is_visible_in_tree():
+		return
+	_first_echo_seen += delta
+	if _first_echo_seen >= (0.45 if reduced_effects else 1.0):
+		_confirm_familiar(&"first_echo")
+		_first_echo_uid = 0
+
+
+func _cancel_hover() -> void:
+	_hover_source = null
+	_hover_left = 0.0
+
+
+func _step_hover(delta: float, point: Vector2) -> void:
+	if not is_instance_valid(_hover_source):
+		_cancel_hover()
+		return
+	if get_viewport().gui_is_dragging() or inspection.pinned or _opaque_modal_open() or not inspection.pointer_enabled \
+			or not _hover_source.is_visible_in_tree() or not _hover_source.get_global_rect().has_point(point):
+		_cancel_hover()
+		return
+	_hover_left -= maxf(0.0, delta)
+	if _hover_left <= 0.0:
+		var source := _hover_source
+		_cancel_hover()
+		_request_inspection(source, false)
+
+
+func _weapon_visual_rows(state: ShopState) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for index in state.weapons.size():
+		rows.append({"id": state.weapons[index], "level": state.weapon_levels[index],
+			"art": PresentationAssets.weapon_key(Content.weapon(state.weapons[index])), "index": index})
+	return rows
+
+
+func _echo_visual_rows(state: ShopState) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for row: Dictionary in state.echoes:
+		rows.append({"uid": row["uid"], "condition": row["condition"], "levels": row["levels"].duplicate(),
+			"skill": row["inherited_skill"], "trait": row["merge_trait"],
+			"weapons": row["weapons"].duplicate(), "art": PresentationAssets.character_key(sim.character_id)})
+	return rows
+
+
+func _unmatched_visual_rows(rows: Array[Dictionary], against: Array[Dictionary], echo: bool = false) -> Array[Dictionary]:
+	var remaining := against.duplicate(true)
+	var out: Array[Dictionary] = []
+	for row: Dictionary in rows:
+		var match_index := -1
+		for index in remaining.size():
+			var other: Dictionary = remaining[index]
+			var same := row["uid"] == other["uid"] and row["condition"] == other["condition"] \
+				and row["levels"] == other["levels"] and row["skill"] == other["skill"] if echo \
+				else row["id"] == other["id"] and row["level"] == other["level"]
+			if same:
+				match_index = index
+				break
+		if match_index >= 0:
+			remaining.remove_at(match_index)
+		else:
+			out.append(row.duplicate(true))
+	return out
+
+
+func _change_proof(result: ShopResult) -> Dictionary:
+	if result.before_state == null or result.after_state == null:
+		return {}
+	var before := result.before_state
+	var after := result.after_state
+	var proof := {"action": result.action, "learn_action": &"", "kind": &"", "before": [], "after": [], "index": -1}
+	var old_rows := _weapon_visual_rows(before)
+	var new_rows := _weapon_visual_rows(after)
+	var removed := _unmatched_visual_rows(old_rows, new_rows)
+	var added := _unmatched_visual_rows(new_rows, old_rows)
+	if result.action == ShopResult.REPLACE and result.index >= 0:
+		removed.clear()
+		removed.append(old_rows[result.index])
+		added.clear()
+		added.append(new_rows[result.index])
+	if not removed.is_empty() or not added.is_empty():
+		proof["kind"] = &"weapon"
+		proof["before"] = removed
+		proof["after"] = added
+		proof["index"] = int(added[0]["index"]) if not added.is_empty() else int(removed[0]["index"])
+		if result.action in [ShopResult.BUY, ShopResult.REPLACE, ShopResult.UPGRADE, ShopResult.COMBINE, ShopResult.EVOLVE]:
+			proof["learn_action"] = result.action
+		return proof
+	var old_echoes := _echo_visual_rows(before)
+	var new_echoes := _echo_visual_rows(after)
+	removed = _unmatched_visual_rows(old_echoes, new_echoes, true)
+	added = _unmatched_visual_rows(new_echoes, old_echoes, true)
+	if not removed.is_empty() or not added.is_empty():
+		proof["kind"] = &"echo"
+		proof["before"] = removed
+		proof["after"] = added
+		proof["uid"] = int(added[0]["uid"]) if not added.is_empty() else 0
+		if result.action == ShopResult.ECHO_MERGE and not added.is_empty():
+			proof["learn_action"] = StringName("merge_" + String(added[0]["trait"]))
+		return proof
+	for id: StringName in after.items.keys() + before.items.keys():
+		var old_count := int(before.items.get(id, 0))
+		var new_count := int(after.items.get(id, 0))
+		if old_count == new_count:
+			continue
+		proof["kind"] = &"item"
+		proof["item_id"] = id
+		var art := PresentationAssets.item_key(Content.item(id))
+		proof["before"] = [{"id": id, "count": old_count, "art": art}] if old_count > 0 else []
+		proof["after"] = [{"id": id, "count": new_count, "art": art}] if new_count > 0 else []
+		proof["learn_action"] = &"buy" if result.action == ShopResult.BUY else &""
+		return proof
+	return {}
+
+
+func transaction_profile() -> Dictionary:
+	return _change_visual.snapshot() if is_instance_valid(_change_visual) else _pending_change.duplicate(true)
+
+
+func _clear_visible_change() -> void:
+	if is_instance_valid(_change_underlay):
+		_change_underlay.modulate.a = 1.0
+	_change_underlay = null
+	if is_instance_valid(_change_visual):
+		_change_visual.get_parent().remove_child(_change_visual)
+		_change_visual.queue_free()
+	_change_visual = null
+
+
+func _clear_change() -> void:
+	_clear_visible_change()
+	_pending_change.clear()
+	_last_change.clear()
+
+
+func _flush_change() -> void:
+	if _pending_change.is_empty():
+		return
+	_clear_visible_change()
+	var proof := _pending_change.duplicate(true)
+	_pending_change.clear()
+	_last_change = proof.duplicate(true)
+	var target: Control
+	match proof["kind"]:
+		&"weapon":
+			var index := int(proof["index"])
+			target = build_panel._slot_buttons[index] if index >= 0 and index < build_panel._slot_buttons.size() else build_panel.empty_drop_target
+			if is_instance_valid(target):
+				_change_underlay = target.find_child("WeaponFace", true, false) as Control
+		&"echo":
+			target = echo_panel._identity_buttons.get(int(proof.get("uid", 0))) as Control
+			if not is_instance_valid(target) and not echo_panel.copy_buttons.is_empty():
+				target = echo_panel.copy_buttons[0]
+			if is_instance_valid(target):
+				_change_underlay = target.find_child("EchoDoll", true, false) as Control
+		&"item":
+			for button: Button in build_panel.passive_buttons:
+				if button.get_meta(&"item_id") == proof["item_id"]:
+					target = button
+					break
+	if not is_instance_valid(target) or not target.is_visible_in_tree():
+		_change_underlay = null
+		return
+	_change_visual = WorkshopUi.ChangeVisual.new()
+	_change_visual.custom_minimum_size = Vector2.ZERO
+	_change_visual.setup(proof, false, _familiar_actions.has(proof["learn_action"]), reduced_effects)
+	_change_visual.paused = _shop_paused
+	target.add_child(_change_visual)
+	_change_visual.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_change_visual.z_index = 2
+	if is_instance_valid(_change_underlay):
+		_change_underlay.modulate.a = 0.12
+	_change_visual.settled.connect(_on_change_settled.bind(_change_visual, _feedback_epoch))
+
+
+func _on_change_settled(visual: WorkshopUi.ChangeVisual, epoch: int) -> void:
+	if visual != _change_visual or epoch != _feedback_epoch or not visible or sim == null:
+		return
+	var action := StringName(visual.proof.get("learn_action", &""))
+	if visual.is_visible_in_tree() and not _opaque_modal_open():
+		_confirm_familiar(action)
+	_clear_visible_change()
+
+
+func _weapon_preview(before_rows: Array, after_rows: Array) -> WorkshopUi.ChangeVisual:
+	var visual := WorkshopUi.ChangeVisual.new()
+	visual.setup({"before": before_rows, "after": after_rows}, true)
+	return visual
+
+
+func _weapon_row(weapon: WeaponDef, level: int) -> Dictionary:
+	return {"id": weapon.id, "level": level, "art": PresentationAssets.weapon_key(weapon)}
+
+
+func _combine_preview(host: int, donor: int) -> Dictionary:
+	return {"before": [_weapon_row(sim.player.weapons[host], sim.player.level_at(host)),
+		_weapon_row(sim.player.weapons[donor], sim.player.level_at(donor))],
+		"after": [_weapon_row(sim.player.weapons[host], sim.player.level_at(host) + 1)]}
+
+
+func set_recent_work_result(info: Dictionary) -> void:
+	var kind := StringName(info.get("kind", &""))
+	_recent_work = {"kind": kind} if kind in [&"worker_saved", &"machine_repaired"] else {}
+	if visible and sim != null:
+		_show_recent_work()
+
+
+func _show_recent_work() -> void:
+	if _recent_work.is_empty():
+		return
+	if _work_left <= 0.0:
+		_work_header = _prep_status.text
+		_work_tooltip = _prep_status.tooltip_text
+	var kind := StringName(_recent_work["kind"])
+	_recent_work.clear()
+	_work_left = 1.6
+	_prep_status.text = Loc.t("hud.repair_done") if kind == &"machine_repaired" else crew_button.text
+	_prep_status.tooltip_text = _prep_status.text
+	_prep_status.accessibility_description = _prep_status.text
+	_prep_status.visible = true
+	if kind == &"worker_saved":
+		crew_button.add_theme_color_override("font_color", UiTheme.ACCENT)
+
+
+func _opaque_modal_open() -> bool:
+	return workshop.visible or crew.visible or confession.visible

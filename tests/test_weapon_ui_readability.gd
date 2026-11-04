@@ -57,7 +57,9 @@ func test_primary_weapon_board_is_visual_and_hover_holds_the_prose(c: Check) -> 
 			c.ok(not label.text.contains(Loc.weapon_desc(&"stapler")), "attack prose is not on the primary board")
 		c.ok(not ui.inspection.visible, "opening the shop does not open a text sheet")
 		ui.inspection.pointer_enabled = true
+		tile.size = Vector2(120, 80)
 		tile.mouse_entered.emit()
+		ui._step_hover(0.17, tile.get_global_rect().get_center())
 		c.ok(ui.inspection.visible and not ui.inspection.pinned, "hover opens the secondary sheet")
 		c.eq(ui.inspection.title_label.text, Loc.weapon_name(&"stapler"), "hover identifies the actual weapon")
 		c.eq(ui.inspection.summary_label.text, Loc.weapon_desc(&"stapler"), "short behavior is available on hover")

@@ -376,7 +376,9 @@ func test_work_order_card_states_the_job(c: Check) -> void:
 	var card := ui.offers_box.get_child(0) as OfferCard
 	c.eq(card.find_child("OrderObjective", true, false), null, "primary work order uses its visual identity")
 	ui.inspection.pointer_enabled = true
+	card.size = Vector2(250, 90)
 	card.mouse_entered.emit()
+	ui._step_hover(0.17, card.get_global_rect().get_center())
 	c.eq(ui.inspection.summary_label.text, Loc.t("order.recruit.objective"), "hover states the actual objective")
 	c.ok(str(ui.inspection._payload["rules"][0]["body"]).contains(Loc.t("order.recruit.desc")), "tertiary terms retain the full rule")
 	ui._arm_lock(offer)

@@ -85,6 +85,12 @@ func present(source: Control, payload: Dictionary, pin: bool = false) -> void:
 	_box.add_child(summary_label)
 	facts_label = _text(str(payload.get("facts", "")), 13, UiTheme.COIN)
 	_box.add_child(facts_label)
+	var change: Dictionary = payload.get("change", {})
+	if not change.is_empty():
+		var visual := WorkshopUi.ChangeVisual.new()
+		visual.custom_minimum_size.y = 72.0
+		visual.setup(change, true)
+		_box.add_child(visual)
 	var rules := HBoxContainer.new()
 	rules.add_theme_constant_override("separation", 8)
 	_box.add_child(rules)

@@ -1,0 +1,165 @@
+{
+  "scope": "behavioral acceptance scenarios; automation does not establish human understanding",
+  "cases": [
+    {
+      "id": "01",
+      "name": "first_move"
+    },
+    {
+      "id": "02",
+      "name": "first_interaction"
+    },
+    {
+      "id": "03",
+      "name": "first_echo_handoff"
+    },
+    {
+      "id": "04",
+      "name": "second_encounter_exposure"
+    },
+    {
+      "id": "05",
+      "name": "first_complex_order"
+    },
+    {
+      "id": "06",
+      "name": "retirement_discovery"
+    },
+    {
+      "id": "07",
+      "name": "move_and_autofire"
+    },
+    {
+      "id": "08",
+      "name": "weapon_identity"
+    },
+    {
+      "id": "09",
+      "name": "enemy_hit_and_death"
+    },
+    {
+      "id": "10",
+      "name": "hurt_vs_block"
+    },
+    {
+      "id": "11",
+      "name": "charged_while_busy"
+    },
+    {
+      "id": "12",
+      "name": "ability_success_or_rejection"
+    },
+    {
+      "id": "13",
+      "name": "combo_first_and_repeat"
+    },
+    {
+      "id": "14",
+      "name": "spawn_and_boss_warning"
+    },
+    {
+      "id": "15",
+      "name": "boss_phase_tear"
+    },
+    {
+      "id": "16",
+      "name": "support_lifecycle"
+    },
+    {
+      "id": "17",
+      "name": "manual_pickup_vs_settlement"
+    },
+    {
+      "id": "18",
+      "name": "concurrent_and_offscreen_feedback"
+    },
+    {
+      "id": "19",
+      "name": "future_echo_routes"
+    },
+    {
+      "id": "20",
+      "name": "persistent_echo_wear"
+    },
+    {
+      "id": "21",
+      "name": "active_vs_natural_retirement"
+    },
+    {
+      "id": "22",
+      "name": "held_echo_selection"
+    },
+    {
+      "id": "23",
+      "name": "cleared_cohort_breather"
+    },
+    {
+      "id": "24",
+      "name": "unfinished_work_after_clear"
+    },
+    {
+      "id": "25",
+      "name": "critical_result_before_transition"
+    },
+    {
+      "id": "26",
+      "name": "pending_negotiation"
+    },
+    {
+      "id": "27",
+      "name": "deliberate_inspection"
+    },
+    {
+      "id": "28",
+      "name": "nested_reading"
+    },
+    {
+      "id": "29",
+      "name": "purchase_and_upgrade"
+    },
+    {
+      "id": "30",
+      "name": "repeated_blocked_purchase"
+    },
+    {
+      "id": "31",
+      "name": "full_inventory_replacement"
+    },
+    {
+      "id": "32",
+      "name": "weapon_assembly"
+    },
+    {
+      "id": "33",
+      "name": "weapon_evolution"
+    },
+    {
+      "id": "34",
+      "name": "rapid_undo"
+    },
+    {
+      "id": "35",
+      "name": "echo_binding_traits"
+    },
+    {
+      "id": "36",
+      "name": "reroll_latest_state"
+    },
+    {
+      "id": "37",
+      "name": "player_death_closure"
+    },
+    {
+      "id": "38",
+      "name": "exit_choice_and_victory"
+    },
+    {
+      "id": "39",
+      "name": "archive_candidate_and_replace"
+    },
+    {
+      "id": "40",
+      "name": "familiar_restart_and_resume"
+    }
+  ]
+}

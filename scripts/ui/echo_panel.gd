@@ -30,21 +30,9 @@ var _new_row_tween: Tween
 var _animated_strip: Control
 var _animated_info: Control
 var _merge_tween: Tween
+var _trait_preview: WorkshopUi.ChangeVisual
+var _preview_portrait: Control
 var _stamped_row: Control
-
-
-class StapleMark:
-	extends Control
-
-	func _init() -> void:
-		custom_minimum_size = Vector2(24.0, 14.0)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		# A physical staple remains on merged copies after the press has settled.
-		draw_line(Vector2(4.0, 11.0), Vector2(4.0, 4.0), UiTheme.EDGE, 3.0, true)
-		draw_line(Vector2(4.0, 4.0), Vector2(20.0, 4.0), UiTheme.EDGE, 3.0, true)
-		draw_line(Vector2(20.0, 4.0), Vector2(20.0, 11.0), UiTheme.EDGE, 3.0, true)
 
 
 func _init() -> void:
@@ -75,6 +63,7 @@ func refresh(sim: Sim, animate_new: bool = false) -> void:
 
 
 func close_session() -> void:
+	_clear_trait_preview()
 	_finish_new_row_animation()
 	_sim = null
 	_animate_new = false
@@ -117,6 +106,7 @@ func cancel_merge() -> bool:
 
 
 func end_staple() -> void:
+	_clear_trait_preview()
 	_merge_mode = false
 	_spent_uid = 0
 	_host_uid = 0
@@ -139,6 +129,7 @@ func _render() -> void:
 
 
 func _render_rows() -> void:
+	_clear_trait_preview()
 	_finish_new_row_animation()
 	UiTheme.clear(_box)
 	copy_buttons.clear()
@@ -396,6 +387,9 @@ func _add_marks(line: HBoxContainer, host: EchoTake) -> void:
 		button.add_theme_font_size_override("font_size", 12)
 		button.custom_minimum_size = Vector2(108.0, 28.0)
 		button.pressed.connect(_commit.bind(choice))
+		if quote.ok or quote.reason == &"poor":
+			button.mouse_entered.connect(_show_trait_preview.bind(host.uid, donor.uid, choice))
+			button.focus_entered.connect(_show_trait_preview.bind(host.uid, donor.uid, choice))
 		line.add_child(button)
 		trait_buttons.append(button)
 
@@ -405,7 +399,47 @@ func _commit(choice: StringName) -> void:
 	var donor := _take_by_uid(_spent_uid)
 	if host == null or donor == null:
 		return
+	_clear_trait_preview()
 	staple_requested.emit(host, donor, choice)
+
+
+func _show_trait_preview(host_uid: int, donor_uid: int, choice: StringName) -> void:
+	_clear_trait_preview()
+	var host := _take_by_uid(host_uid)
+	var donor := _take_by_uid(donor_uid)
+	if host == null or donor == null or not _merge_mode:
+		return
+	var merged := _sim.bank.preview_merge(host, donor, choice)
+	var target := _identity_buttons.get(host_uid) as Control
+	if merged == null or not is_instance_valid(target):
+		return
+	var after := _merge_token(merged)
+	# A preview has no allocated identity; only a committed bank transaction does.
+	after["uid"] = 0
+	_trait_preview = WorkshopUi.ChangeVisual.new()
+	_trait_preview.custom_minimum_size = Vector2.ZERO
+	_trait_preview.setup({"before": [_merge_token(host), _merge_token(donor)], "after": [after]}, true)
+	target.add_child(_trait_preview)
+	_trait_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_trait_preview.z_index = 2
+	_preview_portrait = target.find_child("EchoDoll", true, false) as Control
+	if is_instance_valid(_preview_portrait):
+		_preview_portrait.modulate.a = 0.12
+
+
+func _merge_token(take: EchoTake) -> Dictionary:
+	return {"uid": take.uid, "condition": take.condition, "levels": take.levels.duplicate(),
+		"skill": take.inherited_skill, "art": PresentationAssets.character_key(_sim.character_id)}
+
+
+func _clear_trait_preview() -> void:
+	if is_instance_valid(_preview_portrait):
+		_preview_portrait.modulate.a = 1.0
+	_preview_portrait = null
+	if is_instance_valid(_trait_preview):
+		_trait_preview.get_parent().remove_child(_trait_preview)
+		_trait_preview.queue_free()
+	_trait_preview = null
 
 
 func _animate_new_row(row: Control) -> void:
