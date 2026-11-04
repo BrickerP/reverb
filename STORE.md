@@ -1,6 +1,6 @@
 # 商店页材料 / Store copy
 
-工作名：**回响 / Take Stack**。以下文案对应 **0.19.0**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
+工作名：**回响 / Take Stack**。以下文案对应 **0.19.1**。正式商标检索、定价、发行时间与真人体验验证尚未完成。
 
 ## 短描述 / Short description
 
@@ -93,17 +93,23 @@ Python 仅用于开发与 CI：`tools/requirements-dev.txt` 固定 NumPy 2.0.2 �
 
 macOS 开发包只有 ad-hoc 完整性签名，未公证；Windows GUI 包未签名。实体手柄、Windows GUI、Steam Deck、低端硬件和长期真人体验仍未验证。定价、最低配置、正式商标状态和发行时间保持未定。
 
+## 感知节奏 / Perceptual cadence
+
+0.19.1 让第一次完成的操作与结果短暂停稳再淡出，熟悉后的重复提示则缩短并降低音量；复杂手续只在条件真正相关时出现。装配、进化与三种回响合订会展示真实提交后的变化，撤销仍即时生效并恢复精确状态。长 Boss 战的回响路线滚动保留最近 60 秒；已失败的工作不再阻塞清场，重复武器也按真实槽位撤销。
+
+Version 0.19.1 holds an unfamiliar action or result briefly before fading, then shortens and quiets familiar repeats; advanced paperwork appears only when its terms are relevant. Assembly, evolution and all three Echo bindings show real changes while Undo remains immediate and restores exact state. Long Boss recordings retain the latest 60 seconds, failed work no longer blocks a cleared field, and duplicate weapons undo against their actual slot.
+
 ## Bureau rituals / 回收局里的手续
 
 0.17 将现有档案与合并流程表现为副本家谱室、班次档案抽屉、真实继承打印和三种合订／拆钉演出。第2、6、10场有可选送审：Solo可以独自掌握落章时机，回响可以重放安全开关。每幕可在告解复印机签一次原始记录或粉饰履历；确切收益、库存暂时固定、下一场核查与撤销条件都会提前说明。未核验的结果留在收据上，普通失败不暗扣债务。
 
 The archive family wall, bounded shift drawer and actual inherited-copy printer retain real identities. Skill, repair and power merges have distinct staple/unstaple ceremonies. Optional stamp delivery is playable alone or with a recorded safety-lever action. Confession choices state their exact benefit, temporary stock hold, next inspection and Undo conditions before signing. Unverified outcomes remain visible; ordinary failure creates no hidden finance debt.
 
-0.19.0 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7, 0.18.8 and 0.18.9 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
+0.19.1 retains Snapshot v4 and the existing published user-data directory, so 0.17, 0.18, 0.18.1, 0.18.2, 0.18.3, 0.18.4, 0.18.5, 0.18.6, 0.18.7, 0.18.8, 0.18.9 and 0.19.0 runs and permanent progress remain usable. Earlier suspended-run schemas require a new run. Concepts remain credited reference illustrations; two rebuilt transparent production atlases supply the live facilities and binding poses.
 
 
 ## Paper actions / 纸上见真章
 
-0.19.0 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
+0.19.1 沿用既有纸偶美术，以钉穿、压印、裁切、泼墨、回卷和传导组织35把武器的出手与命中。受创身体、维修补丁、回响报废和机器握柄使用真实事件；同类武器按实际槽位后坐，完全挡伤使用独立防守反馈。
 
 The same paper cast now has six material attack gestures, directional target reactions and visible repair, retirement and machine-contact sequences. Actual slot and event identities drive feedback; simulation rules, combat geometry and Snapshot v4 remain authoritative.

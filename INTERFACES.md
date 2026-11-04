@@ -1,6 +1,6 @@
 # Gameplay and presentation interfaces
 
-This is the current development contract (public baseline: 0.19.0). Simulation owns rules and mutation. UI,
+This is the current 0.19.1 contract. Simulation owns rules and mutation. UI,
 rendering, audio and native probes may read model state and submit explicit
 actions; they must not invent prices, damage, availability, debt, random results
 or saved-run outcomes.
@@ -223,12 +223,12 @@ GameAudio routes existing samples through bounded normal/protected voices, separ
 
 `Meta.familiar_actions` is a bounded set of completed interactions from `ExperienceHints.ALL`. Reading, drawing or replaying an animation does not itself earn familiarity. `StoryLedger.seed_known` carries discovered lore IDs into a new run while keeping current receipts, counters, choices, workers and outcomes independent. Restores keep the saved run's actual knowledge; Daily offer/dispatch rules do not depend on account history.
 
-Orders and signatures use their canonical introduced/available queries. Previously saved accepted work remains valid. `Expedition.unfinished_work` is shared by early completion and the actual HUD objective; a clear field with remaining work shows that work rather than completion.
+Orders and signatures use their canonical introduced/available queries, so advanced paperwork is exposed only after its relevant world facts or prior knowledge exist. Previously saved accepted work remains valid. `Expedition.unfinished_work` is shared by early completion and the actual HUD objective; a clear field with actionable work shows that work rather than completion, while a terminally failed order remains history and cannot hold the field open.
 
 A still-valid charged state may retry a rejected accent. Familiar combo confirmations are shorter and do not continually renew a HUD label or music duck. Existing control/status surfaces remain readable until an unused action is completed. New result marks hold briefly before fading; transient events are never queued for stale replay.
 
 `ArenaView.transition_hold` captures first successful skill/work closure before familiarity is updated, with a bounded maximum. Main preserves that necessary window before a shop or reward; starting rewards with no outstanding result remain immediate. Death and victory retain their existing finite beats.
 
-Shop before/after drawings consume detached real `ShopState` values. Completed results remain available in the existing inspection layer. Rapid actions, Undo, reroll, departure and rebind discard obsolete visual callbacks. Hidden BindingCeremony and onboarding overlay code is removed. Final-exit imagery reads real quotes and committed outcomes; archive comparison remains player-timed and default preservation stays safe.
+Shop before/after drawings consume detached real `ShopState` values. Assembly, evolution and each binding trait keep the committed result visible before first-time familiarity is recorded; completed results remain available in the existing inspection layer. Rapid actions, Undo, reroll, departure and rebind discard obsolete visual callbacks. Undo resolves the changed physical slot and detached identities, so duplicate weapon IDs cannot redirect its reverse feedback. Hidden BindingCeremony and onboarding overlay code is removed. Final-exit imagery reads real quotes and committed outcomes; archive comparison remains player-timed and default preservation stays safe.
 
 The forty behavioral scenarios are defined in `tools/perception_cases.json`. A required `perception` gate records one uncut fresh Main journey and focused EN/ZH-compact/Reduced clinics, including original-size frames, actual audio, exact source and model/RNG rendering proofs. Automation reports observed and unexercised scenarios separately; human understanding, listening and fun are not certified by those receipts.

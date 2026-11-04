@@ -17,7 +17,7 @@
 - **签字之前，先看代价。** 35 把武器、同级装配、家族进化分支与工作单构成商店的选择。修好的设备和救下的工友，会在这次远征中跨场保留。
 - **最后一页，自己签。** 三幕十二场，三个不同 Boss。离开、与工友共同离开，或者接管回收局；债务不替你选择结局。
 
-0.19.0 用裁纸虚线画出每份回响接下来的路线。清完有限攻势，可以提前下班；连携、挡伤、救援与报废都有更清楚的音画回应。
+0.19.1 让陌生结果先停稳再淡出，熟悉后的重复提示则更安静；复杂手续只在条件相关时出现。装配、进化与回响合订会展示真实提交结果，撤销仍即时生效；长 Boss 战保留最近 60 秒路线，失败任务与重复武器的撤销也按实际状态收口。
 
 [看完整介绍](https://brickerp.github.io/reverb/?lang=zh) · [版本说明与实机演示](https://github.com/BrickerP/reverb/releases/latest)
 
@@ -31,25 +31,25 @@
 
 下载对应平台 ZIP，解压后运行。macOS 包为 ad-hoc 签名、未公证，首次打开请按包内 `MAC_START_HERE.txt` 操作。Windows 包未签名，可能显示系统提示。
 
-0.19.0 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7、0.18.8、0.18.9 的中途存档，无需重开；更早格式的对局需重新开始。永久角色解锁、设置和已保存的回响档案保留。
+0.19.1 可继续 0.17、0.18、0.18.1、0.18.2、0.18.3、0.18.4、0.18.5、0.18.6、0.18.7、0.18.8、0.18.9、0.19.0 的中途存档，无需重开；更早格式的对局需重新开始。永久角色解锁、设置和已保存的回响档案保留。
 
 </details>
 
 <details>
 <summary>从源码运行</summary>
 
-使用 Godot **4.7.2**。以下命令取得与 0.19.0 公开版对应的源码：
+使用 Godot **4.7.2**。以下命令取得与 0.19.1 公开版对应的源码：
 
 ```bash
-git clone --branch v0.19.0 https://github.com/BrickerP/reverb.git
+git clone --branch v0.19.1 https://github.com/BrickerP/reverb.git
 cd reverb
 make run
 ```
 
 也可以用 Godot 打开 `project.godot` 后按 F5。`make run-zh` 使用中文。
 
-[玩法接口](https://github.com/BrickerP/reverb/blob/v0.19.0/INTERFACES.md) · [美术方向](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/art-direction.md) · [验收范围](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/closeout-acceptance.md)
+[玩法接口](https://github.com/BrickerP/reverb/blob/v0.19.1/INTERFACES.md) · [美术方向](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/art-direction.md) · [验收范围](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/closeout-acceptance.md)
 
 </details>
 
-代码与文档采用 [MIT](LICENSE)。美术及声音来源、字体许可见[美术方向](https://github.com/BrickerP/reverb/blob/v0.19.0/docs/art-direction.md)与[第三方说明](THIRD_PARTY.md)。
+代码与文档采用 [MIT](LICENSE)。美术及声音来源、字体许可见[美术方向](https://github.com/BrickerP/reverb/blob/v0.19.1/docs/art-direction.md)与[第三方说明](THIRD_PARTY.md)。
