@@ -119,7 +119,7 @@
     {
       "id": "24",
       "name": "unfinished_work_after_clear",
-      "expected": "Empty combat with unfinished accepted work identifies the real remaining objective."
+      "expected": "Empty combat identifies actual remaining work; a failed objective cannot keep a cleared field waiting."
     },
     {
       "id": "25",

@@ -744,7 +744,7 @@ func objective_text() -> String:
 	var mission: Dictionary = sim.expedition.get("mission", {})
 	var kind := String(mission.get("kind", &"survive")) if mission.get("state", &"") in [&"active", &"pending"] else "survive"
 	var label := Loc.t("order.%s.short" % kind)
-	if int(status.target) > 0:
+	if kind != "survive" and int(status.target) > 0:
 		label += " %d/%d" % [status.progress, status.target]
 	return label
 

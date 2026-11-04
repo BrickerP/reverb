@@ -225,8 +225,9 @@ static func unfinished_work(sim: Sim) -> Dictionary:
 	if is_negotiating(sim):
 		return {"kind": &"negotiation", "name_key": "context.negotiation.title",
 			"progress": 0, "target": 1, "state": &"pending"}
-	if sim.active_contract != null and not sim.active_contract.is_complete(sim):
-		var mission: Dictionary = sim.expedition.get("mission", {})
+	var mission: Dictionary = sim.expedition.get("mission", {})
+	if sim.active_contract != null and mission.get("state", &"pending") in [&"pending", &"active"] \
+			and not sim.active_contract.is_complete(sim):
 		return {"kind": sim.active_contract.kind, "name_key": "order." + String(sim.active_contract.kind) + ".short",
 			"progress": int(mission.get("progress", 0)), "target": int(mission.get("target", sim.active_contract.target)),
 			"state": mission.get("state", &"pending")}

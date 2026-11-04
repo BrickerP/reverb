@@ -23,6 +23,92 @@ func _order(sim: Sim, kind: StringName) -> AnomalyContract:
 	return order
 
 
+func _failed_rescue(c: Check, additional_work: StringName = &"") -> Sim:
+	var sim := Sim.new(137)
+	StoryLedger.seed_known(sim, [&"order_rescue"])
+	if additional_work != &"":
+		StoryLedger.seed_known(sim, [&"carbon"])
+	sim.start_run()
+	sim._end_wave()
+	# Stage only funding and the durable final threat; this is not an income/playthrough fixture.
+	sim.player.materials = 200
+	if additional_work == &"inspection":
+		c.ok(sim.shop.apply(ShopResult.CONFESS, sim, null, -1, &"polish").ok, "fixture signs a real inspection before accepting rescue work")
+	var offer: Offer
+	for candidate: Offer in sim.shop.offers:
+		if candidate.is_contract() and candidate.contract.kind == &"rescue":
+			offer = candidate
+	c.ok(offer != null and sim.shop.buy(sim, offer), "fixture purchases the actual known rescue order")
+	if sim.active_contract == null:
+		return null
+	sim.start_next_wave()
+	# Isolate the last real threat after the rest of the finite budget has cleared.
+	sim._plan_idx = sim._plan.size()
+	var arrival := PendingSpawn.new()
+	arrival.def = Content.enemy(&"grunt")
+	for item: Dictionary in sim.interactables:
+		if item["kind"] == &"rescue":
+			arrival.pos = item["pos"]
+	c.ok(sim._materialize(arrival), "the real allocator creates the final threatening body")
+	var attacker: EnemyState = sim.enemies.back()
+	attacker.damage = 50.0
+	attacker.max_hp = 10000.0
+	attacker.hp = attacker.max_hp
+	sim.step(1.0, Vector2.ZERO)
+	c.eq(sim.expedition["mission"]["state"], &"failed", "actual lethal enemy contact destroys the rescue objective")
+	return sim
+
+
+func test_actual_failed_rescue_releases_finite_clear_without_reward_or_impossible_hud_goal(c: Check) -> void:
+	var sim := _failed_rescue(c)
+	if sim == null:
+		return
+	var hud := Hud.new()
+	hud.bind(sim)
+	var previous_language := Loc.lang
+	for language: String in ["en", "zh"]:
+		Loc.lang = language
+		c.eq(hud.objective_text(), Loc.t("order.survive.short"), "a lost objective falls back to survival without impossible progress")
+	Loc.lang = previous_language
+	hud.free()
+	var before := RunSnapshot.capture(sim)
+	var restored := RunSnapshot.restore(before)
+	c.ok(restored != null, "the existing failed-order snapshot remains valid: %s" % RunSnapshot.last_error)
+	if restored == null:
+		return
+	c.eq(RunSnapshot.capture(restored), before, "the semantic fix never migrates or removes failed-order state")
+	c.ok(Expedition.unfinished_work(restored).is_empty(), "terminal rescue failure is not actionable remaining work")
+	restored.damage_enemy(restored.enemies[0], 100000.0, Vector2.ZERO, false)
+	restored.step(0.01, Vector2.ZERO)
+	c.eq(restored.phase, Sim.Phase.SHOP, "clearing the last real threat can end the failed encounter early")
+	c.ok(restored.wave_time < restored.wave_duration, "failure does not force idle waiting to the original clock")
+	c.eq(restored.contracts_failed, 1, "the failed rescue settles once as a failure")
+	c.eq(restored.contracts_completed, 0, "early closing cannot turn the destroyed objective into a success")
+	c.eq(restored.last_contract_reward, 0, "failed rescue pays no completion reward")
+	c.ok(restored.expedition["failed_orders"].has(&"rescue"), "the actual failed rescue remains in world history")
+
+
+func test_failed_rescue_still_reports_real_delivery_or_inspection(c: Check) -> void:
+	for kind: StringName in [&"delivery", &"inspection"]:
+		var sim := _failed_rescue(c, kind)
+		if sim == null:
+			return
+		if kind == &"delivery":
+			sim.player.pos = BureauEvents.PICKUP
+			c.ok(sim.interact(), "the real delivery document is picked up despite the separate failed order")
+		sim.damage_enemy(sim.enemies[0], 100000.0, Vector2.ZERO, false)
+		sim.step(0.01, Vector2.ZERO)
+		c.eq(Expedition.unfinished_work(sim)["kind"], kind, "terminal order failure falls through to real unfinished work")
+		c.eq(sim.phase, Sim.Phase.WAVE, "remaining actionable work retains its original window")
+		c.eq(sim.encounter_profile()["id"], &"work", "only actual remaining work keeps the work phase")
+		sim.player.pos = BureauEvents.INBOX if kind == &"delivery" else BureauConfession.TERMINAL_POS
+		c.ok(sim.interact(), "the remaining delivery or inspection completes through its real E target")
+		c.ok(Expedition.unfinished_work(sim).is_empty(), "finished side work removes the last actionable blocker")
+		sim.step(0.01, Vector2.ZERO)
+		c.eq(sim.phase, Sim.Phase.SHOP, "finishing the remaining side work releases finite clear")
+		c.ok(not sim.last_contract_success and sim.last_contract_reward == 0, "side-work completion does not redeem the failed rescue reward")
+
+
 func test_order_pool_follows_completed_natural_encounters(c: Check) -> void:
 	var stages := [1, 2, 3, 4, 8]
 	var pools := [[], [&"repair", &"rescue"], [&"salvage", &"repair", &"rescue"],
