@@ -8,6 +8,8 @@ Exact runtime rules and ownership live in [INTERFACES.md](INTERFACES.md). That c
 
 Each Echo follows its actual recording and responds to current enemies with its recorded build. Its next two seconds appear as cutting dashes on the floor. These show upcoming turns and known pauses, giving the player enough information to arrange crossfire, approach support, or exploit a useful old position. Selection improves contrast without hiding the other bodies' routes.
 
+A recording retains the most recent minute of the encounter. Short encounters remain complete; longer Boss fights replace the oldest route and work events with the newest, retaining their relative timing. Recording, replay, saving and permanent archives share the same bounded tape.
+
 The route is information, not another command system. Roles retain their own rewind, swap, anchor and sacrifice mechanics. Active retirement spends the actual copy; natural wear remains a separate outcome. Merge retains the host's route and equipment while transferring one explicit donor contribution. Permanent archives use the same bounded opening normalization as deployment.
 
 ## Good play can finish the work early

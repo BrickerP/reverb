@@ -17,7 +17,7 @@ const TABLE := {
 	"inspection.owned": "Owned %d",
 	"inspection.choose_donor": "Choose a copy to consume",
 	"inspection.choose_host": "Choose the copy to keep",
-	"inspection.wear_rule": "Condition wears down only while the copy replays in combat. Repair restores condition; it never extends the recorded route. Discarding in the shop removes the copy without firing its retirement skill. Undo restores the transaction.",
+	"inspection.wear_rule": "Routes retain up to the most recent 60 seconds of an encounter. Condition wears down only while the copy replays in combat. Repair restores condition; it never extends the recorded route. Discarding in the shop removes the copy without firing its retirement skill. Undo restores the transaction.",
 	"inspection.copy_summary": "Replays your recorded route and weapons.",
 	"inspection.copy_facts": "Condition %d%% · about %ds left",
 	"inspection.base_rule": "These are base weapon values. Your character stats, family bonuses, critical hits and combat effects modify the actual output.",

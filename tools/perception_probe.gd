@@ -889,7 +889,8 @@ func _queue_capture(label: String, ids: Array, reason: String) -> void:
 
 
 func _present_queued() -> void:
-	if _queued.is_empty():
+	var periodic := _mode == "journey" and _frame % 600 == 0
+	if _queued.is_empty() and not periodic:
 		await RenderingServer.frame_post_draw
 		return
 	var before: Dictionary = {}
@@ -901,7 +902,17 @@ func _present_queued() -> void:
 		if not _require(not before.is_empty(), "strict source snapshot captures: " + RunSnapshot.last_error):
 			return
 		var restored := RunSnapshot.restore(before)
-		if not _require(restored != null and RunSnapshot.capture(restored) == before, "checkpoint snapshot is valid under strict restore"):
+		var restore_error := RunSnapshot.last_error
+		if restored == null:
+			_snapshot_failure("restore_null", restore_error, before, {})
+			return
+		var recaptured := RunSnapshot.capture(restored)
+		var recapture_error := RunSnapshot.last_error
+		if recaptured.is_empty():
+			_snapshot_failure("recapture_empty", recapture_error, before, recaptured)
+			return
+		if recaptured != before:
+			_snapshot_failure("recapture_mismatch", recapture_error, before, recaptured)
 			return
 		rng = sim.rng.state
 		hazard = sim.hazard_rng.state
@@ -910,8 +921,10 @@ func _present_queued() -> void:
 		if not _require(RunSnapshot.capture(sim) == before and sim.rng.state == rng and sim.hazard_rng.state == hazard,
 				"same native frame's process/draw changes no full model state or RNG"):
 			return
-		_checks.append({"native_frame": _frame, "strict_roundtrip": true,
+		_checks.append({"native_frame": _frame, "periodic": periodic, "strict_roundtrip": true,
 			"full_snapshot_unchanged": true, "rng_unchanged": true, "hazard_rng_unchanged": true})
+	if _queued.is_empty():
+		return
 	var image := root.get_texture().get_image()
 	if not _require(image != null and image.get_size() == _canvas, "checkpoint pixels match the original requested native canvas"):
 		return
@@ -930,6 +943,32 @@ func _present_queued() -> void:
 					acceptance["status"] = "native_observed"
 					acceptance["checkpoints"].append(label)
 	_queued.clear()
+
+
+func _snapshot_failure(kind: String, error: String, before: Dictionary, recaptured: Dictionary) -> void:
+	var labels: Array[String] = []
+	for queued: Dictionary in _queued:
+		labels.append(queued["label"])
+	var row := {"kind": kind, "error": error, "native_frame": _frame, "labels": labels,
+		"before_objects": before.get("objects", []).size(), "recaptured_objects": recaptured.get("objects", []).size()}
+	var sim: Sim = _main.sim
+	var takes: Array[Dictionary] = []
+	for take: EchoTake in sim.bank.takes:
+		takes.append({"uid": take.uid, "samples": take.samples.size(), "duration": take.duration(),
+			"condition": take.condition})
+	row["runtime"] = {"wave": sim.wave, "phase": int(sim.phase), "wave_time": sim.wave_time,
+		"recorder_elapsed": sim.recorder.get("_elapsed"), "recorder_accumulator": sim.recorder.get("_acc"),
+		"recorder_samples": sim.recorder.samples.size(), "tape_max_samples": EchoTake.MAX_SAMPLES,
+		"takes": takes}
+	for entry: Array in [["before", before], ["recaptured", recaptured]]:
+		var filename := "snapshot_failure_" + str(entry[0]) + ".json"
+		var file := FileAccess.open(_output.path_join(filename), FileAccess.WRITE)
+		if file != null:
+			file.store_string(JSON.stringify(entry[1], "  ") + "\n")
+			file.close()
+			row[str(entry[0]) + "_file"] = filename
+	_summary["snapshot_failure"] = row
+	_fail("checkpoint strict restore failure [%s, %s] atframe%d labels=%s" % [kind, error, _frame, str(labels)])
 
 
 func _profiles() -> Dictionary:

@@ -17,7 +17,7 @@ const TABLE := {
 	"inspection.owned": "已拥有 %d 件",
 	"inspection.choose_donor": "选择要消耗的副本",
 	"inspection.choose_host": "选择要保留的副本",
-	"inspection.wear_rule": "副本只在战斗回放时持续磨损。维修恢复完好度，不延长录像路线。在商店丢弃副本不会触发退场技能；可用撤销恢复这笔操作。",
+	"inspection.wear_rule": "路线最多保留本场最近60秒。副本只在战斗回放时持续磨损。维修恢复完好度，不延长录像路线。在商店丢弃副本不会触发退场技能；可用撤销恢复这笔操作。",
 	"inspection.copy_summary": "回放你录下的路线与武器。",
 	"inspection.copy_facts": "完好度 %d%% · 还能撑约 %d 秒",
 	"inspection.base_rule": "这里显示武器基础数值。角色属性、家族加成、暴击和战斗效果会进一步改变实际输出。",
