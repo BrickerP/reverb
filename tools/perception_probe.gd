@@ -828,7 +828,7 @@ func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int,
 	var actual := RunSnapshot.capture(_main.sim)
 	var profile := ui.transaction_profile()
 	var snapshot_equal := actual == expected_before
-	var slot_guard := expected_index < 0 or (profile.get("kind", &"") == &"weapon"
+	var slot_guard: bool = expected_index < 0 or (profile.get("kind", &"") == &"weapon"
 		and int(profile.get("index", -1)) == expected_index)
 	var neighbor: Dictionary = {}
 	if label == "evolve":
