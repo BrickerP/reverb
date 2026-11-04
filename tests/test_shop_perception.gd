@@ -324,10 +324,10 @@ func test_960_blocked_evolution_preserves_cancel_and_read_only_details(c: Check)
 			ui.workshop.choice_buttons[2].pressed.emit()
 			ui.workshop._fit_preview_budget()
 			c.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "both canonical branches expose the real blocking condition")
-			c.ok(ui.workshop.choice_preview.custom_minimum_size.y <= 88.0, "blocked diagrams reserve the compact action budget")
-			var paper := ui.workshop._content.get_parent() as PanelContainer
-			var required: float = ui.workshop._content.get_combined_minimum_size().y + paper.get_theme_stylebox("panel").get_minimum_size().y + 48.0
-			c.ok(required <= 540.0, "blocked branches and Cancel fit the actual 540p sheet minimum")
+			c.eq(ui.workshop._preview_limit, 88.0, "blocked diagrams select the compact budget before layout")
+			c.ok(ui.workshop.choice_preview.preview, "blocked branch proof stays read-only")
+			# This suite is synchronous; native weapon_ui_probe verifies the settled
+			# 540p bounds after real container frames, including both blocked cases.
 			c.ok(ui.workshop.cancel_button.custom_minimum_size.y >= 38.0, "Cancel keeps its full action target")
 			var target: StringName = sim.shop.evolution_choices(sim, 0)[0]
 			c.ok(ui.workshop.choice_buttons[0].accessibility_description.contains(Loc.weapon_desc(target)), "compact primary choices retain complete mechanics on inspection")
@@ -341,6 +341,6 @@ func test_960_blocked_evolution_preserves_cancel_and_read_only_details(c: Check)
 			ui._on_evolve_weapon(0)
 			ui.workshop._fit_preview_budget()
 			c.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return not button.disabled), "meeting the real requirements makes both branches available")
-			c.near(ui.workshop.choice_preview.custom_minimum_size.y, 168.0, 0.001, "a new affordable sheet restores its large diagram instead of inheriting the blocked limit")
+			c.eq(ui.workshop._preview_limit, 168.0, "a new affordable sheet restores its large budget instead of inheriting the blocked limit")
 			_release(ui)
 	Loc.lang = previous
