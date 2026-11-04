@@ -689,19 +689,25 @@ func _clinic_shop_actions() -> bool:
 	if not _require(ui.workshop.visible and sim.player.weapons.size() == 4,
 			"donor selection opens the existing confirmation without consuming equipment"):
 		return false
+	var combine_before := RunSnapshot.capture(sim)
+	if not _require(not combine_before.is_empty(), "strict pre-confirmation assembly snapshot exists"):
+		return false
 	_press_first_enabled(ui.workshop.choice_buttons, "real_combine_confirmation")
 	_queue_capture("combine_real_commit", ["32"], "actual donor and confirmation inputs commit the assembly before Undo")
 	if not (await _clinic_frames(2)):
 		return false
 	if not _require(sim.player.weapons.size() == 3, "assembly consumed exactly one actual donor slot"):
 		return false
-	if not (await _clinic_undo(ui, "combine", 4)):
+	if not (await _clinic_undo(ui, "combine", 4, combine_before)):
 		return false
 	ui.workshop.close()
 	ui._on_evolve_weapon(2)
 	if not (await _clinic_frames(2)):
 		return false
 	if not _require(not _main.meta.familiar_actions.has(&"evolve"), "this native evolution result is still unfamiliar"):
+		return false
+	var evolve_before := RunSnapshot.capture(sim)
+	if not _require(not evolve_before.is_empty(), "strict pre-commit evolution snapshot exists"):
 		return false
 	var evolve_input_frame := _frame
 	_press_first_enabled(ui.workshop.choice_buttons, "real_evolution_choice")
@@ -720,7 +726,7 @@ func _clinic_shop_actions() -> bool:
 	_queue_capture("evolve_visible_settled", ["33"], "actual first evolved result has visibly settled and confirmed familiarity before Undo")
 	if not (await _clinic_frames(1)):
 		return false
-	if not (await _clinic_undo(ui, "evolve", 4)):
+	if not (await _clinic_undo(ui, "evolve", 4, evolve_before)):
 		return false
 	ui.workshop.close()
 	for trait_name: StringName in [&"skill", &"repair", &"power"]:
@@ -742,13 +748,16 @@ func _clinic_shop_actions() -> bool:
 				trait_button = button
 		if not _require(trait_button != null and not trait_button.disabled, "real quoted binding trait is available"):
 			return false
+		var merge_before := RunSnapshot.capture(sim)
+		if not _require(not merge_before.is_empty(), "strict selected-trait pre-commit snapshot exists"):
+			return false
 		_press_button(trait_button, "real_merge_trait_" + String(trait_name))
 		_queue_capture("merge_" + String(trait_name) + "_commit", ["35"], "actual selected binding trait and source identities before Undo")
 		if not (await _clinic_frames(2)):
 			return false
 		if not _require(sim.bank.takes.size() == 1, "real binding consumes its one donor"):
 			return false
-		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4)):
+		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4, merge_before)):
 			return false
 		if not _require(sim.bank.find_uid(donor.uid) != null and sim.bank.takes.size() == 2,
 				"Undo restores both exact binding identities"):
@@ -757,16 +766,38 @@ func _clinic_shop_actions() -> bool:
 	return await _clinic_hover(ui)
 
 
-func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int) -> bool:
+func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int, expected_before: Dictionary) -> bool:
 	if ui.workshop.visible:
 		ui.workshop.close()
+	var before_profile := ui.transaction_profile()
 	_press_button(ui.undo_button, "rapid_actual_undo_" + label)
 	if not (await _clinic_frames(3)):
 		return false
-	if not _require(_main.sim.player.weapons.size() == expected_weapons and ui.transaction_profile().is_empty(),
-			"rapid Undo restores real state and cancels obsolete introduction"):
+	var actual := RunSnapshot.capture(_main.sim)
+	var profile := ui.transaction_profile()
+	var snapshot_equal := actual == expected_before
+	var diagnostic := {"label": label, "native_frame": _frame,
+		"actual_weapon_count": _main.sim.player.weapons.size(), "expected_weapon_count": expected_weapons,
+		"before_action": String(before_profile.get("action", &"")), "profile": profile,
+		"snapshot_equal": snapshot_equal, "capture_error": RunSnapshot.last_error,
+		"expected_objects": expected_before.get("objects", []).size(), "actual_objects": actual.get("objects", []).size()}
+	if not _summary.has("undo_clinic"):
+		_summary["undo_clinic"] = []
+	_summary["undo_clinic"].append(diagnostic)
+	_note("clinic_undo_proof", diagnostic)
+	if not snapshot_equal:
+		for entry: Array in [["expected", expected_before], ["actual", actual]]:
+			var filename := "undo_" + label + "_" + str(entry[0]) + ".json"
+			var file := FileAccess.open(_output.path_join(filename), FileAccess.WRITE)
+			if file != null:
+				file.store_string(JSON.stringify(entry[1], "  ") + "\n")
+				file.close()
+				diagnostic[str(entry[0]) + "_file"] = filename
+	if not _require(_main.sim.player.weapons.size() == expected_weapons and snapshot_equal
+			and profile.get("action", &"") == ShopResult.UNDO and profile.get("learn_action", &"") == &"",
+			"rapid Undo exactly restores the pre-commit model and presents only its actual reverse result"):
 		return false
-	_queue_capture(label + "_undo_current_state", ["34"], "real Undo cancels the obsolete pending/visible result")
+	_queue_capture(label + "_undo_current_state", ["34"], "real Undo restores the exact model and replaces obsolete feedback with its own reverse result")
 	return await _clinic_frames(1)
 
 
