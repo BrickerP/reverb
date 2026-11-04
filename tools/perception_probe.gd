@@ -723,7 +723,7 @@ func _clinic_shop_actions() -> bool:
 		return false
 	if not _require(sim.player.weapons.size() == 3, "assembly consumed exactly one actual donor slot"):
 		return false
-	if not (await _clinic_undo(ui, "combine", 4, combine_before)):
+	if not (await _clinic_undo(ui, "combine", 4, combine_before, 0)):
 		return false
 	ui.workshop.close()
 	ui._on_evolve_weapon(2)
@@ -751,7 +751,7 @@ func _clinic_shop_actions() -> bool:
 	_queue_capture("evolve_visible_settled", ["33"], "actual first evolved result has visibly settled and confirmed familiarity before Undo")
 	if not (await _clinic_frames(1)):
 		return false
-	if not (await _clinic_undo(ui, "evolve", 4, evolve_before)):
+	if not (await _clinic_undo(ui, "evolve", 4, evolve_before, 2)):
 		return false
 	ui.workshop.close()
 	for trait_name: StringName in [&"skill", &"repair", &"power"]:
@@ -790,7 +790,7 @@ func _clinic_shop_actions() -> bool:
 			return false
 		if not _require(sim.bank.takes.size() == 1, "real binding consumes its one donor"):
 			return false
-		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4, merge_before)):
+		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4, merge_before, -1)):
 			return false
 		if not _require(sim.bank.find_uid(donor.uid) != null and sim.bank.takes.size() == 2,
 				"Undo restores both exact binding identities"):
@@ -817,7 +817,8 @@ func _merge_quote_state(sim: Sim, panel: EchoPanel, requested: StringName) -> Di
 		"quotes": quotes, "buttons": buttons}
 
 
-func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int, expected_before: Dictionary) -> bool:
+func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int,
+		expected_before: Dictionary, expected_index: int) -> bool:
 	if ui.workshop.visible:
 		ui.workshop.close()
 	var before_profile := ui.transaction_profile()
@@ -827,8 +828,23 @@ func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int, expected_bef
 	var actual := RunSnapshot.capture(_main.sim)
 	var profile := ui.transaction_profile()
 	var snapshot_equal := actual == expected_before
+	var slot_guard := expected_index < 0 or (profile.get("kind", &"") == &"weapon"
+		and int(profile.get("index", -1)) == expected_index)
+	var neighbor: Dictionary = {}
+	if label == "evolve":
+		var previous: Array = profile.get("before", [])
+		var restored: Array = profile.get("after", [])
+		slot_guard = slot_guard and previous.size() == 1 and restored.size() == 1
+		if slot_guard:
+			slot_guard = int(previous[0].get("index", -1)) == expected_index \
+				and int(restored[0].get("index", -1)) == expected_index
+		neighbor = _unchanged_weapon_slot(ui, 3)
+		slot_guard = slot_guard and bool(neighbor["exists"]) and int(neighbor["change_visuals"]) == 0 \
+			and float(neighbor["face_alpha"]) >= 0.99 and float(neighbor["face_self_alpha"]) >= 0.99
 	var diagnostic := {"label": label, "native_frame": _frame,
 		"actual_weapon_count": _main.sim.player.weapons.size(), "expected_weapon_count": expected_weapons,
+		"expected_index": expected_index, "actual_index": int(profile.get("index", -1)),
+		"slot_guard": slot_guard, "unchanged_neighbor": neighbor,
 		"before_action": String(before_profile.get("action", &"")), "profile": profile,
 		"snapshot_equal": snapshot_equal, "capture_error": RunSnapshot.last_error,
 		"expected_objects": expected_before.get("objects", []).size(), "actual_objects": actual.get("objects", []).size()}
@@ -844,12 +860,30 @@ func _clinic_undo(ui: ShopUi, label: String, expected_weapons: int, expected_bef
 				file.store_string(JSON.stringify(entry[1], "  ") + "\n")
 				file.close()
 				diagnostic[str(entry[0]) + "_file"] = filename
-	if not _require(_main.sim.player.weapons.size() == expected_weapons and snapshot_equal
+	if not _require(_main.sim.player.weapons.size() == expected_weapons and snapshot_equal and slot_guard
 			and profile.get("action", &"") == ShopResult.UNDO and profile.get("learn_action", &"") == &"",
 			"rapid Undo exactly restores the pre-commit model and presents only its actual reverse result"):
 		return false
 	_queue_capture(label + "_undo_current_state", ["34"], "real Undo restores the exact model and replaces obsolete feedback with its own reverse result")
 	return await _clinic_frames(1)
+
+
+func _unchanged_weapon_slot(ui: ShopUi, index: int) -> Dictionary:
+	var result := {"index": index, "exists": false, "change_visuals": 0,
+		"face_alpha": 0.0, "face_self_alpha": 0.0}
+	if index < 0 or index >= ui.build_panel._slot_buttons.size():
+		return result
+	var button: Button = ui.build_panel._slot_buttons[index]
+	var face := button.find_child("WeaponFace", true, false) as Control
+	if face == null:
+		return result
+	result["exists"] = true
+	result["face_alpha"] = face.modulate.a
+	result["face_self_alpha"] = face.self_modulate.a
+	for child: Node in button.find_children("*", "", true, false):
+		if child is WorkshopUi.ChangeVisual:
+			result["change_visuals"] = int(result["change_visuals"]) + 1
+	return result
 
 
 func _clinic_hover(ui: ShopUi) -> bool:

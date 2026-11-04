@@ -2228,8 +2228,18 @@ func _change_proof(result: ShopResult) -> Dictionary:
 	var proof := {"action": result.action, "learn_action": &"", "kind": &"", "before": [], "after": [], "index": -1}
 	var old_rows := _weapon_visual_rows(before)
 	var new_rows := _weapon_visual_rows(after)
-	var removed := _unmatched_visual_rows(old_rows, new_rows)
-	var added := _unmatched_visual_rows(new_rows, old_rows)
+	var removed: Array[Dictionary] = []
+	var added: Array[Dictionary] = []
+	if old_rows.size() == new_rows.size():
+		# Refit/evolution/Undo keep their physical slots. Matching duplicate values
+		# across indices can move the restored artwork onto an untouched neighbour.
+		for index in old_rows.size():
+			if old_rows[index]["id"] != new_rows[index]["id"] or old_rows[index]["level"] != new_rows[index]["level"]:
+				removed.append(old_rows[index])
+				added.append(new_rows[index])
+	else:
+		removed = _unmatched_visual_rows(old_rows, new_rows)
+		added = _unmatched_visual_rows(new_rows, old_rows)
 	if result.action == ShopResult.REPLACE and result.index >= 0:
 		removed.clear()
 		removed.append(old_rows[result.index])
