@@ -438,7 +438,8 @@ func _clinic() -> bool:
 		"wall_clock_limit_seconds": CLINIC_WALL_DEADLINE_MSEC / 1000,
 		"native_seconds_limit": 90, "busy_case_frame_bounds": [180, 600], "first_evolve_reading_frames": 60,
 		"native_main_physics": "engine callback disabled; same Main._physics_process(1/60) called once per native frame",
-		"key_input_route": "current Window.push_input for both press and release; real GUI then Main unhandled input, no direct interaction call",
+		"key_input_route": "Input.parse_input_event for both press and release; real GUI then Main unhandled input, no direct interaction call",
+		"rescue_stance": "initial player placement worker+(50,0), outside the live conveyor push; real out-and-back movement and exact nearest available worker check before E",
 		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; shop800materials/four pistol grades0,0,3,3/two copies; actual donor and confirmation inputs; first evolved result deliberately remains visible for60frames before Undo; ordinary real UI commits and Undo",
 		"scope": "timing and native pixels for controlled cases; not a fresh campaign or human-learning proof"}
 	if not (await _clinic_busy_ready()):
@@ -566,7 +567,7 @@ func _clinic_rescue_closure() -> bool:
 	for item: Dictionary in sim.interactables:
 		if item["kind"] == &"rescue":
 			worker_id = item["id"]
-			sim.player.pos = item["pos"] + Vector2(-50.0, 0.0)
+			sim.player.pos = item["pos"] + Vector2(50.0, 0.0)
 			break
 	if not _require(worker_id != &"", "canonical first-act endangered worker exists"):
 		return false
@@ -588,6 +589,10 @@ func _clinic_rescue_closure() -> bool:
 	var before_input := _rescue_input_state(sim, worker_id)
 	_summary["rescue_clinic"] = {"before_input": before_input}
 	_note("clinic_rescue_before_input", before_input)
+	if not _require(before_input["nearest_id"] == String(worker_id)
+			and before_input["nearest_kind"] == "rescue" and bool(before_input["nearest_available"]),
+			"actual nearest interaction is the intended available worker immediately before E"):
+		return false
 	_press_key(KEY_E, "last_real_rescue_input")
 	_note("clinic_rescue_after_press", _rescue_input_state(sim, worker_id))
 	var saw_closure := false
@@ -1073,10 +1078,7 @@ func _press_key(code: Key, reason: String) -> void:
 	event.keycode = code
 	event.physical_keycode = code
 	event.pressed = true
-	if _mode == "clinic":
-		root.push_input(event, true)
-	else:
-		Input.parse_input_event(event)
+	Input.parse_input_event(event)
 	_release_key = code
 	_next_ui = _frame + 24
 	_inputs.append({"native_frame": _frame, "key": int(code), "reason": reason})
@@ -1089,10 +1091,7 @@ func _release_input_key() -> void:
 	event.keycode = _release_key
 	event.physical_keycode = _release_key
 	event.pressed = false
-	if _mode == "clinic":
-		root.push_input(event, true)
-	else:
-		Input.parse_input_event(event)
+	Input.parse_input_event(event)
 	_release_key = KEY_NONE
 
 
