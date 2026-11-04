@@ -304,3 +304,43 @@ func test_signature_entry_follows_introduction_but_keeps_existing_receipts_reach
 	ui._open_confession()
 	c.ok(ui.confession.visible and ui.confession_button.visible, "existing receipt stays reachable even when new signing is unavailable")
 	_release(ui)
+
+
+func test_960_blocked_evolution_preserves_cancel_and_read_only_details(c: Check) -> void:
+	var previous := Loc.lang
+	for language in ["en", "zh"]:
+		Loc.lang = language
+		for poor in [false, true]:
+			var sim := _sim()
+			if poor:
+				for _copy in 2:
+					sim.player.add_weapon(Content.weapon(&"pistol"))
+				sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+				sim.player.materials = 0
+			var ui := _open(sim, [], Vector2i(960, 540))
+			var before := RunSnapshot.capture(sim)
+			ui.build_panel._slot_buttons[0].pressed.emit()
+			ui.inspection.details_button.pressed.emit()
+			ui.workshop.choice_buttons[2].pressed.emit()
+			ui.workshop._fit_preview_budget()
+			c.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "both canonical branches expose the real blocking condition")
+			c.ok(ui.workshop.choice_preview.custom_minimum_size.y <= 88.0, "blocked diagrams reserve the compact action budget")
+			var paper := ui.workshop._content.get_parent() as PanelContainer
+			var required: float = ui.workshop._content.get_combined_minimum_size().y + paper.get_theme_stylebox("panel").get_minimum_size().y + 48.0
+			c.ok(required <= 540.0, "blocked branches and Cancel fit the actual 540p sheet minimum")
+			c.ok(ui.workshop.cancel_button.custom_minimum_size.y >= 38.0, "Cancel keeps its full action target")
+			var target: StringName = sim.shop.evolution_choices(sim, 0)[0]
+			c.ok(ui.workshop.choice_buttons[0].accessibility_description.contains(Loc.weapon_desc(target)), "compact primary choices retain complete mechanics on inspection")
+			c.eq(RunSnapshot.capture(sim), before, "blocked evolution entry never changes the run")
+			ui.workshop.cancel_button.pressed.emit()
+			while sim.player.weapons.size() < 3:
+				sim.player.add_weapon(Content.weapon(&"pistol"))
+			sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+			sim.player.materials = 500
+			ui.refresh()
+			ui._on_evolve_weapon(0)
+			ui.workshop._fit_preview_budget()
+			c.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return not button.disabled), "meeting the real requirements makes both branches available")
+			c.near(ui.workshop.choice_preview.custom_minimum_size.y, 168.0, 0.001, "a new affordable sheet restores its large diagram instead of inheriting the blocked limit")
+			_release(ui)
+	Loc.lang = previous

@@ -355,13 +355,38 @@ func _exercise_workshop(ui: ShopUi, sim: Sim, extent: Vector2i) -> void:
 	ui.undo_button.pressed.emit()
 	await _settle()
 	_check.eq(RunSnapshot.capture(sim), before, "combine Undo restores the exact host and donor")
+	# The actual Manage entry offers canonical branches even before their grade
+	# gate is met. Keep this disabled, multiline boundary in native 540p coverage.
+	ui.build_panel._slot_buttons[0].pressed.emit()
+	ui.inspection.details_button.pressed.emit()
+	ui.workshop.choice_buttons[2].pressed.emit()
+	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "ordinary low-grade evolution keeps both actual branches blocked")
+	_check.eq(RunSnapshot.capture(sim), before, "reading blocked grade branches leaves the run unchanged")
+	await _capture(ui, extent, "evolution-blocked-grade")
+	ui.workshop.cancel_button.pressed.emit()
 	sim.player.weapons[2] = Content.weapon(&"pistol")
 	sim.player.weapon_levels[0] = WeaponDef.MAX_LEVEL
+	var evolution_cash: int = sim.player.materials
+	sim.player.materials = 0
+	ui.refresh()
+	await _settle()
+	var poor_before := RunSnapshot.capture(sim)
+	ui.build_panel._select(0)
+	ui.build_panel.upgrade_button.pressed.emit()
+	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return button.disabled), "maximum-grade evolution still blocks unaffordable branches")
+	_check.eq(RunSnapshot.capture(sim), poor_before, "unaffordable branch inspection cannot spend or evolve")
+	await _capture(ui, extent, "evolution-blocked-funds")
+	ui.workshop.cancel_button.pressed.emit()
+	sim.player.materials = evolution_cash
 	ui.refresh()
 	await _settle()
 	before = RunSnapshot.capture(sim)
 	ui.build_panel.upgrade_button.pressed.emit()
 	await _settle()
+	_check.ok(ui.workshop.choice_buttons.all(func(button: Button) -> bool: return not button.disabled), "restored funds expose the actual affordable branches")
+	_check.ok(ui.workshop.choice_preview.custom_minimum_size.y >= 150.0 and ui.workshop.choice_preview.custom_minimum_size.y <= 180.0, "affordable evolution restores the dominant result diagram after blocked entries")
 	await _capture(ui, extent, "evolution-choice")
 	ui.workshop.choice_buttons[0].pressed.emit()
 	await _settle()

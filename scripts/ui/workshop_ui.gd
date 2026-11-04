@@ -9,6 +9,7 @@ var _content: VBoxContainer
 var _select := Callable()
 var _last_focus: Button
 var choice_preview: ChangeVisual
+var _preview_limit := 168.0
 
 
 class ChangeVisual:
@@ -176,6 +177,7 @@ func show_choices(title: String, body: String, choices: Array[Dictionary], selec
 	_last_focus = null
 	UiTheme.clear(_content)
 	choice_preview = null
+	_preview_limit = 88.0 if choices.size() > 2 else 168.0
 	choice_buttons.clear()
 	_content.add_child(UiTheme.section_label(title, 29))
 	var description := UiTheme.label(body, 16, UiTheme.DIM)
@@ -195,7 +197,13 @@ func show_choices(title: String, body: String, choices: Array[Dictionary], selec
 		button.tooltip_text = hint
 		button.accessibility_description = hint if hint != "" else button.text
 		button.disabled = bool(choice.get("disabled", false))
-		if button.disabled and hint != "":
+		var multiline_hint: bool = button.disabled and hint.contains("\n")
+		if multiline_hint:
+			# Full branch mechanics remain available on hover. The sheet's body
+			# already names the blocking condition; duplicating all terms in both
+			# disabled buttons can consume the entire 540p action area.
+			_preview_limit = 88.0
+		if button.disabled and hint != "" and not multiline_hint:
 			button.text += "\n" + hint
 			button.clip_text = false
 			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -299,17 +307,36 @@ static func fit_button(button: Button, font_size: int = 14, height: float = 28.0
 func add_result_visual(control: Control) -> void:
 	_content.add_child(control)
 	_content.move_child(control, 2)
+	if control is ChangeVisual:
+		choice_preview = control as ChangeVisual
+		_fit_preview_budget()
 
 
 func show_choice_preview(data: Dictionary) -> void:
 	if not is_instance_valid(choice_preview):
 		choice_preview = ChangeVisual.new()
-		# Many donor choices retain their compact list; final confirmations own the
-		# larger diagram without pushing the existing Cancel control off a 540p sheet.
-		if choice_buttons.size() > 2:
-			choice_preview.custom_minimum_size.y = 88.0
 		add_result_visual(choice_preview)
 	choice_preview.setup(data, true)
+	_fit_preview_budget()
+
+
+func _process(_delta: float) -> void:
+	if visible and is_instance_valid(choice_preview):
+		_fit_preview_budget()
+
+
+func _fit_preview_budget() -> void:
+	if not is_instance_valid(choice_preview):
+		return
+	var paper := _content.get_parent() as PanelContainer
+	var used: float = 48.0 + paper.get_theme_stylebox("panel").get_minimum_size().y
+	used += float(maxi(0, _content.get_child_count() - 1)) * float(_content.get_theme_constant("separation"))
+	for child: Control in _content.get_children():
+		if child != choice_preview:
+			used += child.get_combined_minimum_size().y
+	var height: float = minf(_preview_limit, maxf(0.0, get_viewport_rect().size.y - used))
+	if not is_equal_approx(choice_preview.custom_minimum_size.y, height):
+		choice_preview.custom_minimum_size.y = height
 
 
 func _remember_focus(button: Button) -> void:
