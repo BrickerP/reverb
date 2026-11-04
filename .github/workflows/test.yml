@@ -326,7 +326,7 @@ jobs:
           REVERB_BUILD_COMMIT: ${{ github.sha }}
         shell: bash
         run: |
-          for variant in journey clinic-en clinic-zh clinic-reduced; do
+          for variant in clinic-en clinic-zh clinic-reduced journey; do
             resolution=1280x720
             arguments=(--mode=clinic)
             if [ "$variant" = journey ]; then arguments=(--mode=journey); fi

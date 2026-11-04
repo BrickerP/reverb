@@ -6,6 +6,7 @@ extends SceneTree
 
 const DT := 1.0 / 60.0
 const JOURNEY_FRAMES := 240 * 60
+const CLINIC_FRAMES := 90 * 60
 const JOURNEY_WALL_DEADLINE_MSEC := 25 * 60 * 1000
 const CLINIC_WALL_DEADLINE_MSEC := 6 * 60 * 1000
 const SEED := 20261022
@@ -106,6 +107,8 @@ func _initialize() -> void:
 
 func _process(_delta: float) -> bool:
 	_frame += 1
+	if not _failed and not _finished and _mode == "clinic" and _frame > CLINIC_FRAMES:
+		_fail("clinic exceeded ninety native seconds")
 	var deadline := JOURNEY_WALL_DEADLINE_MSEC if _mode == "journey" else CLINIC_WALL_DEADLINE_MSEC
 	if not _failed and not _finished and Time.get_ticks_msec() - _started > deadline:
 		_fail("perception native capture exceeded its wall-clock deadline")
@@ -433,8 +436,10 @@ func _shop_state(sim: Sim) -> Dictionary:
 func _clinic() -> bool:
 	_summary["policy"] = {"fresh_run": false, "mode": "disclosed staged clinic",
 		"wall_clock_limit_seconds": CLINIC_WALL_DEADLINE_MSEC / 1000,
+		"native_seconds_limit": 90, "busy_case_frame_bounds": [180, 600], "first_evolve_reading_frames": 60,
 		"native_main_physics": "engine callback disabled; same Main._physics_process(1/60) called once per native frame",
-		"staging": "high-HP immobile harmless combo target; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; shop800materials/four pistol grades0,0,3,3/two copies; ordinary real UI commits and Undo",
+		"key_input_route": "current Window.push_input for both press and release; real GUI then Main unhandled input, no direct interaction call",
+		"staging": "high-HP immobile harmless combo target with unchanged automatic stapler/stamp fire until a real repeated quiet combo; energy96 and actual scrap pickup; authored accepted rescue order using Expedition.on_order_purchased and actual wave2 worker with spent finite threat budget; shop800materials/four pistol grades0,0,3,3/two copies; actual donor and confirmation inputs; first evolved result deliberately remains visible for60frames before Undo; ordinary real UI commits and Undo",
 		"scope": "timing and native pixels for controlled cases; not a fresh campaign or human-learning proof"}
 	if not (await _clinic_busy_ready()):
 		return false
@@ -499,13 +504,17 @@ func _clinic_busy_ready() -> bool:
 	var saw_pending := false
 	var saw_ready := false
 	var charged := false
+	var repeat_quiet := false
+	var first_combo_shots := -1
 	var combos_before := int(_event_counts.get("combo", 0))
-	for _index in 180:
+	var first_frame := _frame
+	for index in 600:
 		if not (await _clinic_frames(1)):
 			return false
 		var arena: Dictionary = _main._view.perception_profile()
 		var mark: Dictionary = arena["moment"]
 		if not charged and mark.get("kind", &"") == &"combo":
+			first_combo_shots = int(_event_counts.get("shot", 0))
 			var pickup := Pickup.new()
 			pickup.pos = sim.player.pos
 			pickup.value = 1
@@ -519,13 +528,26 @@ func _clinic_busy_ready() -> bool:
 		if charged and mark.get("kind", &"") == &"ready":
 			saw_ready = true
 			_queue_capture("busy_charge_replayed", ["11"], "deferred ready is replayed after the critical mark releases attention")
-		if int(_event_counts.get("combo", 0)) - combos_before >= 2:
-			_queue_capture("repeat_combo_is_bounded", ["13"], "actual repeated combo; HUD full/quiet and gate are recorded")
-	if not _require(charged and saw_pending and saw_ready and int(_event_counts.get("combo", 0)) > combos_before,
-			"busy charge has both deferred and later presented phases"):
+		var hud: Dictionary = _main.hud.perception_profile()
+		if int(_event_counts.get("combo", 0)) - combos_before >= 2 \
+				and float(hud["combo_left"]) <= 0.001 and float(hud["combo_gate"]) > 0.0 \
+				and int(_event_counts.get("shot", 0)) > first_combo_shots:
+			repeat_quiet = true
+			_queue_capture("repeat_combo_is_bounded", ["13"],
+				"at least two actual combos with unchanged weapons still firing; HUD is quiet while its repeat gate remains active")
+		if index >= 179 and charged and saw_pending and saw_ready and repeat_quiet \
+				and _screenshots.has("repeat_combo_is_bounded"):
+			break
+	if not _require(charged and saw_pending and saw_ready and repeat_quiet
+			and int(_event_counts.get("combo", 0)) - combos_before >= 2
+			and _screenshots.has("repeat_combo_is_bounded")
+			and sim.player.weapons.size() == 2 and sim.player.weapons[0].id == &"stapler"
+			and sim.player.weapons[1].id == &"stamp",
+			"actual busy charge replays and repeated combos become quiet while the same weapons keep firing"):
 		return false
 	_note("clinic_busy_ready_proof", {"pending_seen": saw_pending, "replayed_seen": saw_ready,
-		"combo_events": int(_event_counts.get("combo", 0)) - combos_before})
+		"repeat_quiet": repeat_quiet, "combo_events": int(_event_counts.get("combo", 0)) - combos_before,
+		"frames": _frame - first_frame, "hud": _main.hud.perception_profile()})
 	return true
 
 
@@ -563,11 +585,17 @@ func _clinic_rescue_closure() -> bool:
 	_queue_capture("last_rescue_still_available", ["24"], "finite enemy budget spent, opening movement complete, actual nearby rescue remains")
 	if not (await _clinic_frames(6)):
 		return false
+	var before_input := _rescue_input_state(sim, worker_id)
+	_summary["rescue_clinic"] = {"before_input": before_input}
+	_note("clinic_rescue_before_input", before_input)
 	_press_key(KEY_E, "last_real_rescue_input")
+	_note("clinic_rescue_after_press", _rescue_input_state(sim, worker_id))
 	var saw_closure := false
 	for index in 120:
 		if not (await _clinic_frames(1)):
 			return false
+		if index == 0:
+			_note("clinic_rescue_after_native_frame", _rescue_input_state(sim, worker_id))
 		var transition: Dictionary = _main.transition_profile()
 		if index < 12 and transition["target"] == &"shop" and not _main.shop_ui.visible:
 			saw_closure = true
@@ -575,6 +603,8 @@ func _clinic_rescue_closure() -> bool:
 		if _main.shop_ui.visible:
 			_queue_capture("last_rescue_actual_shop", ["24", "25"], "actual Main transition opens shop after the last real rescue")
 			break
+	_summary["rescue_clinic"]["after_wait"] = _rescue_input_state(sim, worker_id)
+	_summary["rescue_clinic"]["saw_closure"] = saw_closure
 	if not _require(saw_closure and _main.shop_ui.visible and Expedition._worker(sim, worker_id)["state"] == &"safe",
 			"last real rescue completes and its readable closure precedes shop"):
 		return false
@@ -599,6 +629,25 @@ func _clinic_rescue_closure() -> bool:
 	_queue_capture("first_echo_native_handoff", ["03"],
 		"fresh actual generated copy is shown before familiarity is confirmed; original native canvas")
 	return await _clinic_frames(1)
+
+
+func _rescue_input_state(sim: Sim, worker_id: StringName) -> Dictionary:
+	var nearest := Expedition.interaction(sim)
+	var worker := Expedition._worker(sim, worker_id)
+	var focus := root.gui_get_focus_owner()
+	return {"worker_id": String(worker_id), "worker_state": String(worker.get("state", &"missing")),
+		"worker_pos": _point(worker.get("pos", Vector2.ZERO)), "player_pos": _point(sim.player.pos),
+		"phase": int(sim.phase), "wave_time": sim.wave_time, "paused": _main.paused,
+		"nearest_id": String(nearest.get("id", &"")), "nearest_kind": String(nearest.get("kind", &"")),
+		"nearest_available": bool(nearest.get("available", false)),
+		"nearest_gap": Expedition.interact_gap(sim, nearest) if not nearest.is_empty() else -1.0,
+		"focus": str(focus.get_path()) if focus != null else "",
+		"modals": {"context": _main.context_ui.visible, "boon": _main.boon_ui.visible,
+			"receipt": _main.receipt_ui.visible, "story": _main.story_ui.visible,
+			"echo_archive": _main.echo_archive_ui.visible, "echo_wheel": _main.echo_wheel.visible,
+			"settings": _main.settings_ui.visible, "history": _main.history_ui.visible,
+			"feedback": _main.feedback_ui.visible, "codex": _main.codex_ui.visible},
+		"shop_visible": _main.shop_ui.visible, "transition": _main.transition_profile()}
 
 
 func _clinic_shop_actions() -> bool:
@@ -632,7 +681,13 @@ func _clinic_shop_actions() -> bool:
 	_press_first_enabled(ui.workshop.choice_buttons, "real_combine_donor_choice")
 	if not (await _clinic_frames(2)):
 		return false
-	_queue_capture("combine_real_commit", ["32"], "actual donor choice commits a real assembly result")
+	if not _require(ui.workshop.visible and sim.player.weapons.size() == 4,
+			"donor selection opens the existing confirmation without consuming equipment"):
+		return false
+	_press_first_enabled(ui.workshop.choice_buttons, "real_combine_confirmation")
+	_queue_capture("combine_real_commit", ["32"], "actual donor and confirmation inputs commit the assembly before Undo")
+	if not (await _clinic_frames(2)):
+		return false
 	if not _require(sim.player.weapons.size() == 3, "assembly consumed exactly one actual donor slot"):
 		return false
 	if not (await _clinic_undo(ui, "combine", 4)):
@@ -641,11 +696,24 @@ func _clinic_shop_actions() -> bool:
 	ui._on_evolve_weapon(2)
 	if not (await _clinic_frames(2)):
 		return false
+	if not _require(not _main.meta.familiar_actions.has(&"evolve"), "this native evolution result is still unfamiliar"):
+		return false
+	var evolve_input_frame := _frame
 	_press_first_enabled(ui.workshop.choice_buttons, "real_evolution_choice")
+	_queue_capture("evolve_real_commit", ["33"], "actual target choice commits the quoted final weapon before Undo")
 	if not (await _clinic_frames(2)):
 		return false
-	_queue_capture("evolve_real_commit", ["33"], "actual target choice commits the quoted final weapon")
 	if not _require(sim.player.weapons[2].id != &"pistol", "evolution changes the actual selected weapon"):
+		return false
+	if not (await _clinic_frames(60)):
+		return false
+	if not _require(_main.meta.familiar_actions.has(&"evolve"),
+			"leaving the actual first evolved result visible confirms persistent familiarity"):
+		return false
+	_note("clinic_evolve_visible_completion", {"input_native_frame": evolve_input_frame,
+		"settled_native_frame": _frame, "deliberate_dwell_frames": 60, "familiar": true})
+	_queue_capture("evolve_visible_settled", ["33"], "actual first evolved result has visibly settled and confirmed familiarity before Undo")
+	if not (await _clinic_frames(1)):
 		return false
 	if not (await _clinic_undo(ui, "evolve", 4)):
 		return false
@@ -670,9 +738,9 @@ func _clinic_shop_actions() -> bool:
 		if not _require(trait_button != null and not trait_button.disabled, "real quoted binding trait is available"):
 			return false
 		_press_button(trait_button, "real_merge_trait_" + String(trait_name))
+		_queue_capture("merge_" + String(trait_name) + "_commit", ["35"], "actual selected binding trait and source identities before Undo")
 		if not (await _clinic_frames(2)):
 			return false
-		_queue_capture("merge_" + String(trait_name) + "_commit", ["35"], "actual selected binding trait and source identities")
 		if not _require(sim.bank.takes.size() == 1, "real binding consumes its one donor"):
 			return false
 		if not (await _clinic_undo(ui, "merge_" + String(trait_name), 4)):
@@ -838,9 +906,13 @@ func _on_combo(info: ComboInfo) -> void:
 
 func _on_world(info: Dictionary) -> void:
 	var kind := String(info.get("kind", &""))
-	if kind == "interaction_result" and bool(info.get("ok", false)):
-		_note("interaction", {"target_kind": String(info.get("target_kind", &""))})
-		_queue_capture("first_interaction", ["02"], "actual accepted interaction input")
+	if kind == "interaction_result":
+		var accepted := bool(info.get("ok", false))
+		_note("interaction" if accepted else "interaction_rejected", {
+			"target_id": String(info.get("target_id", &"")),
+			"target_kind": String(info.get("target_kind", &"")), "reason": String(info.get("reason", &""))})
+		if accepted:
+			_queue_capture("first_interaction", ["02"], "actual accepted interaction input")
 	elif kind == "character_skill":
 		_note("character_skill", {"ok": bool(info.get("ok", false)), "ability": String(info.get("ability", &""))})
 		_queue_capture("real_skill", ["12"], "actual role activation result")
@@ -1001,7 +1073,10 @@ func _press_key(code: Key, reason: String) -> void:
 	event.keycode = code
 	event.physical_keycode = code
 	event.pressed = true
-	Input.parse_input_event(event)
+	if _mode == "clinic":
+		root.push_input(event, true)
+	else:
+		Input.parse_input_event(event)
 	_release_key = code
 	_next_ui = _frame + 24
 	_inputs.append({"native_frame": _frame, "key": int(code), "reason": reason})
@@ -1014,7 +1089,10 @@ func _release_input_key() -> void:
 	event.keycode = _release_key
 	event.physical_keycode = _release_key
 	event.pressed = false
-	Input.parse_input_event(event)
+	if _mode == "clinic":
+		root.push_input(event, true)
+	else:
+		Input.parse_input_event(event)
 	_release_key = KEY_NONE
 
 
